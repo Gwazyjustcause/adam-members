@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace AdamMembership\Core;
 
+use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\UserRegistration;
+use AdamMembership\Helpers\Logger;
 
 /**
  * Coordinates plugin services.
@@ -57,7 +59,10 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
-		( new UserRegistration() )->register();
+		$logger = new Logger();
+		$config = new RegistrationFormConfig();
+
+		( new UserRegistration( $config, $logger ) )->register();
 	}
 
 	/**

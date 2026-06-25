@@ -9,16 +9,38 @@ declare(strict_types=1);
 
 namespace AdamMembership\Forminator;
 
+use AdamMembership\Helpers\Logger;
+use AdamMembership\Member\Member;
 use WP_Error;
 
 /**
- * Creates WordPress users from approved Forminator submissions.
+ * Creates WordPress users and initializes member records from approved Forminator submissions.
  */
 final class UserRegistration {
 	/**
-	 * Forminator form ID used for ADAM member applications.
+	 * Registration form configuration.
+	 *
+	 * @var RegistrationFormConfig
 	 */
-	private const FORM_ID = 178;
+	private RegistrationFormConfig $config;
+
+	/**
+	 * Logger helper.
+	 *
+	 * @var Logger
+	 */
+	private Logger $logger;
+
+	/**
+	 * Create the registration service.
+	 *
+	 * @param RegistrationFormConfig $config Registration form configuration.
+	 * @param Logger                 $logger Logger helper.
+	 */
+	public function __construct( RegistrationFormConfig $config, Logger $logger ) {
+		$this->config = $config;
+		$this->logger = $logger;
+	}
 
 	/**
 	 * Register WordPress hooks.
@@ -35,146 +57,117 @@ final class UserRegistration {
 	 * @param mixed $field_data_array Submitted field data.
 	 */
 	public function handle_submission( mixed $entry_id, mixed $form_id, mixed $field_data_array ): void {
-		unset( $entry_id );
-
-		if ( self::FORM_ID !== absint( $form_id ) ) {
+		if ( $this->config->form_id() !== absint( $form_id ) ) {
 			return;
 		}
+
+		$this->logger->info( 'Registration started.', array( 'entry_id' => $entry_id ) );
 
 		if ( ! is_array( $field_data_array ) ) {
-			error_log( 'ADAM Membership: Forminator submission data was not an array.' );
+			$this->logger->error( 'Registration failed because Forminator submission data was not an array.', array( 'entry_id' => $entry_id ) );
 			return;
 		}
 
-		$email = $this->extract_email( $field_data_array );
+		$submission = new SubmissionData( $field_data_array, $this->config );
+		$email      = $submission->get_email( 'email' );
 
 		if ( '' === $email ) {
-			error_log( 'ADAM Membership: Unable to find a valid email in Forminator form 178 submission.' );
+			$this->logger->error( 'Registration failed because the submitted email was missing or invalid.', array( 'entry_id' => $entry_id ) );
 			return;
 		}
 
 		if ( email_exists( $email ) ) {
+			$this->logger->info( 'Registration skipped because the submitted email already exists.', array( 'email' => $email ) );
 			return;
 		}
 
 		if ( username_exists( $email ) ) {
-			error_log( sprintf( 'ADAM Membership: Username already exists for submitted email %s.', $email ) );
+			$this->logger->error( 'Registration failed because the submitted email is already used as a username.', array( 'email' => $email ) );
 			return;
 		}
 
-		$user_id = wp_insert_user(
-			array(
-				'user_login' => $email,
-				'user_email' => $email,
-				'user_pass'  => wp_generate_password( 32, true, true ),
-				'role'       => 'subscriber',
-			)
-		);
+		$user_id = $this->create_user( $submission, $email );
 
 		if ( is_wp_error( $user_id ) ) {
-			$this->log_wp_error( $user_id, $email );
+			$this->logger->error(
+				'Registration failed during WordPress user creation.',
+				array(
+					'email' => $email,
+					'error' => $user_id->get_error_message(),
+				)
+			);
 			return;
 		}
 
+		$this->logger->info( 'User created.', array( 'user_id' => $user_id ) );
+
 		wp_new_user_notification( (int) $user_id, null, 'user' );
+
+		$member = new Member( (int) $user_id );
+		$member->initialize( $this->build_member_data( $submission ) );
+
+		$this->logger->info( 'Member initialized.', array( 'user_id' => $user_id ) );
 	}
 
 	/**
-	 * Extract the submitted email from Forminator field data.
+	 * Create a WordPress subscriber user from submitted data.
 	 *
-	 * @param array<int|string, mixed> $field_data_array Submitted field data.
+	 * @param SubmissionData $submission Submitted registration data.
+	 * @param string         $email      Submitted email address.
+	 * @return int|WP_Error
 	 */
-	private function extract_email( array $field_data_array ): string {
-		$preferred_email = $this->find_email_by_field_name( $field_data_array );
+	private function create_user( SubmissionData $submission, string $email ): int|WP_Error {
+		$first_name   = $submission->get_string( 'first_name' );
+		$last_name    = $submission->get_string( 'last_name' );
+		$display_name = $this->build_display_name( $first_name, $last_name, $email );
 
-		if ( '' !== $preferred_email ) {
-			return $preferred_email;
-		}
-
-		return $this->find_first_email_value( $field_data_array );
-	}
-
-	/**
-	 * Find an email value from fields that identify themselves as email fields.
-	 *
-	 * @param array<int|string, mixed> $field_data_array Submitted field data.
-	 */
-	private function find_email_by_field_name( array $field_data_array ): string {
-		foreach ( $field_data_array as $field ) {
-			if ( ! is_array( $field ) ) {
-				continue;
-			}
-
-			$field_name = isset( $field['name'] ) ? strtolower( (string) $field['name'] ) : '';
-			$field_type = isset( $field['type'] ) ? strtolower( (string) $field['type'] ) : '';
-
-			if ( ! str_contains( $field_name, 'email' ) && 'email' !== $field_type ) {
-				continue;
-			}
-
-			$email = $this->sanitize_email_value( $field['value'] ?? '' );
-
-			if ( '' !== $email ) {
-				return $email;
-			}
-		}
-
-		return '';
-	}
-
-	/**
-	 * Find the first valid email value in submitted data.
-	 *
-	 * @param mixed $data Submitted field data.
-	 */
-	private function find_first_email_value( mixed $data ): string {
-		if ( is_scalar( $data ) ) {
-			return $this->sanitize_email_value( $data );
-		}
-
-		if ( ! is_array( $data ) ) {
-			return '';
-		}
-
-		foreach ( $data as $value ) {
-			$email = $this->find_first_email_value( $value );
-
-			if ( '' !== $email ) {
-				return $email;
-			}
-		}
-
-		return '';
-	}
-
-	/**
-	 * Sanitize and validate a possible email value.
-	 *
-	 * @param mixed $value Possible email value.
-	 */
-	private function sanitize_email_value( mixed $value ): string {
-		if ( ! is_scalar( $value ) ) {
-			return '';
-		}
-
-		$email = sanitize_email( (string) $value );
-
-		return is_email( $email ) ? $email : '';
-	}
-
-	/**
-	 * Log user creation failures.
-	 *
-	 * @param WP_Error $error Failed user creation error.
-	 * @param string   $email Submitted email address.
-	 */
-	private function log_wp_error( WP_Error $error, string $email ): void {
-		error_log(
-			sprintf(
-				'ADAM Membership: Failed to create user for %1$s. Error: %2$s',
-				$email,
-				$error->get_error_message()
+		return wp_insert_user(
+			array(
+				'user_login'   => $email,
+				'user_email'   => $email,
+				'user_pass'    => wp_generate_password( 32, true, true ),
+				'role'         => 'subscriber',
+				'first_name'   => $first_name,
+				'last_name'    => $last_name,
+				'display_name' => $display_name,
+				'nickname'     => $display_name,
 			)
 		);
+	}
+
+	/**
+	 * Build member data from submitted registration values.
+	 *
+	 * @param SubmissionData $submission Submitted registration data.
+	 * @return array<string, mixed>
+	 */
+	private function build_member_data( SubmissionData $submission ): array {
+		return array(
+			'estado'            => 'Pendente',
+			'numero_socio'      => '',
+			'data_adesao'       => '',
+			'validade_quota'    => '',
+			'telefone'          => $submission->get_string( 'phone' ),
+			'nif'               => $submission->get_string( 'nif' ),
+			'cartao_cidadao'    => $submission->get_string( 'citizen_card' ),
+			'data_nascimento'   => $submission->get_string( 'birth_date' ),
+			'morada'            => $submission->get_string( 'address' ),
+			'equipa'            => $submission->get_string( 'team' ),
+			'profile_photo'     => $submission->get( 'profile_photo' ),
+			'payment_receipt'   => $submission->get( 'payment_receipt' ),
+		);
+	}
+
+	/**
+	 * Build a display name from submitted profile data.
+	 *
+	 * @param string $first_name Submitted first name.
+	 * @param string $last_name  Submitted last name.
+	 * @param string $email      Submitted email address.
+	 */
+	private function build_display_name( string $first_name, string $last_name, string $email ): string {
+		$display_name = trim( $first_name . ' ' . $last_name );
+
+		return '' !== $display_name ? $display_name : $email;
 	}
 }
