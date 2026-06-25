@@ -30,6 +30,23 @@ $adam_membership_autoloader = ADAM_MEMBERSHIP_PATH . 'vendor/autoload.php';
 
 if ( file_exists( $adam_membership_autoloader ) ) {
 	require_once $adam_membership_autoloader;
+} else {
+	spl_autoload_register(
+		static function ( string $class_name ): void {
+			$prefix = __NAMESPACE__ . '\\';
+
+			if ( ! str_starts_with( $class_name, $prefix ) ) {
+				return;
+			}
+
+			$relative_class = substr( $class_name, strlen( $prefix ) );
+			$file           = ADAM_MEMBERSHIP_PATH . 'src/' . str_replace( '\\', '/', $relative_class ) . '.php';
+
+			if ( file_exists( $file ) ) {
+				require_once $file;
+			}
+		}
+	);
 }
 
 add_action(
