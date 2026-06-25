@@ -105,8 +105,8 @@ final class UserRegistration {
 				continue;
 			}
 
-			$field_name = isset( $field['name'] ) ? (string) $field['name'] : '';
-			$field_type = isset( $field['type'] ) ? (string) $field['type'] : '';
+			$field_name = isset( $field['name'] ) ? strtolower( (string) $field['name'] ) : '';
+			$field_type = isset( $field['type'] ) ? strtolower( (string) $field['type'] ) : '';
 
 			if ( ! str_contains( $field_name, 'email' ) && 'email' !== $field_type ) {
 				continue;
