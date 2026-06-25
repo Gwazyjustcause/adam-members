@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace AdamMembership\Core;
 
+use AdamMembership\Forminator\UserRegistration;
+
 /**
  * Coordinates plugin services.
  */
@@ -47,6 +49,15 @@ final class Plugin {
 		}
 
 		$this->booted = true;
+
+		$this->register_modules();
+	}
+
+	/**
+	 * Register plugin modules.
+	 */
+	private function register_modules(): void {
+		( new UserRegistration() )->register();
 	}
 
 	/**
