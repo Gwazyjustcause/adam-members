@@ -63,16 +63,17 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
-		$logger   = new Logger();
-		$settings = new SettingsRepository();
-		$members  = new MemberRepository();
-		$email    = new EmailService( $settings, $logger );
-		$approval = new ApprovalService( $members, $settings, $email, $logger );
-		$config   = new RegistrationFormConfig();
+		$logger    = new Logger();
+		$settings  = new SettingsRepository();
+		$members   = new MemberRepository();
+		$email     = new EmailService( $settings, $logger );
+		$approval  = new ApprovalService( $members, $settings, $email, $logger );
+		$config    = new RegistrationFormConfig();
+		$memberArea = new MemberArea( $members );
 
 		( new UserRegistration( $config, $logger ) )->register();
 		( new AdminController( $members, $approval, $settings, $logger ) )->register();
-	}
+		$memberArea->register();
 
 	/**
 	 * Prevent direct construction.
