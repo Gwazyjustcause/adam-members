@@ -16,6 +16,7 @@ use AdamMembership\Forminator\UserRegistration;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\MemberArea;
 
 /**
  * Coordinates plugin services.
@@ -74,11 +75,12 @@ final class Plugin {
 		( new UserRegistration( $config, $logger ) )->register();
 		( new AdminController( $members, $approval, $settings, $logger ) )->register();
 		$memberArea->register();
+}
 
-	/**
-	 * Prevent direct construction.
-	 */
-	private function __construct() {}
+/**
+ * Prevent direct construction.
+ */
+private function __construct() {}
 
 	/**
 	 * Prevent cloning.
