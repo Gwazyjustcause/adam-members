@@ -54,10 +54,10 @@ final class AdminController {
 	/**
 	 * Create the admin controller.
 	 *
-	 * @param MemberRepository  $members          Member repository.
-	 * @param ApprovalService   $approval_service Approval service.
-	 * @param SettingsRepository $settings        Settings repository.
-	 * @param Logger            $logger           Logger helper.
+	 * @param MemberRepository   $members          Member repository.
+	 * @param ApprovalService    $approval_service Approval service.
+	 * @param SettingsRepository $settings         Settings repository.
+	 * @param Logger             $logger           Logger helper.
 	 */
 	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger ) {
 		$this->members          = $members;
@@ -394,7 +394,7 @@ final class AdminController {
 			add_query_arg(
 				array(
 					'page'         => 'adam-membership-pending',
-					'adam_message' => rawurlencode( $message ),
+					'adam_message' => $message,
 				),
 				admin_url( 'admin.php' )
 			)
@@ -412,7 +412,7 @@ final class AdminController {
 			add_query_arg(
 				array(
 					'page'       => 'adam-membership-pending',
-					'adam_error' => rawurlencode( $message ),
+					'adam_error' => $message,
 				),
 				admin_url( 'admin.php' )
 			)
