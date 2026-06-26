@@ -75,7 +75,9 @@ final class Plugin {
 		$config    = new RegistrationFormConfig();
 		$memberArea = new MemberArea( $members );
 		$account = new Account();
-		$passwordRecovery = new PasswordRecovery();
+		$passwordRecovery = new PasswordRecovery(
+	$email
+);
 		$passwordReset = new PasswordReset();
 
 		( new UserRegistration( $config, $logger ) )->register();
