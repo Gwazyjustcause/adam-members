@@ -38,6 +38,22 @@ final class MemberArea {
 			'adam_member_area',
 			array( $this, 'render' )
 		);
+
+		add_action(
+			'wp_enqueue_scripts',
+			array( $this, 'enqueue_assets' )
+		);
+	}
+    /**
+	 * Enqueue member area assets.
+	 */
+	public function enqueue_assets(): void {
+		wp_enqueue_style(
+			'adam-member-area',
+			ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css',
+			array(),
+			ADAM_MEMBERSHIP_VERSION
+		);
 	}
 
 	/**
