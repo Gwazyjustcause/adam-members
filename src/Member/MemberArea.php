@@ -31,9 +31,10 @@ final class MemberArea {
 	}
 
 	/**
-	 * Register the shortcode.
+	 * Register shortcode and assets.
 	 */
 	public function register(): void {
+
 		add_shortcode(
 			'adam_member_area',
 			array( $this, 'render' )
@@ -44,10 +45,12 @@ final class MemberArea {
 			array( $this, 'enqueue_assets' )
 		);
 	}
-    /**
-	 * Enqueue member area assets.
+
+	/**
+	 * Enqueue assets.
 	 */
 	public function enqueue_assets(): void {
+
 		wp_enqueue_style(
 			'adam-member-area',
 			ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css',
@@ -57,12 +60,15 @@ final class MemberArea {
 	}
 
 	/**
-	 * Render the member area.
+	 * Render member area.
 	 */
 	public function render(): string {
 
 		if ( ! is_user_logged_in() ) {
-			return $this->render_login();
+
+			$message = $this->process_login();
+
+			return $this->render_login( $message );
 		}
 
 		$member = $this->members->find( get_current_user_id() );
@@ -80,17 +86,25 @@ final class MemberArea {
 			<?php $this->render_header( $member ); ?>
 
 			<?php
+
 			if ( $member->isPending() ) {
+
 				$this->render_pending( $member );
+
 			} elseif ( $member->isRejected() ) {
+
 				$this->render_rejected( $member );
+
 			} elseif ( $member->isActive() ) {
+
 				$this->render_active( $member );
+
 			} else {
-				?>
-				<p>Estado desconhecido.</p>
-				<?php
+
+				echo '<p>Estado desconhecido.</p>';
+
 			}
+
 			?>
 
 		</div>
@@ -99,11 +113,12 @@ final class MemberArea {
 
 		return (string) ob_get_clean();
 	}
-
-	/**
+    	/**
 	 * Render login page.
+	 *
+	 * @param string $message Message to display.
 	 */
-	private function render_login(): string {
+	private function render_login( string $message = '' ): string {
 
 		ob_start();
 
@@ -111,17 +126,89 @@ final class MemberArea {
 
 		<div class="adam-member-area">
 
-			<h2>Área do Sócio</h2>
+			<div class="adam-card">
 
-			<p>Esta área é exclusiva para associados.</p>
+				<h2>Área do Sócio</h2>
 
-			<?php
-			wp_login_form(
-				array(
-					'remember' => true,
-				)
-			);
-			?>
+				<p>Inicie sessão para aceder à Área do Sócio.</p>
+
+				<?php echo wp_kses_post( $message ); ?>
+
+				<form method="post">
+
+					<?php wp_nonce_field( 'adam_member_login' ); ?>
+
+					<p>
+
+						<label for="adam_login">
+							Email ou Nome de Utilizador
+						</label>
+
+						<input
+							type="text"
+							id="adam_login"
+							name="adam_login"
+							required
+							autocomplete="username"
+						>
+
+					</p>
+
+					<p>
+
+						<label for="adam_password">
+							Palavra-passe
+						</label>
+
+						<input
+							type="password"
+							id="adam_password"
+							name="adam_password"
+							required
+							autocomplete="current-password"
+						>
+
+					</p>
+
+					<p>
+
+						<label>
+
+							<input
+								type="checkbox"
+								name="rememberme"
+								value="1"
+							>
+
+							Lembrar-me
+
+						</label>
+
+					</p>
+
+					<p>
+
+						<button
+							type="submit"
+							name="adam_login_submit"
+							class="button button-primary"
+						>
+							Iniciar Sessão
+						</button>
+
+					</p>
+
+					<p>
+
+						<a href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+							Esqueceu-se da palavra-passe?
+						</a>
+
+					</p>
+
+				</form>
+
+			</div>
 
 		</div>
 
@@ -131,19 +218,79 @@ final class MemberArea {
 	}
 
 	/**
+	 * Process login.
+	 */
+	private function process_login(): string {
+
+		if (
+			'POST' !== $_SERVER['REQUEST_METHOD'] ||
+			! isset( $_POST['adam_login_submit'] )
+		) {
+			return '';
+		}
+
+		if (
+			! isset( $_POST['_wpnonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ),
+				'adam_member_login'
+			)
+		) {
+			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
+		}
+
+		$login = sanitize_text_field(
+			wp_unslash( $_POST['adam_login'] ?? '' )
+		);
+
+		if ( is_email( $login ) ) {
+
+			$user = get_user_by( 'email', $login );
+
+			if ( $user instanceof \WP_User ) {
+				$login = $user->user_login;
+			}
+		}
+
+		$result = wp_signon(
+			array(
+				'user_login'    => $login,
+				'user_password' => (string) wp_unslash( $_POST['adam_password'] ?? '' ),
+				'remember'      => isset( $_POST['rememberme'] ),
+			),
+			false
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return '<div class="notice notice-error"><p>Email ou palavra-passe incorretos.</p></div>';
+		}
+
+		wp_safe_redirect( home_url( '/socio/' ) );
+		exit;
+	}
+    	/**
 	 * Render member not found.
 	 */
 	private function render_not_found(): string {
 
 		return '
 		<div class="adam-member-area">
-			<h2>Área do Sócio</h2>
-			<p>Não foi encontrada informação de associado.</p>
+
+			<div class="adam-card">
+
+				<h2>Área do Sócio</h2>
+
+				<p>Não foi encontrada informação de associado.</p>
+
+			</div>
+
 		</div>';
 	}
 
 	/**
-	 * Render common page header.
+	 * Render page header.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_header( Member $member ): void {
 
@@ -152,14 +299,24 @@ final class MemberArea {
 		<h2>Área do Sócio</h2>
 
 		<p>
+
 			Bem-vindo,
-			<strong><?php echo esc_html( $member->full_name() ); ?></strong>.
+
+			<strong>
+
+				<?php echo esc_html( $member->full_name() ); ?>
+
+			</strong>.
+
 		</p>
 
 		<?php
 	}
-    	/**
+
+	/**
 	 * Render pending dashboard.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_pending( Member $member ): void {
 
@@ -180,6 +337,8 @@ final class MemberArea {
 
 	/**
 	 * Render rejected dashboard.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_rejected( Member $member ): void {
 
@@ -197,9 +356,10 @@ final class MemberArea {
 			)
 		);
 	}
-
-	/**
+    	/**
 	 * Render active dashboard.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_active( Member $member ): void {
 
@@ -232,6 +392,9 @@ final class MemberArea {
 
 	/**
 	 * Render status card.
+	 *
+	 * @param string $status Status.
+	 * @param string $message Message.
 	 */
 	private function render_status_card(
 		string $status,
@@ -252,8 +415,11 @@ final class MemberArea {
 
 		<?php
 	}
-    	/**
+
+	/**
 	 * Render membership information.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_membership( Member $member ): void {
 
@@ -285,6 +451,8 @@ final class MemberArea {
 
 	/**
 	 * Render member profile.
+	 *
+	 * @param Member $member Member.
 	 */
 	private function render_profile( Member $member ): void {
 
@@ -318,10 +486,11 @@ final class MemberArea {
 
 		<?php
 	}
-    	/**
+
+	/**
 	 * Render action links.
 	 *
-	 * @param array<int, array{label:string,url:string}> $actions Actions.
+	 * @param array<int,array{label:string,url:string}> $actions Actions.
 	 */
 	private function render_actions( array $actions ): void {
 
