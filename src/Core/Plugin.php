@@ -18,6 +18,7 @@ use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\MemberArea;
 use AdamMembership\Member\Account;
+use AdamMembership\Member\PasswordRecovery;
 
 /**
  * Coordinates plugin services.
@@ -73,11 +74,13 @@ final class Plugin {
 		$config    = new RegistrationFormConfig();
 		$memberArea = new MemberArea( $members );
 		$account = new Account();
+		$passwordRecovery = new PasswordRecovery();
 
 		( new UserRegistration( $config, $logger ) )->register();
 		( new AdminController( $members, $approval, $settings, $logger ) )->register();
 
 		$memberArea->register();
+		$passwordRecovery->register();
 		$account->register();
 }
 
