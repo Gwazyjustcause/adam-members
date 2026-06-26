@@ -69,7 +69,6 @@ final class MemberRepository {
 					'fields'  => 'ID',
 					'orderby' => 'registered',
 					'order'   => 'DESC',
-					'number'  => 200,
 				),
 				$args
 			)
