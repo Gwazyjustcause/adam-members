@@ -216,7 +216,11 @@ final class MemberArea {
 			array(
 				array(
 					'label' => 'Alterar Palavra-passe',
-					'url'   => wp_lostpassword_url(),
+					'url'   => home_url( '/socio-password/' ),
+				),
+				array(
+					'label' => 'Alterar Email',
+					'url'   => home_url( '/socio-email/' ),
 				),
 				array(
 					'label' => 'Terminar sessão',
