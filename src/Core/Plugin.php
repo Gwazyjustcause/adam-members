@@ -9,9 +9,13 @@ declare(strict_types=1);
 
 namespace AdamMembership\Core;
 
+use AdamMembership\Admin\AdminController;
+use AdamMembership\Emails\EmailService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\UserRegistration;
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Member\ApprovalService;
+use AdamMembership\Member\MemberRepository;
 
 /**
  * Coordinates plugin services.
@@ -59,10 +63,15 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
-		$logger = new Logger();
-		$config = new RegistrationFormConfig();
+		$logger   = new Logger();
+		$settings = new SettingsRepository();
+		$members  = new MemberRepository();
+		$email    = new EmailService( $settings, $logger );
+		$approval = new ApprovalService( $members, $settings, $email, $logger );
+		$config   = new RegistrationFormConfig();
 
 		( new UserRegistration( $config, $logger ) )->register();
+		( new AdminController( $members, $approval, $settings, $logger ) )->register();
 	}
 
 	/**

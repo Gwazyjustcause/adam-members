@@ -143,18 +143,18 @@ final class UserRegistration {
 	 */
 	private function build_member_data( SubmissionData $submission ): array {
 		return array(
-			'estado'            => 'Pendente',
-			'numero_socio'      => '',
-			'data_adesao'       => '',
-			'validade_quota'    => '',
-			'telefone'          => $submission->get_string( 'phone' ),
-			'nif'               => $submission->get_string( 'nif' ),
-			'cartao_cidadao'    => $submission->get_string( 'citizen_card' ),
-			'data_nascimento'   => $submission->get_string( 'birth_date' ),
-			'morada'            => $submission->get_string( 'address' ),
-			'equipa'            => $submission->get_string( 'team' ),
-			'profile_photo'     => $submission->get( 'profile_photo' ),
-			'payment_receipt'   => $submission->get( 'payment_receipt' ),
+			'estado'          => Member::STATUS_PENDING,
+			'numero_socio'    => '',
+			'data_adesao'     => '',
+			'validade_quota'  => '',
+			'telefone'        => $submission->get_string( 'phone' ),
+			'nif'             => $submission->get_string( 'nif' ),
+			'cartao_cidadao'  => $submission->get_string( 'citizen_card' ),
+			'data_nascimento' => $submission->get_string( 'birth_date' ),
+			'morada'          => $submission->get_string( 'address' ),
+			'equipa'          => $submission->get_string( 'team' ),
+			'profile_photo'   => $submission->get( 'profile_photo' ),
+			'payment_receipt' => $submission->get( 'payment_receipt' ),
 		);
 	}
 

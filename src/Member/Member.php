@@ -16,9 +16,19 @@ use WP_User;
  */
 final class Member {
 	/**
-	 * Default member status.
+	 * Pending member status.
 	 */
 	public const STATUS_PENDING = 'Pendente';
+
+	/**
+	 * Active member status.
+	 */
+	public const STATUS_ACTIVE = 'Ativo';
+
+	/**
+	 * Rejected member status.
+	 */
+	public const STATUS_REJECTED = 'Rejeitado';
 
 	/**
 	 * Member field defaults.
@@ -26,18 +36,18 @@ final class Member {
 	 * @var array<string, mixed>
 	 */
 	private const DEFAULT_DATA = array(
-		'estado'            => self::STATUS_PENDING,
-		'numero_socio'      => '',
-		'data_adesao'       => '',
-		'validade_quota'    => '',
-		'telefone'          => '',
-		'nif'               => '',
-		'cartao_cidadao'    => '',
-		'data_nascimento'   => '',
-		'morada'            => '',
-		'equipa'            => '',
-		'profile_photo'     => '',
-		'payment_receipt'   => '',
+		'estado'          => self::STATUS_PENDING,
+		'numero_socio'    => '',
+		'data_adesao'     => '',
+		'validade_quota'  => '',
+		'telefone'        => '',
+		'nif'             => '',
+		'cartao_cidadao'  => '',
+		'data_nascimento' => '',
+		'morada'          => '',
+		'equipa'          => '',
+		'profile_photo'   => '',
+		'payment_receipt' => '',
 	);
 
 	/**
@@ -46,6 +56,13 @@ final class Member {
 	 * @var int
 	 */
 	private int $user_id;
+
+	/**
+	 * Cached WordPress user object.
+	 *
+	 * @var WP_User|null
+	 */
+	private ?WP_User $user = null;
 
 	/**
 	 * Create a member model for a WordPress user.
@@ -72,6 +89,60 @@ final class Member {
 	 */
 	public function user_id(): int {
 		return $this->user_id;
+	}
+
+	/**
+	 * Get the backing WordPress user.
+	 */
+	public function user(): ?WP_User {
+		if ( null === $this->user ) {
+			$user = get_user_by( 'id', $this->user_id );
+
+			$this->user = $user instanceof WP_User ? $user : null;
+		}
+
+		return $this->user;
+	}
+
+	/**
+	 * Get the member email address.
+	 */
+	public function email(): string {
+		$user = $this->user();
+
+		return $user instanceof WP_User ? (string) $user->user_email : '';
+	}
+
+	/**
+	 * Get the member full name.
+	 */
+	public function full_name(): string {
+		$user = $this->user();
+
+		if ( ! $user instanceof WP_User ) {
+			return '';
+		}
+
+		$first_name = (string) get_user_meta( $this->user_id, 'first_name', true );
+		$last_name  = (string) get_user_meta( $this->user_id, 'last_name', true );
+		$full_name  = trim( $first_name . ' ' . $last_name );
+
+		return '' !== $full_name ? $full_name : (string) $user->display_name;
+	}
+
+	/**
+	 * Get the WordPress registration date.
+	 */
+	public function registration_date(): string {
+		$user = $this->user();
+
+		if ( ! $user instanceof WP_User ) {
+			return '';
+		}
+
+		$timestamp = strtotime( (string) $user->user_registered );
+
+		return false === $timestamp ? '' : wp_date( get_option( 'date_format' ), $timestamp );
 	}
 
 	/**
@@ -107,7 +178,7 @@ final class Member {
 		$data = array();
 
 		foreach ( array_keys( self::DEFAULT_DATA ) as $field_name ) {
-			$data[ $field_name ] = $this->get_field( $field_name );
+			$data[ $field_name ] = $this->field( $field_name );
 		}
 
 		return $data;
@@ -117,7 +188,7 @@ final class Member {
 	 * Retrieve the member status.
 	 */
 	public function status(): string {
-		$status = $this->get_field( 'estado' );
+		$status = $this->field( 'estado' );
 
 		return is_scalar( $status ) && '' !== (string) $status ? (string) $status : self::STATUS_PENDING;
 	}
@@ -128,7 +199,7 @@ final class Member {
 	 * @param string $field_name Member field name.
 	 * @return mixed
 	 */
-	private function get_field( string $field_name ): mixed {
+	public function field( string $field_name ): mixed {
 		if ( function_exists( 'get_field' ) ) {
 			$value = get_field( $field_name, 'user_' . $this->user_id );
 
@@ -138,6 +209,15 @@ final class Member {
 		}
 
 		return get_user_meta( $this->user_id, $field_name, true );
+	}
+
+	/**
+	 * Get a media URL stored on a member field.
+	 *
+	 * @param string $field_name Member media field name.
+	 */
+	public function media_url( string $field_name ): string {
+		return $this->normalize_media_url( $this->field( $field_name ) );
 	}
 
 	/**
@@ -153,5 +233,42 @@ final class Member {
 		}
 
 		update_user_meta( $this->user_id, $field_name, $value );
+	}
+
+	/**
+	 * Normalize a stored media reference into a URL.
+	 *
+	 * @param mixed $value Stored media value.
+	 */
+	private function normalize_media_url( mixed $value ): string {
+		if ( is_numeric( $value ) ) {
+			$url = wp_get_attachment_url( absint( $value ) );
+
+			return false !== $url ? $url : '';
+		}
+
+		if ( is_string( $value ) && wp_http_validate_url( $value ) ) {
+			return $value;
+		}
+
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+
+		foreach ( array( 'url', 'file_url', 'source_url' ) as $url_key ) {
+			if ( isset( $value[ $url_key ] ) && is_string( $value[ $url_key ] ) && wp_http_validate_url( $value[ $url_key ] ) ) {
+				return $value[ $url_key ];
+			}
+		}
+
+		foreach ( array( 'ID', 'id', 'attachment_id' ) as $id_key ) {
+			if ( isset( $value[ $id_key ] ) && is_numeric( $value[ $id_key ] ) ) {
+				$url = wp_get_attachment_url( absint( $value[ $id_key ] ) );
+
+				return false !== $url ? $url : '';
+			}
+		}
+
+		return '';
 	}
 }
