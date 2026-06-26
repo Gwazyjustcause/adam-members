@@ -9,10 +9,30 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Emails\EmailService;
+
 /**
  * Handles password recovery.
  */
 final class PasswordRecovery {
+
+	/**
+	 * Email service.
+	 *
+	 * @var EmailService
+	 */
+	private EmailService $email;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param EmailService $email Email service.
+	 */
+	public function __construct(
+		EmailService $email
+	) {
+		$this->email = $email;
+	}
 
 	/**
 	 * Register shortcode.
@@ -63,6 +83,7 @@ final class PasswordRecovery {
 							id="adam_recovery_login"
 							name="adam_recovery_login"
 							required
+							autocomplete="username"
 						>
 
 					</p>
@@ -108,16 +129,42 @@ final class PasswordRecovery {
 				'adam_password_recovery'
 			)
 		) {
-			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>Pedido inválido.</p>
+			</div>';
 		}
 
 		$login = sanitize_text_field(
 			wp_unslash( $_POST['adam_recovery_login'] ?? '' )
 		);
 
-		if ( '' !== $login ) {
+		$user = get_user_by(
+			'login',
+			$login
+		);
 
-			retrieve_password( $login );
+		if ( ! $user && is_email( $login ) ) {
+
+			$user = get_user_by(
+				'email',
+				$login
+			);
+		}
+
+		if ( $user instanceof \WP_User ) {
+
+			$key = get_password_reset_key(
+				$user
+			);
+
+			if ( ! is_wp_error( $key ) ) {
+
+				$this->email->send_password_reset_email(
+					$user,
+					$key
+				);
+			}
 		}
 
 		return '

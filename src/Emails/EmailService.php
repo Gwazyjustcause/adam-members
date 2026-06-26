@@ -12,6 +12,7 @@ namespace AdamMembership\Emails;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
+use WP_User;
 
 /**
  * Sends membership lifecycle emails.
@@ -56,7 +57,9 @@ final class EmailService {
 	/**
 	 * Send approval email.
 	 */
-	public function send_approval_email( Member $member ): bool {
+	public function send_approval_email(
+		Member $member
+	): bool {
 
 		$recipient = $member->email();
 
@@ -74,7 +77,109 @@ final class EmailService {
 
 		$subject = 'A sua inscrição na ADAM foi aprovada';
 
-		$message = $this->build_approval_message( $member );
+		$message = $this->build_approval_message(
+			$member
+		);
+
+		return $this->send(
+			$recipient,
+			$subject,
+			$message
+		);
+	}
+
+	/**
+	 * Send password reset email.
+	 */
+	public function send_password_reset_email(
+		WP_User $user,
+		string $key
+	): bool {
+
+		$reset_url = add_query_arg(
+			array(
+				'login' => rawurlencode(
+					$user->user_login
+				),
+				'key' => rawurlencode(
+					$key
+				),
+			),
+			home_url(
+				'/redefinir-password/'
+			)
+		);
+
+		$button = sprintf(
+			'<a href="%1$s"
+				style="
+					display:inline-block;
+					background:%2$s;
+					color:#ffffff;
+					padding:14px 28px;
+					text-decoration:none;
+					border-radius:8px;
+					font-weight:bold;
+					font-size:16px;
+				">
+				Redefinir Palavra-passe
+			</a>',
+			esc_url(
+				$reset_url
+			),
+			self::PRIMARY
+		);
+
+		$content = sprintf(
+			'
+			<p>Olá <strong>%1$s</strong>,</p>
+
+			<p>
+			Recebemos um pedido para redefinir a palavra-passe da sua conta.
+			</p>
+
+			<p>
+			Clique no botão abaixo para continuar.
+			</p>
+
+			<p style="text-align:center;">
+			%2$s
+			</p>
+
+			<p>
+			Se não efetuou este pedido,
+			pode ignorar este email.
+			</p>
+
+			<p>
+			Cumprimentos,
+			<br>
+			<strong>ADAM</strong>
+			</p>
+			',
+			esc_html(
+				$user->display_name
+			),
+			$button
+		);
+
+		return $this->send(
+			$user->user_email,
+			'Redefinição da Palavra-passe',
+			$this->render_template(
+				'Redefinição da Palavra-passe',
+				$content
+			)
+		);
+	}
+		/**
+	 * Send HTML email.
+	 */
+	private function send(
+		string $recipient,
+		string $subject,
+		string $message
+	): bool {
 
 		$headers = array(
 			'Content-Type: text/html; charset=UTF-8',
@@ -90,9 +195,10 @@ final class EmailService {
 		if ( ! $sent ) {
 
 			$this->logger->error(
-				'Approval email failed.',
+				'Email failed.',
 				array(
-					'user_id' => $member->user_id(),
+					'recipient' => $recipient,
+					'subject'   => $subject,
 				)
 			);
 		}
@@ -149,48 +255,21 @@ final class EmailService {
 			%2$s
 			</p>
 
-			<p>
-			Pode aceder à sua Área de Sócio através do botão abaixo.
-			</p>
-
 			<p style="text-align:center;">
 			%3$s
 			</p>
 
 			<p>
-			Na Área de Sócio poderá:
-			</p>
-
-			<ul>
-				<li>Consultar os seus dados</li>
-				<li>Ver a validade da sua quota</li>
-				<li>Renovar a quota</li>
-				<li>Alterar a sua palavra-passe</li>
-			</ul>
-
-			<p>
-			Por motivos de segurança,
-			<strong>esta mensagem não inclui a sua palavra-passe.</strong>
+			Na Área de Sócio poderá consultar os seus dados, renovar a quota e alterar a sua palavra-passe.
 			</p>
 
 			<p>
-			Caso ainda não a tenha definido,
-			utilize a opção
-			<strong>"Esqueceu-se da palavra-passe?"</strong>
-			na página de acesso.
+			Por motivos de segurança, esta mensagem não inclui a sua palavra-passe.
 			</p>
 
 			<p>
-			Esperamos contar consigo nas próximas atividades da associação.
-			</p>
-
-			<p>
-			Com os melhores cumprimentos,
-			</p>
-
-			<p>
-			<strong>A Direção</strong><br>
-			ADAM – Associação Desportiva de Airsoft do Mondego
+			Cumprimentos,<br>
+			<strong>A Direção da ADAM</strong>
 			</p>
 			',
 			esc_html(
@@ -208,8 +287,8 @@ final class EmailService {
 			'Bem-vindo à ADAM!',
 			$content
 		);
-	}	
-	/**
+	}
+		/**
 	 * Render the standard ADAM email template.
 	 *
 	 * @param string $title   Email title.
@@ -350,10 +429,8 @@ Caso necessite de apoio, contacte a Direção da ADAM.
 </a>
 
 </p>
-<p
-	style="
-		margin-bottom:0;
-	">
+
+<p style="margin-bottom:0;">
 
 Esta é uma mensagem automática da
 <strong>ADAM – Associação Desportiva de Airsoft do Mondego</strong>.
