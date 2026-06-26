@@ -80,8 +80,8 @@ final class AdminController {
 	 */
 	public function register_menu(): void {
 		add_menu_page(
-			esc_html__( 'ADAM Membership', 'adam-membership' ),
-			esc_html__( 'ADAM Membership', 'adam-membership' ),
+			esc_html__( 'ADAM', 'adam-membership' ),
+			esc_html__( 'ADAM', 'adam-membership' ),
 			self::CAPABILITY,
 			self::MENU_SLUG,
 			array( $this, 'render_dashboard_page' ),
@@ -91,8 +91,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Dashboard', 'adam-membership' ),
-			esc_html__( 'Dashboard', 'adam-membership' ),
+			esc_html__( 'Painel', 'adam-membership' ),
+			esc_html__( 'Painel', 'adam-membership' ),
 			self::CAPABILITY,
 			self::MENU_SLUG,
 			array( $this, 'render_dashboard_page' )
@@ -100,8 +100,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Pending Members', 'adam-membership' ),
-			esc_html__( 'Pending Members', 'adam-membership' ),
+			esc_html__( 'Membros Pendentes', 'adam-membership' ),
+			esc_html__( 'Membros Pendentes', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-pending',
 			array( $this, 'render_pending_members_page' )
@@ -109,8 +109,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Members', 'adam-membership' ),
-			esc_html__( 'Members', 'adam-membership' ),
+			esc_html__( 'Sócios', 'adam-membership' ),
+			esc_html__( 'Sócios', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-members',
 			array( $this, 'render_members_page' )
@@ -118,8 +118,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Settings', 'adam-membership' ),
-			esc_html__( 'Settings', 'adam-membership' ),
+			esc_html__( 'Configurações', 'adam-membership' ),
+			esc_html__( 'Configurações', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-settings',
 			array( $this, 'render_settings_page' )
@@ -130,7 +130,7 @@ final class AdminController {
 	 * Render the dashboard page.
 	 */
 	public function render_dashboard_page(): void {
-		$this->render_header( __( 'ADAM Membership Dashboard', 'adam-membership' ) );
+		$this->render_header( __( 'Painel ADAM', 'adam-membership' ) );
 		$this->render_notices();
 		?>
 		<p><?php esc_html_e( 'Use the membership pages to review pending applications and manage member records.', 'adam-membership' ); ?></p>
@@ -144,7 +144,7 @@ final class AdminController {
 	public function render_pending_members_page(): void {
 		$members = $this->members->pending_members();
 
-		$this->render_header( __( 'Pending Members', 'adam-membership' ) );
+		$this->render_header( __( 'Membros Pendentes', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_members_table( $members, true );
 		$this->render_footer();
@@ -156,7 +156,7 @@ final class AdminController {
 	public function render_members_page(): void {
 		$members = $this->members->all_members();
 
-		$this->render_header( __( 'Members', 'adam-membership' ) );
+		$this->render_header( __( 'Membros', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_members_table( $members, false );
 		$this->render_footer();
@@ -166,20 +166,20 @@ final class AdminController {
 	 * Render the settings page.
 	 */
 	public function render_settings_page(): void {
-		$this->render_header( __( 'ADAM Membership Settings', 'adam-membership' ) );
+		$this->render_header( __( 'Configurações da ADAM', 'adam-membership' ) );
 		$this->render_notices();
 		?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Last assigned member number', 'adam-membership' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Último número de sócio atribuído', 'adam-membership' ); ?></th>
 				<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Next member number', 'adam-membership' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Próximo número de sócio', 'adam-membership' ); ?></th>
 				<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Member area URL', 'adam-membership' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'URL da Área de Sócio', 'adam-membership' ); ?></th>
 				<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
 			</tr>
 		</table>
@@ -210,7 +210,7 @@ final class AdminController {
 	private function render_members_table( array $members, bool $show_actions ): void {
 		if ( array() === $members ) {
 			?>
-			<p><?php esc_html_e( 'No members found.', 'adam-membership' ); ?></p>
+			<p><?php esc_html_e( 'Não foram encontrados sócios.', 'adam-membership' ); ?></p>
 			<?php
 			return;
 		}
@@ -219,17 +219,17 @@ final class AdminController {
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Photo', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Name', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Foto', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Nome', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Email', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Phone', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Team', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Registered', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Status', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Member Number', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Payment', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Telemovel', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Equipa', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Data de Registo', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'N.º de Sócio', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Comprovativo', 'adam-membership' ); ?></th>
 					<?php if ( $show_actions ) : ?>
-						<th><?php esc_html_e( 'Actions', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
@@ -262,7 +262,7 @@ final class AdminController {
 	 */
 	private function handle_member_action( string $action ): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
-			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
+			wp_die( esc_html__( 'Não tem permissões para gerir os sócios da ADAM.', 'adam-membership' ) );
 		}
 
 		$user_id = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
@@ -270,7 +270,7 @@ final class AdminController {
 		check_admin_referer( 'adam_membership_member_action_' . $user_id );
 
 		if ( 0 === $user_id ) {
-			$this->redirect_with_error( __( 'Invalid member selected.', 'adam-membership' ) );
+			$this->redirect_with_error( __( 'Sócio inválido.', 'adam-membership' ) );
 		}
 
 		$result = 'approve' === $action ? $this->approval_service->approve( $user_id ) : $this->approval_service->reject( $user_id );
@@ -280,7 +280,7 @@ final class AdminController {
 			$this->redirect_with_error( $result->get_error_message() );
 		}
 
-		$message = 'approve' === $action ? __( 'Member approved successfully.', 'adam-membership' ) : __( 'Member rejected successfully.', 'adam-membership' );
+		$message = 'approve' === $action ? __( 'Sócio aprovado com sucesso.', 'adam-membership' ) : __( 'Sócio rejeitado com sucesso.', 'adam-membership' );
 		$this->redirect_with_message( $message );
 	}
 
@@ -336,13 +336,13 @@ final class AdminController {
 			<input type="hidden" name="action" value="adam_membership_approve_member" />
 			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $user_id ); ?>
-			<?php submit_button( __( 'Approve', 'adam-membership' ), 'primary small', 'submit', false ); ?>
+			<?php submit_button( __( 'Aprovar', 'adam-membership' ), 'primary small', 'submit', false ); ?>
 		</form>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
 			<input type="hidden" name="action" value="adam_membership_reject_member" />
 			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $user_id ); ?>
-			<?php submit_button( __( 'Reject', 'adam-membership' ), 'delete small', 'submit', false ); ?>
+			<?php submit_button( __( 'Rejeitar', 'adam-membership' ), 'delete small', 'submit', false ); ?>
 		</form>
 		<?php
 	}

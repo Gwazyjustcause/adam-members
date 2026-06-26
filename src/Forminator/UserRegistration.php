@@ -110,7 +110,7 @@ final class UserRegistration {
 	}
 
 	/**
-	 * Create a WordPress subscriber user from submitted data.
+	 * Create a WordPress visitor user from submitted data.
 	 *
 	 * @param SubmissionData $submission Submitted registration data.
 	 * @param string         $email      Submitted email address.
@@ -126,7 +126,7 @@ final class UserRegistration {
 				'user_login'   => $email,
 				'user_email'   => $email,
 				'user_pass'    => wp_generate_password( 32, true, true ),
-				'role'         => 'subscriber',
+				'role'         => 'visitante',
 				'first_name'   => $first_name,
 				'last_name'    => $last_name,
 				'display_name' => $display_name,

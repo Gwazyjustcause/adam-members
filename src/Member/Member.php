@@ -192,6 +192,55 @@ final class Member {
 
 		return is_scalar( $status ) && '' !== (string) $status ? (string) $status : self::STATUS_PENDING;
 	}
+	
+	/**
+ 	* Check if the member is pending.
+	 */
+	public function isPending(): bool {
+	return self::STATUS_PENDING === $this->status();
+	}
+
+	/**
+	 * Check if the member is active.
+	 */
+	public function isActive(): bool {
+		return self::STATUS_ACTIVE === $this->status();
+	}
+
+	/**
+	 * Check if the member has been rejected.
+	 */
+	public function isRejected(): bool {
+		return self::STATUS_REJECTED === $this->status();
+	}
+
+	/**
+ 	* Approve the member.
+ 	*/
+	public function approve(): void {
+	$this->update_field( 'estado', self::STATUS_ACTIVE );
+
+		if ( '' === (string) $this->field( 'data_adesao' ) ) {
+			$this->update_field(
+				'data_adesao',
+				current_time( 'Y-m-d' )
+			);
+		}
+	}
+
+	/**
+ 	* Reject the member.
+ 	*/
+	public function reject(): void {
+		$this->update_field( 'estado', self::STATUS_REJECTED );
+	}
+
+	/**
+ 	* Set the member back to pending.
+ 	*/
+	public function resetToPending(): void {
+		$this->update_field( 'estado', self::STATUS_PENDING );
+	}
 
 	/**
 	 * Get a member field value.
