@@ -17,6 +17,7 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\MemberArea;
+use AdamMembership\Member\Account;
 
 /**
  * Coordinates plugin services.
@@ -71,10 +72,13 @@ final class Plugin {
 		$approval  = new ApprovalService( $members, $settings, $email, $logger );
 		$config    = new RegistrationFormConfig();
 		$memberArea = new MemberArea( $members );
+		$account = new Account();
 
 		( new UserRegistration( $config, $logger ) )->register();
 		( new AdminController( $members, $approval, $settings, $logger ) )->register();
+
 		$memberArea->register();
+		$account->register();
 }
 
 /**
