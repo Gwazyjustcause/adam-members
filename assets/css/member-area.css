@@ -124,55 +124,61 @@
 ========================================== */
 
 .adam-password-strength{
-	margin:20px 0;
-	padding:18px;
-	background:#f7f8fa;
-	border:1px solid #e5e7eb;
-	border-radius:10px;
+	margin:24px 0;
+	padding:22px;
+	background:#f8fafc;
+	border:1px solid #dbe3ea;
+	border-radius:12px;
 }
 
 .adam-strength-title{
-	margin:0 0 12px;
+	margin:0 0 16px;
+	font-size:18px;
 	font-weight:700;
-	font-size:15px;
+	color:#1f2937;
 }
 
 .adam-strength-bar{
 	display:flex;
-	gap:6px;
-	margin-bottom:12px;
+	gap:8px;
+	margin:14px 0 18px;
 }
 
 .adam-strength-bar span{
+	display:block;
 	flex:1;
-	height:8px;
+	height:10px;
+	min-height:10px;
 	border-radius:999px;
-	background:#d6d6d6;
+	background:#d1d5db;
 	transition:background .2s ease;
 }
 
 .adam-strength-text{
-	margin:0 0 14px;
+	margin:0 0 20px;
+	font-size:16px;
 	font-weight:700;
-	font-size:15px;
 	color:#374151;
-	transition:color .2s ease;
 }
 
 .adam-password-rules p{
-	margin:0 0 10px;
-	font-weight:600;
+	margin:0 0 14px;
+	font-size:15px;
+	font-weight:700;
+	color:#111827;
 }
 
 .adam-password-rules ul{
 	margin:0;
-	padding-left:22px;
+	padding:0;
+	list-style:none;
 }
 
 .adam-password-rules li{
-	margin:8px 0;
-	list-style:none;
-	font-size:14px;
+	margin:12px 0;
+	font-size:15px;
+	font-weight:500;
+	line-height:1.5;
 	color:#c62828;
-	transition:color .2s ease;
+	transition:all .2s ease;
 }
