@@ -286,17 +286,10 @@
 
 .adam-action-card strong {
 	display: block;
-	margin-bottom: 4px;
+	margin-bottom: 0;
 	font-size: 1rem;
 	font-weight: 850;
 	color: #102033;
-}
-
-.adam-action-card span {
-	display: block;
-	font-size: 0.93rem;
-	line-height: 1.5;
-	color: #657386;
 }
 
 .adam-member-notice,

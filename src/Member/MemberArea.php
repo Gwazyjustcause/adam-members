@@ -313,7 +313,7 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
+						'description' => '',
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)
@@ -350,7 +350,7 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
+						'description' => '',
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)
@@ -388,17 +388,17 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
-						'description' => __( 'Atualize a sua palavra-passe.', 'adam-membership' ),
+						'description' => '',
 						'url'         => home_url( '/socio-password/' ),
 					),
 					array(
 						'label'       => __( 'Alterar email', 'adam-membership' ),
-						'description' => __( 'Atualize o email da conta.', 'adam-membership' ),
+						'description' => '',
 						'url'         => home_url( '/socio-email/' ),
 					),
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
+						'description' => '',
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)
@@ -459,7 +459,6 @@ final class MemberArea {
 		<section class="adam-card adam-membership-card">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Quota e identificação', 'adam-membership' ); ?></p>
-				<h3><?php esc_html_e( 'Resumo de sócio', 'adam-membership' ); ?></h3>
 			</div>
 
 			<div class="adam-data-list">
@@ -481,7 +480,6 @@ final class MemberArea {
 		<section class="adam-card adam-profile-card">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Dados do sócio', 'adam-membership' ); ?></p>
-				<h3><?php esc_html_e( 'Perfil', 'adam-membership' ); ?></h3>
 			</div>
 
 			<div class="adam-data-list">
@@ -504,7 +502,6 @@ final class MemberArea {
 		<section class="adam-card adam-notifications-card">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
-				<h3><?php esc_html_e( 'Atualizações importantes', 'adam-membership' ); ?></h3>
 			</div>
 
 			<ul class="adam-notification-list">
@@ -541,14 +538,12 @@ final class MemberArea {
 		<section class="adam-card adam-actions-card">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Ações', 'adam-membership' ); ?></p>
-				<h3><?php esc_html_e( 'Gerir conta', 'adam-membership' ); ?></h3>
 			</div>
 
 			<div class="adam-action-grid">
 				<?php foreach ( $actions as $action ) : ?>
 					<a class="adam-action-card" href="<?php echo esc_url( $action['url'] ); ?>">
 						<strong><?php echo esc_html( $action['label'] ); ?></strong>
-						<span><?php echo esc_html( $action['description'] ); ?></span>
 					</a>
 				<?php endforeach; ?>
 			</div>
