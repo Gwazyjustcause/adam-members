@@ -13,23 +13,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		button.type = 'button';
 		button.className = 'adam-password-toggle';
-		button.setAttribute('aria-label', 'Mostrar palavra-passe');
+		button.setAttribute(
+			'aria-label',
+			'Mostrar palavra-passe'
+		);
 
-		button.innerHTML = '👁';
+		button.innerHTML =
+			'<span class="dashicons dashicons-visibility"></span>';
 
 		wrapper.appendChild(button);
 
 		button.addEventListener('click', function () {
 
-			if (input.type === 'password') {
+			if ( input.type === 'password' ) {
 
 				input.type = 'text';
-				button.innerHTML = '🙈';
+
+				button.innerHTML =
+					'<span class="dashicons dashicons-hidden"></span>';
+
+				button.setAttribute(
+					'aria-label',
+					'Esconder palavra-passe'
+				);
 
 			} else {
 
 				input.type = 'password';
-				button.innerHTML = '👁';
+
+				button.innerHTML =
+					'<span class="dashicons dashicons-visibility"></span>';
+
+				button.setAttribute(
+					'aria-label',
+					'Mostrar palavra-passe'
+				);
 
 			}
 

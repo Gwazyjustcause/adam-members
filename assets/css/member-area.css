@@ -206,36 +206,34 @@
 
 .adam-password-wrapper input{
 	width:100%;
-	padding-right:52px !important;
+	padding-right:48px !important;
 }
 
 .adam-password-toggle{
 	position:absolute;
 	top:50%;
-	right:14px;
+	right:12px;
 	transform:translateY(-50%);
+	width:32px;
+	height:32px;
+	border:none;
+	background:transparent;
+	padding:0;
+	margin:0;
 	display:flex;
 	align-items:center;
 	justify-content:center;
-	width:32px;
-	height:32px;
-	padding:0;
-	margin:0;
-	border:none;
-	background:transparent;
 	cursor:pointer;
-	font-size:18px;
 	color:#6b7280;
-	border-radius:50%;
-	transition:all .2s ease;
 }
 
 .adam-password-toggle:hover{
-	background:#f3f4f6;
-	color:#111827;
+	color:#2e7d32;
 }
 
-.adam-password-toggle:focus{
-	outline:none;
-	box-shadow:0 0 0 3px rgba(22,163,74,.25);
+.adam-password-toggle .dashicons{
+	font-size:20px;
+	width:20px;
+	height:20px;
+	line-height:20px;
 }
