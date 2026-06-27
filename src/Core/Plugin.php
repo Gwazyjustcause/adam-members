@@ -76,7 +76,9 @@ final class Plugin {
 		$approval  = new ApprovalService( $members, $settings, $email, $logger );
 		$config    = new RegistrationFormConfig();
 		$memberArea = new MemberArea( $members );
-		$account = new Account();
+		$account = new Account(
+	$email
+);
 		$passwordRecovery = new PasswordRecovery(
 	$email
 );

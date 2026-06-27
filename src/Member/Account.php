@@ -56,27 +56,6 @@ final class Account {
 	}
 
 	/**
-	 * Register shortcodes.
-	 */
-	public function register(): void {
-
-		add_shortcode(
-			'adam_change_password',
-			array( $this, 'render_password_form' )
-		);
-
-		add_shortcode(
-			'adam_change_email',
-			array( $this, 'render_email_form' )
-		);
-
-		add_action(
-			'wp_enqueue_scripts',
-			array( $this, 'enqueue_assets' )
-		);
-	}
-
-	/**
 	 * Enqueue password strength assets.
 	 */
 	public function enqueue_assets(): void {
