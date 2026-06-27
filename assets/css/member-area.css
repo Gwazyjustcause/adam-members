@@ -1,411 +1,588 @@
 .adam-member-area {
-	max-width: 1200px;
-	margin: 50px auto;
+	max-width: 1180px;
+	margin: 48px auto;
 	padding: 0 24px;
 	font-family: inherit;
+	color: #172033;
 }
 
-.adam-member-area h2 {
-	margin-bottom: 14px;
-	font-size: 2.3rem;
-	font-weight: 700;
-	color: #1f2937;
-}
-
-.adam-member-area > p:first-of-type{
-	font-size:18px;
-	font-weight:500;
-	color:#4b5563;
-	margin-bottom:30px;
+.adam-member-area * {
+	box-sizing: border-box;
 }
 
 .adam-member-area p {
 	margin: 0;
-	line-height: 1.7;
+	line-height: 1.65;
 }
 
-.adam-member-area hr {
-	display: none;
+.adam-member-area a {
+	text-decoration: none;
+}
+
+.adam-member-dashboard {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+
+.adam-member-hero {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	padding: 34px;
+	border: 1px solid #dbe3ea;
+	border-radius: 24px;
+	background:
+		linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(34, 113, 177, 0.10)),
+		#ffffff;
+	box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.adam-member-hero h2,
+.adam-member-login h2,
+.adam-empty-state h2 {
+	margin: 0 0 12px;
+	font-size: clamp(2rem, 3vw, 3.1rem);
+	line-height: 1.08;
+	font-weight: 800;
+	color: #102033;
+	letter-spacing: 0;
+}
+
+.adam-member-hero p:not(.adam-eyebrow) {
+	max-width: 680px;
+	font-size: 1rem;
+	color: #526070;
+}
+
+.adam-hero-status {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 10px;
+	min-width: 170px;
+}
+
+.adam-hero-status span:not(.adam-badge) {
+	font-size: 1.05rem;
+	font-weight: 800;
+	color: #172033;
+}
+
+.adam-dashboard-grid {
+	display: grid;
+	grid-template-columns: repeat(12, 1fr);
+	gap: 22px;
 }
 
 .adam-card {
+	min-width: 0;
+	margin: 0;
+	padding: 26px;
+	border: 1px solid #dbe3ea;
+	border-radius: 18px;
 	background: #ffffff;
-	border: 1px solid #e5e7eb;
-	border-radius: 14px;
-	padding: 32px;
-	margin-bottom: 24px;
-	box-shadow: 0 6px 18px rgba(0,0,0,.06);
-	transition: all .25s ease;
-}
-
-.adam-card:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 12px 28px rgba(0,0,0,.10);
+	box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
 }
 
 .adam-card h3 {
-	margin: 0 0 22px;
-	padding-bottom: 14px;
-	border-bottom: 2px solid #16a34a;
-	font-size: 1.45rem;
+	margin: 0;
+	font-size: 1.25rem;
+	line-height: 1.25;
+	font-weight: 800;
+	color: #122034;
+	letter-spacing: 0;
+}
+
+.adam-card-heading {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 18px;
+}
+
+.adam-card-heading h3 {
+	flex: 1 1 auto;
+}
+
+.adam-eyebrow {
+	margin: 0 0 8px;
+	font-size: 0.74rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #2271b1;
+}
+
+.adam-status-card,
+.adam-membership-card {
+	grid-column: span 6;
+}
+
+.adam-notifications-card,
+.adam-profile-card {
+	grid-column: span 6;
+}
+
+.adam-actions-card,
+.adam-future-card {
+	grid-column: 1 / -1;
+}
+
+.adam-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 34px;
+	padding: 7px 14px;
+	border-radius: 999px;
+	font-size: 0.86rem;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.adam-badge.active {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.adam-badge.pending,
+.adam-badge.warning {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-badge.rejected,
+.adam-badge.expired {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-badge.unknown {
+	background: #e5e7eb;
+	color: #374151;
+}
+
+.adam-data-list {
+	display: grid;
+	gap: 14px;
+}
+
+.adam-data-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+	padding: 14px 0;
+	border-bottom: 1px solid #edf1f5;
+}
+
+.adam-data-item:last-child {
+	border-bottom: 0;
+}
+
+.adam-data-item span {
+	color: #657386;
+	font-size: 0.94rem;
 	font-weight: 700;
-	color: #14532d;
-	letter-spacing:.2px;
 }
 
-.adam-card strong {
-	font-size:16px;
-	font-weight:700;
-	color:#111827;
+.adam-data-item strong {
+	max-width: 58%;
+	color: #172033;
+	font-size: 0.98rem;
+	font-weight: 800;
+	text-align: right;
+	overflow-wrap: anywhere;
 }
 
-.adam-card ul {
-	list-style:none;
-	padding:0;
-	margin:0;
+.adam-notification-list {
+	display: grid;
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
-.adam-card li {
-	margin-bottom:16px;
-	font-size:16px;
-	font-weight:500;
+.adam-notification-list li {
+	position: relative;
+	margin: 0;
+	padding: 13px 14px 13px 38px;
+	border-radius: 14px;
+	background: #f8fafc;
+	color: #344256;
+	font-weight: 650;
+	line-height: 1.55;
 }
 
-.adam-card a {
-	display:inline-block;
-	padding:12px 22px;
-	background:#16a34a;
-	color:#ffffff;
-	text-decoration:none;
-	border-radius:10px;
-	font-weight:700;
-	font-size:15px;
-	transition:.2s ease;
+.adam-notification-list li::before {
+	content: "";
+	position: absolute;
+	left: 16px;
+	top: 21px;
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: #16a34a;
 }
 
-.adam-card a:hover {
-	background:#15803d;
-	color:#ffffff;
-	transform:translateY(-2px);
+.adam-action-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
 }
 
-.adam-card p + p {
-	margin-top:16px;
+.adam-action-card {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	min-height: 112px;
+	padding: 18px;
+	border: 1px solid #dbe3ea;
+	border-radius: 16px;
+	background: #f8fafc;
+	color: #172033;
+	transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.adam-card br {
-	display:none;
+.adam-action-card:hover,
+.adam-action-card:focus {
+	border-color: #16a34a;
+	box-shadow: 0 12px 26px rgba(22, 163, 74, 0.12);
+	color: #172033;
+	transform: translateY(-2px);
+	outline: none;
 }
 
-.adam-card:first-of-type {
-	border-left:5px solid #16a34a;
+.adam-action-card strong {
+	font-size: 1rem;
+	font-weight: 850;
+	color: #102033;
 }
 
-.adam-member-area section {
-	margin-bottom:24px;
+.adam-action-card span {
+	font-size: 0.93rem;
+	line-height: 1.5;
+	color: #657386;
 }
 
-/* ==========================================
-   Data rows
-========================================== */
-
-.adam-card p{
-	font-size:16px;
-	font-weight:500;
-	color:#374151;
+.adam-member-notice,
+.adam-member-area .notice {
+	margin: 0;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: #ffffff;
+	box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
 }
 
-.adam-card p strong{
-	display:inline-block;
-	min-width:155px;
-	color:#111827;
+.adam-member-area .notice p {
+	margin: 0;
+	font-weight: 750;
 }
 
-/* ==========================================
-   Buttons
-========================================== */
-
-.adam-card .button,
-.adam-card button,
-.adam-card input[type="submit"]{
-
-	width:230px;
-	padding:13px 20px;
-	border-radius:10px;
-	font-size:15px;
-	font-weight:700;
-	transition:.2s ease;
+.adam-member-area .notice-success {
+	border-left: 5px solid #16a34a;
+	background: #ecfdf5;
+	color: #166534;
 }
 
-.adam-card .button:hover,
-.adam-card button:hover,
-.adam-card input[type="submit"]:hover{
-
-	transform:translateY(-2px);
+.adam-member-area .notice-error {
+	border-left: 5px solid #dc2626;
+	background: #fef2f2;
+	color: #991b1b;
 }
 
-/* ==========================================
-   Status Badges
-========================================== */
-
-.adam-badge{
-	display:inline-flex;
-	align-items:center;
-	padding:8px 16px;
-	border-radius:999px;
-	font-size:14px;
-	font-weight:700;
+.adam-member-login {
+	max-width: 760px;
 }
 
-.adam-badge.active{
-	background:#dcfce7;
-	color:#166534;
+.adam-login-panel {
+	padding: 38px;
+	border-radius: 24px;
 }
 
-.adam-badge.warning{
-	background:#fef3c7;
-	color:#92400e;
+.adam-login-copy {
+	margin-bottom: 26px;
 }
 
-.adam-badge.expired{
-	background:#fee2e2;
-	color:#991b1b;
+.adam-login-copy p:not(.adam-eyebrow) {
+	max-width: 560px;
+	color: #526070;
 }
 
-/* ==========================================
-   Password Strength
-========================================== */
-
-.adam-password-strength{
-	margin:26px 0;
-	padding:24px;
-	background:#f8fafc;
-	border:1px solid #dbe3ea;
-	border-radius:12px;
+.adam-login-form {
+	display: grid;
+	gap: 18px;
 }
 
-.adam-strength-title{
-	margin:0 0 18px;
-	font-size:18px;
-	font-weight:700;
-	color:#1f2937;
-}
-
-.adam-strength-bar{
-	display:flex !important;
-	gap:8px;
-	margin:14px 0 18px;
-	width:100%;
-	height:10px;
-}
-
-.adam-strength-bar span{
-	display:block !important;
-	flex:1 1 0;
-	height:10px !important;
-	min-height:10px !important;
-	max-height:10px;
-	background:#d1d5db;
-	border-radius:999px;
-	transition:background .2s ease;
-}
-
-.adam-strength-text{
-	margin:0 0 20px;
-	font-size:16px;
-	font-weight:700;
-	color:#374151;
-}
-
-.adam-password-rules p{
-	margin:0 0 14px;
-	font-size:15px;
-	font-weight:700;
-	color:#111827;
-}
-
-.adam-password-rules ul{
-	margin:0;
-	padding:0;
-	list-style:none;
-}
-
-.adam-password-rules li{
-	display:flex;
-	align-items:center;
-	gap:8px;
-	margin:12px 0;
-	font-size:15px;
-	font-weight:500;
-	line-height:1.5;
-	color:#c62828;
-	transition:all .2s ease;
-}
-
-.adam-card label{
-	display:block;
-	margin-bottom:8px;
-	font-size:15px;
-	font-weight:700;
-	color:#374151;
+.adam-form-field label,
+.adam-card label {
+	display: block;
+	margin-bottom: 8px;
+	font-size: 0.93rem;
+	font-weight: 800;
+	color: #344256;
 }
 
 .adam-card input,
-.adam-card select{
-	font-size:15px;
-	font-weight:500;
-	padding:12px 14px;
-	border-radius:8px;
+.adam-card select {
+	width: 100%;
+	max-width: 100%;
+	padding: 12px 14px;
+	border: 1px solid #cfd8e3;
+	border-radius: 12px;
+	font-size: 1rem;
+	font-weight: 600;
 }
 
-/* ==========================================
-   Password Toggle
-========================================== */
-
-.adam-password-wrapper{
-	position:relative;
-	width:100%;
+.adam-card input:focus,
+.adam-card select:focus {
+	border-color: #2271b1;
+	box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.14);
+	outline: none;
 }
 
-.adam-password-wrapper input{
-	width:100%;
-	padding-right:48px !important;
+.adam-remember {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	width: fit-content;
+	margin: 0;
 }
 
-.adam-password-toggle{
-	position:absolute;
-	top:50%;
-	right:12px;
-	transform:translateY(-50%);
-	width:32px;
-	height:32px;
-	border:none;
-	background:transparent;
-	padding:0;
-	margin:0;
-	display:flex;
-	align-items:center;
-	justify-content:center;
-	cursor:pointer;
-	color:#6b7280;
+.adam-remember input {
+	width: auto;
 }
 
-.adam-password-toggle:hover{
-	color:#2e7d32;
+.adam-primary-action,
+.adam-card .button,
+.adam-card button,
+.adam-card input[type="submit"] {
+	width: fit-content;
+	min-width: 180px;
+	padding: 12px 20px;
+	border-radius: 12px;
+	font-size: 0.96rem;
+	font-weight: 800;
+	cursor: pointer;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.adam-password-toggle .dashicons{
-	font-size:20px;
-	width:20px;
-	height:20px;
-	line-height:20px;
+.adam-primary-action:hover,
+.adam-card .button:hover,
+.adam-card button:hover,
+.adam-card input[type="submit"]:hover {
+	transform: translateY(-1px);
 }
 
-/* ==========================================
-   Login Required
-========================================== */
-
-.adam-login-required{
-	text-align:center !important;
+.adam-text-link {
+	width: fit-content;
+	color: #2271b1;
+	font-weight: 800;
 }
 
-.adam-login-required h2{
-	text-align:center !important;
+.adam-text-link:hover,
+.adam-text-link:focus {
+	color: #145d8f;
+	text-decoration: underline;
 }
 
-.adam-login-required p{
-	text-align:center !important;
-	margin:18px auto !important;
-	max-width:550px;
+.adam-empty-state {
+	text-align: center;
 }
 
-.adam-login-required a{
-	display:inline-block;
-	margin:10px 6px;
+.adam-empty-state .adam-action-card {
+	display: inline-flex;
+	min-height: auto;
+	margin-top: 20px;
+	text-align: left;
 }
 
-.adam-card.adam-login-required{
-	display:flex;
-	flex-direction:column;
-	align-items:center;
-	text-align:center;
+/* Password strength and password forms used by companion account screens. */
+.adam-password-strength {
+	margin: 26px 0;
+	padding: 24px;
+	background: #f8fafc;
+	border: 1px solid #dbe3ea;
+	border-radius: 14px;
 }
 
-.adam-card.adam-login-required h2,
-.adam-card.adam-login-required p{
-	text-align:center;
-	width:100%;
+.adam-strength-title {
+	margin: 0 0 18px;
+	font-size: 18px;
+	font-weight: 800;
+	color: #172033;
 }
 
-.adam-card.adam-login-required a{
-	align-self:center;
+.adam-strength-bar {
+	display: flex !important;
+	gap: 8px;
+	margin: 14px 0 18px;
+	width: 100%;
+	height: 10px;
 }
 
-/* ==========================================
-   Notices
-========================================== */
-
-.adam-card .notice{
-	margin:0 0 24px;
-	padding:18px 22px;
-	border-radius:10px;
-	font-size:16px;
-	line-height:1.7;
-	font-weight:500;
+.adam-strength-bar span {
+	display: block !important;
+	flex: 1 1 0;
+	height: 10px !important;
+	min-height: 10px !important;
+	max-height: 10px;
+	background: #d1d5db;
+	border-radius: 999px;
+	transition: background 0.2s ease;
 }
 
-.adam-card .notice p{
-	font-size:17px;
-	font-weight:700;
+.adam-strength-text {
+	margin: 0 0 20px;
+	font-size: 16px;
+	font-weight: 800;
+	color: #374151;
 }
 
-.adam-card .notice-success{
-	background:#ecfdf5;
-	border-left:5px solid #16a34a;
-	color:#166534;
+.adam-password-rules p {
+	margin: 0 0 14px;
+	font-size: 15px;
+	font-weight: 800;
+	color: #111827;
 }
 
-.adam-card .notice-error{
-	background:#fef2f2;
-	border-left:5px solid #dc2626;
-	color:#991b1b;
+.adam-password-rules ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
-@media (min-width:768px){
+.adam-password-rules li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.5;
+	color: #c62828;
+	transition: all 0.2s ease;
+}
 
-	.adam-member-area{
-		display:grid;
-		grid-template-columns:repeat(2,1fr);
-		gap:28px;
+.adam-password-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.adam-password-wrapper input {
+	width: 100%;
+	padding-right: 48px !important;
+}
+
+.adam-password-toggle {
+	position: absolute;
+	top: 50%;
+	right: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: #6b7280;
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.adam-password-toggle:hover {
+	color: #16a34a;
+}
+
+.adam-password-toggle .dashicons {
+	width: 20px;
+	height: 20px;
+	font-size: 20px;
+	line-height: 20px;
+}
+
+.adam-login-required {
+	text-align: center !important;
+}
+
+.adam-login-required h2 {
+	text-align: center !important;
+}
+
+.adam-login-required p {
+	max-width: 550px;
+	margin: 18px auto !important;
+	text-align: center !important;
+}
+
+.adam-card.adam-login-required {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+@media (max-width: 900px) {
+	.adam-member-hero {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 
-	.adam-member-area h2,
-	.adam-member-area > p:first-of-type{
-		grid-column:1/-1;
+	.adam-hero-status {
+		align-items: flex-start;
 	}
 
-	.adam-card:last-child{
-		grid-column:1/-1;
+	.adam-status-card,
+	.adam-membership-card,
+	.adam-notifications-card,
+	.adam-profile-card,
+	.adam-actions-card,
+	.adam-future-card {
+		grid-column: 1 / -1;
+	}
+
+	.adam-action-grid {
+		grid-template-columns: 1fr;
 	}
 }
 
-@media (max-width:767px){
-
-	.adam-member-area{
-		padding:20px 16px;
+@media (max-width: 640px) {
+	.adam-member-area {
+		margin: 28px auto;
+		padding: 0 16px;
 	}
 
-	.adam-member-area h2{
-		font-size:1.8rem;
+	.adam-member-hero,
+	.adam-card,
+	.adam-login-panel {
+		padding: 22px;
+		border-radius: 18px;
 	}
 
-	.adam-card{
-		padding:22px;
+	.adam-card-heading {
+		flex-direction: column;
 	}
 
+	.adam-data-item {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.adam-data-item strong {
+		max-width: 100%;
+		text-align: left;
+	}
+
+	.adam-primary-action,
 	.adam-card .button,
 	.adam-card button,
-	.adam-card input[type="submit"]{
-		width:100%;
+	.adam-card input[type="submit"] {
+		width: 100%;
 	}
 }

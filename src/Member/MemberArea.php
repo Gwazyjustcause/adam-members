@@ -34,7 +34,6 @@ final class MemberArea {
 	 * Register shortcode and assets.
 	 */
 	public function register(): void {
-
 		add_shortcode(
 			'adam_member_area',
 			array( $this, 'render' )
@@ -50,7 +49,6 @@ final class MemberArea {
 	 * Enqueue assets.
 	 */
 	public function enqueue_assets(): void {
-
 		wp_enqueue_style(
 			'adam-member-area',
 			ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css',
@@ -63,9 +61,7 @@ final class MemberArea {
 	 * Render member area.
 	 */
 	public function render(): string {
-
 		if ( ! is_user_logged_in() ) {
-
 			$message = $this->process_login();
 
 			return $this->render_login( $message );
@@ -78,115 +74,57 @@ final class MemberArea {
 		}
 
 		ob_start();
-
 		?>
-
-		<div class="adam-member-area">
-
+		<div class="adam-member-area adam-member-dashboard">
 			<?php $this->render_header( $member ); ?>
+			<?php $this->render_account_notices(); ?>
 
 			<?php
-
-		if ( isset( $_GET['password_changed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['password_changed'] ) ) ) :
-
-		?>
-
-			<div class="notice notice-success">
-				<p>Palavra-passe alterada com sucesso.</p>
-			</div>
-
-		<?php elseif (
-			isset( $_GET['email_changed'] ) &&
-				'1' === sanitize_text_field(
-					wp_unslash( $_GET['email_changed'] )
-				)
-		) :
-		?>
-
-			<div class="notice notice-success">
-				<p>Endereço de email alterado com sucesso.</p>
-			</div>
-
-		<?php endif; ?>
-
-			<?php
-
 			if ( $member->isPending() ) {
-
 				$this->render_pending( $member );
-
 			} elseif ( $member->isRejected() ) {
-
 				$this->render_rejected( $member );
-
 			} elseif ( $member->isActive() ) {
-
 				$this->render_active( $member );
-
 			} else {
-
-				echo '<p>Estado desconhecido.</p>';
-
+				$this->render_unknown_status();
 			}
-
 			?>
-
 		</div>
-
 		<?php
 
 		return (string) ob_get_clean();
 	}
-    	/**
+
+	/**
 	 * Render login page.
 	 *
 	 * @param string $message Message to display.
 	 */
 	private function render_login( string $message = '' ): string {
-
-	if ( isset( $_GET['logged_out'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['logged_out'] ) ) ) {
-
-			$message = '
-			<div class="notice notice-success">
-				<p>Sessão terminada com sucesso.</p>
-			</div>';
-
+		if ( isset( $_GET['logged_out'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['logged_out'] ) ) ) {
+			$message = $this->notice_markup( 'success', __( 'Sessão terminada com sucesso.', 'adam-membership' ) );
 		} elseif ( isset( $_GET['password_reset'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['password_reset'] ) ) ) {
-
-			$message = '
-			<div class="notice notice-success">
-				<p>
-					A sua palavra-passe foi alterada com sucesso.
-					Pode agora iniciar sessão.
-				</p>
-			</div>';
-
+			$message = $this->notice_markup( 'success', __( 'A sua palavra-passe foi alterada com sucesso. Pode agora iniciar sessão.', 'adam-membership' ) );
 		}
 
-	ob_start();
-
-	?>
-
-		<div class="adam-member-area">
-
-			<div class="adam-card">
-
-				<h2>Área do Sócio</h2>
-
-				<p>Inicie sessão para aceder à Área do Sócio.</p>
+		ob_start();
+		?>
+		<div class="adam-member-area adam-member-login">
+			<section class="adam-login-panel adam-card">
+				<div class="adam-login-copy">
+					<p class="adam-eyebrow"><?php esc_html_e( 'ADAM Membership', 'adam-membership' ); ?></p>
+					<h2><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></h2>
+					<p><?php esc_html_e( 'Inicie sessão para acompanhar o estado da sua inscrição, consultar os seus dados e gerir o acesso à conta.', 'adam-membership' ); ?></p>
+				</div>
 
 				<?php echo wp_kses_post( $message ); ?>
 
-				<form method="post">
-
+				<form method="post" class="adam-login-form">
 					<?php wp_nonce_field( 'adam_member_login' ); ?>
 
-					<p>
-
-						<label for="adam_login">
-							Email ou Nome de Utilizador
-						</label>
-
+					<div class="adam-form-field">
+						<label for="adam_login"><?php esc_html_e( 'Email ou nome de utilizador', 'adam-membership' ); ?></label>
 						<input
 							type="text"
 							id="adam_login"
@@ -194,71 +132,36 @@ final class MemberArea {
 							required
 							autocomplete="username"
 						>
+					</div>
 
-					</p>
-
-					<p>
-
-						<label for="adam_password">
-							Palavra-passe
-						</label>
-
-					<div class="adam-password-wrapper">
-
-						<input
-						type="password"
-						id="adam_password"
-						name="adam_password"
-						required
-						autocomplete="current-password"
-				>
-
-			</div>
-
-					</p>
-
-					<p>
-
-						<label>
-
+					<div class="adam-form-field">
+						<label for="adam_password"><?php esc_html_e( 'Palavra-passe', 'adam-membership' ); ?></label>
+						<div class="adam-password-wrapper">
 							<input
-								type="checkbox"
-								name="rememberme"
-								value="1"
+								type="password"
+								id="adam_password"
+								name="adam_password"
+								required
+								autocomplete="current-password"
 							>
+						</div>
+					</div>
 
-							Lembrar-me
+					<label class="adam-remember">
+						<input type="checkbox" name="rememberme" value="1">
+						<span><?php esc_html_e( 'Lembrar-me', 'adam-membership' ); ?></span>
+					</label>
 
-						</label>
+					<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action">
+						<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
+					</button>
 
-					</p>
-
-					<p>
-
-						<button
-							type="submit"
-							name="adam_login_submit"
-							class="button button-primary"
-						>
-							Iniciar Sessão
-						</button>
-
-					</p>
-
-					<p>
-
-						<a href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
-							Esqueceu-se da palavra-passe?
-						</a>
-
-					</p>
-
+					<a class="adam-text-link" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+						<?php esc_html_e( 'Esqueceu-se da palavra-passe?', 'adam-membership' ); ?>
+					</a>
 				</form>
-
-			</div>
-
+			</section>
 		</div>
-
 		<?php
 
 		return (string) ob_get_clean();
@@ -268,9 +171,8 @@ final class MemberArea {
 	 * Process login.
 	 */
 	private function process_login(): string {
-
 		if (
-			'POST' !== $_SERVER['REQUEST_METHOD'] ||
+			'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ||
 			! isset( $_POST['adam_login_submit'] )
 		) {
 			return '';
@@ -283,7 +185,7 @@ final class MemberArea {
 				'adam_member_login'
 			)
 		) {
-			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
+			return $this->notice_markup( 'error', __( 'Pedido inválido.', 'adam-membership' ) );
 		}
 
 		$login = sanitize_text_field(
@@ -291,7 +193,6 @@ final class MemberArea {
 		);
 
 		if ( is_email( $login ) ) {
-
 			$user = get_user_by( 'email', $login );
 
 			if ( $user instanceof \WP_User ) {
@@ -309,29 +210,32 @@ final class MemberArea {
 		);
 
 		if ( is_wp_error( $result ) ) {
-			return '<div class="notice notice-error"><p>Email ou palavra-passe incorretos.</p></div>';
+			return $this->notice_markup( 'error', __( 'Email ou palavra-passe incorretos.', 'adam-membership' ) );
 		}
 
 		wp_safe_redirect( home_url( '/socio/' ) );
 		exit;
 	}
-    	/**
+
+	/**
 	 * Render member not found.
 	 */
 	private function render_not_found(): string {
+		ob_start();
+		?>
+		<div class="adam-member-area adam-member-dashboard">
+			<section class="adam-card adam-empty-state">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
+				<h2><?php esc_html_e( 'Informação indisponível', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'Não foi encontrada informação de associado para esta conta.', 'adam-membership' ); ?></p>
+				<a class="adam-action-card" href="<?php echo esc_url( wp_logout_url( home_url( '/socio/?logged_out=1' ) ) ); ?>">
+					<?php esc_html_e( 'Terminar sessão', 'adam-membership' ); ?>
+				</a>
+			</section>
+		</div>
+		<?php
 
-		return '
-		<div class="adam-member-area">
-
-			<div class="adam-card">
-
-				<h2>Área do Sócio</h2>
-
-				<p>Não foi encontrada informação de associado.</p>
-
-			</div>
-
-		</div>';
+		return (string) ob_get_clean();
 	}
 
 	/**
@@ -340,24 +244,44 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_header( Member $member ): void {
-
 		?>
+		<header class="adam-member-hero">
+			<div>
+				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
+				<h2>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %s: member full name. */
+							__( 'Bem-vindo, %s', 'adam-membership' ),
+							$member->full_name()
+						)
+					);
+					?>
+				</h2>
+				<p><?php esc_html_e( 'O seu painel central para acompanhar a inscrição, quota, dados de sócio e próximas funcionalidades da ADAM.', 'adam-membership' ); ?></p>
+			</div>
 
-		<h2>Área do Sócio</h2>
-
-		<p>
-
-			Bem-vindo,
-
-			<strong>
-
-				<?php echo esc_html( $member->full_name() ); ?>
-
-			</strong>.
-
-		</p>
-
+			<div class="adam-hero-status">
+				<?php $this->render_status_badge( $member->status() ); ?>
+				<span><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: __( 'Número por atribuir', 'adam-membership' ) ); ?></span>
+			</div>
+		</header>
 		<?php
+	}
+
+	/**
+	 * Render account notices.
+	 */
+	private function render_account_notices(): void {
+		if ( isset( $_GET['password_changed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['password_changed'] ) ) ) {
+			echo wp_kses_post( $this->notice_markup( 'success', __( 'Palavra-passe alterada com sucesso.', 'adam-membership' ) ) );
+			return;
+		}
+
+		if ( isset( $_GET['email_changed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['email_changed'] ) ) ) {
+			echo wp_kses_post( $this->notice_markup( 'success', __( 'Endereço de email alterado com sucesso.', 'adam-membership' ) ) );
+		}
 	}
 
 	/**
@@ -366,20 +290,35 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_pending( Member $member ): void {
+		?>
+		<div class="adam-dashboard-grid">
+			<?php
+			$this->render_status_card(
+				$member->status(),
+				__( 'O seu pedido de inscrição foi recebido e encontra-se em análise pela ADAM.', 'adam-membership' )
+			);
 
-		$this->render_status_card(
-			'Pendente',
-			'O seu pedido de inscrição foi recebido e encontra-se em análise pela ADAM.'
-		);
-
-		$this->render_actions(
-			array(
+			$this->render_notifications_card(
 				array(
-					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-				),
-			)
-		);
+					__( 'A equipa ADAM está a validar os seus dados e comprovativo de pagamento.', 'adam-membership' ),
+					__( 'Receberá uma atualização assim que o processo for concluído.', 'adam-membership' ),
+				)
+			);
+
+			$this->render_future_card();
+
+			$this->render_actions(
+				array(
+					array(
+						'label'       => __( 'Terminar sessão', 'adam-membership' ),
+						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+					),
+				)
+			);
+			?>
+		</div>
+		<?php
 	}
 
 	/**
@@ -388,79 +327,124 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_rejected( Member $member ): void {
+		?>
+		<div class="adam-dashboard-grid">
+			<?php
+			$this->render_status_card(
+				$member->status(),
+				__( 'Infelizmente a sua inscrição não foi aprovada. Caso pretenda mais informações, contacte a ADAM.', 'adam-membership' )
+			);
 
-		$this->render_status_card(
-			'Rejeitado',
-			'Infelizmente a sua inscrição não foi aprovada. Caso pretenda mais informações, contacte a ADAM.'
-		);
-
-		$this->render_actions(
-			array(
+			$this->render_notifications_card(
 				array(
-					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) )
-				),
-			)
-		);
+					__( 'A sua conta continua disponível para consulta.', 'adam-membership' ),
+					__( 'Os dados submetidos permanecem guardados para referência administrativa.', 'adam-membership' ),
+				)
+			);
+
+			$this->render_profile( $member );
+
+			$this->render_actions(
+				array(
+					array(
+						'label'       => __( 'Terminar sessão', 'adam-membership' ),
+						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+					),
+				)
+			);
+			?>
+		</div>
+		<?php
 	}
-    	/**
+
+	/**
 	 * Render active dashboard.
 	 *
 	 * @param Member $member Member.
 	 */
 	private function render_active( Member $member ): void {
+		?>
+		<div class="adam-dashboard-grid">
+			<?php
+			$this->render_status_card(
+				$member->status(),
+				__( 'A sua inscrição encontra-se ativa. Pode consultar os seus dados e gerir o acesso à conta.', 'adam-membership' )
+			);
 
+			$this->render_membership( $member );
+
+			$this->render_notifications_card(
+				array(
+					__( 'A área de cartão digital, QR code e renovações ficará disponível em futuras atualizações.', 'adam-membership' ),
+				)
+			);
+
+			$this->render_profile( $member );
+
+			$this->render_actions(
+				array(
+					array(
+						'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
+						'description' => __( 'Atualizar a credencial de acesso.', 'adam-membership' ),
+						'url'         => home_url( '/socio-password/' ),
+					),
+					array(
+						'label'       => __( 'Alterar email', 'adam-membership' ),
+						'description' => __( 'Gerir o endereço associado à conta.', 'adam-membership' ),
+						'url'         => home_url( '/socio-email/' ),
+					),
+					array(
+						'label'       => __( 'Terminar sessão', 'adam-membership' ),
+						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+					),
+				)
+			);
+			?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render unknown status state.
+	 */
+	private function render_unknown_status(): void {
 		$this->render_status_card(
-			$member->status(),
-			'A sua quota encontra-se ativa.'
-		);
-
-		$this->render_membership( $member );
-
-		$this->render_profile( $member );
-
-		$this->render_actions(
-			array(
-				array(
-					'label' => 'Alterar Palavra-passe',
-					'url'   => home_url( '/socio-password/' ),
-				),
-				array(
-					'label' => 'Alterar Email',
-					'url'   => home_url( '/socio-email/' ),
-				),
-				array(
-					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-				),
-			)
+			__( 'Estado desconhecido', 'adam-membership' ),
+			__( 'Não foi possível determinar o estado atual da sua inscrição.', 'adam-membership' )
 		);
 	}
 
 	/**
 	 * Render status card.
 	 *
-	 * @param string $status Status.
+	 * @param string $status  Status.
 	 * @param string $message Message.
 	 */
-	private function render_status_card(
-		string $status,
-		string $message
-	): void {
-
+	private function render_status_card( string $status, string $message ): void {
 		?>
-
-		<section class="adam-card">
-
-			<h3>Estado</h3>
-
-			<p><strong><?php echo esc_html( $status ); ?></strong></p>
-
+		<section class="adam-card adam-status-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Estado da inscrição', 'adam-membership' ); ?></p>
+				<?php $this->render_status_badge( $status ); ?>
+			</div>
 			<p><?php echo esc_html( $message ); ?></p>
-
 		</section>
-
 		<?php
+	}
+
+	/**
+	 * Render a status badge.
+	 *
+	 * @param string $status Member status.
+	 */
+	private function render_status_badge( string $status ): void {
+		printf(
+			'<span class="adam-badge %1$s">%2$s</span>',
+			esc_attr( $this->status_class( $status ) ),
+			esc_html( $status )
+		);
 	}
 
 	/**
@@ -469,30 +453,19 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_membership( Member $member ): void {
-
 		?>
+		<section class="adam-card adam-membership-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Quota e identificação', 'adam-membership' ); ?></p>
+				<h3><?php esc_html_e( 'Resumo de sócio', 'adam-membership' ); ?></h3>
+			</div>
 
-		<section class="adam-card">
-
-			<h3>Quota</h3>
-
-			<p>
-				<strong>N.º de Sócio:</strong><br>
-				<?php echo esc_html( (string) $member->field( 'numero_socio' ) ); ?>
-			</p>
-
-			<p>
-				<strong>Data de Adesão:</strong><br>
-				<?php echo esc_html( (string) $member->field( 'data_adesao' ) ); ?>
-			</p>
-
-			<p>
-				<strong>Validade:</strong><br>
-				<?php echo esc_html( (string) $member->field( 'validade_quota' ) ); ?>
-			</p>
-
+			<div class="adam-data-list">
+				<?php $this->render_data_item( __( 'N.º de sócio', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
+				<?php $this->render_data_item( __( 'Data de adesão', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
+				<?php $this->render_data_item( __( 'Validade da quota', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
+			</div>
 		</section>
-
 		<?php
 	}
 
@@ -502,71 +475,159 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_profile( Member $member ): void {
-
 		?>
+		<section class="adam-card adam-profile-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Dados do sócio', 'adam-membership' ); ?></p>
+				<h3><?php esc_html_e( 'Perfil', 'adam-membership' ); ?></h3>
+			</div>
 
-		<section class="adam-card">
-
-			<h3>Dados do Sócio</h3>
-
-			<p>
-				<strong>Nome:</strong><br>
-				<?php echo esc_html( $member->full_name() ); ?>
-			</p>
-
-			<p>
-				<strong>Email:</strong><br>
-				<?php echo esc_html( $member->email() ); ?>
-			</p>
-
-			<p>
-				<strong>Telefone:</strong><br>
-				<?php echo esc_html( (string) $member->field( 'telefone' ) ); ?>
-			</p>
-
-			<p>
-				<strong>Equipa:</strong><br>
-				<?php echo esc_html( (string) $member->field( 'equipa' ) ); ?>
-			</p>
-
+			<div class="adam-data-list">
+				<?php $this->render_data_item( __( 'Nome', 'adam-membership' ), $member->full_name() ); ?>
+				<?php $this->render_data_item( __( 'Email', 'adam-membership' ), $member->email() ); ?>
+				<?php $this->render_data_item( __( 'Telefone', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
+				<?php $this->render_data_item( __( 'Equipa', 'adam-membership' ), (string) $member->field( 'equipa' ) ); ?>
+			</div>
 		</section>
+		<?php
+	}
 
+	/**
+	 * Render notifications card.
+	 *
+	 * @param array<int, string> $messages Notification messages.
+	 */
+	private function render_notifications_card( array $messages ): void {
+		?>
+		<section class="adam-card adam-notifications-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
+				<h3><?php esc_html_e( 'Atualizações importantes', 'adam-membership' ); ?></h3>
+			</div>
+
+			<ul class="adam-notification-list">
+				<?php foreach ( $messages as $message ) : ?>
+					<li><?php echo esc_html( $message ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render future-ready member tools card.
+	 */
+	private function render_future_card(): void {
+		?>
+		<section class="adam-card adam-future-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Em preparação', 'adam-membership' ); ?></p>
+				<h3><?php esc_html_e( 'Cartão, QR code e renovações', 'adam-membership' ); ?></h3>
+			</div>
+			<p><?php esc_html_e( 'Esta área está preparada para receber o cartão digital de sócio, QR code e gestão de renovações.', 'adam-membership' ); ?></p>
+		</section>
 		<?php
 	}
 
 	/**
 	 * Render action links.
 	 *
-	 * @param array<int,array{label:string,url:string}> $actions Actions.
+	 * @param array<int,array{label:string,description:string,url:string}> $actions Actions.
 	 */
 	private function render_actions( array $actions ): void {
-
 		?>
+		<section class="adam-card adam-actions-card">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Ações', 'adam-membership' ); ?></p>
+				<h3><?php esc_html_e( 'Gerir conta', 'adam-membership' ); ?></h3>
+			</div>
 
-		<section class="adam-card">
-
-			<h3>Ações</h3>
-
-			<ul>
-
+			<div class="adam-action-grid">
 				<?php foreach ( $actions as $action ) : ?>
-
-					<li>
-
-						<a href="<?php echo esc_url( $action['url'] ); ?>">
-
-							<?php echo esc_html( $action['label'] ); ?>
-
-						</a>
-
-					</li>
-
+					<a class="adam-action-card" href="<?php echo esc_url( $action['url'] ); ?>">
+						<strong><?php echo esc_html( $action['label'] ); ?></strong>
+						<span><?php echo esc_html( $action['description'] ); ?></span>
+					</a>
 				<?php endforeach; ?>
-
-			</ul>
-
+			</div>
 		</section>
-
 		<?php
+	}
+
+	/**
+	 * Render a data item.
+	 *
+	 * @param string $label Data label.
+	 * @param string $value Data value.
+	 */
+	private function render_data_item( string $label, string $value ): void {
+		?>
+		<div class="adam-data-item">
+			<span><?php echo esc_html( $label ); ?></span>
+			<strong><?php echo esc_html( '' !== $value ? $value : __( 'Por preencher', 'adam-membership' ) ); ?></strong>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Build notice markup.
+	 *
+	 * @param string $type    Notice type.
+	 * @param string $message Notice message.
+	 */
+	private function notice_markup( string $type, string $message ): string {
+		return sprintf(
+			'<div class="notice notice-%1$s adam-member-notice"><p>%2$s</p></div>',
+			esc_attr( $type ),
+			esc_html( $message )
+		);
+	}
+
+	/**
+	 * Convert a member status into a badge class.
+	 *
+	 * @param string $status Member status.
+	 */
+	private function status_class( string $status ): string {
+		if ( Member::STATUS_ACTIVE === $status ) {
+			return 'active';
+		}
+
+		if ( Member::STATUS_REJECTED === $status ) {
+			return 'rejected expired';
+		}
+
+		if ( Member::STATUS_PENDING === $status ) {
+			return 'pending warning';
+		}
+
+		return 'unknown';
+	}
+
+	/**
+	 * Format stored dates for display.
+	 *
+	 * @param mixed $date Raw date value.
+	 */
+	private function format_date( mixed $date ): string {
+		if ( ! is_scalar( $date ) ) {
+			return '';
+		}
+
+		$date = trim( (string) $date );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			return substr( $date, 6, 2 ) . '/' . substr( $date, 4, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return substr( $date, 8, 2 ) . '/' . substr( $date, 5, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		return $date;
 	}
 }
