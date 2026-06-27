@@ -49,11 +49,13 @@ final class MemberArea {
 	 * Enqueue assets.
 	 */
 	public function enqueue_assets(): void {
+		$asset_path = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
+
 		wp_enqueue_style(
 			'adam-member-area',
 			ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css',
 			array(),
-			ADAM_MEMBERSHIP_VERSION
+			file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : ADAM_MEMBERSHIP_VERSION
 		);
 	}
 
@@ -311,7 +313,7 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)
@@ -348,7 +350,7 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)
@@ -386,17 +388,17 @@ final class MemberArea {
 				array(
 					array(
 						'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
-						'description' => __( 'Atualizar a credencial de acesso.', 'adam-membership' ),
+						'description' => __( 'Atualize a sua palavra-passe.', 'adam-membership' ),
 						'url'         => home_url( '/socio-password/' ),
 					),
 					array(
 						'label'       => __( 'Alterar email', 'adam-membership' ),
-						'description' => __( 'Gerir o endereço associado à conta.', 'adam-membership' ),
+						'description' => __( 'Atualize o email da conta.', 'adam-membership' ),
 						'url'         => home_url( '/socio-email/' ),
 					),
 					array(
 						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => __( 'Sair em segurança desta área.', 'adam-membership' ),
+						'description' => __( 'Sair da área de sócio.', 'adam-membership' ),
 						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 					),
 				)

@@ -19,10 +19,17 @@
 	text-decoration: none;
 }
 
-.adam-member-dashboard {
-	display: flex;
+.adam-member-area.adam-member-dashboard {
+	display: flex !important;
 	flex-direction: column;
 	gap: 24px;
+}
+
+.adam-member-dashboard > .adam-member-hero,
+.adam-member-dashboard > .adam-dashboard-grid,
+.adam-member-dashboard > .adam-member-notice,
+.adam-member-dashboard > .notice {
+	width: 100%;
 }
 
 .adam-member-hero {
@@ -58,8 +65,10 @@
 
 .adam-hero-status {
 	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
 	gap: 10px;
 	min-width: 170px;
 }
@@ -230,39 +239,61 @@
 
 .adam-action-grid {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 14px;
+	grid-template-columns: 1fr;
+	gap: 12px;
 }
 
 .adam-action-card {
 	display: flex;
-	flex-direction: column;
-	gap: 7px;
-	min-height: 112px;
-	padding: 18px;
+	align-items: center;
+	justify-content: space-between;
+	flex-direction: row;
+	gap: 18px;
+	min-height: 76px;
+	padding: 16px 18px;
 	border: 1px solid #dbe3ea;
-	border-radius: 16px;
-	background: #f8fafc;
+	border-left: 4px solid #16a34a;
+	border-radius: 14px;
+	background: #ffffff;
 	color: #172033;
 	transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.adam-action-card::after {
+	content: "›";
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 30px;
+	height: 30px;
+	border-radius: 999px;
+	background: #ecfdf5;
+	color: #15803d;
+	font-size: 1.35rem;
+	font-weight: 800;
+	line-height: 1;
 }
 
 .adam-action-card:hover,
 .adam-action-card:focus {
 	border-color: #16a34a;
-	box-shadow: 0 12px 26px rgba(22, 163, 74, 0.12);
+	box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 	color: #172033;
 	transform: translateY(-2px);
 	outline: none;
 }
 
 .adam-action-card strong {
+	display: block;
+	margin-bottom: 4px;
 	font-size: 1rem;
 	font-weight: 850;
 	color: #102033;
 }
 
 .adam-action-card span {
+	display: block;
 	font-size: 0.93rem;
 	line-height: 1.5;
 	color: #657386;
@@ -577,6 +608,15 @@
 	.adam-data-item strong {
 		max-width: 100%;
 		text-align: left;
+	}
+
+	.adam-action-card {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.adam-action-card::after {
+		display: none;
 	}
 
 	.adam-primary-action,
