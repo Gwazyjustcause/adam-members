@@ -238,20 +238,20 @@
 	line-height:20px;
 }
 .adam-login-required{
-	text-align:center;
-	max-width:700px;
-	margin:40px auto;
+	text-align:center !important;
 }
 
 .adam-login-required h2{
-	margin-bottom:20px;
+	text-align:center !important;
 }
 
 .adam-login-required p{
-	max-width:520px;
-	margin:18px auto;
+	text-align:center !important;
+	margin:18px auto !important;
+	max-width:550px;
 }
 
-.adam-login-required .button{
-	margin:8px 6px;
+.adam-login-required a{
+	display:inline-block;
+	margin:10px 6px;
 }
