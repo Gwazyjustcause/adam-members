@@ -92,7 +92,7 @@ final class Account {
 	return '
 	<div class="adam-member-area">
 
-		<div class="adam-card">
+		<div class="adam-card adam-login-required">
 
 			<h2>🔒 Alterar Palavra-passe</h2>
 
@@ -304,7 +304,7 @@ final class Account {
 	return '
 	<div class="adam-member-area">
 
-		<div class="adam-card">
+		<div class="adam-card adam-login-required">
 
 			<h2>🔒 Alterar Email</h2>
 
