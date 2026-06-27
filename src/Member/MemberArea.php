@@ -120,9 +120,13 @@ final class MemberArea {
 	 */
 	private function render_login( string $message = '' ): string {
 
-		ob_start();
+	if ( isset( $_GET['logged_out'] ) ) {
+		$message = '<div class="notice notice-success"><p>Sessão terminada com sucesso.</p></div>';
+	}
 
-		?>
+	ob_start();
+
+	?>
 
 		<div class="adam-member-area">
 
@@ -329,7 +333,7 @@ final class MemberArea {
 			array(
 				array(
 					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url() ),
+					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 				),
 			)
 		);
@@ -351,7 +355,7 @@ final class MemberArea {
 			array(
 				array(
 					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url() ),
+					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) )
 				),
 			)
 		);
@@ -384,7 +388,7 @@ final class MemberArea {
 				),
 				array(
 					'label' => 'Terminar sessão',
-					'url'   => wp_logout_url( home_url() ),
+					'url'   => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
 				),
 			)
 		);

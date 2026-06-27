@@ -255,3 +255,19 @@
 	display:inline-block;
 	margin:10px 6px;
 }
+.adam-card.adam-login-required{
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+	text-align:center;
+}
+
+.adam-card.adam-login-required h2,
+.adam-card.adam-login-required p{
+	text-align:center;
+	width:100%;
+}
+
+.adam-card.adam-login-required a{
+	align-self:center;
+}
