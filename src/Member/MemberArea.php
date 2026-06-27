@@ -98,9 +98,10 @@ final class MemberArea {
 		<?php elseif (
 			isset( $_GET['email_changed'] ) &&
 				'1' === sanitize_text_field(
-				wp_unslash( $_GET['email_changed'] )
-			)
+					wp_unslash( $_GET['email_changed'] )
+				)
 		) :
+		?>
 
 			<div class="notice notice-success">
 				<p>Endereço de email alterado com sucesso.</p>
