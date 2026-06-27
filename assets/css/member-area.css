@@ -119,3 +119,60 @@
 		padding: 18px;
 	}
 }
+/* ==========================================
+   Password Strength
+========================================== */
+
+.adam-password-strength{
+	margin:20px 0;
+	padding:18px;
+	background:#f7f8fa;
+	border:1px solid #e5e7eb;
+	border-radius:10px;
+}
+
+.adam-strength-title{
+	margin:0 0 12px;
+	font-weight:700;
+	font-size:15px;
+}
+
+.adam-strength-bar{
+	display:flex;
+	gap:6px;
+	margin-bottom:12px;
+}
+
+.adam-strength-bar span{
+	flex:1;
+	height:8px;
+	border-radius:999px;
+	background:#d6d6d6;
+	transition:background .2s ease;
+}
+
+.adam-strength-text{
+	margin:0 0 14px;
+	font-weight:700;
+	font-size:15px;
+	color:#374151;
+	transition:color .2s ease;
+}
+
+.adam-password-rules p{
+	margin:0 0 10px;
+	font-weight:600;
+}
+
+.adam-password-rules ul{
+	margin:0;
+	padding-left:22px;
+}
+
+.adam-password-rules li{
+	margin:8px 0;
+	list-style:none;
+	font-size:14px;
+	color:#c62828;
+	transition:color .2s ease;
+}

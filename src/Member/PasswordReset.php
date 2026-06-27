@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
-use WP_Error;
 use WP_User;
 
 /**
@@ -144,7 +143,7 @@ final class PasswordReset {
 
 		return (string) ob_get_clean();
 	}
-    	/**
+ 	/**
 	 * Process password reset.
 	 *
 	 * @param WP_User $user User.
@@ -192,6 +191,25 @@ final class PasswordReset {
 			</div>';
 		}
 
+		/*
+		 * Prevent reusing the current password.
+		 */
+		if (
+			wp_check_password(
+				$password1,
+				$user->user_pass,
+				$user->ID
+			)
+		) {
+
+			return '
+			<div class="notice notice-error">
+				<p>
+					A nova palavra-passe deve ser diferente da palavra-passe atual.
+				</p>
+			</div>';
+		}
+
 		reset_password(
 			$user,
 			$password1
@@ -201,6 +219,6 @@ final class PasswordReset {
 			home_url( '/socio/' )
 		);
 
-		exit;
+	exit;
 	}
 }

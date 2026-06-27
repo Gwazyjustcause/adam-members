@@ -28,6 +28,51 @@ final class Account {
 			'adam_change_email',
 			array( $this, 'render_email_form' )
 		);
+
+		add_action(
+			'wp_enqueue_scripts',
+			array( $this, 'enqueue_assets' )
+		);
+	}
+
+		/**
+	 * Enqueue password strength assets.
+	 */
+	public function enqueue_assets(): void {
+
+		if (
+			! is_page(
+				array(
+					'socio-password',
+					'redefinir-password',
+				)
+			)
+		) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'password-strength-meter'
+		);
+
+		wp_enqueue_script(
+			'zxcvbn-async'
+		);
+
+		wp_enqueue_script(
+			'adam-password-strength',
+			ADAM_MEMBERSHIP_URL . 'assets/js/password-strength.js',
+			array(
+				'jquery',
+				'password-strength-meter',
+			),
+			ADAM_MEMBERSHIP_VERSION,
+			true
+		);
+
+		wp_enqueue_style(
+			'dashicons'
+		);
 	}
 
 	/**
@@ -78,46 +123,111 @@ final class Account {
 
 					</p>
 
-					<p>
+<p>
 
-						<label for="new_password">
-							Nova palavra-passe
-						</label><br>
+	<label for="new_password">
+		Nova palavra-passe
+	</label><br>
 
-						<input
-							type="password"
-							id="new_password"
-							name="new_password"
-							required
-						>
+	<input
+		type="password"
+		id="new_password"
+		name="new_password"
+		required
+		autocomplete="new-password"
+	>
 
-					</p>
+</p>
 
-					<p>
+<div
+	id="adam-password-strength"
+	class="adam-password-strength"
+>
 
-						<label for="confirm_password">
-							Confirmar nova palavra-passe
-						</label><br>
+	<p class="adam-strength-title">
+		Força da palavra-passe
+	</p>
 
-						<input
-							type="password"
-							id="confirm_password"
-							name="confirm_password"
-							required
-						>
+	<div
+		id="adam-strength-bar"
+		class="adam-strength-bar"
+	>
 
-					</p>
-                    					<p>
+		<span></span>
+		<span></span>
+		<span></span>
+		<span></span>
+		<span></span>
 
-						<button
-							type="submit"
-							name="adam_change_password"
-							class="button button-primary"
-						>
-							Alterar Palavra-passe
-						</button>
+	</div>
 
-					</p>
+	<p
+		id="password-strength-text"
+		class="adam-strength-text"
+	>
+		Muito fraca
+	</p>
+
+	<div class="adam-password-rules">
+
+		<p>
+			A sua palavra-passe deve conter:
+		</p>
+
+		<ul>
+
+			<li id="rule-length">
+				✗ Pelo menos 8 caracteres
+			</li>
+
+			<li id="rule-lower">
+				✗ Uma letra minúscula
+			</li>
+
+			<li id="rule-upper">
+				✗ Uma letra maiúscula
+			</li>
+
+			<li id="rule-number">
+				✗ Um número
+			</li>
+
+			<li id="rule-symbol">
+				✗ Um símbolo
+			</li>
+
+		</ul>
+
+	</div>
+
+</div>
+
+<p>
+
+	<label for="confirm_password">
+		Confirmar nova palavra-passe
+	</label><br>
+
+	<input
+		type="password"
+		id="confirm_password"
+		name="confirm_password"
+		required
+	>
+
+</p>
+
+<p>
+
+	<button
+		type="submit"
+		name="adam_change_password"
+		class="button button-primary"
+	>
+		Alterar Palavra-passe
+	</button>
+
+</p>
 
 				</form>
 
@@ -249,17 +359,39 @@ final class Account {
 	 */
 	private function process_password_change(): string {
 
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_change_password' ) ) {
+		if (
+			! isset( $_POST['_wpnonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field(
+					wp_unslash( $_POST['_wpnonce'] )
+				),
+				'adam_change_password'
+			)
+		) {
 			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
 		}
 
 		$user = wp_get_current_user();
 
-		$current = (string) wp_unslash( $_POST['current_password'] ?? '' );
-		$new     = (string) wp_unslash( $_POST['new_password'] ?? '' );
-		$confirm = (string) wp_unslash( $_POST['confirm_password'] ?? '' );
+		$current = (string) wp_unslash(
+			$_POST['current_password'] ?? ''
+		);
 
-		if ( ! wp_check_password( $current, $user->user_pass, $user->ID ) ) {
+		$new = (string) wp_unslash(
+			$_POST['new_password'] ?? ''
+		);
+
+		$confirm = (string) wp_unslash(
+			$_POST['confirm_password'] ?? ''
+		);
+
+		if (
+			! wp_check_password(
+				$current,
+				$user->user_pass,
+				$user->ID
+			)
+		) {
 			return '<div class="notice notice-error"><p>A palavra-passe atual está incorreta.</p></div>';
 		}
 
@@ -271,9 +403,24 @@ final class Account {
 			return '<div class="notice notice-error"><p>A palavra-passe deve ter pelo menos 8 caracteres.</p></div>';
 		}
 
-		wp_set_password( $new, $user->ID );
+		if (
+			wp_check_password(
+				$new,
+				$user->user_pass,
+				$user->ID
+			)
+		) {
+			return '<div class="notice notice-error"><p>A nova palavra-passe deve ser diferente da palavra-passe atual.</p></div>';
+		}
 
-		wp_set_auth_cookie( $user->ID );
+		wp_set_password(
+			$new,
+			$user->ID
+		);
+
+		wp_set_auth_cookie(
+			$user->ID
+		);
 
 		return '<div class="notice notice-success"><p>Palavra-passe alterada com sucesso.</p></div>';
 	}
