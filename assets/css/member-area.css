@@ -184,3 +184,10 @@
 	color:#c62828;
 	transition:all .2s ease;
 }
+.adam-card label{
+	display:block;
+	margin-bottom:8px;
+	font-size:15px;
+	font-weight:600;
+	color:#374151;
+}

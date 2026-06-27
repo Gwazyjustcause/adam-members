@@ -522,4 +522,39 @@ final class MemberArea {
 
 		<?php
 	}
+	/* ==========================================
+	   Password Toggle
+	========================================== */
+
+		.adam-password-wrapper{
+			position:relative;
+			display:flex;
+			align-items:center;
+			width:100%;
+	}
+
+		.adam-password-wrapper input{
+			padding-right:48px !important;
+	}
+
+		.adam-password-toggle{
+			position:absolute;
+			right:12px;
+			top:50%;
+			transform:translateY(-50%);
+			background:none;
+			border:none;
+			padding:0;
+			margin:0;
+			cursor:pointer;
+			font-size:20px;
+			line-height:1;
+			color:#6b7280;
+			transition:color .2s ease;
+	}
+
+		.adam-password-toggle:hover{
+			color:#111827;
+	}
+	
 }

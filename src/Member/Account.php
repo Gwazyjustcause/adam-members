@@ -73,6 +73,13 @@ final class Account {
 		wp_enqueue_style(
 			'dashicons'
 		);
+		wp_enqueue_script(
+			'adam-password-toggle',
+			ADAM_MEMBERSHIP_URL . 'assets/js/password-toggle.js',
+			array(),
+			ADAM_MEMBERSHIP_VERSION,
+			true
+		);
 	}
 
 	/**
