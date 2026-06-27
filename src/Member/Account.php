@@ -88,8 +88,55 @@ final class Account {
 	public function render_password_form(): string {
 
 		if ( ! is_user_logged_in() ) {
-			return '<p>Tem de iniciar sessão para aceder a esta página.</p>';
-		}
+
+	return '
+	<div class="adam-member-area">
+
+		<div class="adam-card">
+
+			<h2>🔒 Alterar Palavra-passe</h2>
+
+			<p>
+				É necessário iniciar sessão para alterar a sua palavra-passe.
+			</p>
+
+			<p>
+				Esta página destina-se apenas a associados que já possuem
+				uma conta na ADAM.
+			</p>
+
+			<p>
+
+				<a
+					class="button button-primary"
+					href="' . esc_url( home_url( '/socio/' ) ) . '"
+				>
+					Iniciar Sessão
+				</a>
+
+			</p>
+
+			<p>
+
+				Esqueceu-se da palavra-passe?
+
+			</p>
+
+			<p>
+
+				<a
+					class="button"
+					href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
+				>
+					Recuperar Palavra-passe
+				</a>
+
+			</p>
+
+		</div>
+
+	</div>';
+}
 
 		$message = '';
 
@@ -253,8 +300,55 @@ final class Account {
 	public function render_email_form(): string {
 
 		if ( ! is_user_logged_in() ) {
-			return '<p>Tem de iniciar sessão para aceder a esta página.</p>';
-		}
+
+	return '
+	<div class="adam-member-area">
+
+		<div class="adam-card">
+
+			<h2>🔒 Alterar Email</h2>
+
+			<p>
+				É necessário iniciar sessão para alterar o seu endereço de email.
+			</p>
+
+			<p>
+				Esta página destina-se apenas a associados que já possuem
+				uma conta na ADAM.
+			</p>
+
+			<p>
+
+				<a
+					class="button button-primary"
+					href="' . esc_url( home_url( '/socio/' ) ) . '"
+				>
+					Iniciar Sessão
+				</a>
+
+			</p>
+
+			<p>
+
+				Esqueceu-se da palavra-passe?
+
+			</p>
+
+			<p>
+
+				<a
+					class="button"
+					href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
+				>
+					Recuperar Palavra-passe
+				</a>
+
+			</p>
+
+		</div>
+
+	</div>';
+}
 
 		$message = '';
 
