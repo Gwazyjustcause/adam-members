@@ -173,6 +173,87 @@ final class EmailService {
 		);
 	}
 		/**
+	 * Send email confirmation email.
+	 */
+	public function send_email_confirmation(
+		WP_User $user,
+		string $new_email,
+		string $link
+	): bool {
+
+		$button = sprintf(
+			'<a href="%1$s"
+				style="
+					display:inline-block;
+					background:%2$s;
+					color:#ffffff;
+					padding:14px 28px;
+					text-decoration:none;
+					border-radius:8px;
+					font-weight:bold;
+					font-size:16px;
+				">
+				Confirmar Email
+			</a>',
+			esc_url(
+				$link
+			),
+			self::PRIMARY
+		);
+
+		$content = sprintf(
+			'
+			<p>Olá <strong>%1$s</strong>,</p>
+
+			<p>
+			Recebemos um pedido para alterar o endereço de email da sua conta.
+			</p>
+
+			<p>
+			O novo endereço solicitado é:
+			</p>
+
+			<p>
+			<strong>%2$s</strong>
+			</p>
+
+			<p>
+			Para concluir a alteração clique no botão abaixo.
+			</p>
+
+			<p style="text-align:center;">
+				%3$s
+			</p>
+
+			<p>
+			Se não efetuou este pedido, ignore este email.
+			Nenhuma alteração será realizada.
+			</p>
+
+			<p>
+			Cumprimentos,<br>
+			<strong>ADAM</strong>
+			</p>
+			',
+			esc_html(
+				$user->display_name
+			),
+			esc_html(
+				$new_email
+			),
+			$button
+		);
+
+		return $this->send(
+			$new_email,
+			'Confirmar alteração de email',
+			$this->render_template(
+				'Confirmar alteração de email',
+				$content
+			)
+		);
+	}
+		/**
 	 * Send HTML email.
 	 */
 	private function send(

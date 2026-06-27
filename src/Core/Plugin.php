@@ -20,6 +20,8 @@ use AdamMembership\Member\MemberArea;
 use AdamMembership\Member\Account;
 use AdamMembership\Member\PasswordRecovery;
 use AdamMembership\Member\PasswordReset;
+use AdamMembership\Member\EmailChangeConfirmation;
+use AdamMembership\Member\EmailConfirmation;
 
 /**
  * Coordinates plugin services.
@@ -79,6 +81,8 @@ final class Plugin {
 	$email
 );
 		$passwordReset = new PasswordReset();
+		$emailChangeConfirmation = new EmailChangeConfirmation();
+		$emailConfirmation = new EmailConfirmation();
 
 		( new UserRegistration( $config, $logger ) )->register();
 		( new AdminController( $members, $approval, $settings, $logger ) )->register();
@@ -87,6 +91,8 @@ final class Plugin {
 		$passwordRecovery->register();
 		$passwordReset->register();
 		$account->register();
+		$emailChangeConfirmation->register();
+		$emailConfirmation->register();
 }
 
 /**

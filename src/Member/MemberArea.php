@@ -87,6 +87,29 @@ final class MemberArea {
 
 			<?php
 
+		if ( isset( $_GET['password_changed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['password_changed'] ) ) ) :
+
+		?>
+
+			<div class="notice notice-success">
+				<p>Palavra-passe alterada com sucesso.</p>
+			</div>
+
+		<?php elseif (
+			isset( $_GET['email_changed'] ) &&
+				'1' === sanitize_text_field(
+				wp_unslash( $_GET['email_changed'] )
+			)
+		) :
+
+			<div class="notice notice-success">
+				<p>Endereço de email alterado com sucesso.</p>
+			</div>
+
+		<?php endif; ?>
+
+			<?php
+
 			if ( $member->isPending() ) {
 
 				$this->render_pending( $member );
@@ -120,9 +143,24 @@ final class MemberArea {
 	 */
 	private function render_login( string $message = '' ): string {
 
-	if ( isset( $_GET['logged_out'] ) ) {
-		$message = '<div class="notice notice-success"><p>Sessão terminada com sucesso.</p></div>';
-	}
+	if ( isset( $_GET['logged_out'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['logged_out'] ) ) ) {
+
+			$message = '
+			<div class="notice notice-success">
+				<p>Sessão terminada com sucesso.</p>
+			</div>';
+
+		} elseif ( isset( $_GET['password_reset'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['password_reset'] ) ) ) {
+
+			$message = '
+			<div class="notice notice-success">
+				<p>
+					A sua palavra-passe foi alterada com sucesso.
+					Pode agora iniciar sessão.
+				</p>
+			</div>';
+
+		}
 
 	ob_start();
 
@@ -164,13 +202,17 @@ final class MemberArea {
 							Palavra-passe
 						</label>
 
+					<div class="adam-password-wrapper">
+
 						<input
-							type="password"
-							id="adam_password"
-							name="adam_password"
-							required
-							autocomplete="current-password"
-						>
+						type="password"
+						id="adam_password"
+						name="adam_password"
+						required
+						autocomplete="current-password"
+				>
+
+			</div>
 
 					</p>
 

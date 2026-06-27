@@ -108,6 +108,10 @@ final class PasswordReset {
 
 		$message = $this->process( $user );
 
+		if ( str_contains( $message, 'adam-login-required' ) ) {
+			return $message;
+		}
+
 		ob_start();
 
 		?>
@@ -326,10 +330,34 @@ final class PasswordReset {
 			$password1
 		);
 
-		wp_safe_redirect(
-			home_url( '/socio/' )
-		);
+		return '
+		<div class="adam-member-area">
 
-		exit;
+			<div class="adam-card adam-login-required">
+
+				<h2>✅ Palavra-passe redefinida</h2>
+
+				<p>
+					A sua palavra-passe foi redefinida com sucesso.
+				</p>
+
+				<p>
+					Já pode iniciar sessão utilizando a sua nova palavra-passe.
+				</p>
+
+				<p>
+
+					<a
+						class="button button-primary"
+						href="' . esc_url( home_url( '/socio/' ) ) . '"
+					>
+						Iniciar Sessão
+					</a>
+
+				</p>
+
+			</div>
+
+		</div>';
 	}
 }

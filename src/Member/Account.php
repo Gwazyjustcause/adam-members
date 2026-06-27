@@ -9,10 +9,30 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Emails\EmailService;
+
 /**
  * Handles account management.
  */
 final class Account {
+
+	/**
+	 * Email service.
+	 *
+	 * @var EmailService
+	 */
+	private EmailService $email;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param EmailService $email Email service.
+	 */
+	public function __construct(
+		EmailService $email
+	) {
+		$this->email = $email;
+	}
 
 	/**
 	 * Register shortcodes.
@@ -35,7 +55,28 @@ final class Account {
 		);
 	}
 
-		/**
+	/**
+	 * Register shortcodes.
+	 */
+	public function register(): void {
+
+		add_shortcode(
+			'adam_change_password',
+			array( $this, 'render_password_form' )
+		);
+
+		add_shortcode(
+			'adam_change_email',
+			array( $this, 'render_email_form' )
+		);
+
+		add_action(
+			'wp_enqueue_scripts',
+			array( $this, 'enqueue_assets' )
+		);
+	}
+
+	/**
 	 * Enqueue password strength assets.
 	 */
 	public function enqueue_assets(): void {
@@ -73,6 +114,7 @@ final class Account {
 		wp_enqueue_style(
 			'dashicons'
 		);
+
 		wp_enqueue_script(
 			'adam-password-toggle',
 			ADAM_MEMBERSHIP_URL . 'assets/js/password-toggle.js',
@@ -85,58 +127,56 @@ final class Account {
 	/**
 	 * Render password form.
 	 */
-	public function render_password_form(): string {
+		public function render_password_form(): string {
 
 		if ( ! is_user_logged_in() ) {
 
-	return '
-	<div class="adam-member-area">
+			return '
+			<div class="adam-member-area">
 
-		<div class="adam-card adam-login-required">
+				<div class="adam-card adam-login-required">
 
-			<h2>🔒 Alterar Palavra-passe</h2>
+					<h2>🔒 Alterar Palavra-passe</h2>
 
-			<p>
-				É necessário iniciar sessão para alterar a sua palavra-passe.
-			</p>
+					<p>
+						É necessário iniciar sessão para alterar a sua palavra-passe.
+					</p>
 
-			<p>
-				Esta página destina-se apenas a associados que já possuem
-				uma conta na ADAM.
-			</p>
+					<p>
+						Esta página destina-se apenas a associados que já possuem
+						uma conta na ADAM.
+					</p>
 
-			<p>
+					<p>
 
-				<a
-					class="button button-primary"
-					href="' . esc_url( home_url( '/socio/' ) ) . '"
-				>
-					Iniciar Sessão
-				</a>
+						<a
+							class="button button-primary"
+							href="' . esc_url( home_url( '/socio/' ) ) . '"
+						>
+							Iniciar Sessão
+						</a>
 
-			</p>
+					</p>
 
-			<p>
+					<p>
+						Esqueceu-se da palavra-passe?
+					</p>
 
-				Esqueceu-se da palavra-passe?
+					<p>
 
-			</p>
+						<a
+							class="button"
+							href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
+						>
+							Recuperar Palavra-passe
+						</a>
 
-			<p>
+					</p>
 
-				<a
-					class="button"
-					href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
-				>
-					Recuperar Palavra-passe
-				</a>
+				</div>
 
-			</p>
-
-		</div>
-
-	</div>';
-}
+			</div>';
+		}
 
 		$message = '';
 
@@ -148,6 +188,7 @@ final class Account {
 		}
 
 		ob_start();
+
 		?>
 
 		<div class="adam-member-area">
@@ -168,120 +209,162 @@ final class Account {
 							Palavra-passe atual
 						</label><br>
 
-						<input
-							type="password"
-							id="current_password"
-							name="current_password"
-							required
-						>
+						<div class="adam-password-wrapper">
+
+							<input
+								type="password"
+								id="current_password"
+								name="current_password"
+								required
+							>
+
+							<button
+								type="button"
+								class="adam-password-toggle"
+								aria-label="Mostrar palavra-passe"
+							>
+
+								<span class="dashicons dashicons-visibility"></span>
+
+							</button>
+
+						</div>
 
 					</p>
 
-<p>
+					<p>
 
-	<label for="new_password">
-		Nova palavra-passe
-	</label><br>
+						<label for="new_password">
+							Nova palavra-passe
+						</label><br>
 
-	<input
-		type="password"
-		id="new_password"
-		name="new_password"
-		required
-		autocomplete="new-password"
-	>
+						<div class="adam-password-wrapper">
 
-</p>
+							<input
+								type="password"
+								id="new_password"
+								name="new_password"
+								required
+								autocomplete="new-password"
+							>
 
-<div
-	id="adam-password-strength"
-	class="adam-password-strength"
->
+							<button
+								type="button"
+								class="adam-password-toggle"
+								aria-label="Mostrar palavra-passe"
+							>
 
-	<p class="adam-strength-title">
-		Força da palavra-passe
-	</p>
+								<span class="dashicons dashicons-visibility"></span>
 
-	<div
-		id="adam-strength-bar"
-		class="adam-strength-bar"
-	>
+							</button>
 
-		<span></span>
-		<span></span>
-		<span></span>
-		<span></span>
-		<span></span>
+						</div>
 
-	</div>
+					</p>
 
-	<p
-		id="password-strength-text"
-		class="adam-strength-text"
-	>
-		Muito fraca
-	</p>
+					<div
+						id="adam-password-strength"
+						class="adam-password-strength"
+					>
 
-	<div class="adam-password-rules">
+						<p class="adam-strength-title">
+							Força da palavra-passe
+						</p>
 
-		<p>
-			A sua palavra-passe deve conter:
-		</p>
+						<div
+							id="adam-strength-bar"
+							class="adam-strength-bar"
+						>
 
-		<ul>
+							<span></span>
+							<span></span>
+							<span></span>
+							<span></span>
+							<span></span>
 
-			<li id="rule-length">
-				✗ Pelo menos 8 caracteres
-			</li>
+						</div>
 
-			<li id="rule-lower">
-				✗ Uma letra minúscula
-			</li>
+						<p
+							id="password-strength-text"
+							class="adam-strength-text"
+						>
+							Muito fraca
+						</p>
 
-			<li id="rule-upper">
-				✗ Uma letra maiúscula
-			</li>
+						<div class="adam-password-rules">
 
-			<li id="rule-number">
-				✗ Um número
-			</li>
+							<p>
+								A sua palavra-passe deve conter:
+							</p>
 
-			<li id="rule-symbol">
-				✗ Um símbolo
-			</li>
+							<ul>
 
-		</ul>
+								<li id="rule-length">
+									✗ Pelo menos 8 caracteres
+								</li>
 
-	</div>
+								<li id="rule-lower">
+									✗ Uma letra minúscula
+								</li>
 
-</div>
+								<li id="rule-upper">
+									✗ Uma letra maiúscula
+								</li>
 
-<p>
+								<li id="rule-number">
+									✗ Um número
+								</li>
 
-	<label for="confirm_password">
-		Confirmar nova palavra-passe
-	</label><br>
+								<li id="rule-symbol">
+									✗ Um símbolo
+								</li>
 
-	<input
-		type="password"
-		id="confirm_password"
-		name="confirm_password"
-		required
-	>
+							</ul>
 
-</p>
+						</div>
 
-<p>
+					</div>
 
-	<button
-		type="submit"
-		name="adam_change_password"
-		class="button button-primary"
-	>
-		Alterar Palavra-passe
-	</button>
+					<p>
 
-</p>
+						<label for="confirm_password">
+							Confirmar nova palavra-passe
+						</label><br>
+
+						<div class="adam-password-wrapper">
+
+							<input
+								type="password"
+								id="confirm_password"
+								name="confirm_password"
+								required
+							>
+
+							<button
+								type="button"
+								class="adam-password-toggle"
+								aria-label="Mostrar palavra-passe"
+							>
+
+								<span class="dashicons dashicons-visibility"></span>
+
+							</button>
+
+						</div>
+
+					</p>
+
+					<p>
+
+						<button
+							type="submit"
+							name="adam_change_password"
+							class="button button-primary"
+						>
+							Alterar Palavra-passe
+						</button>
+
+					</p>
 
 				</form>
 
@@ -297,58 +380,56 @@ final class Account {
 	/**
 	 * Render email form.
 	 */
-	public function render_email_form(): string {
+		public function render_email_form(): string {
 
 		if ( ! is_user_logged_in() ) {
 
-	return '
-	<div class="adam-member-area">
+			return '
+			<div class="adam-member-area">
 
-		<div class="adam-card adam-login-required">
+				<div class="adam-card adam-login-required">
 
-			<h2>🔒 Alterar Email</h2>
+					<h2>🔒 Alterar Email</h2>
 
-			<p>
-				É necessário iniciar sessão para alterar o seu endereço de email.
-			</p>
+					<p>
+						É necessário iniciar sessão para alterar o seu endereço de email.
+					</p>
 
-			<p>
-				Esta página destina-se apenas a associados que já possuem
-				uma conta na ADAM.
-			</p>
+					<p>
+						Esta página destina-se apenas a associados que já possuem
+						uma conta na ADAM.
+					</p>
 
-			<p>
+					<p>
 
-				<a
-					class="button button-primary"
-					href="' . esc_url( home_url( '/socio/' ) ) . '"
-				>
-					Iniciar Sessão
-				</a>
+						<a
+							class="button button-primary"
+							href="' . esc_url( home_url( '/socio/' ) ) . '"
+						>
+							Iniciar Sessão
+						</a>
 
-			</p>
+					</p>
 
-			<p>
+					<p>
+						Esqueceu-se da palavra-passe?
+					</p>
 
-				Esqueceu-se da palavra-passe?
+					<p>
 
-			</p>
+						<a
+							class="button"
+							href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
+						>
+							Recuperar Palavra-passe
+						</a>
 
-			<p>
+					</p>
 
-				<a
-					class="button"
-					href="' . esc_url( home_url( '/recuperar-password/' ) ) . '"
-				>
-					Recuperar Palavra-passe
-				</a>
+				</div>
 
-			</p>
-
-		</div>
-
-	</div>';
-}
+			</div>';
+		}
 
 		$message = '';
 
@@ -362,6 +443,7 @@ final class Account {
 		$current_user = wp_get_current_user();
 
 		ob_start();
+
 		?>
 
 		<div class="adam-member-area">
@@ -424,22 +506,37 @@ final class Account {
 							Palavra-passe atual
 						</label><br>
 
-						<input
-							type="password"
-							id="email_password"
-							name="email_password"
-							required
-						>
+						<div class="adam-password-wrapper">
+
+							<input
+								type="password"
+								id="email_password"
+								name="email_password"
+								required
+							>
+
+							<button
+								type="button"
+								class="adam-password-toggle"
+								aria-label="Mostrar palavra-passe"
+							>
+
+								<span class="dashicons dashicons-visibility"></span>
+
+							</button>
+
+						</div>
 
 					</p>
-                    					<p>
+
+					<p>
 
 						<button
 							type="submit"
 							name="adam_change_email"
 							class="button button-primary"
 						>
-							Alterar Email
+							Enviar confirmação
 						</button>
 
 					</p>
@@ -458,7 +555,7 @@ final class Account {
 	/**
 	 * Process password change.
 	 */
-	private function process_password_change(): string {
+		private function process_password_change(): string {
 
 		if (
 			! isset( $_POST['_wpnonce'] ) ||
@@ -469,7 +566,10 @@ final class Account {
 				'adam_change_password'
 			)
 		) {
-			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>Pedido inválido.</p>
+			</div>';
 		}
 
 		$user = wp_get_current_user();
@@ -493,15 +593,24 @@ final class Account {
 				$user->ID
 			)
 		) {
-			return '<div class="notice notice-error"><p>A palavra-passe atual está incorreta.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>A palavra-passe atual está incorreta.</p>
+			</div>';
 		}
 
 		if ( $new !== $confirm ) {
-			return '<div class="notice notice-error"><p>As palavras-passe não coincidem.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>As palavras-passe não coincidem.</p>
+			</div>';
 		}
 
 		if ( strlen( $new ) < 8 ) {
-			return '<div class="notice notice-error"><p>A palavra-passe deve ter pelo menos 8 caracteres.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>A palavra-passe deve ter pelo menos 8 caracteres.</p>
+			</div>';
 		}
 
 		if (
@@ -511,7 +620,12 @@ final class Account {
 				$user->ID
 			)
 		) {
-			return '<div class="notice notice-error"><p>A nova palavra-passe deve ser diferente da palavra-passe atual.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>
+					A nova palavra-passe deve ser diferente da palavra-passe atual.
+				</p>
+			</div>';
 		}
 
 		wp_set_password(
@@ -523,46 +637,125 @@ final class Account {
 			$user->ID
 		);
 
-		return '<div class="notice notice-success"><p>Palavra-passe alterada com sucesso.</p></div>';
+		wp_safe_redirect(
+			home_url( '/socio/?password_changed=1' )
+		);
+
+		exit;
 	}
 
 	/**
 	 * Process email change.
 	 */
-	private function process_email_change(): string {
+		private function process_email_change(): string {
 
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_change_email' ) ) {
-			return '<div class="notice notice-error"><p>Pedido inválido.</p></div>';
+		if (
+			! isset( $_POST['_wpnonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field(
+					wp_unslash( $_POST['_wpnonce'] )
+				),
+				'adam_change_email'
+			)
+		) {
+			return '
+			<div class="notice notice-error">
+				<p>Pedido inválido.</p>
+			</div>';
 		}
 
 		$user = wp_get_current_user();
 
-		$new      = sanitize_email( wp_unslash( $_POST['new_email'] ?? '' ) );
-		$confirm  = sanitize_email( wp_unslash( $_POST['confirm_email'] ?? '' ) );
-		$password = (string) wp_unslash( $_POST['email_password'] ?? '' );
-        		if ( ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
-			return '<div class="notice notice-error"><p>A palavra-passe atual está incorreta.</p></div>';
+		$new = sanitize_email(
+			wp_unslash( $_POST['new_email'] ?? '' )
+		);
+
+		$confirm = sanitize_email(
+			wp_unslash( $_POST['confirm_email'] ?? '' )
+		);
+
+		$password = (string) wp_unslash(
+			$_POST['email_password'] ?? ''
+		);
+
+		if (
+			! wp_check_password(
+				$password,
+				$user->user_pass,
+				$user->ID
+			)
+		) {
+			return '
+			<div class="notice notice-error">
+				<p>A palavra-passe atual está incorreta.</p>
+			</div>';
 		}
 
 		if ( $new !== $confirm ) {
-			return '<div class="notice notice-error"><p>Os emails não coincidem.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>Os emails não coincidem.</p>
+			</div>';
 		}
 
 		if ( ! is_email( $new ) ) {
-			return '<div class="notice notice-error"><p>O endereço de email é inválido.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>O endereço de email é inválido.</p>
+			</div>';
 		}
 
 		if ( email_exists( $new ) ) {
-			return '<div class="notice notice-error"><p>Este endereço de email já está a ser utilizado.</p></div>';
+			return '
+			<div class="notice notice-error">
+				<p>Este endereço de email já está a ser utilizado.</p>
+			</div>';
 		}
 
-		wp_update_user(
-			array(
-				'ID'         => $user->ID,
-				'user_email' => $new,
-			)
+		$token = wp_generate_password(
+			32,
+			false,
+			false
 		);
 
-		return '<div class="notice notice-success"><p>Email alterado com sucesso.</p></div>';
+		update_user_meta(
+			$user->ID,
+			'adam_pending_email',
+			$new
+		);
+
+		update_user_meta(
+			$user->ID,
+			'adam_email_token',
+			$token
+		);
+
+		update_user_meta(
+			$user->ID,
+			'adam_email_token_expires',
+			time() + DAY_IN_SECONDS
+		);
+
+		$link = add_query_arg(
+			array(
+				'token' => $token,
+				'user'  => $user->ID,
+			),
+			home_url( '/confirmar-email/' )
+		);
+
+			$this->email->send_email_confirmation(
+				$user,
+				$new,
+				$link
+		);
+
+		return '
+		<div class="notice notice-success">
+			<p>
+				Enviámos um email de confirmação para o novo endereço.
+				A alteração apenas será concluída depois de clicar no link de confirmação.
+			</p>
+		</div>';
 	}
 }
