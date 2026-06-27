@@ -271,3 +271,33 @@
 .adam-card.adam-login-required a{
 	align-self:center;
 }
+/* ==========================================
+   Notices
+========================================== */
+
+.adam-card .notice{
+	margin:0 0 20px;
+	padding:16px 20px;
+	border-radius:10px;
+	font-size:16px;
+	line-height:1.6;
+	font-weight:500;
+}
+
+.adam-card .notice p{
+	margin:0;
+	font-size:16px;
+	font-weight:600;
+}
+
+.adam-card .notice-success{
+	background:#ecfdf5;
+	border-left:4px solid #16a34a;
+	color:#166534;
+}
+
+.adam-card .notice-error{
+	background:#fef2f2;
+	border-left:4px solid #dc2626;
+	color:#991b1b;
+}
