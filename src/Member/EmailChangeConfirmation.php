@@ -36,9 +36,9 @@ final class EmailChangeConfirmation {
 			$_GET['user'] ?? 0
 		);
 
-		$key = sanitize_text_field(
-			wp_unslash( $_GET['key'] ?? '' )
-		);
+		$token = sanitize_text_field(
+	        wp_unslash( $_GET['token'] ?? '' )
+        );
 
 		if ( ! $user_id || '' === $key ) {
 
@@ -59,9 +59,9 @@ final class EmailChangeConfirmation {
 			);
 		}
 
-		$stored_key = (string) get_user_meta(
+		$stored_token = (string) get_user_meta(
 			$user_id,
-			'adam_pending_email_key',
+			'adam_email_token',
 			true
 		);
 
@@ -73,17 +73,17 @@ final class EmailChangeConfirmation {
 
 		$expires = (int) get_user_meta(
 			$user_id,
-			'adam_pending_email_expires',
+			'adam_email_token_expires',
 			true
 		);
-        		if ( '' === $stored_key ) {
+        		if ( '' === $stored_token ) {
 
 			return $this->error(
 				'Este pedido já foi utilizado ou expirou.'
 			);
 		}
 
-		if ( ! hash_equals( $stored_key, $key ) ) {
+		if ( ! hash_equals( $stored_token, $key ) ) {
 
 			return $this->error(
 				'Código de confirmação inválido.'
@@ -99,12 +99,12 @@ final class EmailChangeConfirmation {
 
 			delete_user_meta(
 				$user_id,
-				'adam_pending_email_key'
+				'adam_email_token'
 			);
 
 			delete_user_meta(
 				$user_id,
-				'adam_pending_email_expires'
+				'adam_email_token_expires'
 			);
 
 			return $this->error(
@@ -133,12 +133,12 @@ final class EmailChangeConfirmation {
 
 		delete_user_meta(
 			$user_id,
-			'adam_pending_email_key'
+			'adam_email_token'
 		);
 
 		delete_user_meta(
 			$user_id,
-			'adam_pending_email_expires'
+			'adam_email_token_expires'
 		);
 
 		ob_start();
