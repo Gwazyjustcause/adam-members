@@ -177,6 +177,9 @@
 }
 
 .adam-password-rules li{
+	display:flex;
+	align-items:center;
+	gap:8px;
 	margin:12px 0;
 	font-size:15px;
 	font-weight:500;
@@ -184,10 +187,55 @@
 	color:#c62828;
 	transition:all .2s ease;
 }
+
 .adam-card label{
 	display:block;
 	margin-bottom:8px;
 	font-size:15px;
 	font-weight:600;
 	color:#374151;
+}
+/* ==========================================
+   Password Toggle
+========================================== */
+
+.adam-password-wrapper{
+	position:relative;
+	width:100%;
+}
+
+.adam-password-wrapper input{
+	width:100%;
+	padding-right:52px !important;
+}
+
+.adam-password-toggle{
+	position:absolute;
+	top:50%;
+	right:14px;
+	transform:translateY(-50%);
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	width:32px;
+	height:32px;
+	padding:0;
+	margin:0;
+	border:none;
+	background:transparent;
+	cursor:pointer;
+	font-size:18px;
+	color:#6b7280;
+	border-radius:50%;
+	transition:all .2s ease;
+}
+
+.adam-password-toggle:hover{
+	background:#f3f4f6;
+	color:#111827;
+}
+
+.adam-password-toggle:focus{
+	outline:none;
+	box-shadow:0 0 0 3px rgba(22,163,74,.25);
 }
