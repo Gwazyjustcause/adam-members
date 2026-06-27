@@ -1,19 +1,27 @@
 .adam-member-area {
-	max-width: 1100px;
-	margin: 40px auto;
-	padding: 0 20px;
+	max-width: 1200px;
+	margin: 50px auto;
+	padding: 0 24px;
 	font-family: inherit;
 }
 
 .adam-member-area h2 {
-	margin-bottom: 10px;
-	font-size: 2rem;
+	margin-bottom: 14px;
+	font-size: 2.3rem;
+	font-weight: 700;
 	color: #1f2937;
+}
+
+.adam-member-area > p:first-of-type{
+	font-size:18px;
+	font-weight:500;
+	color:#4b5563;
+	margin-bottom:30px;
 }
 
 .adam-member-area p {
 	margin: 0;
-	line-height: 1.6;
+	line-height: 1.7;
 }
 
 .adam-member-area hr {
@@ -23,116 +31,161 @@
 .adam-card {
 	background: #ffffff;
 	border: 1px solid #e5e7eb;
-	border-radius: 12px;
-	padding: 24px;
+	border-radius: 14px;
+	padding: 32px;
 	margin-bottom: 24px;
-	box-shadow: 0 4px 12px rgba(0,0,0,.06);
-	transition: .2s ease;
+	box-shadow: 0 6px 18px rgba(0,0,0,.06);
+	transition: all .25s ease;
 }
 
 .adam-card:hover {
-	box-shadow: 0 8px 24px rgba(0,0,0,.10);
+	transform: translateY(-3px);
+	box-shadow: 0 12px 28px rgba(0,0,0,.10);
 }
 
 .adam-card h3 {
-	margin: 0 0 18px;
-	padding-bottom: 12px;
+	margin: 0 0 22px;
+	padding-bottom: 14px;
 	border-bottom: 2px solid #16a34a;
-	font-size: 1.2rem;
+	font-size: 1.45rem;
+	font-weight: 700;
 	color: #14532d;
+	letter-spacing:.2px;
 }
 
 .adam-card strong {
-	color: #111827;
+	font-size:16px;
+	font-weight:700;
+	color:#111827;
 }
+
 .adam-card ul {
-	list-style: none;
-	padding: 0;
-	margin: 0;
+	list-style:none;
+	padding:0;
+	margin:0;
 }
 
 .adam-card li {
-	margin-bottom: 12px;
+	margin-bottom:16px;
+	font-size:16px;
+	font-weight:500;
 }
 
 .adam-card a {
-	display: inline-block;
-	padding: 10px 18px;
-	background: #16a34a;
-	color: #ffffff;
-	text-decoration: none;
-	border-radius: 8px;
-	font-weight: 600;
-	transition: .2s ease;
+	display:inline-block;
+	padding:12px 22px;
+	background:#16a34a;
+	color:#ffffff;
+	text-decoration:none;
+	border-radius:10px;
+	font-weight:700;
+	font-size:15px;
+	transition:.2s ease;
 }
 
 .adam-card a:hover {
-	background: #15803d;
-	color: #ffffff;
-	transform: translateY(-1px);
+	background:#15803d;
+	color:#ffffff;
+	transform:translateY(-2px);
 }
 
 .adam-card p + p {
-	margin-top: 14px;
+	margin-top:16px;
 }
 
 .adam-card br {
-	display: none;
+	display:none;
 }
+
 .adam-card:first-of-type {
-	border-left: 5px solid #16a34a;
+	border-left:5px solid #16a34a;
 }
 
 .adam-member-area section {
-	margin-bottom: 24px;
+	margin-bottom:24px;
 }
 
-@media (min-width: 768px) {
+/* ==========================================
+   Data rows
+========================================== */
 
-	.adam-member-area {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 24px;
-	}
-
-	.adam-member-area h2,
-	.adam-member-area > p:first-of-type {
-		grid-column: 1 / -1;
-	}
-
-	.adam-card:last-child {
-		grid-column: 1 / -1;
-	}
+.adam-card p{
+	font-size:16px;
+	font-weight:500;
+	color:#374151;
 }
 
-@media (max-width: 767px) {
-
-	.adam-member-area {
-		padding: 20px 16px;
-	}
-
-	.adam-member-area h2 {
-		font-size: 1.6rem;
-	}
-
-	.adam-card {
-		padding: 18px;
-	}
+.adam-card p strong{
+	display:inline-block;
+	min-width:155px;
+	color:#111827;
 }
+
+/* ==========================================
+   Buttons
+========================================== */
+
+.adam-card .button,
+.adam-card button,
+.adam-card input[type="submit"]{
+
+	width:230px;
+	padding:13px 20px;
+	border-radius:10px;
+	font-size:15px;
+	font-weight:700;
+	transition:.2s ease;
+}
+
+.adam-card .button:hover,
+.adam-card button:hover,
+.adam-card input[type="submit"]:hover{
+
+	transform:translateY(-2px);
+}
+
+/* ==========================================
+   Status Badges
+========================================== */
+
+.adam-badge{
+	display:inline-flex;
+	align-items:center;
+	padding:8px 16px;
+	border-radius:999px;
+	font-size:14px;
+	font-weight:700;
+}
+
+.adam-badge.active{
+	background:#dcfce7;
+	color:#166534;
+}
+
+.adam-badge.warning{
+	background:#fef3c7;
+	color:#92400e;
+}
+
+.adam-badge.expired{
+	background:#fee2e2;
+	color:#991b1b;
+}
+
 /* ==========================================
    Password Strength
 ========================================== */
 
 .adam-password-strength{
-	margin:24px 0;
-	padding:22px;
+	margin:26px 0;
+	padding:24px;
 	background:#f8fafc;
 	border:1px solid #dbe3ea;
 	border-radius:12px;
 }
 
 .adam-strength-title{
-	margin:0 0 16px;
+	margin:0 0 18px;
 	font-size:18px;
 	font-weight:700;
 	color:#1f2937;
@@ -154,6 +207,7 @@
 	max-height:10px;
 	background:#d1d5db;
 	border-radius:999px;
+	transition:background .2s ease;
 }
 
 .adam-strength-text{
@@ -192,9 +246,18 @@
 	display:block;
 	margin-bottom:8px;
 	font-size:15px;
-	font-weight:600;
+	font-weight:700;
 	color:#374151;
 }
+
+.adam-card input,
+.adam-card select{
+	font-size:15px;
+	font-weight:500;
+	padding:12px 14px;
+	border-radius:8px;
+}
+
 /* ==========================================
    Password Toggle
 ========================================== */
@@ -237,6 +300,11 @@
 	height:20px;
 	line-height:20px;
 }
+
+/* ==========================================
+   Login Required
+========================================== */
+
 .adam-login-required{
 	text-align:center !important;
 }
@@ -255,6 +323,7 @@
 	display:inline-block;
 	margin:10px 6px;
 }
+
 .adam-card.adam-login-required{
 	display:flex;
 	flex-direction:column;
@@ -271,16 +340,17 @@
 .adam-card.adam-login-required a{
 	align-self:center;
 }
+
 /* ==========================================
    Notices
 ========================================== */
 
 .adam-card .notice{
-	margin:0 0 20px;
-	padding:16px 20px;
+	margin:0 0 24px;
+	padding:18px 22px;
 	border-radius:10px;
 	font-size:16px;
-	line-height:1.6;
+	line-height:1.7;
 	font-weight:500;
 }
 
@@ -291,12 +361,51 @@
 
 .adam-card .notice-success{
 	background:#ecfdf5;
-	border-left:4px solid #16a34a;
+	border-left:5px solid #16a34a;
 	color:#166534;
 }
 
 .adam-card .notice-error{
 	background:#fef2f2;
-	border-left:4px solid #dc2626;
+	border-left:5px solid #dc2626;
 	color:#991b1b;
+}
+
+@media (min-width:768px){
+
+	.adam-member-area{
+		display:grid;
+		grid-template-columns:repeat(2,1fr);
+		gap:28px;
+	}
+
+	.adam-member-area h2,
+	.adam-member-area > p:first-of-type{
+		grid-column:1/-1;
+	}
+
+	.adam-card:last-child{
+		grid-column:1/-1;
+	}
+}
+
+@media (max-width:767px){
+
+	.adam-member-area{
+		padding:20px 16px;
+	}
+
+	.adam-member-area h2{
+		font-size:1.8rem;
+	}
+
+	.adam-card{
+		padding:22px;
+	}
+
+	.adam-card .button,
+	.adam-card button,
+	.adam-card input[type="submit"]{
+		width:100%;
+	}
 }
