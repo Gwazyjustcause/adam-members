@@ -491,13 +491,11 @@ final class MemberArea {
 				)
 			);
 
-			$this->render_renewal_action( $member );
+			$this->render_profile( $member );
 
 			$this->render_digital_card( $member );
 
-			$this->render_profile( $member );
-
-			$this->render_standard_account_actions();
+			$this->render_actions( $this->active_actions( $member ) );
 			?>
 		</div>
 		<?php
@@ -522,7 +520,6 @@ final class MemberArea {
 			<div class="adam-card-heading">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
-					<h3><?php esc_html_e( 'Cartão de sócio ADAM', 'adam-membership' ); ?></h3>
 				</div>
 				<div class="adam-card-actions">
 					<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></button>
@@ -729,43 +726,75 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_renewal_action( Member $member ): void {
-		if ( ! $member->can_renew() ) {
-			return;
-		}
+		$actions = $this->renewal_actions( $member );
 
-		$this->render_actions(
-			array(
-				array(
-					'label'       => __( 'Renovar quota', 'adam-membership' ),
-					'description' => '',
-					'url'         => $this->settings->renewal_page_url(),
-				),
-			)
-		);
+		if ( array() !== $actions ) {
+			$this->render_actions( $actions );
+		}
 	}
 
 	/**
 	 * Render standard account management actions.
 	 */
 	private function render_standard_account_actions(): void {
-		$this->render_actions(
+		$this->render_actions( $this->standard_account_actions() );
+	}
+
+	/**
+	 * Build renewal actions for eligible members.
+	 *
+	 * @param Member $member Member.
+	 * @return array<int,array{label:string,description:string,url:string}>
+	 */
+	private function renewal_actions( Member $member ): array {
+		if ( ! $member->can_renew() ) {
+			return array();
+		}
+
+		return array(
 			array(
-				array(
-					'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
-					'description' => '',
-					'url'         => home_url( '/socio-password/' ),
-				),
-				array(
-					'label'       => __( 'Alterar email', 'adam-membership' ),
-					'description' => '',
-					'url'         => home_url( '/socio-email/' ),
-				),
-				array(
-					'label'       => __( 'Terminar sessão', 'adam-membership' ),
-					'description' => '',
-					'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-				),
-			)
+				'label'       => __( 'Renovar quota', 'adam-membership' ),
+				'description' => '',
+				'url'         => $this->settings->renewal_page_url(),
+			),
+		);
+	}
+
+	/**
+	 * Build standard account management actions.
+	 *
+	 * @return array<int,array{label:string,description:string,url:string}>
+	 */
+	private function standard_account_actions(): array {
+		return array(
+			array(
+				'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
+				'description' => '',
+				'url'         => home_url( '/socio-password/' ),
+			),
+			array(
+				'label'       => __( 'Alterar email', 'adam-membership' ),
+				'description' => '',
+				'url'         => home_url( '/socio-email/' ),
+			),
+			array(
+				'label'       => __( 'Terminar sessão', 'adam-membership' ),
+				'description' => '',
+				'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+			),
+		);
+	}
+
+	/**
+	 * Build the combined active member actions.
+	 *
+	 * @param Member $member Member.
+	 * @return array<int,array{label:string,description:string,url:string}>
+	 */
+	private function active_actions( Member $member ): array {
+		return array_merge(
+			$this->renewal_actions( $member ),
+			$this->standard_account_actions()
 		);
 	}
 
