@@ -91,6 +91,60 @@ final class Event {
 		return esc_url_raw( (string) ( $this->data['cover_image'] ?? '' ) );
 	}
 
+	public function external_registration_url(): string {
+		return esc_url_raw( (string) ( $this->data['external_registration_url'] ?? '' ) );
+	}
+
+	public function external_provider_name(): string {
+		$provider = sanitize_text_field( (string) ( $this->data['external_provider_name'] ?? '' ) );
+
+		return '' !== $provider ? $provider : 'Jogar Airsoft';
+	}
+
+	public function is_paid(): bool {
+		return ! empty( $this->data['is_paid'] );
+	}
+
+	public function price(): string {
+		return sanitize_text_field( (string) ( $this->data['price'] ?? '' ) );
+	}
+
+	public function player_limit(): int {
+		$player_limit = absint( $this->data['player_limit'] ?? 0 );
+
+		if ( $player_limit > 0 ) {
+			return $player_limit;
+		}
+
+		return max( 0, absint( $this->data['max_players'] ?? 0 ) );
+	}
+
+	public function notes(): string {
+		return sanitize_textarea_field( (string) ( $this->data['notes'] ?? '' ) );
+	}
+
+	public function checkin_token(): string {
+		return sanitize_text_field( (string) ( $this->data['checkin_token'] ?? '' ) );
+	}
+
+	public function checkin_enabled(): bool {
+		return ! empty( $this->data['checkin_enabled'] );
+	}
+
+	public function checkin_open_at(): string {
+		return sanitize_text_field( (string) ( $this->data['checkin_open_at'] ?? '' ) );
+	}
+
+	public function checkin_close_at(): string {
+		return sanitize_text_field( (string) ( $this->data['checkin_close_at'] ?? '' ) );
+	}
+
+	public function checkin_points(): int {
+		$points = absint( $this->data['checkin_points'] ?? 1 );
+
+		return max( 1, $points );
+	}
+
 	public function access_mode(): string {
 		$mode = sanitize_key( (string) ( $this->data['access_mode'] ?? self::ACCESS_MEMBERS_ONLY ) );
 
@@ -98,7 +152,7 @@ final class Event {
 	}
 
 	public function max_players(): int {
-		return max( 0, absint( $this->data['max_players'] ?? 0 ) );
+		return $this->player_limit();
 	}
 
 	public function waiting_list_enabled(): bool {
@@ -149,6 +203,14 @@ final class Event {
 		return $this->datetime_to_timestamp( $this->registration_deadline() );
 	}
 
+	public function checkin_open_timestamp(): int {
+		return $this->datetime_to_timestamp( $this->checkin_open_at() );
+	}
+
+	public function checkin_close_timestamp(): int {
+		return $this->datetime_to_timestamp( $this->checkin_close_at() );
+	}
+
 	public function priority_deadline_timestamp(): int {
 		return $this->datetime_to_timestamp( $this->priority_deadline() );
 	}
@@ -171,6 +233,30 @@ final class Event {
 		$deadline = $this->priority_deadline_timestamp();
 
 		return 0 !== $deadline && $deadline >= current_time( 'timestamp' );
+	}
+
+	public function is_checkin_window_open(): bool {
+		if ( ! $this->checkin_enabled() ) {
+			return false;
+		}
+
+		if ( self::STATUS_CANCELLED === $this->status() || self::STATUS_DRAFT === $this->status() ) {
+			return false;
+		}
+
+		$now       = current_time( 'timestamp' );
+		$opens_at  = $this->checkin_open_timestamp();
+		$closes_at = $this->checkin_close_timestamp();
+
+		if ( 0 !== $opens_at && $now < $opens_at ) {
+			return false;
+		}
+
+		if ( 0 !== $closes_at && $now > $closes_at ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

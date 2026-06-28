@@ -10,16 +10,17 @@ declare(strict_types=1);
 namespace AdamMembership\Admin;
 
 use AdamMembership\Event\Event;
-use AdamMembership\Event\EventRegistration;
+use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
+use AdamMembership\Member\Member;
 
 /**
  * Manages the admin-side Events module.
  */
 final class EventController {
-	private const CAPABILITY      = 'manage_options';
-	private const MENU_SLUG       = 'adam-membership-events';
-	private const EDIT_PAGE_SLUG  = 'adam-membership-event-edit';
+	private const CAPABILITY     = 'manage_options';
+	private const MENU_SLUG      = 'adam-membership-events';
+	private const EDIT_PAGE_SLUG = 'adam-membership-event-edit';
 
 	private EventService $events;
 
@@ -27,20 +28,12 @@ final class EventController {
 		$this->events = $events;
 	}
 
-	/**
-	 * Register admin hooks.
-	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_post_adam_membership_save_event', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_adam_membership_delete_event', array( $this, 'handle_delete' ) );
-		add_action( 'admin_post_adam_membership_update_event_registration', array( $this, 'handle_registration_status' ) );
-		add_action( 'admin_post_adam_membership_export_event_csv', array( $this, 'handle_export' ) );
 	}
 
-	/**
-	 * Register menu pages.
-	 */
 	public function register_menu(): void {
 		add_submenu_page(
 			'adam-membership',
@@ -100,8 +93,8 @@ final class EventController {
 							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Local', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Acesso', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Jogadores', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Fornecedor externo', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Check-ins', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 						</tr>
@@ -112,8 +105,8 @@ final class EventController {
 								<td><strong><?php echo esc_html( $event->title() ); ?></strong><br><small><?php echo esc_html( $event->slug() ); ?></small></td>
 								<td><?php echo esc_html( $this->format_date( $event->event_date() ) ); ?></td>
 								<td><?php echo esc_html( $event->location() ); ?></td>
-								<td><?php echo esc_html( $this->access_mode_label( $event->access_mode() ) ); ?></td>
-								<td><?php echo esc_html( $this->events->confirmed_count( $event ) . ' / ' . ( $event->max_players() > 0 ? (string) $event->max_players() : __( 'Sem limite', 'adam-membership' ) ) ); ?></td>
+								<td><?php echo esc_html( $event->external_provider_name() ); ?></td>
+								<td><?php echo esc_html( (string) $this->events->checked_in_count( $event ) ); ?></td>
 								<td><?php $this->render_badge( $this->status_label( $event->status() ), 'event-status-' . $event->status() ); ?></td>
 								<td class="adam-admin-row-actions">
 									<a class="button button-small" href="<?php echo esc_url( $this->edit_url( $event->id() ) ); ?>"><?php esc_html_e( 'Editar', 'adam-membership' ); ?></a>
@@ -148,6 +141,9 @@ final class EventController {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form">
 					<input type="hidden" name="action" value="adam_membership_save_event">
 					<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) ( null !== $event ? $event->id() : 0 ) ); ?>">
+					<?php if ( null !== $event ) : ?>
+						<input type="hidden" name="checkin_token" value="<?php echo esc_attr( $event->checkin_token() ); ?>">
+					<?php endif; ?>
 					<?php wp_nonce_field( 'adam_membership_save_event' ); ?>
 					<div class="adam-admin-edit-grid">
 						<label><span><?php esc_html_e( 'Título', 'adam-membership' ); ?></span><input type="text" name="title" required value="<?php echo esc_attr( null !== $event ? $event->title() : '' ); ?>"></label>
@@ -157,17 +153,10 @@ final class EventController {
 						<label><span><?php esc_html_e( 'Local', 'adam-membership' ); ?></span><input type="text" name="location" value="<?php echo esc_attr( null !== $event ? $event->location() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Ligação do mapa', 'adam-membership' ); ?></span><input type="url" name="map_link" value="<?php echo esc_attr( null !== $event ? $event->map_link() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Imagem de capa', 'adam-membership' ); ?></span><input type="url" name="cover_image" value="<?php echo esc_attr( null !== $event ? $event->cover_image() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Modo de acesso', 'adam-membership' ); ?></span>
-							<select name="access_mode">
-								<?php foreach ( Event::access_modes() as $mode ) : ?>
-									<?php $this->render_select_option( $mode, $this->access_mode_label( $mode ), null !== $event ? $event->access_mode() : Event::ACCESS_MEMBERS_ONLY ); ?>
-								<?php endforeach; ?>
-							</select>
-						</label>
-						<label><span><?php esc_html_e( 'Máximo de jogadores', 'adam-membership' ); ?></span><input type="number" min="0" name="max_players" value="<?php echo esc_attr( null !== $event ? (string) $event->max_players() : '30' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Limite da lista de espera', 'adam-membership' ); ?></span><input type="number" min="0" name="waiting_list_limit" value="<?php echo esc_attr( null !== $event ? (string) $event->waiting_list_limit() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Fim das inscrições', 'adam-membership' ); ?></span><input type="datetime-local" name="registration_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->registration_deadline() ) : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Fim da prioridade a sócios', 'adam-membership' ); ?></span><input type="datetime-local" name="priority_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->priority_deadline() ) : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Fornecedor externo', 'adam-membership' ); ?></span><input type="text" name="external_provider_name" value="<?php echo esc_attr( null !== $event ? $event->external_provider_name() : 'Jogar Airsoft' ); ?>"></label>
+						<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'URL externa de inscrição', 'adam-membership' ); ?></span><input type="url" name="external_registration_url" value="<?php echo esc_attr( null !== $event ? $event->external_registration_url() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Limite de jogadores', 'adam-membership' ); ?></span><input type="number" min="0" name="player_limit" value="<?php echo esc_attr( null !== $event ? (string) $event->player_limit() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Preço', 'adam-membership' ); ?></span><input type="text" name="price" value="<?php echo esc_attr( null !== $event ? $event->price() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Estado', 'adam-membership' ); ?></span>
 							<select name="status">
 								<?php foreach ( Event::statuses() as $status ) : ?>
@@ -175,10 +164,15 @@ final class EventController {
 								<?php endforeach; ?>
 							</select>
 						</label>
+						<label><span><?php esc_html_e( 'Pontos atribuídos no check-in', 'adam-membership' ); ?></span><input type="number" min="1" name="checkin_points" value="<?php echo esc_attr( null !== $event ? (string) $event->checkin_points() : '1' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Abertura do check-in', 'adam-membership' ); ?></span><input type="datetime-local" name="checkin_open_at" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->checkin_open_at() ) : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Fecho do check-in', 'adam-membership' ); ?></span><input type="datetime-local" name="checkin_close_at" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->checkin_close_at() ) : '' ); ?>"></label>
 					</div>
-					<label class="adam-admin-checkbox-field"><input type="checkbox" name="waiting_list_enabled" value="1" <?php checked( null !== $event ? $event->waiting_list_enabled() : true ); ?>> <?php esc_html_e( 'Ativar lista de espera', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="is_paid" value="1" <?php checked( null !== $event ? $event->is_paid() : false ); ?>> <?php esc_html_e( 'Evento pago', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="checkin_enabled" value="1" <?php checked( null !== $event ? $event->checkin_enabled() : false ); ?>> <?php esc_html_e( 'Ativar check-in com QR', 'adam-membership' ); ?></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição curta', 'adam-membership' ); ?></span><textarea name="short_description" rows="3"><?php echo esc_textarea( null !== $event ? $event->short_description() : '' ); ?></textarea></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição completa', 'adam-membership' ); ?></span><textarea name="full_description" rows="8"><?php echo esc_textarea( null !== $event ? wp_strip_all_tags( $event->full_description() ) : '' ); ?></textarea></label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Notas', 'adam-membership' ); ?></span><textarea name="notes" rows="4"><?php echo esc_textarea( null !== $event ? $event->notes() : '' ); ?></textarea></label>
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
@@ -190,15 +184,9 @@ final class EventController {
 				<div class="adam-admin-panel">
 					<div class="adam-admin-actions">
 						<a class="button" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página do evento', 'adam-membership' ); ?></a>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
-							<input type="hidden" name="action" value="adam_membership_export_event_csv">
-							<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>">
-							<?php wp_nonce_field( 'adam_membership_export_event_csv_' . $event->id() ); ?>
-							<button type="submit" class="button"><?php esc_html_e( 'Exportar CSV', 'adam-membership' ); ?></button>
-						</form>
 					</div>
 				</div>
-				<?php $this->render_registrations_panel( $event ); ?>
+				<?php $this->render_checkin_panel( $event ); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -225,114 +213,60 @@ final class EventController {
 		$this->redirect_with_notice( 'adam_message', __( 'Evento eliminado.', 'adam-membership' ), admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
 	}
 
-	public function handle_registration_status(): void {
-		$this->ensure_can_manage();
-		$registration_id = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
-		$event_id        = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-		check_admin_referer( 'adam_membership_update_event_registration_' . $registration_id );
-		$status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
-		$result = $this->events->update_registration_status( $registration_id, $status );
-
-		if ( is_wp_error( $result ) ) {
-			$this->redirect_with_notice( 'adam_error', $result->get_error_message(), $this->edit_url( $event_id ) );
-		}
-
-		$this->redirect_with_notice( 'adam_message', __( 'Inscrição atualizada.', 'adam-membership' ), $this->edit_url( $event_id ) );
-	}
-
-	public function handle_export(): void {
-		$this->ensure_can_manage();
-		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-		check_admin_referer( 'adam_membership_export_event_csv_' . $event_id );
-		$event = $this->events->repository()->find_event( $event_id );
-
-		if ( null === $event ) {
-			$this->redirect_with_notice( 'adam_error', __( 'Evento não encontrado.', 'adam-membership' ), admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
-		}
-
-		$filename = 'adam-event-' . $event->slug() . '.csv';
-		nocache_headers();
-		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=' . $filename );
-
-		$handle = fopen( 'php://output', 'w' );
-
-		if ( false !== $handle ) {
-			fputcsv( $handle, array( 'Name', 'Email', 'Phone', 'Team', 'Estado', 'ID do sócio', 'Created At' ) );
-
-			foreach ( $this->events->registrations_for_event( $event->id() ) as $registration ) {
-				fputcsv(
-					$handle,
-					array(
-						$registration->name(),
-						$registration->email(),
-						$registration->phone(),
-						$registration->team(),
-						$registration->status(),
-						(string) $registration->member_id(),
-						$registration->created_at(),
-					)
-				);
-			}
-
-			fclose( $handle );
-		}
-
-		exit;
-	}
-
-	/**
-	 * Render registrations panel.
-	 */
-	private function render_registrations_panel( Event $event ): void {
-		$registrations = $this->events->registrations_for_event( $event->id() );
+	private function render_checkin_panel( Event $event ): void {
+		$checkins = $this->events->event_checkins( $event->id() );
 		?>
 		<div class="adam-admin-panel">
-			<h2><?php esc_html_e( 'Inscrições', 'adam-membership' ); ?></h2>
-			<?php if ( array() === $registrations ) : ?>
-				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem inscrições.', 'adam-membership' ); ?></div>
+			<h2><?php esc_html_e( 'QR de check-in', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-edit-grid">
+				<div>
+					<p><strong><?php esc_html_e( 'URL de check-in', 'adam-membership' ); ?></strong></p>
+					<input type="url" class="large-text" readonly value="<?php echo esc_attr( $this->events->checkin_url( $event ) ); ?>">
+					<p><strong><?php esc_html_e( 'Check-ins registados', 'adam-membership' ); ?>:</strong> <?php echo esc_html( (string) count( $checkins ) ); ?></p>
+				</div>
+				<div>
+					<img src="<?php echo esc_url( $this->events->checkin_qr_image_url( $event ) ); ?>" alt="<?php esc_attr_e( 'QR code de check-in do evento', 'adam-membership' ); ?>" style="max-width:220px;height:auto;">
+				</div>
+			</div>
+			<div class="adam-admin-actions">
+				<a class="button" href="<?php echo esc_url( $this->events->checkin_qr_image_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir / descarregar QR', 'adam-membership' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $this->events->checkin_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página de check-in', 'adam-membership' ); ?></a>
+			</div>
+		</div>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Sócios com check-in', 'adam-membership' ); ?></h2>
+			<?php if ( array() === $checkins ) : ?>
+				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem check-ins registados para este evento.', 'adam-membership' ); ?></div>
 			<?php else : ?>
 				<table class="widefat striped adam-admin-table">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Nome', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Email', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Telefone', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Equipa', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Data do check-in', 'adam-membership' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
-						<?php foreach ( $registrations as $registration ) : ?>
-							<tr>
-								<td><?php echo esc_html( $registration->name() ); ?><?php if ( $registration->member_id() > 0 ) : ?><br><small><?php echo esc_html( 'Sócio #' . $registration->member_id() ); ?></small><?php endif; ?></td>
-								<td><?php echo esc_html( $registration->email() ); ?></td>
-								<td><?php echo esc_html( $registration->phone() ); ?></td>
-								<td><?php echo esc_html( $registration->team() ); ?></td>
-								<td><?php $this->render_badge( $this->registration_status_label( $registration->status() ), 'registration-status-' . $registration->status() ); ?></td>
-								<td><?php echo esc_html( $this->format_datetime( $registration->created_at() ) ); ?></td>
-								<td>
-									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form adam-admin-row-actions">
-										<input type="hidden" name="action" value="adam_membership_update_event_registration">
-										<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration->id() ); ?>">
-										<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>">
-										<?php wp_nonce_field( 'adam_membership_update_event_registration_' . $registration->id() ); ?>
-										<select name="status">
-											<?php foreach ( EventRegistration::statuses() as $status ) : ?>
-												<?php $this->render_select_option( $status, $this->registration_status_label( $status ), $registration->status() ); ?>
-											<?php endforeach; ?>
-										</select>
-										<button type="submit" class="button button-small"><?php esc_html_e( 'Atualizar', 'adam-membership' ); ?></button>
-									</form>
-								</td>
-							</tr>
+						<?php foreach ( $checkins as $checkin ) : ?>
+							<?php $this->render_checkin_row( $checkin ); ?>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
 			<?php endif; ?>
 		</div>
+		<?php
+	}
+
+	private function render_checkin_row( EventCheckIn $checkin ): void {
+		$item = Member::load( $checkin->member_id() );
+		?>
+		<tr>
+			<td><?php echo esc_html( null !== $item ? $item->full_name() : __( 'Sócio removido', 'adam-membership' ) ); ?></td>
+			<td><?php echo esc_html( null !== $item ? (string) $item->field( 'numero_socio' ) : ''); ?></td>
+			<td><?php echo esc_html( '+' . $checkin->points_awarded() ); ?></td>
+			<td><?php echo esc_html( $this->format_datetime( $checkin->checked_in_at() ) ); ?></td>
+		</tr>
 		<?php
 	}
 
@@ -343,8 +277,6 @@ final class EventController {
 	}
 
 	/**
-	 * Read current filters.
-	 *
 	 * @return array<string, string>
 	 */
 	private function current_filters(): array {
@@ -410,24 +342,6 @@ final class EventController {
 		};
 	}
 
-	private function access_mode_label( string $mode ): string {
-		return match ( $mode ) {
-			Event::ACCESS_OPEN            => __( 'Aberto a todos', 'adam-membership' ),
-			Event::ACCESS_MEMBER_PRIORITY => __( 'Prioridade a socios', 'adam-membership' ),
-			default                       => __( 'Socios ADAM', 'adam-membership' ),
-		};
-	}
-
-	private function registration_status_label( string $status ): string {
-		return match ( $status ) {
-			EventRegistration::STATUS_CONFIRMED    => __( 'Confirmado', 'adam-membership' ),
-			EventRegistration::STATUS_PENDING      => __( 'Pendente', 'adam-membership' ),
-			EventRegistration::STATUS_WAITING_LIST => __( 'Lista de Espera', 'adam-membership' ),
-			EventRegistration::STATUS_CANCELLED    => __( 'Cancelado', 'adam-membership' ),
-			default                                => __( 'Rejeitado', 'adam-membership' ),
-		};
-	}
-
 	private function format_date( string $date ): string {
 		$timestamp = strtotime( $date . ' 00:00:00' );
 
@@ -440,7 +354,7 @@ final class EventController {
 		return false === $timestamp ? $datetime : wp_date( get_option( 'date_format' ) . ' H:i', $timestamp );
 	}
 
-	private function datetime_local_value( string $datetime ): string {
-		return '' === $datetime ? '' : str_replace( ' ', 'T', $datetime );
+	private function datetime_local_value( string $value ): string {
+		return '' !== $value ? str_replace( ' ', 'T', $value ) : '';
 	}
 }

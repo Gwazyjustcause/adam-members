@@ -17,6 +17,8 @@ final class EventRepository {
 	private const OPTION_EVENT_NEXT_ID         = 'adam_membership_event_next_id';
 	private const OPTION_REGISTRATIONS         = 'adam_membership_event_registrations';
 	private const OPTION_REGISTRATION_NEXT_ID  = 'adam_membership_event_registration_next_id';
+	private const OPTION_CHECKINS              = 'adam_membership_event_checkins';
+	private const OPTION_CHECKIN_NEXT_ID       = 'adam_membership_event_checkin_next_id';
 
 	/**
 	 * Create an event.
@@ -73,6 +75,18 @@ final class EventRepository {
 		}
 
 		update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+
+		$checkins = $this->raw_checkins();
+
+		foreach ( $checkins as $checkin_id => $checkin ) {
+			if ( ! is_array( $checkin ) || absint( $checkin['event_id'] ?? 0 ) !== $event_id ) {
+				continue;
+			}
+
+			unset( $checkins[ $checkin_id ] );
+		}
+
+		update_option( self::OPTION_CHECKINS, $checkins, false );
 	}
 
 	/**
@@ -271,6 +285,80 @@ final class EventRepository {
 	}
 
 	/**
+	 * Create a check-in.
+	 *
+	 * @param array<string, mixed> $data Check-in data.
+	 */
+	public function create_checkin( array $data ): EventCheckIn {
+		$id        = absint( get_option( self::OPTION_CHECKIN_NEXT_ID, 1 ) );
+		$checkins  = $this->raw_checkins();
+		$data['id'] = $id;
+		$checkins[ $id ] = $data;
+
+		update_option( self::OPTION_CHECKINS, $checkins, false );
+		update_option( self::OPTION_CHECKIN_NEXT_ID, $id + 1, false );
+
+		return new EventCheckIn( $data );
+	}
+
+	/**
+	 * Find a member check-in for one event.
+	 */
+	public function find_checkin_for_member( int $event_id, int $member_id ): ?EventCheckIn {
+		foreach ( $this->raw_checkins() as $checkin ) {
+			if ( ! is_array( $checkin ) ) {
+				continue;
+			}
+
+			if ( absint( $checkin['event_id'] ?? 0 ) === $event_id && absint( $checkin['member_id'] ?? 0 ) === $member_id ) {
+				return new EventCheckIn( $checkin );
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Query check-ins.
+	 *
+	 * @param array<string, mixed> $filters Filters.
+	 * @return array<int, EventCheckIn>
+	 */
+	public function query_checkins( array $filters = array() ): array {
+		$event_id  = isset( $filters['event_id'] ) ? absint( $filters['event_id'] ) : 0;
+		$member_id = isset( $filters['member_id'] ) ? absint( $filters['member_id'] ) : 0;
+
+		$checkins = array_map(
+			static fn ( array $item ): EventCheckIn => new EventCheckIn( $item ),
+			array_values( $this->raw_checkins() )
+		);
+
+		$checkins = array_values(
+			array_filter(
+				$checkins,
+				static function ( EventCheckIn $checkin ) use ( $event_id, $member_id ): bool {
+					if ( 0 !== $event_id && $checkin->event_id() !== $event_id ) {
+						return false;
+					}
+
+					if ( 0 !== $member_id && $checkin->member_id() !== $member_id ) {
+						return false;
+					}
+
+					return true;
+				}
+			)
+		);
+
+		usort(
+			$checkins,
+			static fn ( EventCheckIn $left, EventCheckIn $right ): int => strtotime( $right->checked_in_at() ) <=> strtotime( $left->checked_in_at() )
+		);
+
+		return $checkins;
+	}
+
+	/**
 	 * Build a unique event slug.
 	 */
 	public function unique_slug( string $title, int $ignore_id = 0 ): string {
@@ -311,6 +399,17 @@ final class EventRepository {
 		$registrations = get_option( self::OPTION_REGISTRATIONS, array() );
 
 		return is_array( $registrations ) ? $registrations : array();
+	}
+
+	/**
+	 * Get raw check-ins.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function raw_checkins(): array {
+		$checkins = get_option( self::OPTION_CHECKINS, array() );
+
+		return is_array( $checkins ) ? $checkins : array();
 	}
 
 	/**

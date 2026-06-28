@@ -16,9 +16,11 @@ use AdamMembership\Member\MemberRepository;
 use WP_Error;
 
 /**
- * Coordinates event data and registrations.
+ * Coordinates event data, external registration details, and member check-ins.
  */
 final class EventService {
+	private const MEMBER_POINTS_META = 'adam_membership_event_points_balance';
+
 	private EventRepository $repository;
 	private MemberRepository $members;
 	private Logger $logger;
@@ -31,9 +33,6 @@ final class EventService {
 		$this->history    = $history;
 	}
 
-	/**
-	 * Get repository.
-	 */
 	public function repository(): EventRepository {
 		return $this->repository;
 	}
@@ -46,7 +45,8 @@ final class EventService {
 	 * @return Event|WP_Error
 	 */
 	public function save_event( array $data, int $id = 0 ): Event|WP_Error {
-		$prepared = $this->sanitize_event_data( $data, $id );
+		$existing = $id > 0 ? $this->repository->find_event( $id ) : null;
+		$prepared = $this->sanitize_event_data( $data, $id, $existing );
 
 		if ( '' === $prepared['title'] ) {
 			return new WP_Error( 'adam_membership_event_title_required', __( 'O título do evento é obrigatório.', 'adam-membership' ) );
@@ -58,24 +58,18 @@ final class EventService {
 
 		$now = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
 
-		if ( 0 === $id ) {
+		if ( null === $existing ) {
 			$prepared['created_at'] = $now;
 			$prepared['updated_at'] = $now;
-			$event = $this->repository->create_event( $prepared );
-			$this->logger->info( 'Event created.', array( 'event_id' => $event->id() ) );
+			$event                  = $this->repository->create_event( $prepared );
+			$this->logger->info( 'Evento criado.', array( 'event_id' => $event->id() ) );
 
 			return $event;
 		}
 
-		$current = $this->repository->find_event( $id );
-
-		if ( null === $current ) {
-			return new WP_Error( 'adam_membership_event_not_found', __( 'Evento não encontrado.', 'adam-membership' ) );
-		}
-
 		$prepared['updated_at'] = $now;
-		$event = $this->repository->update_event( $current, $prepared );
-		$this->logger->info( 'Event updated.', array( 'event_id' => $event->id() ) );
+		$event                  = $this->repository->update_event( $existing, $prepared );
+		$this->logger->info( 'Evento atualizado.', array( 'event_id' => $event->id() ) );
 
 		return $event;
 	}
@@ -85,12 +79,10 @@ final class EventService {
 	 */
 	public function delete_event( int $event_id ): void {
 		$this->repository->delete_event( $event_id );
-		$this->logger->info( 'Event deleted.', array( 'event_id' => $event_id ) );
+		$this->logger->info( 'Evento eliminado.', array( 'event_id' => $event_id ) );
 	}
 
 	/**
-	 * Get frontend-visible events.
-	 *
 	 * @return array<int, Event>
 	 */
 	public function visible_events(): array {
@@ -102,9 +94,6 @@ final class EventService {
 		);
 	}
 
-	/**
-	 * Find a visible event by slug.
-	 */
 	public function visible_event_by_slug( string $slug ): ?Event {
 		$event = $this->repository->find_event_by_slug( $slug );
 
@@ -115,182 +104,16 @@ final class EventService {
 		return $event;
 	}
 
-	/**
-	 * Register one participant for an event.
-	 *
-	 * @param Event                $event         Event.
-	 * @param array<string, mixed> $data          Request data.
-	 * @param int                  $current_user_id Current user ID.
-	 * @return EventRegistration|WP_Error
-	 */
-	public function register_participant( Event $event, array $data, int $current_user_id = 0 ): EventRegistration|WP_Error {
-		if ( ! $event->is_registration_open() ) {
-			return new WP_Error( 'adam_membership_event_registration_closed', __( 'As inscrições para este evento estão encerradas.', 'adam-membership' ) );
+	public function event_by_checkin_token( string $token ): ?Event {
+		$token = sanitize_text_field( $token );
+
+		if ( '' === $token ) {
+			return null;
 		}
 
-		$member           = $current_user_id > 0 ? $this->members->find( $current_user_id ) : null;
-		$is_active_member = $member instanceof Member && $member->isActive();
-
-		if ( Event::ACCESS_MEMBERS_ONLY === $event->access_mode() && ! $is_active_member ) {
-			return new WP_Error( 'adam_membership_event_members_only', __( 'Sócios ADAM com estado Ativo são os únicos que podem inscrever-se neste evento.', 'adam-membership' ) );
-		}
-
-		$prepared = $this->sanitize_registration_data( $data, $member );
-
-		if ( '' === $prepared['name'] || '' === $prepared['email'] ) {
-			return new WP_Error( 'adam_membership_event_registration_fields', __( 'O nome e o email são obrigatórios.', 'adam-membership' ) );
-		}
-
-		if ( ! $member instanceof Member && '' === $prepared['phone'] ) {
-			return new WP_Error( 'adam_membership_event_registration_phone_required', __( 'O telefone é obrigatório para inscrições de não sócios.', 'adam-membership' ) );
-		}
-
-		if ( $this->has_existing_registration( $event, $prepared['email'], $prepared['member_id'] ) ) {
-			return new WP_Error( 'adam_membership_event_duplicate_registration', __( 'Já existe uma inscrição para este participante.', 'adam-membership' ) );
-		}
-
-		$status = $this->determine_registration_status( $event, $is_active_member );
-
-		if ( is_wp_error( $status ) ) {
-			return $status;
-		}
-
-		$now = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
-		$registration = $this->repository->create_registration(
-			array_merge(
-				$prepared,
-				array(
-					'event_id'      => $event->id(),
-					'status'        => $status,
-					'manage_token'  => wp_generate_password( 20, false, false ),
-					'created_at'    => $now,
-					'updated_at'    => $now,
-				)
-			)
-		);
-
-		$this->logger->info(
-			'Inscrição em evento criada.',
-			array(
-				'event_id'        => $event->id(),
-				'registration_id' => $registration->id(),
-				'status'          => $registration->status(),
-				'member_id'       => $registration->member_id(),
-			)
-		);
-		$this->record_history( $event, $registration, 'event_registered', __( 'Inscrição no evento criada', 'adam-membership' ) );
-
-		return $registration;
-	}
-
-	/**
-	 * Cancel a registration.
-	 *
-	 * @return EventRegistration|WP_Error
-	 */
-	public function cancel_registration( EventRegistration $registration ): EventRegistration|WP_Error {
-		if ( EventRegistration::STATUS_CANCELLED === $registration->status() ) {
-			return $registration;
-		}
-
-		$updated = $this->repository->update_registration(
-			$registration,
-			array(
-				'status'     => EventRegistration::STATUS_CANCELLED,
-				'updated_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
-			)
-		);
-
-		$event = $this->repository->find_event( $registration->event_id() );
-
-		if ( null !== $event ) {
-			$this->record_history( $event, $updated, 'event_registration_cancelled', __( 'Inscrição no evento cancelada', 'adam-membership' ) );
-		}
-
-		return $updated;
-	}
-
-	/**
-	 * Update one registration status from the admin area.
-	 *
-	 * @return EventRegistration|WP_Error
-	 */
-	public function update_registration_status( int $registration_id, string $status ): EventRegistration|WP_Error {
-		$registration = $this->repository->find_registration( $registration_id );
-
-		if ( null === $registration ) {
-			return new WP_Error( 'adam_membership_registration_not_found', __( 'Inscrição não encontrada.', 'adam-membership' ) );
-		}
-
-		$status = sanitize_key( $status );
-
-		if ( ! in_array( $status, EventRegistration::statuses(), true ) ) {
-			return new WP_Error( 'adam_membership_registration_invalid_status', __( 'Estado de inscrição inválido.', 'adam-membership' ) );
-		}
-
-		$event = $this->repository->find_event( $registration->event_id() );
-
-		if ( null === $event ) {
-			return new WP_Error( 'adam_membership_event_not_found', __( 'Evento não encontrado.', 'adam-membership' ) );
-		}
-
-		if ( EventRegistration::STATUS_CONFIRMED === $status && ! $this->has_confirmed_capacity( $event, $registration->id() ) ) {
-			return new WP_Error( 'adam_membership_registration_full', __( 'Não existem vagas confirmadas disponíveis para este evento.', 'adam-membership' ) );
-		}
-
-		$updated = $this->repository->update_registration(
-			$registration,
-			array(
-				'status'     => $status,
-				'updated_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
-			)
-		);
-
-		$this->record_history( $event, $updated, 'event_registration_status_changed', __( 'Estado da inscrição no evento alterado', 'adam-membership' ) );
-
-		return $updated;
-	}
-
-	/**
-	 * Get all registrations for one event.
-	 *
-	 * @return array<int, EventRegistration>
-	 */
-	public function registrations_for_event( int $event_id ): array {
-		return $this->repository->query_registrations( array( 'event_id' => $event_id ) );
-	}
-
-	/**
-	 * Find a registration for the current member or email.
-	 */
-	public function attendee_registration( Event $event, ?Member $member, string $email = '' ): ?EventRegistration {
-		if ( $member instanceof Member ) {
-			$matches = $this->repository->query_registrations(
-				array(
-					'event_id'   => $event->id(),
-					'member_id'  => $member->user_id(),
-				)
-			);
-
-			foreach ( $matches as $match ) {
-				if ( $match->is_active() ) {
-					return $match;
-				}
-			}
-		}
-
-		if ( '' !== $email ) {
-			$matches = $this->repository->query_registrations(
-				array(
-					'event_id' => $event->id(),
-					'email'    => $email,
-				)
-			);
-
-			foreach ( $matches as $match ) {
-				if ( $match->is_active() ) {
-					return $match;
-				}
+		foreach ( $this->repository->query_events() as $event ) {
+			if ( hash_equals( $event->checkin_token(), $token ) ) {
+				return $event;
 			}
 		}
 
@@ -298,60 +121,150 @@ final class EventService {
 	}
 
 	/**
-	 * Count confirmed registrations.
-	 */
-	public function confirmed_count( Event $event ): int {
-		return count(
-			array_filter(
-				$this->registrations_for_event( $event->id() ),
-				static fn ( EventRegistration $registration ): bool => EventRegistration::STATUS_CONFIRMED === $registration->status()
-			)
-		);
-	}
-
-	/**
-	 * Count waiting list registrations.
-	 */
-	public function waiting_list_count( Event $event ): int {
-		return count(
-			array_filter(
-				$this->registrations_for_event( $event->id() ),
-				static fn ( EventRegistration $registration ): bool => EventRegistration::STATUS_WAITING_LIST === $registration->status()
-			)
-		);
-	}
-
-	/**
-	 * Get a registration by token.
-	 */
-	public function registration_by_token( string $token ): ?EventRegistration {
-		return $this->repository->find_registration_by_token( $token );
-	}
-
-	/**
-	 * Build event URL.
-	 */
-	public function event_url( Event $event ): string {
-		return home_url( '/eventos/' . $event->slug() . '/' );
-	}
-
-	/**
-	 * Get admin list rows.
-	 *
 	 * @return array<int, Event>
 	 */
 	public function admin_events( array $filters = array() ): array {
 		return $this->repository->query_events( $filters );
 	}
 
+	public function event_url( Event $event ): string {
+		return home_url( '/eventos/' . $event->slug() . '/' );
+	}
+
+	public function checkin_url( Event $event ): string {
+		return home_url( '/eventos/check-in/' . rawurlencode( $event->checkin_token() ) . '/' );
+	}
+
+	public function checkin_qr_image_url( Event $event ): string {
+		return add_query_arg(
+			array(
+				'size' => '320x320',
+				'data' => $this->checkin_url( $event ),
+			),
+			'https://api.qrserver.com/v1/create-qr-code/'
+		);
+	}
+
+	public function checked_in_count( Event $event ): int {
+		return count( $this->event_checkins( $event->id() ) );
+	}
+
+	/**
+	 * @return array<int, EventCheckIn>
+	 */
+	public function event_checkins( int $event_id ): array {
+		return $this->repository->query_checkins( array( 'event_id' => $event_id ) );
+	}
+
+	public function member_checkin_for_event( Event $event, Member $member ): ?EventCheckIn {
+		return $this->repository->find_checkin_for_member( $event->id(), $member->user_id() );
+	}
+
+	public function points_balance( Member $member ): int {
+		return max( 0, absint( get_user_meta( $member->user_id(), self::MEMBER_POINTS_META, true ) ) );
+	}
+
+	/**
+	 * Check whether a member can check in.
+	 *
+	 * @return true|WP_Error
+	 */
+	public function validate_checkin_eligibility( Event $event, Member $member ): true|WP_Error {
+		if ( ! $event->checkin_enabled() ) {
+			return new WP_Error( 'adam_membership_event_checkin_disabled', __( 'O check-in para este evento não está ativo.', 'adam-membership' ) );
+		}
+
+		if ( ! $member->isActive() ) {
+			return new WP_Error( 'adam_membership_event_member_not_active', __( 'Os pontos de participação estão disponíveis apenas para sócios ADAM com estado Ativo.', 'adam-membership' ) );
+		}
+
+		if ( ! $event->is_checkin_window_open() ) {
+			return new WP_Error( 'adam_membership_event_checkin_closed', __( 'O período de check-in deste evento não está disponível neste momento.', 'adam-membership' ) );
+		}
+
+		if ( null !== $this->member_checkin_for_event( $event, $member ) ) {
+			return new WP_Error( 'adam_membership_event_already_checked_in', __( 'Já efetuaste o check-in neste evento e os pontos já foram atribuídos.', 'adam-membership' ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Perform a member check-in.
+	 *
+	 * @return EventCheckIn|WP_Error
+	 */
+	public function check_in_member( Event $event, Member $member ): EventCheckIn|WP_Error {
+		$eligibility = $this->validate_checkin_eligibility( $event, $member );
+
+		if ( is_wp_error( $eligibility ) ) {
+			return $eligibility;
+		}
+
+		$now     = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
+		$points  = $event->checkin_points();
+		$checkin = $this->repository->create_checkin(
+			array(
+				'event_id'        => $event->id(),
+				'member_id'       => $member->user_id(),
+				'points_awarded'  => $points,
+				'checked_in_at'   => $now,
+				'created_at'      => $now,
+			)
+		);
+
+		update_user_meta( $member->user_id(), self::MEMBER_POINTS_META, $this->points_balance( $member ) + $points );
+
+		$this->logger->info(
+			'Check-in de evento efetuado.',
+			array(
+				'event_id'   => $event->id(),
+				'member_id'  => $member->user_id(),
+				'points'     => $points,
+				'checkin_id' => $checkin->id(),
+			)
+		);
+
+		$this->history->create(
+			array(
+				'member_id'     => $member->user_id(),
+				'member_number' => sanitize_text_field( (string) $member->field( 'numero_socio' ) ),
+				'member_name'   => sanitize_text_field( $member->full_name() ),
+				'member_email'  => sanitize_email( $member->email() ),
+				'action_key'    => 'event_checkin',
+				'action_label'  => __( 'Check-in em evento', 'adam-membership' ),
+				'actor_type'    => 'member',
+				'actor_id'      => $member->user_id(),
+				'actor_name'    => sanitize_text_field( $member->full_name() ),
+				'description'   => sprintf(
+					/* translators: 1: event title, 2: points awarded */
+					__( 'Check-in efetuado no evento "%1$s". Pontos atribuídos: +%2$d.', 'adam-membership' ),
+					$event->title(),
+					$points
+				),
+				'details'       => array(
+					'event_id'        => $event->id(),
+					'event_title'     => $event->title(),
+					'points_awarded'  => $points,
+					'checkin_id'      => $checkin->id(),
+					'checked_in_at'   => $checkin->checked_in_at(),
+				),
+				'created_at'    => $now,
+			)
+		);
+
+		return $checkin;
+	}
+
 	/**
 	 * Sanitize event data.
 	 *
 	 * @param array<string, mixed> $data Raw data.
-	 * @param int                  $id   Existing ID.
+	 * @param int                  $id Existing ID.
+	 * @param Event|null           $existing Existing event.
 	 * @return array<string, mixed>
 	 */
-	private function sanitize_event_data( array $data, int $id ): array {
+	private function sanitize_event_data( array $data, int $id, ?Event $existing ): array {
 		$title = isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '';
 		$slug  = $this->repository->unique_slug( $title, $id );
 
@@ -361,202 +274,63 @@ final class EventService {
 			$status = Event::STATUS_DRAFT;
 		}
 
-		$access_mode = isset( $data['access_mode'] ) ? sanitize_key( (string) $data['access_mode'] ) : Event::ACCESS_MEMBERS_ONLY;
+		$provider = isset( $data['external_provider_name'] ) ? sanitize_text_field( (string) $data['external_provider_name'] ) : '';
+		$provider = '' !== $provider ? $provider : ( null !== $existing ? $existing->external_provider_name() : 'Jogar Airsoft' );
 
-		if ( ! in_array( $access_mode, Event::access_modes(), true ) ) {
-			$access_mode = Event::ACCESS_MEMBERS_ONLY;
+		$checkin_token = isset( $data['checkin_token'] ) ? sanitize_text_field( (string) $data['checkin_token'] ) : '';
+
+		if ( '' === $checkin_token && null !== $existing ) {
+			$checkin_token = $existing->checkin_token();
+		}
+
+		if ( '' === $checkin_token ) {
+			$checkin_token = wp_generate_password( 48, false, false );
 		}
 
 		return array(
-			'slug'                  => $slug,
-			'title'                 => $title,
-			'short_description'     => isset( $data['short_description'] ) ? sanitize_textarea_field( (string) $data['short_description'] ) : '',
-			'full_description'      => isset( $data['full_description'] ) ? wp_kses_post( (string) $data['full_description'] ) : '',
-			'event_date'            => $this->sanitize_date( (string) ( $data['event_date'] ?? '' ) ),
-			'start_time'            => $this->sanitize_time( (string) ( $data['start_time'] ?? '' ) ),
-			'end_time'              => $this->sanitize_time( (string) ( $data['end_time'] ?? '' ) ),
-			'location'              => isset( $data['location'] ) ? sanitize_text_field( (string) $data['location'] ) : '',
-			'map_link'              => isset( $data['map_link'] ) ? esc_url_raw( (string) $data['map_link'] ) : '',
-			'cover_image'           => isset( $data['cover_image'] ) ? esc_url_raw( (string) $data['cover_image'] ) : '',
-			'access_mode'           => $access_mode,
-			'max_players'           => max( 0, absint( $data['max_players'] ?? 0 ) ),
-			'waiting_list_enabled'  => ! empty( $data['waiting_list_enabled'] ),
-			'waiting_list_limit'    => max( 0, absint( $data['waiting_list_limit'] ?? 0 ) ),
-			'registration_deadline' => $this->sanitize_datetime_local( (string) ( $data['registration_deadline'] ?? '' ) ),
-			'priority_deadline'     => Event::ACCESS_MEMBER_PRIORITY === $access_mode ? $this->sanitize_datetime_local( (string) ( $data['priority_deadline'] ?? '' ) ) : '',
-			'status'                => $status,
+			'slug'                      => $slug,
+			'title'                     => $title,
+			'short_description'         => isset( $data['short_description'] ) ? sanitize_textarea_field( (string) $data['short_description'] ) : '',
+			'full_description'          => isset( $data['full_description'] ) ? wp_kses_post( (string) $data['full_description'] ) : '',
+			'event_date'                => $this->sanitize_date( (string) ( $data['event_date'] ?? '' ) ),
+			'start_time'                => $this->sanitize_time( (string) ( $data['start_time'] ?? '' ) ),
+			'end_time'                  => $this->sanitize_time( (string) ( $data['end_time'] ?? '' ) ),
+			'location'                  => isset( $data['location'] ) ? sanitize_text_field( (string) $data['location'] ) : '',
+			'map_link'                  => isset( $data['map_link'] ) ? esc_url_raw( (string) $data['map_link'] ) : '',
+			'cover_image'               => isset( $data['cover_image'] ) ? esc_url_raw( (string) $data['cover_image'] ) : '',
+			'external_registration_url' => isset( $data['external_registration_url'] ) ? esc_url_raw( (string) $data['external_registration_url'] ) : '',
+			'external_provider_name'    => $provider,
+			'is_paid'                   => ! empty( $data['is_paid'] ),
+			'price'                     => isset( $data['price'] ) ? sanitize_text_field( (string) $data['price'] ) : '',
+			'player_limit'              => max( 0, absint( $data['player_limit'] ?? $data['max_players'] ?? 0 ) ),
+			'notes'                     => isset( $data['notes'] ) ? sanitize_textarea_field( (string) $data['notes'] ) : '',
+			'status'                    => $status,
+			'checkin_token'             => $checkin_token,
+			'checkin_enabled'           => ! empty( $data['checkin_enabled'] ),
+			'checkin_open_at'           => $this->sanitize_datetime_local( (string) ( $data['checkin_open_at'] ?? '' ) ),
+			'checkin_close_at'          => $this->sanitize_datetime_local( (string) ( $data['checkin_close_at'] ?? '' ) ),
+			'checkin_points'            => max( 1, absint( $data['checkin_points'] ?? 1 ) ),
+			'access_mode'               => null !== $existing ? $existing->access_mode() : Event::ACCESS_OPEN,
+			'max_players'               => max( 0, absint( $data['player_limit'] ?? $data['max_players'] ?? 0 ) ),
+			'waiting_list_enabled'      => null !== $existing ? $existing->waiting_list_enabled() : false,
+			'waiting_list_limit'        => null !== $existing ? $existing->waiting_list_limit() : 0,
+			'registration_deadline'     => '',
+			'priority_deadline'         => '',
 		);
 	}
 
-	/**
-	 * Sanitize registration data.
-	 *
-	 * @param array<string, mixed> $data   Raw data.
-	 * @param Member|null          $member Member when logged in.
-	 * @return array<string, mixed>
-	 */
-	private function sanitize_registration_data( array $data, ?Member $member ): array {
-		if ( $member instanceof Member ) {
-			return array(
-				'member_id' => $member->user_id(),
-				'name'      => $member->full_name(),
-				'email'     => $member->email(),
-				'phone'     => sanitize_text_field( (string) $member->field( 'telefone' ) ),
-				'team'      => sanitize_text_field( (string) $member->field( 'equipa' ) ),
-				'notes'     => isset( $data['notes'] ) ? sanitize_textarea_field( (string) $data['notes'] ) : '',
-			);
-		}
-
-		return array(
-			'member_id' => 0,
-			'name'      => isset( $data['name'] ) ? sanitize_text_field( (string) $data['name'] ) : '',
-			'email'     => isset( $data['email'] ) ? sanitize_email( (string) $data['email'] ) : '',
-			'phone'     => isset( $data['phone'] ) ? sanitize_text_field( (string) $data['phone'] ) : '',
-			'team'      => isset( $data['team'] ) ? sanitize_text_field( (string) $data['team'] ) : '',
-			'notes'     => isset( $data['notes'] ) ? sanitize_textarea_field( (string) $data['notes'] ) : '',
-		);
-	}
-
-	/**
-	 * Determine the correct registration status.
-	 *
-	 * @return string|WP_Error
-	 */
-	private function determine_registration_status( Event $event, bool $is_active_member ): string|WP_Error {
-		if ( ! $this->has_confirmed_capacity( $event ) ) {
-			if ( $event->waiting_list_enabled() && $this->has_waiting_list_capacity( $event ) ) {
-				return EventRegistration::STATUS_WAITING_LIST;
-			}
-
-			return new WP_Error( 'adam_membership_event_full', __( 'Este evento já se encontra lotado.', 'adam-membership' ) );
-		}
-
-		if ( Event::ACCESS_MEMBER_PRIORITY === $event->access_mode() && $event->priority_window_open() && ! $is_active_member ) {
-			return EventRegistration::STATUS_PENDING;
-		}
-
-		return EventRegistration::STATUS_CONFIRMED;
-	}
-
-	/**
-	 * Check whether a participant already has an active registration.
-	 */
-	private function has_existing_registration( Event $event, string $email, int $member_id ): bool {
-		$registrations = $this->registrations_for_event( $event->id() );
-
-		foreach ( $registrations as $registration ) {
-			if ( ! $registration->is_active() ) {
-				continue;
-			}
-
-			if ( $member_id > 0 && $registration->member_id() === $member_id ) {
-				return true;
-			}
-
-			if ( '' !== $email && $registration->email() === $email ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Check confirmed capacity.
-	 *
-	 * @param Event $event      Event.
-	 * @param int   $ignore_id  Registration ID to ignore while recounting.
-	 */
-	private function has_confirmed_capacity( Event $event, int $ignore_id = 0 ): bool {
-		if ( $event->max_players() <= 0 ) {
-			return true;
-		}
-
-		$count = 0;
-
-		foreach ( $this->registrations_for_event( $event->id() ) as $registration ) {
-			if ( $ignore_id === $registration->id() ) {
-				continue;
-			}
-
-			if ( EventRegistration::STATUS_CONFIRMED === $registration->status() ) {
-				++$count;
-			}
-		}
-
-		return $count < $event->max_players();
-	}
-
-	/**
-	 * Check waiting list capacity.
-	 */
-	private function has_waiting_list_capacity( Event $event ): bool {
-		if ( $event->waiting_list_limit() <= 0 ) {
-			return true;
-		}
-
-		return $this->waiting_list_count( $event ) < $event->waiting_list_limit();
-	}
-
-	/**
-	 * Record event-related history when a registration is tied to a member.
-	 */
-	private function record_history( Event $event, EventRegistration $registration, string $action_key, string $action_label ): void {
-		$member = $registration->member_id() > 0 ? $this->members->find( $registration->member_id() ) : null;
-
-		if ( null === $member ) {
-			return;
-		}
-
-		$this->history->create(
-			array(
-				'member_id'     => $member->user_id(),
-				'member_number' => sanitize_text_field( (string) $member->field( 'numero_socio' ) ),
-				'member_name'   => $member->full_name(),
-				'member_email'  => $member->email(),
-				'actor_type'    => 'system',
-				'actor_id'      => get_current_user_id(),
-				'actor_name'    => 'ADAM Events',
-				'action_key'    => $action_key,
-				'action_label'  => $action_label,
-				'description'   => sprintf(
-					/* translators: 1: event title, 2: registration status */
-					__( 'Estado da inscrição no evento "%1$s": %2$s', 'adam-membership' ),
-					$event->title(),
-					$registration->status()
-				),
-				'details'       => array(
-					'event_id'         => $event->id(),
-					'event_title'      => $event->title(),
-					'registration_id'  => $registration->id(),
-					'registration_status' => $registration->status(),
-				),
-				'created_at'    => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
-			)
-		);
-	}
-
-	/**
-	 * Sanitize a Y-m-d date.
-	 */
 	private function sanitize_date( string $date ): string {
 		$date = trim( $date );
 
 		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? $date : '';
 	}
 
-	/**
-	 * Sanitize an H:i time.
-	 */
 	private function sanitize_time( string $time ): string {
 		$time = trim( $time );
 
 		return preg_match( '/^\d{2}:\d{2}$/', $time ) ? $time : '';
 	}
 
-	/**
-	 * Sanitize an HTML datetime-local value.
-	 */
 	private function sanitize_datetime_local( string $value ): string {
 		$value = trim( str_replace( 'T', ' ', $value ) );
 

@@ -129,6 +129,16 @@
 	color: #92400e;
 }
 
+.adam-event-badge.event-paid {
+	background: #ede9fe;
+	color: #6d28d9;
+}
+
+.adam-event-badge.event-free {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
 .adam-event-badge.status-cancelled,
 .adam-event-badge.registration-rejected,
 .adam-event-badge.registration-cancelled {
@@ -318,6 +328,42 @@
 
 .adam-events-back {
 	margin-bottom: 16px;
+}
+
+.adam-events-checkin-panel {
+	max-width: 820px;
+	margin: 0 auto;
+	padding: 28px;
+	background: #fff;
+	border: 1px solid #d9e4dc;
+	border-radius: 10px;
+	box-shadow: 0 12px 28px rgba(23, 63, 36, 0.08);
+}
+
+.adam-events-checkin-intro {
+	max-width: 62ch;
+	margin-bottom: 20px;
+	font-size: 1rem;
+	line-height: 1.6;
+	color: #475569;
+}
+
+.adam-events-checkin-invite {
+	margin-top: 26px;
+	padding-top: 22px;
+	border-top: 1px solid #e2e8f0;
+}
+
+.adam-events-checkin-invite h2 {
+	margin-top: 0;
+}
+
+.adam-event-checkin-form {
+	margin-top: 16px;
+}
+
+.adam-event-meta-grid-tight {
+	margin-top: 14px;
 }
 
 @media (max-width: 820px) {

@@ -14,10 +14,11 @@ use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 
 /**
- * Renders /eventos/ and handles public registrations.
+ * Renders /eventos/ and the member event check-in flow.
  */
 final class EventFrontend {
 	private const REWRITE_OPTION = 'adam_membership_events_rewrite_version';
+	private const ROUTE_VERSION  = 'events-external-checkin-v1';
 
 	private EventService $events;
 	private MemberRepository $members;
@@ -29,76 +30,54 @@ final class EventFrontend {
 		$this->logger  = $logger;
 	}
 
-	/**
-	 * Register hooks.
-	 */
 	public function register(): void {
 		add_action( 'init', array( $this, 'register_routes' ) );
 		add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
 		add_filter( 'query_vars', array( $this, 'register_query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'render_route' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-		add_action( 'admin_post_adam_membership_event_register', array( $this, 'handle_register' ) );
-		add_action( 'admin_post_nopriv_adam_membership_event_register', array( $this, 'handle_register' ) );
-		add_action( 'admin_post_adam_membership_event_cancel_registration', array( $this, 'handle_cancel' ) );
-		add_action( 'admin_post_nopriv_adam_membership_event_cancel_registration', array( $this, 'handle_cancel' ) );
 	}
 
-	/**
-	 * Register rewrite rules.
-	 */
 	public function register_routes(): void {
 		add_rewrite_rule( '^eventos/?$', 'index.php?adam_events=archive', 'top' );
+		add_rewrite_rule( '^eventos/check-in/([^/]+)/?$', 'index.php?adam_events=checkin&adam_event_checkin=$matches[1]', 'top' );
 		add_rewrite_rule( '^eventos/([^/]+)/?$', 'index.php?adam_events=detail&adam_event=$matches[1]', 'top' );
 	}
 
-	/**
-	 * Flush rewrites once when this module is introduced or updated.
-	 */
 	public function maybe_flush_rewrite_rules(): void {
-		if ( ADAM_MEMBERSHIP_VERSION === (string) get_option( self::REWRITE_OPTION, '' ) ) {
+		if ( self::ROUTE_VERSION === (string) get_option( self::REWRITE_OPTION, '' ) ) {
 			return;
 		}
 
 		flush_rewrite_rules( false );
-		update_option( self::REWRITE_OPTION, ADAM_MEMBERSHIP_VERSION, false );
+		update_option( self::REWRITE_OPTION, self::ROUTE_VERSION, false );
 	}
 
 	/**
-	 * Register custom query vars.
-	 *
 	 * @param array<int, string> $vars Query vars.
 	 * @return array<int, string>
 	 */
 	public function register_query_vars( array $vars ): array {
 		$vars[] = 'adam_events';
 		$vars[] = 'adam_event';
+		$vars[] = 'adam_event_checkin';
 
 		return $vars;
 	}
 
-	/**
-	 * Activation helper.
-	 */
 	public static function activate(): void {
 		$logger = new \AdamMembership\Helpers\Logger();
 		$self   = new self( new EventService( new EventRepository(), new MemberRepository(), $logger, new \AdamMembership\Member\HistoryRepository() ), new MemberRepository(), $logger );
 		$self->register_routes();
 		flush_rewrite_rules();
-		update_option( self::REWRITE_OPTION, ADAM_MEMBERSHIP_VERSION, false );
+		update_option( self::REWRITE_OPTION, self::ROUTE_VERSION, false );
 	}
 
-	/**
-	 * Deactivation helper.
-	 */
 	public static function deactivate(): void {
 		flush_rewrite_rules();
 		delete_option( self::REWRITE_OPTION );
 	}
 
-	/**
-	 * Enqueue frontend assets when needed.
-	 */
 	public function enqueue_assets(): void {
 		if ( '' === $this->current_events_route() ) {
 			return;
@@ -114,25 +93,12 @@ final class EventFrontend {
 		);
 	}
 
-	/**
-	 * Render custom route.
-	 */
 	public function render_route(): void {
 		$route = $this->current_events_route();
 
 		if ( '' === $route ) {
 			return;
 		}
-
-		$this->logger->info(
-			'Events frontend route rendering.',
-			array(
-				'route'          => $route,
-				'request_path'   => $this->request_path(),
-				'query_route'    => (string) get_query_var( 'adam_events' ),
-				'event_slug'     => (string) get_query_var( 'adam_event' ),
-			)
-		);
 
 		status_header( 200 );
 		nocache_headers();
@@ -141,6 +107,8 @@ final class EventFrontend {
 
 		if ( 'detail' === $route ) {
 			$this->render_detail_page();
+		} elseif ( 'checkin' === $route ) {
+			$this->render_checkin_page();
 		} else {
 			$this->render_archive_page();
 		}
@@ -150,31 +118,20 @@ final class EventFrontend {
 		exit;
 	}
 
-	/**
-	 * Render /eventos/.
-	 */
 	private function render_archive_page(): void {
 		$events = $this->events->visible_events();
 		$view   = isset( $_GET['view'] ) && 'calendar' === sanitize_key( wp_unslash( $_GET['view'] ) ) ? 'calendar' : 'list';
 		$month  = isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( $_GET['month'] ) ) : wp_date( 'Y-m' );
-		$this->logger->info(
-			'Events archive rendered.',
-			array(
-				'event_count' => count( $events ),
-				'view'        => $view,
-				'month'       => $month,
-			)
-		);
 		?>
 		<section class="adam-events-page">
 			<header class="adam-events-hero">
 				<div>
-					<p class="adam-events-eyebrow"><?php esc_html_e( 'ADAM Events', 'adam-membership' ); ?></p>
+					<p class="adam-events-eyebrow"><?php esc_html_e( 'ADAM', 'adam-membership' ); ?></p>
 					<h1><?php esc_html_e( 'Eventos', 'adam-membership' ); ?></h1>
-					<p><?php esc_html_e( 'Agenda, inscricoes e gestao de participantes para os eventos ADAM.', 'adam-membership' ); ?></p>
+					<p><?php esc_html_e( 'Página oficial dos eventos ADAM, com informação completa e ligação direta para a plataforma externa de inscrição.', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-events-toggle">
-					<a class="adam-events-toggle-button<?php echo 'calendar' === $view ? ' is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $month ), home_url( '/eventos/' ) ) ); ?>"><?php esc_html_e( 'Calendario', 'adam-membership' ); ?></a>
+					<a class="adam-events-toggle-button<?php echo 'calendar' === $view ? ' is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $month ), home_url( '/eventos/' ) ) ); ?>"><?php esc_html_e( 'Calendário', 'adam-membership' ); ?></a>
 					<a class="adam-events-toggle-button<?php echo 'list' === $view ? ' is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'view' => 'list' ), home_url( '/eventos/' ) ) ); ?>"><?php esc_html_e( 'Lista', 'adam-membership' ); ?></a>
 				</div>
 			</header>
@@ -182,7 +139,7 @@ final class EventFrontend {
 			<?php echo wp_kses_post( $this->frontend_notice() ); ?>
 
 			<?php if ( array() === $events ) : ?>
-				<div class="adam-events-empty"><?php esc_html_e( 'Nao existem eventos publicados de momento.', 'adam-membership' ); ?></div>
+				<div class="adam-events-empty"><?php esc_html_e( 'Não existem eventos publicados de momento.', 'adam-membership' ); ?></div>
 				<?php return; ?>
 			<?php endif; ?>
 
@@ -195,22 +152,16 @@ final class EventFrontend {
 		<?php
 	}
 
-	/**
-	 * Render one event detail page.
-	 */
 	private function render_detail_page(): void {
 		$slug  = sanitize_title( (string) get_query_var( 'adam_event' ) );
 		$event = $this->events->visible_event_by_slug( $slug );
 
 		if ( null === $event ) {
 			echo '<section class="adam-events-page"><div class="adam-events-empty">';
-			esc_html_e( 'Evento nao encontrado.', 'adam-membership' );
+			esc_html_e( 'Evento não encontrado.', 'adam-membership' );
 			echo '</div></section>';
 			return;
 		}
-
-		$member       = $this->current_member();
-		$registration = $this->current_registration_for_event( $event, $member );
 		?>
 		<section class="adam-events-page adam-event-detail-page">
 			<p class="adam-events-back"><a href="<?php echo esc_url( home_url( '/eventos/' ) ); ?>">&larr; <?php esc_html_e( 'Voltar aos eventos', 'adam-membership' ); ?></a></p>
@@ -224,13 +175,13 @@ final class EventFrontend {
 						<div>
 							<h1><?php echo esc_html( $event->title() ); ?></h1>
 							<div class="adam-event-badges">
-								<?php $this->render_badge( $this->access_mode_label( $event->access_mode() ), 'access-' . $event->access_mode() ); ?>
 								<?php $this->render_badge( $this->event_status_label( $event->status() ), 'status-' . $event->status() ); ?>
+								<?php if ( $event->is_paid() ) : ?>
+									<?php $this->render_badge( __( 'Pago', 'adam-membership' ), 'event-paid' ); ?>
+								<?php else : ?>
+									<?php $this->render_badge( __( 'Gratuito', 'adam-membership' ), 'event-free' ); ?>
+								<?php endif; ?>
 							</div>
-						</div>
-						<div class="adam-event-count">
-							<strong><?php echo esc_html( $this->events->confirmed_count( $event ) . ' / ' . ( $event->max_players() > 0 ? (string) $event->max_players() : __( 'Sem limite', 'adam-membership' ) ) ); ?></strong>
-							<span><?php esc_html_e( 'jogadores confirmados', 'adam-membership' ); ?></span>
 						</div>
 					</div>
 
@@ -238,14 +189,16 @@ final class EventFrontend {
 
 					<div class="adam-event-meta-grid">
 						<?php $this->render_meta_item( __( 'Data', 'adam-membership' ), $this->format_date( $event->event_date() ) ); ?>
-						<?php $this->render_meta_item( __( 'Horario', 'adam-membership' ), $this->format_time_range( $event ) ); ?>
+						<?php $this->render_meta_item( __( 'Horário', 'adam-membership' ), $this->format_time_range( $event ) ); ?>
 						<?php $this->render_meta_item( __( 'Local', 'adam-membership' ), $event->location() ); ?>
-						<?php $this->render_meta_item( __( 'Inscricoes ate', 'adam-membership' ), $this->format_datetime( $event->registration_deadline() ) ?: __( 'Sem prazo definido', 'adam-membership' ) ); ?>
-						<?php if ( Event::ACCESS_MEMBER_PRIORITY === $event->access_mode() ) : ?>
-							<?php $this->render_meta_item( __( 'Prioridade a socios ate', 'adam-membership' ), $this->format_datetime( $event->priority_deadline() ) ?: __( 'Nao definido', 'adam-membership' ) ); ?>
+						<?php if ( $event->is_paid() && '' !== $event->price() ) : ?>
+							<?php $this->render_meta_item( __( 'Preço', 'adam-membership' ), $event->price() ); ?>
+						<?php endif; ?>
+						<?php if ( $event->player_limit() > 0 ) : ?>
+							<?php $this->render_meta_item( __( 'Limite de jogadores', 'adam-membership' ), (string) $event->player_limit() ); ?>
 						<?php endif; ?>
 						<?php if ( '' !== $event->map_link() ) : ?>
-							<?php $this->render_meta_item( __( 'Mapa', 'adam-membership' ), '<a href="' . esc_url( $event->map_link() ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Abrir localizacao', 'adam-membership' ) . '</a>', true ); ?>
+							<?php $this->render_meta_item( __( 'Mapa', 'adam-membership' ), '<a href="' . esc_url( $event->map_link() ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Abrir localização', 'adam-membership' ) . '</a>', true ); ?>
 						<?php endif; ?>
 					</div>
 
@@ -257,8 +210,21 @@ final class EventFrontend {
 						<?php echo wp_kses_post( wpautop( $event->full_description() ) ); ?>
 					</div>
 
+					<?php if ( '' !== $event->notes() ) : ?>
+						<div class="adam-event-registration-box">
+							<h2><?php esc_html_e( 'Notas', 'adam-membership' ); ?></h2>
+							<p><?php echo esc_html( $event->notes() ); ?></p>
+						</div>
+					<?php endif; ?>
+
 					<div class="adam-event-registration-box">
-						<?php $this->render_registration_panel( $event, $member, $registration ); ?>
+						<h2><?php esc_html_e( 'Inscrição', 'adam-membership' ); ?></h2>
+						<p><?php echo esc_html( sprintf( __( 'As inscrições são feitas através do %s.', 'adam-membership' ), $event->external_provider_name() ) ); ?></p>
+						<?php if ( '' !== $event->external_registration_url() ) : ?>
+							<p><a class="adam-events-primary" href="<?php echo esc_url( $event->external_registration_url() ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $this->external_cta_label( $event ) ); ?></a></p>
+						<?php else : ?>
+							<div class="adam-events-notice warning"><?php esc_html_e( 'A ligação externa de inscrição ainda não foi configurada para este evento.', 'adam-membership' ); ?></div>
+						<?php endif; ?>
 					</div>
 				</div>
 			</article>
@@ -266,39 +232,154 @@ final class EventFrontend {
 		<?php
 	}
 
+	private function render_checkin_page(): void {
+		$token = sanitize_text_field( (string) get_query_var( 'adam_event_checkin' ) );
+		$event = $this->events->event_by_checkin_token( $token );
+
+		$message_class = 'info';
+		$message_lines = array();
+
+		if ( null === $event ) {
+			$message_class = 'error';
+			$message_lines[] = __( 'O código de check-in deste evento é inválido ou já não está disponível.', 'adam-membership' );
+		} elseif ( is_user_logged_in() ) {
+			$member = $this->current_member();
+
+			if ( ! $member instanceof Member ) {
+				$message_class = 'warning';
+				$message_lines[] = __( 'Esta vantagem está disponível apenas para contas com sócio ADAM associado.', 'adam-membership' );
+			} else {
+				$existing_checkin = $this->events->member_checkin_for_event( $event, $member );
+
+				if ( null !== $existing_checkin ) {
+					$message_class = 'success';
+					$message_lines[] = __( 'Já efetuaste o check-in neste evento.', 'adam-membership' );
+					$message_lines[] = sprintf(
+						/* translators: %d: points previously awarded */
+						__( 'Os +%d ponto(s) desta participação já foram registados.', 'adam-membership' ),
+						$existing_checkin->points_awarded()
+					);
+				} elseif ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_event_checkin_submit'] ) ) {
+					check_admin_referer( 'adam_membership_event_checkin_' . $token );
+					$result = $this->events->check_in_member( $event, $member );
+
+					if ( is_wp_error( $result ) ) {
+						$message_class = 'warning';
+						$message_lines[] = $result->get_error_message();
+					} else {
+						$message_class = 'success';
+						$message_lines[] = __( 'Check-in efetuado com sucesso!', 'adam-membership' );
+						$message_lines[] = sprintf(
+							/* translators: %d: points awarded */
+							__( 'Recebeste +%d ponto pela tua participação neste evento.', 'adam-membership' ),
+							$result->points_awarded()
+						);
+						$message_lines[] = __( 'Obrigado por fazeres parte da ADAM!', 'adam-membership' );
+					}
+				} else {
+					$eligibility = $this->events->validate_checkin_eligibility( $event, $member );
+
+					if ( is_wp_error( $eligibility ) ) {
+						$message_class = 'warning';
+						$message_lines[] = $eligibility->get_error_message();
+					}
+				}
+			}
+		}
+		?>
+		<section class="adam-events-page adam-event-checkin-page">
+			<div class="adam-events-checkin-panel">
+				<p class="adam-events-eyebrow"><?php esc_html_e( 'Vantagem exclusiva para sócios ADAM', 'adam-membership' ); ?></p>
+				<h1><?php esc_html_e( 'Check-in de evento', 'adam-membership' ); ?></h1>
+				<p class="adam-events-checkin-intro"><?php esc_html_e( 'Ao fazeres o check-in neste evento, acumulas pontos de participação que poderão ser utilizados em futuras recompensas, benefícios e campanhas da associação.', 'adam-membership' ); ?></p>
+
+				<?php if ( null !== $event ) : ?>
+					<div class="adam-event-meta-grid adam-event-meta-grid-tight">
+						<?php $this->render_meta_item( __( 'Evento', 'adam-membership' ), $event->title() ); ?>
+						<?php $this->render_meta_item( __( 'Data', 'adam-membership' ), $this->format_date( $event->event_date() ) ); ?>
+						<?php $this->render_meta_item( __( 'Local', 'adam-membership' ), $event->location() ); ?>
+						<?php $this->render_meta_item( __( 'Pontos', 'adam-membership' ), '+' . $event->checkin_points() ); ?>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( array() !== $message_lines ) : ?>
+					<div class="adam-events-notice <?php echo esc_attr( $message_class ); ?>">
+						<?php foreach ( $message_lines as $line ) : ?>
+							<p><?php echo esc_html( $line ); ?></p>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+
+				<?php if ( null !== $event ) : ?>
+					<?php if ( ! is_user_logged_in() ) : ?>
+						<div class="adam-event-registration-box">
+							<?php
+							wp_login_form(
+								array(
+									'echo'           => true,
+									'remember'       => true,
+									'redirect'       => $this->events->checkin_url( $event ),
+									'label_username' => __( 'Email ou utilizador', 'adam-membership' ),
+									'label_password' => __( 'Palavra-passe', 'adam-membership' ),
+									'label_log_in'   => __( 'Iniciar sessão para fazer check-in', 'adam-membership' ),
+								)
+							);
+							?>
+						</div>
+					<?php else : ?>
+						<?php $member = $this->current_member(); ?>
+						<?php if ( $member instanceof Member && null === $this->events->member_checkin_for_event( $event, $member ) ) : ?>
+							<?php $eligibility = $this->events->validate_checkin_eligibility( $event, $member ); ?>
+							<?php if ( ! is_wp_error( $eligibility ) ) : ?>
+								<form method="post" class="adam-event-checkin-form">
+									<?php wp_nonce_field( 'adam_membership_event_checkin_' . $token ); ?>
+									<button type="submit" name="adam_event_checkin_submit" value="1" class="adam-events-primary"><?php esc_html_e( 'Confirmar check-in', 'adam-membership' ); ?></button>
+								</form>
+							<?php endif; ?>
+						<?php endif; ?>
+					<?php endif; ?>
+				<?php endif; ?>
+
+				<div class="adam-events-checkin-invite">
+					<h2><?php esc_html_e( 'Ainda não és sócio da ADAM?', 'adam-membership' ); ?></h2>
+					<p><?php esc_html_e( 'Os sócios ADAM têm acesso a vantagens exclusivas, incluindo o sistema de pontos por participação em eventos, futuras recompensas e outros benefícios da associação.', 'adam-membership' ); ?></p>
+					<p><a class="adam-events-secondary" href="https://airsoftmondego.pt" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Torna-te sócio', 'adam-membership' ); ?></a></p>
+				</div>
+			</div>
+		</section>
+		<?php
+	}
+
 	/**
-	 * Render list cards.
-	 *
 	 * @param array<int, Event> $events Events.
 	 */
 	private function render_list_view( array $events ): void {
-		if ( array() === $events ) {
-			echo '<div class="adam-events-empty">';
-			esc_html_e( 'Ainda não existem eventos publicados.', 'adam-membership' );
-			echo '</div>';
-			return;
-		}
-
-		$member = $this->current_member();
-
 		echo '<div class="adam-events-list">';
 
 		foreach ( $events as $event ) {
-			$registration = $this->current_registration_for_event( $event, $member );
 			?>
 			<article class="adam-event-card">
 				<div class="adam-event-card-top">
 					<div>
 						<h2><a href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php echo esc_html( $event->title() ); ?></a></h2>
 						<div class="adam-event-badges">
-							<?php $this->render_badge( $this->access_mode_label( $event->access_mode() ), 'access-' . $event->access_mode() ); ?>
 							<?php $this->render_badge( $this->event_status_label( $event->status() ), 'status-' . $event->status() ); ?>
-							<?php if ( null !== $registration ) : ?>
-								<?php $this->render_badge( $this->registration_status_label( $registration->status() ), 'registration-' . $registration->status() ); ?>
+							<?php if ( $event->is_paid() ) : ?>
+								<?php $this->render_badge( __( 'Pago', 'adam-membership' ), 'event-paid' ); ?>
+							<?php else : ?>
+								<?php $this->render_badge( __( 'Gratuito', 'adam-membership' ), 'event-free' ); ?>
 							<?php endif; ?>
 						</div>
 					</div>
-								<div class="adam-event-count-inline"><?php echo esc_html( $this->events->confirmed_count( $event ) . ' / ' . ( $event->max_players() > 0 ? (string) $event->max_players() : __( 'Sem limite', 'adam-membership' ) ) . ' ' . __( 'jogadores', 'adam-membership' ) ); ?></div>
+					<div class="adam-event-count-inline">
+						<?php
+						if ( $event->player_limit() > 0 ) {
+							echo esc_html( sprintf( __( '%d jogadores', 'adam-membership' ), $event->player_limit() ) );
+						} else {
+							esc_html_e( 'Sem limite divulgado', 'adam-membership' );
+						}
+						?>
+					</div>
 				</div>
 				<div class="adam-event-list-meta">
 					<span><?php echo esc_html( $this->format_date( $event->event_date() ) ); ?></span>
@@ -307,7 +388,7 @@ final class EventFrontend {
 				</div>
 				<p><?php echo esc_html( $event->short_description() ); ?></p>
 				<div class="adam-event-card-actions">
-					<a class="adam-events-primary" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php esc_html_e( 'Ver / inscrever', 'adam-membership' ); ?></a>
+					<a class="adam-events-primary" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php esc_html_e( 'Ver evento', 'adam-membership' ); ?></a>
 				</div>
 			</article>
 			<?php
@@ -317,10 +398,8 @@ final class EventFrontend {
 	}
 
 	/**
-	 * Render calendar view.
-	 *
 	 * @param array<int, Event> $events Events.
-	 * @param string            $month  Month in Y-m.
+	 * @param string            $month Month in Y-m.
 	 */
 	private function render_calendar_view( array $events, string $month ): void {
 		$month = preg_match( '/^\d{4}-\d{2}$/', $month ) ? $month : wp_date( 'Y-m' );
@@ -330,7 +409,7 @@ final class EventFrontend {
 			$start = strtotime( wp_date( 'Y-m-01 00:00:00' ) );
 		}
 
-		$start = false === $start ? current_time( 'timestamp' ) : $start;
+		$start         = false === $start ? current_time( 'timestamp' ) : $start;
 		$days_in_month = (int) wp_date( 't', $start );
 		$first_weekday = (int) wp_date( 'N', $start );
 		$prev_month    = wp_date( 'Y-m', strtotime( '-1 month', $start ) ?: $start );
@@ -347,9 +426,9 @@ final class EventFrontend {
 		?>
 		<div class="adam-events-calendar-wrap">
 			<div class="adam-events-calendar-nav">
-				<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $prev_month ), home_url( '/eventos/' ) ) ); ?>">&larr; <?php esc_html_e( 'Mes anterior', 'adam-membership' ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $prev_month ), home_url( '/eventos/' ) ) ); ?>">&larr; <?php esc_html_e( 'Mês anterior', 'adam-membership' ); ?></a>
 				<h2><?php echo esc_html( wp_date( 'F Y', $start ) ); ?></h2>
-				<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $next_month ), home_url( '/eventos/' ) ) ); ?>"><?php esc_html_e( 'Mes seguinte', 'adam-membership' ); ?> &rarr;</a>
+				<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'calendar', 'month' => $next_month ), home_url( '/eventos/' ) ) ); ?>"><?php esc_html_e( 'Mês seguinte', 'adam-membership' ); ?> &rarr;</a>
 			</div>
 			<div class="adam-events-calendar">
 				<?php foreach ( array( 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom' ) as $weekday ) : ?>
@@ -374,162 +453,6 @@ final class EventFrontend {
 				<?php endfor; ?>
 			</div>
 		</div>
-		<?php
-	}
-
-	/**
-	 * Render registration panel for an event detail page.
-	 */
-	private function render_registration_panel( Event $event, ?Member $member, ?EventRegistration $registration ): void {
-		$is_active_member = $member instanceof Member && $member->isActive();
-
-		if ( null !== $registration ) {
-			echo '<div class="adam-events-notice info">';
-			echo esc_html(
-				sprintf(
-					/* translators: %s registration status label */
-					__( 'Estado da sua inscricao: %s', 'adam-membership' ),
-					$this->registration_status_label( $registration->status() )
-				)
-			);
-			echo '</div>';
-			$this->render_cancel_form( $event, $registration );
-			return;
-		}
-
-		if ( ! $event->is_registration_open() ) {
-			echo '<div class="adam-events-notice warning">';
-			esc_html_e( 'As inscricoes para este evento estao encerradas.', 'adam-membership' );
-			echo '</div>';
-			return;
-		}
-
-		if ( Event::ACCESS_MEMBERS_ONLY === $event->access_mode() && ! $is_active_member ) {
-			echo '<div class="adam-events-notice warning">';
-			esc_html_e( 'Este evento esta disponivel apenas para socios ADAM ativos.', 'adam-membership' );
-			echo '</div>';
-			return;
-		}
-
-		if ( Event::ACCESS_MEMBER_PRIORITY === $event->access_mode() && $event->priority_window_open() && ! $is_active_member ) {
-			echo '<div class="adam-events-notice info">';
-			esc_html_e( 'Durante a fase de prioridade, os socios ADAM ativos sao confirmados primeiro. Registos de nao socios podem ficar pendentes ate ao fim da prioridade.', 'adam-membership' );
-			echo '</div>';
-		}
-
-		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-event-registration-form">
-			<input type="hidden" name="action" value="adam_membership_event_register">
-			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>">
-			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->events->event_url( $event ) ); ?>">
-			<?php wp_nonce_field( 'adam_membership_event_register_' . $event->id() ); ?>
-
-			<?php if ( $member instanceof Member ) : ?>
-				<div class="adam-events-form-grid">
-					<div><label><?php esc_html_e( 'Nome', 'adam-membership' ); ?></label><input type="text" value="<?php echo esc_attr( $member->full_name() ); ?>" disabled></div>
-					<div><label><?php esc_html_e( 'Email', 'adam-membership' ); ?></label><input type="email" value="<?php echo esc_attr( $member->email() ); ?>" disabled></div>
-					<div><label><?php esc_html_e( 'Telefone', 'adam-membership' ); ?></label><input type="text" value="<?php echo esc_attr( (string) $member->field( 'telefone' ) ); ?>" disabled></div>
-					<div><label><?php esc_html_e( 'Equipa', 'adam-membership' ); ?></label><input type="text" value="<?php echo esc_attr( (string) $member->field( 'equipa' ) ); ?>" disabled></div>
-				</div>
-			<?php else : ?>
-				<div class="adam-events-form-grid">
-					<div><label for="adam_event_name"><?php esc_html_e( 'Nome', 'adam-membership' ); ?></label><input id="adam_event_name" type="text" name="name" required></div>
-					<div><label for="adam_event_email"><?php esc_html_e( 'Email', 'adam-membership' ); ?></label><input id="adam_event_email" type="email" name="email" required></div>
-					<div><label for="adam_event_phone"><?php esc_html_e( 'Telefone', 'adam-membership' ); ?></label><input id="adam_event_phone" type="text" name="phone" required></div>
-					<div><label for="adam_event_team"><?php esc_html_e( 'Equipa / associacao', 'adam-membership' ); ?></label><input id="adam_event_team" type="text" name="team"></div>
-				</div>
-			<?php endif; ?>
-
-			<button type="submit" class="adam-events-primary"><?php esc_html_e( 'Inscrever', 'adam-membership' ); ?></button>
-		</form>
-		<?php
-	}
-
-	/**
-	 * Handle frontend registration.
-	 */
-	public function handle_register(): void {
-		$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-		$redirect = isset( $_POST['redirect_to'] ) ? esc_url_raw( (string) wp_unslash( $_POST['redirect_to'] ) ) : home_url( '/eventos/' );
-
-		check_admin_referer( 'adam_membership_event_register_' . $event_id );
-
-		$event = $this->events->repository()->find_event( $event_id );
-
-		if ( null === $event ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', __( 'Evento nao encontrado.', 'adam-membership' ), $redirect ) );
-			exit;
-		}
-
-		$result = $this->events->register_participant( $event, $_POST, get_current_user_id() );
-
-		if ( is_wp_error( $result ) ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', $result->get_error_message(), $redirect ) );
-			exit;
-		}
-
-		$url = add_query_arg(
-			array(
-				'adam_event_message' => __( 'Inscricao registada com sucesso.', 'adam-membership' ),
-				'registration_id'    => $result->id(),
-				'registration_token' => $result->manage_token(),
-			),
-			$redirect
-		);
-
-		wp_safe_redirect( $url );
-		exit;
-	}
-
-	/**
-	 * Handle registration cancellation.
-	 */
-	public function handle_cancel(): void {
-		$registration_id = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
-		$token           = isset( $_POST['registration_token'] ) ? sanitize_text_field( wp_unslash( $_POST['registration_token'] ) ) : '';
-		$redirect        = isset( $_POST['redirect_to'] ) ? esc_url_raw( (string) wp_unslash( $_POST['redirect_to'] ) ) : home_url( '/eventos/' );
-
-		check_admin_referer( 'adam_membership_event_cancel_' . $registration_id );
-
-		$registration = $this->events->repository()->find_registration( $registration_id );
-
-		if ( null === $registration ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', __( 'Inscricao nao encontrada.', 'adam-membership' ), $redirect ) );
-			exit;
-		}
-
-		$current_member = $this->current_member();
-		$authorized     = ( $current_member instanceof Member && $registration->member_id() === $current_member->user_id() ) || ( '' !== $token && hash_equals( $registration->manage_token(), $token ) );
-
-		if ( ! $authorized ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', __( 'Não tem permissão para cancelar esta inscrição.', 'adam-membership' ), $redirect ) );
-			exit;
-		}
-
-		$result = $this->events->cancel_registration( $registration );
-
-		if ( is_wp_error( $result ) ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', $result->get_error_message(), $redirect ) );
-			exit;
-		}
-
-		wp_safe_redirect( add_query_arg( 'adam_event_message', __( 'Inscricao cancelada.', 'adam-membership' ), $redirect ) );
-		exit;
-	}
-
-	/**
-	 * Render cancel form.
-	 */
-	private function render_cancel_form( Event $event, EventRegistration $registration ): void {
-		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-event-cancel-form">
-			<input type="hidden" name="action" value="adam_membership_event_cancel_registration">
-			<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration->id() ); ?>">
-			<input type="hidden" name="registration_token" value="<?php echo esc_attr( $registration->manage_token() ); ?>">
-			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->events->event_url( $event ) ); ?>">
-			<?php wp_nonce_field( 'adam_membership_event_cancel_' . $registration->id() ); ?>
-			<button type="submit" class="adam-events-secondary"><?php esc_html_e( 'Cancelar inscricao', 'adam-membership' ); ?></button>
-		</form>
 		<?php
 	}
 
@@ -565,40 +488,10 @@ final class EventFrontend {
 		return is_user_logged_in() ? $this->members->find( get_current_user_id() ) : null;
 	}
 
-	private function current_registration_for_event( Event $event, ?Member $member ): ?EventRegistration {
-		$token = isset( $_GET['registration_token'] ) ? sanitize_text_field( wp_unslash( $_GET['registration_token'] ) ) : '';
-		$id    = isset( $_GET['registration_id'] ) ? absint( wp_unslash( $_GET['registration_id'] ) ) : 0;
-
-		if ( $member instanceof Member ) {
-			$registration = $this->events->attendee_registration( $event, $member );
-
-			if ( null !== $registration ) {
-				return $registration;
-			}
-		}
-
-		if ( $id > 0 && '' !== $token ) {
-			$registration = $this->events->repository()->find_registration( $id );
-
-			if ( null !== $registration && $registration->event_id() === $event->id() && hash_equals( $registration->manage_token(), $token ) ) {
-				return $registration;
-			}
-		}
-
-		return null;
-	}
-
-	private function is_events_request(): bool {
-		return '' !== $this->current_events_route();
-	}
-
-	/**
-	 * Determine the current events frontend route.
-	 */
 	private function current_events_route(): string {
 		$route = sanitize_key( (string) get_query_var( 'adam_events' ) );
 
-		if ( in_array( $route, array( 'archive', 'detail' ), true ) ) {
+		if ( in_array( $route, array( 'archive', 'detail', 'checkin' ), true ) ) {
 			return $route;
 		}
 
@@ -608,11 +501,22 @@ final class EventFrontend {
 			return 'archive';
 		}
 
+		if ( str_starts_with( $request_path, 'eventos/check-in/' ) ) {
+			$parts = explode( '/', $request_path );
+			$token = isset( $parts[2] ) ? sanitize_text_field( (string) $parts[2] ) : '';
+
+			if ( '' !== $token ) {
+				set_query_var( 'adam_event_checkin', $token );
+
+				return 'checkin';
+			}
+		}
+
 		if ( str_starts_with( $request_path, 'eventos/' ) ) {
 			$parts = explode( '/', $request_path );
 			$slug  = isset( $parts[1] ) ? sanitize_title( (string) $parts[1] ) : '';
 
-			if ( '' !== $slug ) {
+			if ( '' !== $slug && 'check-in' !== $slug ) {
 				set_query_var( 'adam_event', $slug );
 
 				return 'detail';
@@ -622,9 +526,6 @@ final class EventFrontend {
 		return '';
 	}
 
-	/**
-	 * Get the current request path relative to the site root.
-	 */
 	private function request_path(): string {
 		global $wp;
 
@@ -645,14 +546,6 @@ final class EventFrontend {
 		return $path;
 	}
 
-	private function access_mode_label( string $mode ): string {
-		return match ( $mode ) {
-			Event::ACCESS_OPEN            => __( 'Aberto a todos', 'adam-membership' ),
-			Event::ACCESS_MEMBER_PRIORITY => __( 'Prioridade a socios', 'adam-membership' ),
-			default                       => __( 'Socios ADAM', 'adam-membership' ),
-		};
-	}
-
 	private function event_status_label( string $status ): string {
 		return match ( $status ) {
 			Event::STATUS_CANCELLED => __( 'Cancelado', 'adam-membership' ),
@@ -662,26 +555,10 @@ final class EventFrontend {
 		};
 	}
 
-	private function registration_status_label( string $status ): string {
-		return match ( $status ) {
-			EventRegistration::STATUS_CONFIRMED   => __( 'Confirmado', 'adam-membership' ),
-			EventRegistration::STATUS_PENDING     => __( 'Pendente', 'adam-membership' ),
-			EventRegistration::STATUS_WAITING_LIST => __( 'Lista de espera', 'adam-membership' ),
-			EventRegistration::STATUS_CANCELLED   => __( 'Cancelado', 'adam-membership' ),
-			default                               => __( 'Rejeitado', 'adam-membership' ),
-		};
-	}
-
 	private function format_date( string $date ): string {
 		$timestamp = strtotime( $date . ' 00:00:00' );
 
 		return false === $timestamp ? $date : wp_date( get_option( 'date_format' ), $timestamp );
-	}
-
-	private function format_datetime( string $datetime ): string {
-		$timestamp = strtotime( $datetime );
-
-		return false === $timestamp ? $datetime : wp_date( get_option( 'date_format' ) . ' H:i', $timestamp );
 	}
 
 	private function format_time_range( Event $event ): string {
@@ -689,9 +566,25 @@ final class EventFrontend {
 		$end   = $event->end_time();
 
 		if ( '' === $start && '' === $end ) {
-			return __( 'Horario a definir', 'adam-membership' );
+			return __( 'Horário a definir', 'adam-membership' );
 		}
 
 		return '' !== $end ? $start . ' - ' . $end : $start;
+	}
+
+	private function external_cta_label( Event $event ): string {
+		if ( $event->is_paid() ) {
+			return sprintf(
+				/* translators: %s: external provider name */
+				__( 'Inscrever / pagar no %s', 'adam-membership' ),
+				$event->external_provider_name()
+			);
+		}
+
+		return sprintf(
+			/* translators: %s: external provider name */
+			__( 'Inscrever no %s', 'adam-membership' ),
+			$event->external_provider_name()
+		);
 	}
 }
