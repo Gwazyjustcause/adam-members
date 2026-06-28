@@ -507,7 +507,7 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_digital_card( Member $member ): void {
-		if ( ! $member->isActive() ) {
+		if ( $member->isPending() || $member->isRejected() ) {
 			return;
 		}
 

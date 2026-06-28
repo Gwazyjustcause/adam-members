@@ -850,9 +850,11 @@ final class AdminController {
 				</div>
 
 				<?php $this->render_admin_safety_notice( $member ); ?>
+				<?php $this->render_member_status_consistency_notice( $member ); ?>
 
 				<div class="adam-admin-detail-grid">
 					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->effective_status() ); ?>
+					<?php $this->render_detail_item( __( 'Saved status', 'adam-membership' ), $member->status() ); ?>
 					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
 					<?php $this->render_detail_item( __( 'Quota valid until', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Joined on', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
@@ -974,7 +976,7 @@ final class AdminController {
 					</label>
 				</div>
 
-				<p class="description"><?php esc_html_e( 'Manual status edits do not send emails. Use the approval actions for the full approval workflow.', 'adam-membership' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Manual status edits do not send emails. Active status requires a quota validity date today or in the future.', 'adam-membership' ); ?></p>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save member fields', 'adam-membership' ); ?></button>
 			</form>
 		</div>
@@ -997,6 +999,24 @@ final class AdminController {
 			<?php if ( $this->is_current_admin_target( $member->user_id() ) ) : ?>
 				<p><?php esc_html_e( 'You cannot reject your own administrator account here. Another administrator must review that change.', 'adam-membership' ); ?></p>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render a notice when saved status and effective status diverge.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_status_consistency_notice( Member $member ): void {
+		if ( Member::STATUS_ACTIVE !== $member->status() || Member::STATUS_EXPIRED !== $member->effective_status() ) {
+			return;
+		}
+		?>
+		<div class="adam-admin-safety-notice">
+			<strong><?php esc_html_e( 'Status requires quota validity', 'adam-membership' ); ?></strong>
+			<p><?php esc_html_e( 'This member is saved as Active, but the effective membership status is Expired because the quota validity date is empty, invalid, or in the past.', 'adam-membership' ); ?></p>
+			<p><?php esc_html_e( 'Set a quota validity date today or in the future before saving Active status.', 'adam-membership' ); ?></p>
 		</div>
 		<?php
 	}
@@ -1103,6 +1123,13 @@ final class AdminController {
 			return new WP_Error(
 				'adam_membership_use_rejection_form',
 				__( 'Please use the rejection form so a rejection reason is stored.', 'adam-membership' )
+			);
+		}
+
+		if ( Member::STATUS_ACTIVE === $status && ! $this->quota_date_is_current( $quota_validity ) ) {
+			return new WP_Error(
+				'adam_membership_active_requires_current_quota',
+				__( 'Active status requires a quota validity date today or in the future. Update the quota date before saving Active status.', 'adam-membership' )
 			);
 		}
 
@@ -1255,6 +1282,22 @@ final class AdminController {
 		}
 
 		return $date;
+	}
+
+	/**
+	 * Check whether a quota date keeps a member current.
+	 *
+	 * @param string $date Date in Y-m-d format.
+	 */
+	private function quota_date_is_current( string $date ): bool {
+		if ( '' === $date ) {
+			return false;
+		}
+
+		$timestamp = strtotime( $date );
+		$today     = strtotime( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
+
+		return false !== $timestamp && false !== $today && $timestamp >= $today;
 	}
 
 	/**
