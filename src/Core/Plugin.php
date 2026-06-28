@@ -10,9 +10,12 @@ declare(strict_types=1);
 namespace AdamMembership\Core;
 
 use AdamMembership\Admin\AnnouncementController;
+use AdamMembership\Admin\DocumentController;
 use AdamMembership\Announcement\AnnouncementRepository;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Admin\AdminController;
+use AdamMembership\Document\DocumentRepository;
+use AdamMembership\Document\DocumentService;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
@@ -87,12 +90,14 @@ final class Plugin {
 		$email              = new EmailService( $settings, $logger );
 		$announcement_repository = new AnnouncementRepository();
 		$announcements      = new AnnouncementService( $announcement_repository, $members, $email, $logger );
+		$document_repository = new DocumentRepository();
+		$documents          = new DocumentService( $document_repository, $members, $logger, $history_repository );
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history );
 		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger );
 		$config             = new RegistrationFormConfig();
-		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements );
+		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents );
 		$account            = new Account( $email, $members, $history );
 		$password_recovery  = new PasswordRecovery( $email, $members, $history );
 		$password_reset     = new PasswordReset( $members, $history );
@@ -112,14 +117,17 @@ final class Plugin {
 			$history_repository
 		);
 		$announcement_admin = new AnnouncementController( $announcements );
+		$document_admin     = new DocumentController( $documents );
 
 		$registration->register();
 		$renewal_submission->register();
 		$admin->register();
 		$announcement_admin->register();
+		$document_admin->register();
 		$maintenance->register();
 		$cards->register();
 		$history->register();
+		$documents->register();
 
 		$member_area->register();
 		$password_recovery->register();

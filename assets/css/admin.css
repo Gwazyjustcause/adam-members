@@ -248,6 +248,27 @@
 	color: #991b1b;
 }
 
+.adam-admin-badge.document-status-published,
+.adam-admin-badge.document-important {
+	background: #dcfce7;
+	color: #14532d;
+}
+
+.adam-admin-badge.document-status-draft {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-admin-badge.document-status-archived {
+	background: #e5e7eb;
+	color: #374151;
+}
+
+.adam-admin-badge.document-normal {
+	background: #f1f5f9;
+	color: #475569;
+}
+
 .adam-admin-table small {
 	display: block;
 	margin-top: 4px;

@@ -12,6 +12,8 @@ namespace AdamMembership\Member;
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Document\Document;
+use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
 
 /**
@@ -55,6 +57,13 @@ final class MemberArea {
 	private AnnouncementService $announcements;
 
 	/**
+	 * Document service.
+	 *
+	 * @var DocumentService
+	 */
+	private DocumentService $documents;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
@@ -62,13 +71,15 @@ final class MemberArea {
 	 * @param SettingsRepository $settings Settings repository.
 	 * @param CardService         $cards         Digital card service.
 	 * @param AnnouncementService $announcements Announcement service.
+	 * @param DocumentService     $documents     Document service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
 		$this->cards         = $cards;
 		$this->announcements = $announcements;
+		$this->documents     = $documents;
 	}
 
 	/**
@@ -149,6 +160,7 @@ final class MemberArea {
 			}
 
 			$this->render_announcements( $member );
+			$this->render_documents( $member );
 			?>
 		</div>
 		<?php
@@ -742,6 +754,88 @@ final class MemberArea {
 	}
 
 	/**
+	 * Render Document Centre.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_documents( Member $member ): void {
+		$filters   = $this->current_document_filters();
+		$documents = $this->documents->visible_for_member( $member, $filters );
+		?>
+		<section class="adam-card adam-documents-section" aria-label="<?php esc_attr_e( 'Documentos', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Documentos', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Documentos oficiais da ADAM', 'adam-membership' ); ?></h3>
+				</div>
+			</div>
+
+			<form method="get" class="adam-document-filters">
+				<label>
+					<span><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></span>
+					<input type="search" name="document_search" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php esc_attr_e( 'Pesquisar documentos', 'adam-membership' ); ?>">
+				</label>
+				<label>
+					<span><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></span>
+					<select name="document_category">
+						<?php $this->render_document_select_option( '', __( 'Todas', 'adam-membership' ), $filters['category'] ); ?>
+						<?php foreach ( $this->documents->categories() as $category ) : ?>
+							<?php $this->render_document_select_option( $category, $category, $filters['category'] ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+				<button type="submit" class="adam-card-link"><?php esc_html_e( 'Filtrar', 'adam-membership' ); ?></button>
+				<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Limpar', 'adam-membership' ); ?></a>
+			</form>
+
+			<?php if ( array() === $documents ) : ?>
+				<div class="adam-document-empty"><?php esc_html_e( 'Nao existem documentos disponiveis para estes filtros.', 'adam-membership' ); ?></div>
+			<?php else : ?>
+				<div class="adam-document-grid">
+					<?php foreach ( $documents as $document ) : ?>
+						<?php $this->render_document_card( $document ); ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render a document card.
+	 *
+	 * @param Document $document Document.
+	 */
+	private function render_document_card( Document $document ): void {
+		?>
+		<article class="adam-document-card">
+			<div class="adam-document-card__icon" aria-hidden="true"><?php echo esc_html( $this->document_file_icon( $document ) ); ?></div>
+			<div class="adam-document-card__body">
+				<div class="adam-document-card__meta">
+					<span class="adam-announcement-category"><?php echo esc_html( $document->category() ); ?></span>
+					<?php if ( $document->important() ) : ?>
+						<span class="adam-badge adam-document-important"><?php esc_html_e( 'Importante', 'adam-membership' ); ?></span>
+					<?php endif; ?>
+				</div>
+				<h4><?php echo esc_html( $document->title() ); ?></h4>
+				<?php if ( '' !== $document->description() ) : ?>
+					<p><?php echo esc_html( $document->description() ); ?></p>
+				<?php endif; ?>
+				<div class="adam-document-card__details">
+					<span><?php echo esc_html( sprintf( __( 'Versao %s', 'adam-membership' ), $document->version() ) ); ?></span>
+					<span><?php echo esc_html( sprintf( __( 'Enviado %s', 'adam-membership' ), $this->format_date( $document->upload_date() ) ) ); ?></span>
+					<span><?php echo esc_html( sprintf( __( 'Atualizado %s', 'adam-membership' ), $this->format_datetime( $document->updated_at() ) ) ); ?></span>
+					<span><?php echo esc_html( $this->format_file_size( $document->file_size() ) ); ?></span>
+				</div>
+				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $this->documents->download_url( $document ) ); ?>">
+					<?php esc_html_e( 'Download', 'adam-membership' ); ?>
+				</a>
+			</div>
+		</article>
+		<?php
+	}
+
+	/**
 	 * Render status card.
 	 *
 	 * @param string $status  Status.
@@ -1076,5 +1170,88 @@ final class MemberArea {
 			Announcement::PRIORITY_URGENT    => __( 'Urgente', 'adam-membership' ),
 			default                          => __( 'Informacao', 'adam-membership' ),
 		};
+	}
+
+	/**
+	 * Get current document filters.
+	 *
+	 * @return array{search:string,category:string}
+	 */
+	private function current_document_filters(): array {
+		return array(
+			'search'   => isset( $_GET['document_search'] ) ? sanitize_text_field( wp_unslash( $_GET['document_search'] ) ) : '',
+			'category' => isset( $_GET['document_category'] ) ? sanitize_text_field( wp_unslash( $_GET['document_category'] ) ) : '',
+		);
+	}
+
+	/**
+	 * Render document select option.
+	 *
+	 * @param string $value   Value.
+	 * @param string $label   Label.
+	 * @param string $current Current value.
+	 */
+	private function render_document_select_option( string $value, string $label, string $current ): void {
+		printf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			esc_attr( $value ),
+			selected( $current, $value, false ),
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Get compact file icon label.
+	 *
+	 * @param Document $document Document.
+	 */
+	private function document_file_icon( Document $document ): string {
+		$extension = strtolower( pathinfo( $document->file_name(), PATHINFO_EXTENSION ) );
+
+		return match ( $extension ) {
+			'pdf'                 => 'PDF',
+			'doc', 'docx'         => 'DOC',
+			'xls', 'xlsx'         => 'XLS',
+			'ppt', 'pptx'         => 'PPT',
+			'jpg', 'jpeg', 'png'  => 'IMG',
+			default               => 'FILE',
+		};
+	}
+
+	/**
+	 * Format file size.
+	 *
+	 * @param int $bytes File size in bytes.
+	 */
+	private function format_file_size( int $bytes ): string {
+		if ( $bytes <= 0 ) {
+			return __( 'Tamanho indisponivel', 'adam-membership' );
+		}
+
+		$units = array( 'B', 'KB', 'MB', 'GB' );
+		$size  = (float) $bytes;
+		$unit  = 0;
+
+		while ( $size >= 1024 && $unit < count( $units ) - 1 ) {
+			$size /= 1024;
+			++$unit;
+		}
+
+		return sprintf( '%1$s %2$s', number_format_i18n( $size, $unit > 0 ? 1 : 0 ), $units[ $unit ] );
+	}
+
+	/**
+	 * Format stored datetime.
+	 *
+	 * @param string $datetime Datetime string.
+	 */
+	private function format_datetime( string $datetime ): string {
+		$timestamp = strtotime( $datetime );
+
+		if ( false === $timestamp ) {
+			return $datetime;
+		}
+
+		return wp_date( 'd/m/Y', $timestamp );
 	}
 }
