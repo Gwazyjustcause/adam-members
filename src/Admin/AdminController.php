@@ -20,8 +20,14 @@ use WP_Error;
  * Registers and renders ADAM Membership admin pages.
  */
 final class AdminController {
-	private const CAPABILITY = 'manage_options';
-	private const MENU_SLUG  = 'adam-membership';
+	private const CAPABILITY          = 'manage_options';
+	private const MENU_SLUG           = 'adam-membership';
+	private const MEMBER_PAGE_SLUG    = 'adam-membership-member';
+	private const ACTION_APPROVE      = 'approve';
+	private const ACTION_REJECT       = 'reject';
+	private const ACTION_RENEW        = 'renew_quota';
+	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
+	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
 
 	/**
 	 * Member repository.
@@ -71,8 +77,10 @@ final class AdminController {
 	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_adam_membership_approve_member', array( $this, 'handle_approve_member' ) );
 		add_action( 'admin_post_adam_membership_reject_member', array( $this, 'handle_reject_member' ) );
+		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
 	}
 
 	/**
@@ -80,8 +88,8 @@ final class AdminController {
 	 */
 	public function register_menu(): void {
 		add_menu_page(
-			esc_html__( 'ADAM', 'adam-membership' ),
-			esc_html__( 'ADAM', 'adam-membership' ),
+			esc_html__( 'ADAM Membership', 'adam-membership' ),
+			esc_html__( 'ADAM Membership', 'adam-membership' ),
 			self::CAPABILITY,
 			self::MENU_SLUG,
 			array( $this, 'render_dashboard_page' ),
@@ -91,8 +99,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Painel', 'adam-membership' ),
-			esc_html__( 'Painel', 'adam-membership' ),
+			esc_html__( 'Dashboard', 'adam-membership' ),
+			esc_html__( 'Dashboard', 'adam-membership' ),
 			self::CAPABILITY,
 			self::MENU_SLUG,
 			array( $this, 'render_dashboard_page' )
@@ -100,8 +108,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Membros Pendentes', 'adam-membership' ),
-			esc_html__( 'Membros Pendentes', 'adam-membership' ),
+			esc_html__( 'Pending Members', 'adam-membership' ),
+			esc_html__( 'Pending Members', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-pending',
 			array( $this, 'render_pending_members_page' )
@@ -109,8 +117,8 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Sócios', 'adam-membership' ),
-			esc_html__( 'Sócios', 'adam-membership' ),
+			esc_html__( 'Members', 'adam-membership' ),
+			esc_html__( 'Members', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-members',
 			array( $this, 'render_members_page' )
@@ -118,11 +126,40 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Configurações', 'adam-membership' ),
-			esc_html__( 'Configurações', 'adam-membership' ),
+			esc_html__( 'Settings', 'adam-membership' ),
+			esc_html__( 'Settings', 'adam-membership' ),
 			self::CAPABILITY,
 			'adam-membership-settings',
 			array( $this, 'render_settings_page' )
+		);
+
+		add_submenu_page(
+			null,
+			esc_html__( 'Member Details', 'adam-membership' ),
+			esc_html__( 'Member Details', 'adam-membership' ),
+			self::CAPABILITY,
+			self::MEMBER_PAGE_SLUG,
+			array( $this, 'render_member_page' )
+		);
+	}
+
+	/**
+	 * Enqueue admin assets.
+	 *
+	 * @param string $hook_suffix Admin hook suffix.
+	 */
+	public function enqueue_assets( string $hook_suffix ): void {
+		if ( ! str_contains( $hook_suffix, 'adam-membership' ) ) {
+			return;
+		}
+
+		$asset_path = ADAM_MEMBERSHIP_PATH . 'assets/css/admin.css';
+
+		wp_enqueue_style(
+			'adam-membership-admin',
+			ADAM_MEMBERSHIP_URL . 'assets/css/admin.css',
+			array(),
+			file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : ADAM_MEMBERSHIP_VERSION
 		);
 	}
 
@@ -130,11 +167,14 @@ final class AdminController {
 	 * Render the dashboard page.
 	 */
 	public function render_dashboard_page(): void {
-		$this->render_header( __( 'Painel ADAM', 'adam-membership' ) );
+		$this->ensure_can_manage();
+
+		$counts = $this->members->dashboard_counts();
+
+		$this->render_header( __( 'ADAM Membership Dashboard', 'adam-membership' ) );
 		$this->render_notices();
-		?>
-		<p><?php esc_html_e( 'Use the membership pages to review pending applications and manage member records.', 'adam-membership' ); ?></p>
-		<?php
+		$this->render_dashboard_cards( $counts );
+		$this->render_dashboard_shortcuts();
 		$this->render_footer();
 	}
 
@@ -142,11 +182,16 @@ final class AdminController {
 	 * Render the pending members page.
 	 */
 	public function render_pending_members_page(): void {
-		$members = $this->members->pending_members();
+		$this->ensure_can_manage();
 
-		$this->render_header( __( 'Membros Pendentes', 'adam-membership' ) );
+		$filters           = $this->current_member_filters();
+		$filters['status'] = Member::STATUS_PENDING;
+		$members           = $this->members->admin_members( $filters );
+
+		$this->render_header( __( 'Pending Members', 'adam-membership' ) );
 		$this->render_notices();
-		$this->render_members_table( $members, true );
+		$this->render_member_filters( $filters, true );
+		$this->render_members_table( $members, true, $filters );
 		$this->render_footer();
 	}
 
@@ -154,11 +199,37 @@ final class AdminController {
 	 * Render the members page.
 	 */
 	public function render_members_page(): void {
-		$members = $this->members->all_members();
+		$this->ensure_can_manage();
 
-		$this->render_header( __( 'Membros', 'adam-membership' ) );
+		$filters = $this->current_member_filters();
+		$members = $this->members->admin_members( $filters );
+
+		$this->render_header( __( 'Members', 'adam-membership' ) );
 		$this->render_notices();
-		$this->render_members_table( $members, false );
+		$this->render_member_filters( $filters, false );
+		$this->render_members_table( $members, false, $filters );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render a single member page.
+	 */
+	public function render_member_page(): void {
+		$this->ensure_can_manage();
+
+		$user_id = isset( $_GET['member_id'] ) ? absint( wp_unslash( $_GET['member_id'] ) ) : 0;
+		$member  = $this->members->find( $user_id );
+
+		$this->render_header( __( 'Member Details', 'adam-membership' ) );
+		$this->render_notices();
+
+		if ( null === $member ) {
+			$this->render_empty_state( __( 'Member not found.', 'adam-membership' ) );
+			$this->render_footer();
+			return;
+		}
+
+		$this->render_member_detail( $member );
 		$this->render_footer();
 	}
 
@@ -166,23 +237,28 @@ final class AdminController {
 	 * Render the settings page.
 	 */
 	public function render_settings_page(): void {
-		$this->render_header( __( 'Configurações da ADAM', 'adam-membership' ) );
+		$this->ensure_can_manage();
+
+		$this->render_header( __( 'ADAM Settings', 'adam-membership' ) );
 		$this->render_notices();
 		?>
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Último número de sócio atribuído', 'adam-membership' ); ?></th>
-				<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'Próximo número de sócio', 'adam-membership' ); ?></th>
-				<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
-			</tr>
-			<tr>
-				<th scope="row"><?php esc_html_e( 'URL da Área de Sócio', 'adam-membership' ); ?></th>
-				<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
-			</tr>
-		</table>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Membership numbering', 'adam-membership' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Last assigned member number', 'adam-membership' ); ?></th>
+					<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Next member number', 'adam-membership' ); ?></th>
+					<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Member area URL', 'adam-membership' ); ?></th>
+					<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
+				</tr>
+			</table>
+		</div>
 		<?php
 		$this->render_footer();
 	}
@@ -191,67 +267,224 @@ final class AdminController {
 	 * Handle member approval requests.
 	 */
 	public function handle_approve_member(): void {
-		$this->handle_member_action( 'approve' );
+		$this->handle_member_action( self::ACTION_APPROVE );
 	}
 
 	/**
 	 * Handle member rejection requests.
 	 */
 	public function handle_reject_member(): void {
-		$this->handle_member_action( 'reject' );
+		$this->handle_member_action( self::ACTION_REJECT );
+	}
+
+	/**
+	 * Handle member detail page actions.
+	 */
+	public function handle_member_admin_action(): void {
+		$action = isset( $_POST['member_action'] ) ? sanitize_key( wp_unslash( $_POST['member_action'] ) ) : '';
+
+		$this->handle_member_action( $action );
+	}
+
+	/**
+	 * Render dashboard cards.
+	 *
+	 * @param array<string, int> $counts Dashboard counts.
+	 */
+	private function render_dashboard_cards( array $counts ): void {
+		$cards = array(
+			array( 'label' => __( 'Total members', 'adam-membership' ), 'value' => $counts['total'] ?? 0 ),
+			array( 'label' => __( 'Active members', 'adam-membership' ), 'value' => $counts['active'] ?? 0 ),
+			array( 'label' => __( 'Pending members', 'adam-membership' ), 'value' => $counts['pending'] ?? 0 ),
+			array( 'label' => __( 'Rejected members', 'adam-membership' ), 'value' => $counts['rejected'] ?? 0 ),
+			array( 'label' => __( 'Expired memberships', 'adam-membership' ), 'value' => $counts['expired'] ?? 0 ),
+			array( 'label' => __( 'Expiring in 30 days', 'adam-membership' ), 'value' => $counts['expiring_soon'] ?? 0 ),
+		);
+		?>
+		<div class="adam-admin-cards">
+			<?php foreach ( $cards as $card ) : ?>
+				<div class="adam-admin-card">
+					<span><?php echo esc_html( $card['label'] ); ?></span>
+					<strong><?php echo esc_html( (string) $card['value'] ); ?></strong>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render dashboard shortcut links.
+	 */
+	private function render_dashboard_shortcuts(): void {
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Quick actions', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-actions">
+				<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-pending' ) ); ?>"><?php esc_html_e( 'Review pending members', 'adam-membership' ); ?></a>
+				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-members' ) ); ?>"><?php esc_html_e( 'Search members', 'adam-membership' ); ?></a>
+				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-members&quota_status=expiring_soon' ) ); ?>"><?php esc_html_e( 'Check renewals', 'adam-membership' ); ?></a>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render member filters.
+	 *
+	 * @param array<string, string> $filters      Current filters.
+	 * @param bool                  $force_pending Whether status is fixed to pending.
+	 */
+	private function render_member_filters( array $filters, bool $force_pending ): void {
+		?>
+		<form method="get" class="adam-admin-filters">
+			<input type="hidden" name="page" value="<?php echo esc_attr( $force_pending ? 'adam-membership-pending' : 'adam-membership-members' ); ?>">
+			<label>
+				<span><?php esc_html_e( 'Search', 'adam-membership' ); ?></span>
+				<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Name, email, member number', 'adam-membership' ); ?>">
+			</label>
+
+			<?php if ( ! $force_pending ) : ?>
+				<label>
+					<span><?php esc_html_e( 'Status', 'adam-membership' ); ?></span>
+					<select name="status">
+						<?php $this->render_select_option( '', __( 'All statuses', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+						<?php $this->render_select_option( Member::STATUS_ACTIVE, __( 'Active', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+						<?php $this->render_select_option( Member::STATUS_PENDING, __( 'Pending', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+						<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+					</select>
+				</label>
+			<?php endif; ?>
+
+			<label>
+				<span><?php esc_html_e( 'Quota', 'adam-membership' ); ?></span>
+				<select name="quota_status">
+					<?php $this->render_select_option( '', __( 'All quotas', 'adam-membership' ), $filters['quota_status'] ?? '' ); ?>
+					<?php $this->render_select_option( Member::QUOTA_ACTIVE, __( 'Active', 'adam-membership' ), $filters['quota_status'] ?? '' ); ?>
+					<?php $this->render_select_option( Member::QUOTA_EXPIRED, __( 'Expired', 'adam-membership' ), $filters['quota_status'] ?? '' ); ?>
+					<?php $this->render_select_option( Member::QUOTA_EXPIRING_SOON, __( 'Expiring soon', 'adam-membership' ), $filters['quota_status'] ?? '' ); ?>
+				</select>
+			</label>
+
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply filters', 'adam-membership' ); ?></button>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . ( $force_pending ? 'adam-membership-pending' : 'adam-membership-members' ) ) ); ?>"><?php esc_html_e( 'Reset', 'adam-membership' ); ?></a>
+		</form>
+		<?php
 	}
 
 	/**
 	 * Render a member table.
 	 *
-	 * @param array<int, Member> $members      Members to render.
-	 * @param bool               $show_actions Whether to show approval actions.
+	 * @param array<int, Member>    $members      Members to render.
+	 * @param bool                  $show_actions Whether to show approval actions.
+	 * @param array<string, string> $filters      Current filters.
 	 */
-	private function render_members_table( array $members, bool $show_actions ): void {
+	private function render_members_table( array $members, bool $show_actions, array $filters ): void {
 		if ( array() === $members ) {
-			?>
-			<p><?php esc_html_e( 'Não foram encontrados sócios.', 'adam-membership' ); ?></p>
-			<?php
+			$this->render_empty_state( __( 'No members found for the current filters.', 'adam-membership' ) );
 			return;
 		}
-
 		?>
-		<table class="widefat striped">
+		<table class="widefat striped adam-admin-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Foto', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Nome', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Email', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Telemovel', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Equipa', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Data de Registo', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'N.º de Sócio', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Comprovativo', 'adam-membership' ); ?></th>
-					<?php if ( $show_actions ) : ?>
-						<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
-					<?php endif; ?>
+					<th><?php esc_html_e( 'Photo', 'adam-membership' ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Name', 'adam-membership' ), 'name', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Email', 'adam-membership' ), 'email', $filters ) ); ?></th>
+					<th><?php esc_html_e( 'Phone', 'adam-membership' ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Registered', 'adam-membership' ), 'registered', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Status', 'adam-membership' ), 'status', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Member no.', 'adam-membership' ), 'member_number', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->sort_link( __( 'Quota', 'adam-membership' ), 'quota', $filters ) ); ?></th>
+					<th><?php esc_html_e( 'Actions', 'adam-membership' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php foreach ( $members as $member ) : ?>
 					<tr>
 						<td><?php $this->render_profile_photo( $member ); ?></td>
-						<td><?php echo esc_html( $member->full_name() ); ?></td>
+						<td><strong><?php echo esc_html( $member->full_name() ); ?></strong></td>
 						<td><a href="mailto:<?php echo esc_attr( $member->email() ); ?>"><?php echo esc_html( $member->email() ); ?></a></td>
-						<td><?php echo esc_html( (string) $member->field( 'telefone' ) ); ?></td>
-						<td><?php echo esc_html( (string) $member->field( 'equipa' ) ); ?></td>
+						<td><?php echo esc_html( (string) $member->field( 'telefone' ) ?: '—' ); ?></td>
 						<td><?php echo esc_html( $member->registration_date() ); ?></td>
-						<td><?php echo esc_html( $member->status() ); ?></td>
-						<td><?php echo esc_html( (string) $member->field( 'numero_socio' ) ); ?></td>
-						<td><?php $this->render_payment_receipt( $member ); ?></td>
-						<?php if ( $show_actions ) : ?>
-							<td><?php $this->render_pending_actions( $member ); ?></td>
-						<?php endif; ?>
+						<td><?php $this->render_status_badge( $member->status() ); ?></td>
+						<td><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: '—' ); ?></td>
+						<td><?php $this->render_quota_badge( $member ); ?></td>
+						<td class="adam-admin-row-actions">
+							<a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'View', 'adam-membership' ); ?></a>
+							<?php if ( $show_actions ) : ?>
+								<?php $this->render_inline_action_form( $member, self::ACTION_APPROVE, __( 'Approve', 'adam-membership' ), 'button-primary' ); ?>
+								<?php $this->render_inline_action_form( $member, self::ACTION_REJECT, __( 'Reject', 'adam-membership' ), 'button-link-delete' ); ?>
+							<?php endif; ?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
+		<?php
+	}
+
+	/**
+	 * Render a single member detail page.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_detail( Member $member ): void {
+		?>
+		<div class="adam-admin-member-layout">
+			<div class="adam-admin-panel">
+				<div class="adam-admin-member-heading">
+					<?php $this->render_profile_photo( $member ); ?>
+					<div>
+						<h2><?php echo esc_html( $member->full_name() ); ?></h2>
+						<p><?php echo esc_html( $member->email() ); ?></p>
+					</div>
+				</div>
+
+				<div class="adam-admin-detail-grid">
+					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->status() ); ?>
+					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
+					<?php $this->render_detail_item( __( 'Quota valid until', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
+					<?php $this->render_detail_item( __( 'Joined on', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
+					<?php $this->render_detail_item( __( 'Phone', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
+					<?php $this->render_detail_item( __( 'Team', 'adam-membership' ), (string) $member->field( 'equipa' ) ); ?>
+					<?php $this->render_detail_item( __( 'NIF', 'adam-membership' ), (string) $member->field( 'nif' ) ); ?>
+					<?php $this->render_detail_item( __( 'Citizen card', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
+					<?php $this->render_detail_item( __( 'Birth date', 'adam-membership' ), $this->format_date( $member->field( 'data_nascimento' ) ) ); ?>
+					<?php $this->render_detail_item( __( 'Address', 'adam-membership' ), (string) $member->field( 'morada' ) ); ?>
+				</div>
+			</div>
+
+			<div class="adam-admin-panel">
+				<h2><?php esc_html_e( 'Admin actions', 'adam-membership' ); ?></h2>
+				<div class="adam-admin-action-stack">
+					<?php $this->render_action_form( $member, self::ACTION_APPROVE, __( 'Approve member', 'adam-membership' ), 'button-primary' ); ?>
+					<?php $this->render_action_form( $member, self::ACTION_REJECT, __( 'Reject member', 'adam-membership' ), 'button-link-delete' ); ?>
+					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renew quota for one year', 'adam-membership' ), 'button-secondary' ); ?>
+					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Resend approval email', 'adam-membership' ), 'button-secondary' ); ?>
+				</div>
+
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-quota-form">
+					<input type="hidden" name="action" value="adam_membership_member_action">
+					<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CHANGE_QUOTA ); ?>">
+					<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+					<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+					<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+					<label for="adam_quota_validity"><?php esc_html_e( 'Change quota validity', 'adam-membership' ); ?></label>
+					<input type="date" id="adam_quota_validity" name="quota_validity" value="<?php echo esc_attr( $this->date_input_value( $member->field( 'validade_quota' ) ) ); ?>">
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Save validity', 'adam-membership' ); ?></button>
+				</form>
+
+				<div class="adam-admin-safe-view">
+					<h3><?php esc_html_e( 'View as member', 'adam-membership' ); ?></h3>
+					<?php if ( get_current_user_id() === $member->user_id() ) : ?>
+						<a class="button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open member area', 'adam-membership' ); ?></a>
+					<?php else : ?>
+						<p><?php esc_html_e( 'Impersonation is not enabled for safety. Use the WordPress user profile for account-level review.', 'adam-membership' ); ?></p>
+					<?php endif; ?>
+					<a class="button" href="<?php echo esc_url( get_edit_user_link( $member->user_id() ) ); ?>"><?php esc_html_e( 'Open WordPress profile', 'adam-membership' ); ?></a>
+				</div>
+			</div>
+		</div>
 		<?php
 	}
 
@@ -262,26 +495,134 @@ final class AdminController {
 	 */
 	private function handle_member_action( string $action ): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
-			wp_die( esc_html__( 'Não tem permissões para gerir os sócios da ADAM.', 'adam-membership' ) );
+			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
 		}
 
 		$user_id = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
-
 		check_admin_referer( 'adam_membership_member_action_' . $user_id );
 
 		if ( 0 === $user_id ) {
-			$this->redirect_with_error( __( 'Sócio inválido.', 'adam-membership' ) );
+			$this->redirect_with_error( __( 'Invalid member.', 'adam-membership' ) );
 		}
 
-		$result = 'approve' === $action ? $this->approval_service->approve( $user_id ) : $this->approval_service->reject( $user_id );
+		$result = match ( $action ) {
+			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id ),
+			self::ACTION_REJECT       => $this->approval_service->reject( $user_id ),
+			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
+			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
+			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
+			default                   => new WP_Error( 'adam_membership_invalid_action', __( 'Invalid member action.', 'adam-membership' ) ),
+		};
 
 		if ( $result instanceof WP_Error ) {
 			$this->logger->error( 'Admin member action failed.', array( 'error' => $result->get_error_message() ) );
 			$this->redirect_with_error( $result->get_error_message() );
 		}
 
-		$message = 'approve' === $action ? __( 'Sócio aprovado com sucesso.', 'adam-membership' ) : __( 'Sócio rejeitado com sucesso.', 'adam-membership' );
-		$this->redirect_with_message( $message );
+		$this->redirect_with_message( $this->action_success_message( $action ) );
+	}
+
+	/**
+	 * Ensure the current user can manage ADAM membership data.
+	 */
+	private function ensure_can_manage(): void {
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
+		}
+	}
+
+	/**
+	 * Read current list filters from the query string.
+	 *
+	 * @return array<string, string>
+	 */
+	private function current_member_filters(): array {
+		return array(
+			'search'       => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
+			'status'       => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : '',
+			'quota_status' => isset( $_GET['quota_status'] ) ? sanitize_key( wp_unslash( $_GET['quota_status'] ) ) : '',
+			'orderby'      => isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'registered',
+			'order'        => isset( $_GET['order'] ) && 'asc' === strtolower( sanitize_text_field( wp_unslash( $_GET['order'] ) ) ) ? 'asc' : 'desc',
+		);
+	}
+
+	/**
+	 * Render a select option.
+	 *
+	 * @param string $value   Option value.
+	 * @param string $label   Option label.
+	 * @param string $current Current value.
+	 */
+	private function render_select_option( string $value, string $label, string $current ): void {
+		printf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			esc_attr( $value ),
+			selected( $current, $value, false ),
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Render a sortable column link.
+	 *
+	 * @param string                $label   Link label.
+	 * @param string                $orderby Sort key.
+	 * @param array<string, string> $filters Current filters.
+	 */
+	private function sort_link( string $label, string $orderby, array $filters ): string {
+		$current_orderby = $filters['orderby'] ?? 'registered';
+		$current_order   = $filters['order'] ?? 'desc';
+		$next_order      = $current_orderby === $orderby && 'asc' === $current_order ? 'desc' : 'asc';
+
+		$url = add_query_arg(
+			array_filter(
+				array(
+					'page'         => isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : 'adam-membership-members',
+					's'            => $filters['search'] ?? '',
+					'status'       => $filters['status'] ?? '',
+					'quota_status' => $filters['quota_status'] ?? '',
+					'orderby'      => $orderby,
+					'order'        => $next_order,
+				)
+			),
+			admin_url( 'admin.php' )
+		);
+
+		return sprintf( '<a href="%1$s">%2$s</a>', esc_url( $url ), esc_html( $label ) );
+	}
+
+	/**
+	 * Render a status badge.
+	 *
+	 * @param string $status Member status.
+	 */
+	private function render_status_badge( string $status ): void {
+		printf(
+			'<span class="adam-admin-badge %1$s">%2$s</span>',
+			esc_attr( sanitize_html_class( strtolower( $status ) ) ),
+			esc_html( $status )
+		);
+	}
+
+	/**
+	 * Render a quota badge.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_quota_badge( Member $member ): void {
+		$status = $member->quota_status();
+		$label  = match ( $status ) {
+			Member::QUOTA_ACTIVE        => __( 'Active', 'adam-membership' ),
+			Member::QUOTA_EXPIRING_SOON => __( 'Expiring soon', 'adam-membership' ),
+			default                     => __( 'Expired', 'adam-membership' ),
+		};
+
+		printf(
+			'<span class="adam-admin-badge quota-%1$s">%2$s</span><small>%3$s</small>',
+			esc_attr( $status ),
+			esc_html( $label ),
+			esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ?: '—' )
+		);
 	}
 
 	/**
@@ -293,58 +634,80 @@ final class AdminController {
 		$photo_url = $member->media_url( 'profile_photo' );
 
 		if ( '' === $photo_url ) {
-			echo '&mdash;';
+			echo '<span class="adam-admin-avatar-placeholder">AD</span>';
 			return;
 		}
 
 		printf(
-			'<img src="%1$s" alt="%2$s" style="width:48px;height:48px;object-fit:cover;border-radius:4px;" />',
+			'<img class="adam-admin-avatar" src="%1$s" alt="%2$s" />',
 			esc_url( $photo_url ),
 			esc_attr( $member->full_name() )
 		);
 	}
 
 	/**
-	 * Render the payment receipt link.
+	 * Render an inline row action form.
 	 *
-	 * @param Member $member Member model.
+	 * @param Member $member Member.
+	 * @param string $action Action.
+	 * @param string $label  Button label.
+	 * @param string $class  Button class.
 	 */
-	private function render_payment_receipt( Member $member ): void {
-		$receipt_url = $member->media_url( 'payment_receipt' );
-
-		if ( '' === $receipt_url ) {
-			echo '&mdash;';
-			return;
-		}
-
-		printf(
-			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
-			esc_url( $receipt_url ),
-			esc_html__( 'Download', 'adam-membership' )
-		);
+	private function render_inline_action_form( Member $member, string $action, string $label, string $class ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( $action ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<button type="submit" class="button button-small <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
+		</form>
+		<?php
 	}
 
 	/**
-	 * Render pending member actions.
+	 * Render a full-width member action form.
 	 *
-	 * @param Member $member Member model.
+	 * @param Member $member Member.
+	 * @param string $action Action.
+	 * @param string $label  Button label.
+	 * @param string $class  Button class.
 	 */
-	private function render_pending_actions( Member $member ): void {
-		$user_id = $member->user_id();
+	private function render_action_form( Member $member, string $action, string $label, string $class ): void {
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:6px;">
-			<input type="hidden" name="action" value="adam_membership_approve_member" />
-			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
-			<?php wp_nonce_field( 'adam_membership_member_action_' . $user_id ); ?>
-			<?php submit_button( __( 'Aprovar', 'adam-membership' ), 'primary small', 'submit', false ); ?>
-		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
-			<input type="hidden" name="action" value="adam_membership_reject_member" />
-			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $user_id ); ?>" />
-			<?php wp_nonce_field( 'adam_membership_member_action_' . $user_id ); ?>
-			<?php submit_button( __( 'Rejeitar', 'adam-membership' ), 'delete small', 'submit', false ); ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( $action ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<button type="submit" class="button <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
 		</form>
 		<?php
+	}
+
+	/**
+	 * Render a detail item.
+	 *
+	 * @param string $label Detail label.
+	 * @param string $value Detail value.
+	 */
+	private function render_detail_item( string $label, string $value ): void {
+		?>
+		<div class="adam-admin-detail-item">
+			<span><?php echo esc_html( $label ); ?></span>
+			<strong><?php echo esc_html( '' !== $value ? $value : '—' ); ?></strong>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render an empty state.
+	 *
+	 * @param string $message Empty state message.
+	 */
+	private function render_empty_state( string $message ): void {
+		printf( '<div class="adam-admin-empty">%s</div>', esc_html( $message ) );
 	}
 
 	/**
@@ -354,8 +717,10 @@ final class AdminController {
 	 */
 	private function render_header( string $title ): void {
 		?>
-		<div class="wrap">
-			<h1><?php echo esc_html( $title ); ?></h1>
+		<div class="wrap adam-admin-wrap">
+			<div class="adam-admin-titlebar">
+				<h1><?php echo esc_html( $title ); ?></h1>
+			</div>
 		<?php
 	}
 
@@ -376,47 +741,134 @@ final class AdminController {
 		$error   = isset( $_GET['adam_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $message ) );
+			printf( '<div class="adam-admin-notice success"><p>%s</p></div>', esc_html( $message ) );
 		}
 
 		if ( '' !== $error ) {
-			printf( '<div class="notice notice-error is-dismissible"><p>%s</p></div>', esc_html( $error ) );
+			printf( '<div class="adam-admin-notice error"><p>%s</p></div>', esc_html( $error ) );
 		}
 	}
 
 	/**
-	 * Redirect to the pending members page with a success message.
+	 * Build a member details URL.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function member_url( Member $member ): string {
+		return add_query_arg(
+			array(
+				'page'      => self::MEMBER_PAGE_SLUG,
+				'member_id' => $member->user_id(),
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
+	/**
+	 * Get posted quota validity.
+	 */
+	private function posted_quota_validity(): string {
+		return isset( $_POST['quota_validity'] ) ? sanitize_text_field( wp_unslash( $_POST['quota_validity'] ) ) : '';
+	}
+
+	/**
+	 * Get action success message.
+	 *
+	 * @param string $action Action.
+	 */
+	private function action_success_message( string $action ): string {
+		return match ( $action ) {
+			self::ACTION_APPROVE      => __( 'Member approved successfully.', 'adam-membership' ),
+			self::ACTION_REJECT       => __( 'Member rejected successfully.', 'adam-membership' ),
+			self::ACTION_RENEW        => __( 'Quota renewed successfully.', 'adam-membership' ),
+			self::ACTION_CHANGE_QUOTA => __( 'Quota validity updated successfully.', 'adam-membership' ),
+			self::ACTION_RESEND_EMAIL => __( 'Approval email resent successfully.', 'adam-membership' ),
+			default                   => __( 'Member updated successfully.', 'adam-membership' ),
+		};
+	}
+
+	/**
+	 * Redirect with a success message.
 	 *
 	 * @param string $message Success message.
 	 */
 	private function redirect_with_message( string $message ): void {
+		$this->redirect_with_notice( 'adam_message', $message );
+	}
+
+	/**
+	 * Redirect with an error message.
+	 *
+	 * @param string $message Error message.
+	 */
+	private function redirect_with_error( string $message ): void {
+		$this->redirect_with_notice( 'adam_error', $message );
+	}
+
+	/**
+	 * Redirect after an admin action.
+	 *
+	 * @param string $key     Query argument key.
+	 * @param string $message Notice message.
+	 */
+	private function redirect_with_notice( string $key, string $message ): void {
+		$redirect_to = isset( $_POST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ) : '';
+		$fallback    = admin_url( 'admin.php?page=adam-membership-pending' );
+
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'page'         => 'adam-membership-pending',
-					'adam_message' => $message,
+					$key => $message,
 				),
-				admin_url( 'admin.php' )
+				wp_validate_redirect( $redirect_to, $fallback )
 			)
 		);
 		exit;
 	}
 
 	/**
-	 * Redirect to the pending members page with an error message.
+	 * Format a stored date.
 	 *
-	 * @param string $message Error message.
+	 * @param mixed $date Stored date.
 	 */
-	private function redirect_with_error( string $message ): void {
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'       => 'adam-membership-pending',
-					'adam_error' => $message,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
+	private function format_date( mixed $date ): string {
+		if ( ! is_scalar( $date ) ) {
+			return '';
+		}
+
+		$date = trim( (string) $date );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			return substr( $date, 6, 2 ) . '/' . substr( $date, 4, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return substr( $date, 8, 2 ) . '/' . substr( $date, 5, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		return $date;
+	}
+
+	/**
+	 * Convert stored date to HTML date input value.
+	 *
+	 * @param mixed $date Stored date.
+	 */
+	private function date_input_value( mixed $date ): string {
+		if ( ! is_scalar( $date ) ) {
+			return '';
+		}
+
+		$date = trim( (string) $date );
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			return substr( $date, 0, 4 ) . '-' . substr( $date, 4, 2 ) . '-' . substr( $date, 6, 2 );
+		}
+
+		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? $date : '';
 	}
 }

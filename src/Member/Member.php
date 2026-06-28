@@ -31,6 +31,21 @@ final class Member {
 	public const STATUS_REJECTED = 'Rejeitado';
 
 	/**
+	 * Active quota status.
+	 */
+	public const QUOTA_ACTIVE = 'active';
+
+	/**
+	 * Expired quota status.
+	 */
+	public const QUOTA_EXPIRED = 'expired';
+
+	/**
+	 * Quota expiring within 30 days.
+	 */
+	public const QUOTA_EXPIRING_SOON = 'expiring_soon';
+
+	/**
 	 * Member field defaults.
 	 *
 	 * @var array<string, mixed>
@@ -140,9 +155,24 @@ final class Member {
 			return '';
 		}
 
+		$timestamp = $this->registration_timestamp();
+
+		return 0 === $timestamp ? '' : wp_date( get_option( 'date_format' ), $timestamp );
+	}
+
+	/**
+	 * Get the WordPress registration timestamp.
+	 */
+	public function registration_timestamp(): int {
+		$user = $this->user();
+
+		if ( ! $user instanceof WP_User ) {
+			return 0;
+		}
+
 		$timestamp = strtotime( (string) $user->user_registered );
 
-		return false === $timestamp ? '' : wp_date( get_option( 'date_format' ), $timestamp );
+		return false === $timestamp ? 0 : $timestamp;
 	}
 
 	/**
@@ -191,6 +221,54 @@ final class Member {
 		$status = $this->field( 'estado' );
 
 		return is_scalar( $status ) && '' !== (string) $status ? (string) $status : self::STATUS_PENDING;
+	}
+
+	/**
+	 * Get the quota status.
+	 */
+	public function quota_status(): string {
+		$timestamp = $this->quota_expiry_timestamp();
+
+		if ( 0 === $timestamp ) {
+			return self::QUOTA_EXPIRED;
+		}
+
+		$today = strtotime( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
+
+		if ( false === $today || $timestamp < $today ) {
+			return self::QUOTA_EXPIRED;
+		}
+
+		if ( $timestamp <= strtotime( '+30 days', $today ) ) {
+			return self::QUOTA_EXPIRING_SOON;
+		}
+
+		return self::QUOTA_ACTIVE;
+	}
+
+	/**
+	 * Get the quota expiry timestamp.
+	 */
+	public function quota_expiry_timestamp(): int {
+		$value = $this->field( 'validade_quota' );
+
+		if ( ! is_scalar( $value ) ) {
+			return 0;
+		}
+
+		$date = trim( (string) $value );
+
+		if ( '' === $date ) {
+			return 0;
+		}
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			$date = substr( $date, 0, 4 ) . '-' . substr( $date, 4, 2 ) . '-' . substr( $date, 6, 2 );
+		}
+
+		$timestamp = strtotime( $date );
+
+		return false === $timestamp ? 0 : $timestamp;
 	}
 	
 	/**
@@ -296,7 +374,7 @@ final class Member {
 			return false !== $url ? $url : '';
 		}
 
-		if ( is_string( $value ) && wp_http_validate_url( $value ) ) {
+		if ( is_string( $value ) && $this->is_allowed_media_url( $value ) ) {
 			return $value;
 		}
 
@@ -305,7 +383,7 @@ final class Member {
 		}
 
 		foreach ( array( 'url', 'file_url', 'source_url' ) as $url_key ) {
-			if ( isset( $value[ $url_key ] ) && is_string( $value[ $url_key ] ) && wp_http_validate_url( $value[ $url_key ] ) ) {
+			if ( isset( $value[ $url_key ] ) && is_string( $value[ $url_key ] ) && $this->is_allowed_media_url( $value[ $url_key ] ) ) {
 				return $value[ $url_key ];
 			}
 		}
@@ -319,5 +397,21 @@ final class Member {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Determine whether a media URL belongs to this WordPress site.
+	 *
+	 * @param string $url Media URL.
+	 */
+	private function is_allowed_media_url( string $url ): bool {
+		if ( ! wp_http_validate_url( $url ) ) {
+			return false;
+		}
+
+		$url_host  = wp_parse_url( $url, PHP_URL_HOST );
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		return is_string( $url_host ) && is_string( $site_host ) && strtolower( $url_host ) === strtolower( $site_host );
 	}
 }

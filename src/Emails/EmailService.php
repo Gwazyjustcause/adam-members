@@ -278,8 +278,8 @@ final class EmailService {
 			$this->logger->error(
 				'Email failed.',
 				array(
-					'recipient' => $recipient,
-					'subject'   => $subject,
+					'recipient_hash' => wp_hash( $recipient ),
+					'subject'        => $subject,
 				)
 			);
 		}

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Helpers\RateLimiter;
 use WP_User;
 
 /**
@@ -20,7 +21,6 @@ final class PasswordReset {
 	 * Register shortcode.
 	 */
 	public function register(): void {
-
 		add_shortcode(
 			'adam_reset_password',
 			array( $this, 'render' )
@@ -36,18 +36,12 @@ final class PasswordReset {
 	 * Enqueue assets.
 	 */
 	public function enqueue_assets(): void {
-
 		if ( ! is_page( 'redefinir-password' ) ) {
 			return;
 		}
 
-		wp_enqueue_script(
-			'password-strength-meter'
-		);
-
-		wp_enqueue_script(
-			'zxcvbn-async'
-		);
+		wp_enqueue_script( 'password-strength-meter' );
+		wp_enqueue_script( 'zxcvbn-async' );
 
 		wp_enqueue_script(
 			'adam-password-strength',
@@ -60,9 +54,7 @@ final class PasswordReset {
 			true
 		);
 
-		wp_enqueue_style(
-			'dashicons'
-		);
+		wp_enqueue_style( 'dashicons' );
 
 		wp_enqueue_script(
 			'adam-password-toggle',
@@ -77,7 +69,7 @@ final class PasswordReset {
 	 * Render page.
 	 */
 	public function render(): string {
-				$login = sanitize_text_field(
+		$login = sanitize_text_field(
 			wp_unslash( $_GET['login'] ?? '' )
 		);
 
@@ -85,25 +77,10 @@ final class PasswordReset {
 			wp_unslash( $_GET['key'] ?? '' )
 		);
 
-		$user = check_password_reset_key(
-			$key,
-			$login
-		);
+		$user = check_password_reset_key( $key, $login );
 
 		if ( ! $user instanceof WP_User ) {
-
-			return '
-			<div class="adam-member-area">
-
-				<div class="adam-card">
-
-					<h2>Redefinir Palavra-passe</h2>
-
-					<p>O link é inválido ou expirou.</p>
-
-				</div>
-
-			</div>';
+			return $this->render_invalid_link();
 		}
 
 		$message = $this->process( $user );
@@ -113,117 +90,43 @@ final class PasswordReset {
 		}
 
 		ob_start();
-
 		?>
+		<div class="adam-member-area adam-account-page">
+			<section class="adam-member-hero adam-account-hero">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Acesso à conta', 'adam-membership' ); ?></p>
+					<h2><?php esc_html_e( 'Redefinir palavra-passe', 'adam-membership' ); ?></h2>
+					<p><?php esc_html_e( 'Escolha uma nova palavra-passe para voltar a aceder à área de sócio.', 'adam-membership' ); ?></p>
+				</div>
+			</section>
 
-		<div class="adam-member-area">
-
-			<div class="adam-card">
-
-				<h2>Redefinir Palavra-passe</h2>
+			<section class="adam-card adam-form-card" aria-labelledby="adam-reset-password-title">
+				<h3 id="adam-reset-password-title"><?php esc_html_e( 'Nova palavra-passe', 'adam-membership' ); ?></h3>
 
 				<?php echo wp_kses_post( $message ); ?>
 
-				<form method="post">
-
+				<form method="post" class="adam-account-form">
 					<?php wp_nonce_field( 'adam_reset_password' ); ?>
 
-					<input
-						type="hidden"
-						name="login"
-						value="<?php echo esc_attr( $login ); ?>"
-					>
+					<input type="hidden" name="login" value="<?php echo esc_attr( $login ); ?>">
+					<input type="hidden" name="key" value="<?php echo esc_attr( $key ); ?>">
 
-					<input
-						type="hidden"
-						name="key"
-						value="<?php echo esc_attr( $key ); ?>"
-					>
-
-					<p>
-
-						<label for="password1">
-							Nova Palavra-passe
-						</label>
-
+					<div class="adam-form-field">
+						<label for="password1"><?php esc_html_e( 'Nova palavra-passe', 'adam-membership' ); ?></label>
 						<input
 							type="password"
 							id="password1"
 							name="password1"
 							required
 							autocomplete="new-password"
+							aria-describedby="adam-password-requirements password-strength-text"
 						>
-
-					</p>
-
-					<div
-						id="adam-password-strength"
-						class="adam-password-strength"
-					>
-
-						<p class="adam-strength-title">
-							Força da palavra-passe
-						</p>
-
-						<div
-							id="adam-strength-bar"
-							class="adam-strength-bar"
-						>
-
-							<span></span>
-							<span></span>
-							<span></span>
-							<span></span>
-							<span></span>
-
-						</div>
-
-						<p
-							id="password-strength-text"
-							class="adam-strength-text"
-						>
-							Muito fraca
-						</p>
-
-						<div class="adam-password-rules">
-
-							<p>
-								A sua palavra-passe deve conter:
-							</p>
-
-							<ul>
-
-								<li id="rule-length">
-									✗ Pelo menos 8 caracteres
-								</li>
-
-								<li id="rule-lower">
-									✗ Uma letra minúscula
-								</li>
-
-								<li id="rule-upper">
-									✗ Uma letra maiúscula
-								</li>
-
-								<li id="rule-number">
-									✗ Um número
-								</li>
-
-								<li id="rule-symbol">
-									✗ Um símbolo
-								</li>
-
-							</ul>
-
-						</div>
-
 					</div>
-										<p>
 
-						<label for="password2">
-							Confirmar Palavra-passe
-						</label>
+					<?php $this->render_password_strength(); ?>
 
+					<div class="adam-form-field">
+						<label for="password2"><?php esc_html_e( 'Confirmar nova palavra-passe', 'adam-membership' ); ?></label>
 						<input
 							type="password"
 							id="password2"
@@ -231,27 +134,19 @@ final class PasswordReset {
 							required
 							autocomplete="new-password"
 						>
+					</div>
 
-					</p>
-
-					<p>
-
-						<button
-							type="submit"
-							name="adam_reset_submit"
-							class="button button-primary"
-						>
-							Alterar Palavra-passe
+					<div class="adam-form-actions">
+						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action">
+							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
-
-					</p>
-
+						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+							<?php esc_html_e( 'Voltar ao início de sessão', 'adam-membership' ); ?>
+						</a>
+					</div>
 				</form>
-
-			</div>
-
+			</section>
 		</div>
-
 		<?php
 
 		return (string) ob_get_clean();
@@ -263,8 +158,8 @@ final class PasswordReset {
 	 * @param WP_User $user User.
 	 */
 	private function process( WP_User $user ): string {
-				if (
-			'POST' !== $_SERVER['REQUEST_METHOD'] ||
+		if (
+			'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ||
 			! isset( $_POST['adam_reset_submit'] )
 		) {
 			return '';
@@ -273,91 +168,141 @@ final class PasswordReset {
 		if (
 			! isset( $_POST['_wpnonce'] ) ||
 			! wp_verify_nonce(
-				sanitize_text_field(
-					wp_unslash( $_POST['_wpnonce'] )
-				),
+				sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ),
 				'adam_reset_password'
 			)
 		) {
-			return '
-			<div class="notice notice-error">
-				<p>Pedido inválido.</p>
-			</div>';
+			return $this->notice_markup( 'error', __( 'Pedido inválido.', 'adam-membership' ) );
 		}
 
-		$password1 = (string) wp_unslash(
-			$_POST['password1'] ?? ''
-		);
+		$password1 = (string) wp_unslash( $_POST['password1'] ?? '' );
+		$password2 = (string) wp_unslash( $_POST['password2'] ?? '' );
+		$identity  = RateLimiter::request_identity( (string) $user->user_login );
 
-		$password2 = (string) wp_unslash(
-			$_POST['password2'] ?? ''
-		);
+		if ( RateLimiter::too_many_attempts( 'password_reset', $identity, 5, 15 * MINUTE_IN_SECONDS ) ) {
+			return $this->notice_markup( 'error', __( 'Demasiadas tentativas. Tente novamente mais tarde.', 'adam-membership' ) );
+		}
+
+		RateLimiter::hit( 'password_reset', $identity, 15 * MINUTE_IN_SECONDS );
 
 		if ( $password1 !== $password2 ) {
-
-			return '
-			<div class="notice notice-error">
-				<p>As palavras-passe não coincidem.</p>
-			</div>';
+			return $this->notice_markup( 'error', __( 'As palavras-passe não coincidem.', 'adam-membership' ) );
 		}
 
 		if ( strlen( $password1 ) < 8 ) {
-
-			return '
-			<div class="notice notice-error">
-				<p>A palavra-passe deve ter pelo menos 8 caracteres.</p>
-			</div>';
+			return $this->notice_markup( 'error', __( 'A palavra-passe deve ter pelo menos 8 caracteres.', 'adam-membership' ) );
 		}
 
-		if (
-			wp_check_password(
-				$password1,
-				$user->user_pass,
-				$user->ID
-			)
-		) {
-
-			return '
-			<div class="notice notice-error">
-				<p>
-					A nova palavra-passe deve ser diferente da palavra-passe atual.
-				</p>
-			</div>';
+		if ( wp_check_password( $password1, $user->user_pass, $user->ID ) ) {
+			return $this->notice_markup( 'error', __( 'A nova palavra-passe deve ser diferente da palavra-passe atual.', 'adam-membership' ) );
 		}
 
-		reset_password(
-			$user,
-			$password1
-		);
+		reset_password( $user, $password1 );
+		RateLimiter::clear( 'password_reset', $identity );
 
-		return '
-		<div class="adam-member-area">
+		return $this->render_success();
+	}
 
-			<div class="adam-card adam-login-required">
+	/**
+	 * Render invalid or expired reset-link state.
+	 */
+	private function render_invalid_link(): string {
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page">
+			<section class="adam-card adam-login-required" aria-labelledby="adam-invalid-reset-title">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Link expirado', 'adam-membership' ); ?></p>
+				<h2 id="adam-invalid-reset-title"><?php esc_html_e( 'Redefinir palavra-passe', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'O link é inválido ou expirou. Peça um novo link para continuar.', 'adam-membership' ); ?></p>
 
-				<h2>✅ Palavra-passe redefinida</h2>
-
-				<p>
-					A sua palavra-passe foi redefinida com sucesso.
-				</p>
-
-				<p>
-					Já pode iniciar sessão utilizando a sua nova palavra-passe.
-				</p>
-
-				<p>
-
-					<a
-						class="button button-primary"
-						href="' . esc_url( home_url( '/socio/' ) ) . '"
-					>
-						Iniciar Sessão
+				<div class="adam-form-actions adam-form-actions-center">
+					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+						<?php esc_html_e( 'Pedir novo link', 'adam-membership' ); ?>
 					</a>
+					<a class="button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<?php esc_html_e( 'Voltar ao início de sessão', 'adam-membership' ); ?>
+					</a>
+				</div>
+			</section>
+		</div>
+		<?php
 
-				</p>
+		return (string) ob_get_clean();
+	}
 
+	/**
+	 * Render successful reset state.
+	 */
+	private function render_success(): string {
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page">
+			<section class="adam-card adam-login-required" aria-labelledby="adam-reset-success-title">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Palavra-passe atualizada', 'adam-membership' ); ?></p>
+				<h2 id="adam-reset-success-title"><?php esc_html_e( 'Palavra-passe redefinida', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'A sua palavra-passe foi redefinida com sucesso.', 'adam-membership' ); ?></p>
+				<p><?php esc_html_e( 'Já pode iniciar sessão utilizando a sua nova palavra-passe.', 'adam-membership' ); ?></p>
+
+				<div class="adam-form-actions adam-form-actions-center">
+					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
+					</a>
+				</div>
+			</section>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Render password strength guidance.
+	 */
+	private function render_password_strength(): void {
+		?>
+		<div id="adam-password-strength" class="adam-password-strength">
+			<p class="adam-strength-title"><?php esc_html_e( 'Força da palavra-passe', 'adam-membership' ); ?></p>
+
+			<div id="adam-strength-bar" class="adam-strength-bar" aria-hidden="true">
+				<span></span>
+				<span></span>
+				<span></span>
+				<span></span>
+				<span></span>
 			</div>
 
-		</div>';
+			<p id="password-strength-text" class="adam-strength-text" aria-live="polite">
+				<?php esc_html_e( 'Muito fraca', 'adam-membership' ); ?>
+			</p>
+
+			<div id="adam-password-requirements" class="adam-password-rules">
+				<p><?php esc_html_e( 'A sua palavra-passe deve conter:', 'adam-membership' ); ?></p>
+				<ul>
+					<li id="rule-length"><?php esc_html_e( 'Pelo menos 8 caracteres', 'adam-membership' ); ?></li>
+					<li id="rule-lower"><?php esc_html_e( 'Uma letra minúscula', 'adam-membership' ); ?></li>
+					<li id="rule-upper"><?php esc_html_e( 'Uma letra maiúscula', 'adam-membership' ); ?></li>
+					<li id="rule-number"><?php esc_html_e( 'Um número', 'adam-membership' ); ?></li>
+					<li id="rule-symbol"><?php esc_html_e( 'Um símbolo', 'adam-membership' ); ?></li>
+				</ul>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Build notice markup.
+	 *
+	 * @param string $type    Notice type.
+	 * @param string $message Notice message.
+	 */
+	private function notice_markup( string $type, string $message ): string {
+		$role = 'error' === $type ? 'alert' : 'status';
+
+		return sprintf(
+			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			esc_attr( $type ),
+			esc_attr( $role ),
+			esc_html( $message )
+		);
 	}
 }

@@ -178,6 +178,106 @@ final class ApprovalService {
 	}
 
 	/**
+	 * Renew a member quota for one year.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	public function renew_quota( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error(
+				'adam_membership_member_not_found',
+				__( 'Member not found.', 'adam-membership' )
+			);
+		}
+
+		$base_timestamp = max( current_time( 'timestamp' ), $member->quota_expiry_timestamp() );
+
+		$member->save(
+			array(
+				'estado'         => Member::STATUS_ACTIVE,
+				'validade_quota' => wp_date( 'Y-m-d', strtotime( '+1 year', $base_timestamp ) ),
+			)
+		);
+
+		$this->logger->info( 'Member quota renewed.', array( 'user_id' => $user_id ) );
+
+		return true;
+	}
+
+	/**
+	 * Change the member quota validity date.
+	 *
+	 * @param int    $user_id User ID.
+	 * @param string $date    New quota validity date in Y-m-d format.
+	 * @return true|WP_Error
+	 */
+	public function change_quota_validity( int $user_id, string $date ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error(
+				'adam_membership_member_not_found',
+				__( 'Member not found.', 'adam-membership' )
+			);
+		}
+
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) || false === strtotime( $date ) ) {
+			return new WP_Error(
+				'adam_membership_invalid_quota_date',
+				__( 'Invalid quota validity date.', 'adam-membership' )
+			);
+		}
+
+		$member->save(
+			array(
+				'validade_quota' => $date,
+			)
+		);
+
+		$this->logger->info( 'Member quota validity changed.', array( 'user_id' => $user_id ) );
+
+		return true;
+	}
+
+	/**
+	 * Resend the approval email to a member.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	public function resend_approval_email( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error(
+				'adam_membership_member_not_found',
+				__( 'Member not found.', 'adam-membership' )
+			);
+		}
+
+		if ( ! $member->isActive() ) {
+			return new WP_Error(
+				'adam_membership_member_not_active',
+				__( 'Only active members can receive the approval email.', 'adam-membership' )
+			);
+		}
+
+		if ( ! $this->email->send_approval_email( $member ) ) {
+			return new WP_Error(
+				'adam_membership_approval_email_failed',
+				__( 'The approval email could not be sent.', 'adam-membership' )
+			);
+		}
+
+		$this->logger->info( 'Approval email resent.', array( 'user_id' => $user_id ) );
+
+		return true;
+	}
+
+	/**
 	 * Today's date.
 	 */
 	private function today(): string {

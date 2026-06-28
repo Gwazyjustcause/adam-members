@@ -108,12 +108,6 @@
 	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.adam-card:hover {
-	border-color: rgba(47, 107, 59, 0.28);
-	box-shadow: var(--adam-shadow-hover);
-	transform: translateY(-2px);
-}
-
 .adam-card h3 {
 	margin: 0;
 	font-size: 1.25rem;
@@ -241,7 +235,7 @@
 	border-radius: 14px;
 	background: var(--adam-green-50);
 	color: var(--adam-green-900);
-	font-weight: 650;
+	font-weight: 600;
 	line-height: 1.55;
 }
 
@@ -307,7 +301,7 @@
 	display: block;
 	margin-bottom: 0;
 	font-size: 1rem;
-	font-weight: 850;
+	font-weight: 800;
 	color: #102033;
 }
 
@@ -322,7 +316,7 @@
 
 .adam-member-area .notice p {
 	margin: 0;
-	font-weight: 750;
+	font-weight: 700;
 }
 
 .adam-member-area .notice-success {
@@ -335,6 +329,12 @@
 	border-left: 5px solid #dc2626;
 	background: #fef2f2;
 	color: #991b1b;
+}
+
+.adam-member-area .notice-info {
+	border-left: 5px solid var(--adam-green-600);
+	background: #f8fafc;
+	color: var(--adam-ink);
 }
 
 .adam-member-login {
@@ -360,6 +360,36 @@
 	gap: 18px;
 }
 
+.adam-account-page {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	max-width: 860px;
+}
+
+.adam-account-hero {
+	padding: 30px 34px;
+}
+
+.adam-form-card {
+	display: grid;
+	gap: 20px;
+}
+
+.adam-form-card h3 {
+	margin-bottom: 0;
+}
+
+.adam-form-intro {
+	max-width: 660px;
+	color: var(--adam-muted);
+}
+
+.adam-account-form {
+	display: grid;
+	gap: 18px;
+}
+
 .adam-form-field label,
 .adam-card label {
 	display: block;
@@ -373,11 +403,18 @@
 .adam-card select {
 	width: 100%;
 	max-width: 100%;
+	min-height: 46px;
 	padding: 12px 14px;
 	border: 1px solid #cfd8e3;
 	border-radius: 12px;
 	font-size: 1rem;
 	font-weight: 600;
+}
+
+.adam-card input[readonly] {
+	background: #f8fafc;
+	color: var(--adam-muted);
+	cursor: default;
 }
 
 .adam-card input:focus,
@@ -393,6 +430,8 @@
 	gap: 10px;
 	width: fit-content;
 	margin: 0;
+	min-height: 44px;
+	cursor: pointer;
 }
 
 .adam-remember input {
@@ -404,6 +443,7 @@
 .adam-card button,
 .adam-card input[type="submit"] {
 	width: fit-content;
+	min-height: 44px;
 	min-width: 180px;
 	padding: 12px 20px;
 	border-radius: 12px;
@@ -418,6 +458,18 @@
 .adam-card button:hover,
 .adam-card input[type="submit"]:hover {
 	transform: translateY(-1px);
+}
+
+.adam-form-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 14px;
+	margin-top: 4px;
+}
+
+.adam-form-actions-center {
+	justify-content: center;
 }
 
 .adam-text-link {
@@ -478,6 +530,10 @@
 	transition: background 0.2s ease;
 }
 
+.adam-strength-bar span.is-active {
+	background: var(--adam-green-600);
+}
+
 .adam-strength-text {
 	margin: 0 0 20px;
 	font-size: 16px;
@@ -506,8 +562,13 @@
 	font-size: 15px;
 	font-weight: 600;
 	line-height: 1.5;
-	color: #c62828;
+	color: #6b7280;
 	transition: all 0.2s ease;
+}
+
+.adam-password-rules li.is-valid {
+	color: var(--adam-green-700);
+	font-weight: 800;
 }
 
 .adam-password-wrapper {
@@ -520,7 +581,7 @@
 	padding-right: 48px !important;
 }
 
-.adam-password-toggle {
+.adam-card .adam-password-toggle {
 	position: absolute;
 	top: 50%;
 	right: 12px;
@@ -528,7 +589,9 @@
 	align-items: center;
 	justify-content: center;
 	width: 32px;
+	min-width: 0;
 	height: 32px;
+	min-height: 32px;
 	margin: 0;
 	padding: 0;
 	border: 0;
@@ -538,11 +601,17 @@
 	transform: translateY(-50%);
 }
 
-.adam-password-toggle:hover {
+.adam-card .adam-password-toggle:hover {
 	color: #16a34a;
+	transform: translateY(-50%);
 }
 
-.adam-password-toggle .dashicons {
+.adam-card .adam-password-toggle:focus {
+	box-shadow: 0 0 0 3px rgba(63, 143, 77, 0.18);
+	outline: none;
+}
+
+.adam-card .adam-password-toggle .dashicons {
 	width: 20px;
 	height: 20px;
 	font-size: 20px;
@@ -568,6 +637,13 @@
 	flex-direction: column;
 	align-items: center;
 	text-align: center;
+}
+
+.adam-member-area a:focus-visible,
+.adam-member-area button:focus-visible,
+.adam-member-area input:focus-visible {
+	outline: 3px solid rgba(63, 143, 77, 0.28);
+	outline-offset: 3px;
 }
 
 @media (max-width: 900px) {
@@ -637,5 +713,15 @@
 	.adam-card button,
 	.adam-card input[type="submit"] {
 		width: 100%;
+	}
+
+	.adam-form-actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.adam-text-link {
+		width: 100%;
+		text-align: center;
 	}
 }

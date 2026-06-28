@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-
-	const password = document.getElementById('new_password');
+	const password = document.getElementById('new_password') || document.getElementById('password1');
 
 	if (!password) {
 		return;
@@ -8,6 +7,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	const strengthText = document.getElementById('password-strength-text');
 	const strengthBar = document.getElementById('adam-strength-bar');
+
+	if (!strengthText || !strengthBar) {
+		return;
+	}
 
 	const rules = {
 		length: document.getElementById('rule-length'),
@@ -18,17 +21,15 @@ document.addEventListener('DOMContentLoaded', function () {
 	};
 
 	function updateRule(element, valid, text) {
-
 		if (!element) {
 			return;
 		}
 
-		element.textContent = (valid ? '✓ ' : '✗ ') + text;
-		element.style.color = valid ? '#2e7d32' : '#c62828';
+		element.textContent = (valid ? '✓ ' : '• ') + text;
+		element.classList.toggle('is-valid', valid);
 	}
 
 	password.addEventListener('input', function () {
-
 		const value = password.value;
 
 		updateRule(
@@ -68,7 +69,6 @@ document.addEventListener('DOMContentLoaded', function () {
 			wp.passwordStrength &&
 			wp.passwordStrength.meter
 		) {
-
 			score = wp.passwordStrength.meter(
 				value,
 				[],
@@ -79,12 +79,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		const bars = strengthBar.querySelectorAll('span');
 
 		bars.forEach(function (bar) {
-			bar.style.background = '#d6d6d6';
+			bar.className = '';
 		});
 
 		for (let i = 0; i < Math.max(score, 0); i++) {
 			if (bars[i]) {
-				bars[i].style.background = '#2e7d32';
+				bars[i].className = 'is-active';
 			}
 		}
 
@@ -97,7 +97,5 @@ document.addEventListener('DOMContentLoaded', function () {
 		];
 
 		strengthText.textContent = labels[Math.max(score, 0)] || 'Muito fraca';
-
 	});
-
 });

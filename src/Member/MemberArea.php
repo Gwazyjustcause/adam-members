@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Helpers\RateLimiter;
+
 /**
  * Handles the frontend member area.
  */
@@ -113,10 +115,10 @@ final class MemberArea {
 		ob_start();
 		?>
 		<div class="adam-member-area adam-member-login">
-			<section class="adam-login-panel adam-card">
+			<section class="adam-login-panel adam-card" aria-labelledby="adam-member-login-title">
 				<div class="adam-login-copy">
 					<p class="adam-eyebrow"><?php esc_html_e( 'ADAM Membership', 'adam-membership' ); ?></p>
-					<h2><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></h2>
+					<h2 id="adam-member-login-title"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></h2>
 					<p><?php esc_html_e( 'Inicie sessão para acompanhar o estado da sua inscrição, consultar os seus dados e gerir o acesso à conta.', 'adam-membership' ); ?></p>
 				</div>
 
@@ -154,13 +156,14 @@ final class MemberArea {
 						<span><?php esc_html_e( 'Lembrar-me', 'adam-membership' ); ?></span>
 					</label>
 
-					<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action">
-						<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
-					</button>
-
-					<a class="adam-text-link" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
-						<?php esc_html_e( 'Esqueceu-se da palavra-passe?', 'adam-membership' ); ?>
-					</a>
+					<div class="adam-form-actions">
+						<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action">
+							<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
+						</button>
+						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+							<?php esc_html_e( 'Esqueceu-se da palavra-passe?', 'adam-membership' ); ?>
+						</a>
+					</div>
 				</form>
 			</section>
 		</div>
@@ -193,6 +196,13 @@ final class MemberArea {
 		$login = sanitize_text_field(
 			wp_unslash( $_POST['adam_login'] ?? '' )
 		);
+		$identity = RateLimiter::request_identity( $login );
+
+		if ( RateLimiter::too_many_attempts( 'member_login', $identity, 8, 15 * MINUTE_IN_SECONDS ) ) {
+			return $this->notice_markup( 'error', __( 'Demasiadas tentativas. Tente novamente mais tarde.', 'adam-membership' ) );
+		}
+
+		RateLimiter::hit( 'member_login', $identity, 15 * MINUTE_IN_SECONDS );
 
 		if ( is_email( $login ) ) {
 			$user = get_user_by( 'email', $login );
@@ -216,6 +226,7 @@ final class MemberArea {
 		}
 
 		wp_safe_redirect( home_url( '/socio/' ) );
+		RateLimiter::clear( 'member_login', $identity );
 		exit;
 	}
 
@@ -426,7 +437,7 @@ final class MemberArea {
 	 */
 	private function render_status_card( string $status, string $message ): void {
 		?>
-		<section class="adam-card adam-status-card">
+		<section class="adam-card adam-status-card" aria-label="<?php esc_attr_e( 'Estado da inscrição', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Estado da inscrição', 'adam-membership' ); ?></p>
 				<?php $this->render_status_badge( $status ); ?>
@@ -456,7 +467,7 @@ final class MemberArea {
 	 */
 	private function render_membership( Member $member ): void {
 		?>
-		<section class="adam-card adam-membership-card">
+		<section class="adam-card adam-membership-card" aria-label="<?php esc_attr_e( 'Quota e identificação', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Quota e identificação', 'adam-membership' ); ?></p>
 			</div>
@@ -477,7 +488,7 @@ final class MemberArea {
 	 */
 	private function render_profile( Member $member ): void {
 		?>
-		<section class="adam-card adam-profile-card">
+		<section class="adam-card adam-profile-card" aria-label="<?php esc_attr_e( 'Dados do sócio', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Dados do sócio', 'adam-membership' ); ?></p>
 			</div>
@@ -499,7 +510,7 @@ final class MemberArea {
 	 */
 	private function render_notifications_card( array $messages ): void {
 		?>
-		<section class="adam-card adam-notifications-card">
+		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Notificações', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
 			</div>
@@ -518,7 +529,7 @@ final class MemberArea {
 	 */
 	private function render_future_card(): void {
 		?>
-		<section class="adam-card adam-future-card">
+		<section class="adam-card adam-future-card" aria-label="<?php esc_attr_e( 'Funcionalidades em preparação', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Em preparação', 'adam-membership' ); ?></p>
 				<h3><?php esc_html_e( 'Cartão, QR code e renovações', 'adam-membership' ); ?></h3>
@@ -535,7 +546,7 @@ final class MemberArea {
 	 */
 	private function render_actions( array $actions ): void {
 		?>
-		<section class="adam-card adam-actions-card">
+		<section class="adam-card adam-actions-card" aria-label="<?php esc_attr_e( 'Ações da conta', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Ações', 'adam-membership' ); ?></p>
 			</div>
@@ -573,9 +584,12 @@ final class MemberArea {
 	 * @param string $message Notice message.
 	 */
 	private function notice_markup( string $type, string $message ): string {
+		$role = 'error' === $type ? 'alert' : 'status';
+
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice"><p>%2$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
+			esc_attr( $role ),
 			esc_html( $message )
 		);
 	}

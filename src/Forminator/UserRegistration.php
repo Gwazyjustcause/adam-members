@@ -77,12 +77,12 @@ final class UserRegistration {
 		}
 
 		if ( email_exists( $email ) ) {
-			$this->logger->info( 'Registration skipped because the submitted email already exists.', array( 'email' => $email ) );
+			$this->logger->info( 'Registration skipped because the submitted email already exists.', array( 'email_hash' => wp_hash( $email ) ) );
 			return;
 		}
 
 		if ( username_exists( $email ) ) {
-			$this->logger->error( 'Registration failed because the submitted email is already used as a username.', array( 'email' => $email ) );
+			$this->logger->error( 'Registration failed because the submitted email is already used as a username.', array( 'email_hash' => wp_hash( $email ) ) );
 			return;
 		}
 
@@ -92,8 +92,8 @@ final class UserRegistration {
 			$this->logger->error(
 				'Registration failed during WordPress user creation.',
 				array(
-					'email' => $email,
-					'error' => $user_id->get_error_message(),
+					'email_hash' => wp_hash( $email ),
+					'error'      => $user_id->get_error_message(),
 				)
 			);
 			return;
