@@ -1,0 +1,341 @@
+.adam-events-shell {
+	background: #f4f6f2;
+	padding: 32px 0 64px;
+}
+
+.adam-events-page {
+	max-width: 1180px;
+	margin: 0 auto;
+	padding: 0 20px;
+	color: #102033;
+}
+
+.adam-events-hero,
+.adam-event-detail-card {
+	background: #fff;
+	border: 1px solid #d9e4dc;
+	border-radius: 10px;
+	box-shadow: 0 12px 28px rgba(23, 63, 36, 0.08);
+}
+
+.adam-events-hero {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 28px;
+	margin-bottom: 22px;
+}
+
+.adam-events-eyebrow {
+	margin: 0 0 8px;
+	color: #2f6b3b;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.adam-events-hero h1,
+.adam-event-detail-content h1 {
+	margin: 0 0 10px;
+	color: #173f24;
+}
+
+.adam-events-toggle {
+	display: inline-flex;
+	border: 1px solid #d9e4dc;
+	border-radius: 999px;
+	padding: 4px;
+	background: #f8faf8;
+}
+
+.adam-events-toggle-button,
+.adam-events-toggle-button:visited {
+	padding: 10px 16px;
+	border-radius: 999px;
+	color: #4b5563;
+	text-decoration: none;
+	font-weight: 700;
+}
+
+.adam-events-toggle-button.is-active {
+	background: #2f6b3b;
+	color: #fff;
+}
+
+.adam-events-list {
+	display: grid;
+	gap: 18px;
+}
+
+.adam-event-card,
+.adam-events-calendar-wrap,
+.adam-events-empty {
+	background: #fff;
+	border: 1px solid #d9e4dc;
+	border-radius: 10px;
+	box-shadow: 0 10px 24px rgba(23, 63, 36, 0.06);
+}
+
+.adam-event-card {
+	padding: 20px;
+}
+
+.adam-event-card-top,
+.adam-event-header-row,
+.adam-events-calendar-nav {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	align-items: start;
+}
+
+.adam-event-card h2,
+.adam-event-card p,
+.adam-event-short {
+	margin-top: 0;
+}
+
+.adam-event-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.adam-event-badge {
+	display: inline-flex;
+	align-items: center;
+	min-height: 26px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: #e5e7eb;
+	color: #374151;
+	font-size: 12px;
+	font-weight: 800;
+}
+
+.adam-event-badge.access-members_only,
+.adam-event-badge.registration-confirmed,
+.adam-event-badge.status-published {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.adam-event-badge.access-member_priority,
+.adam-event-badge.registration-pending {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-event-badge.status-cancelled,
+.adam-event-badge.registration-rejected,
+.adam-event-badge.registration-cancelled {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-event-badge.registration-waiting_list,
+.adam-event-badge.status-completed {
+	background: #e2e8f0;
+	color: #334155;
+}
+
+.adam-event-list-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+	margin: 14px 0;
+	color: #475569;
+	font-size: 14px;
+}
+
+.adam-events-primary,
+.adam-events-secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 42px;
+	padding: 0 18px;
+	border: 1px solid #2f6b3b;
+	border-radius: 8px;
+	background: #2f6b3b;
+	color: #fff;
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.adam-events-secondary {
+	background: #fff;
+	color: #2f6b3b;
+}
+
+.adam-events-calendar-wrap,
+.adam-event-detail-card {
+	padding: 22px;
+}
+
+.adam-events-calendar-nav {
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.adam-events-calendar {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.adam-events-calendar-head,
+.adam-events-calendar-day {
+	min-height: 120px;
+	padding: 12px;
+	border-radius: 8px;
+	border: 1px solid #e2e8f0;
+	background: #f8faf8;
+}
+
+.adam-events-calendar-head {
+	min-height: auto;
+	background: transparent;
+	border: 0;
+	font-weight: 700;
+	color: #64748b;
+}
+
+.adam-events-calendar-day.is-empty {
+	background: transparent;
+	border-style: dashed;
+}
+
+.adam-events-calendar-item {
+	display: block;
+	margin-top: 8px;
+	padding: 8px;
+	border-radius: 8px;
+	background: #fff;
+	color: #173f24;
+	text-decoration: none;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.adam-events-calendar-item small {
+	display: block;
+	margin-top: 4px;
+	color: #64748b;
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.adam-event-cover {
+	margin-bottom: 18px;
+}
+
+.adam-event-cover img {
+	display: block;
+	width: 100%;
+	max-height: 380px;
+	object-fit: cover;
+	border-radius: 8px;
+}
+
+.adam-event-meta-grid,
+.adam-events-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+	margin: 20px 0;
+}
+
+.adam-event-meta-item,
+.adam-event-registration-box {
+	padding: 16px;
+	border: 1px solid #d9e4dc;
+	border-radius: 8px;
+	background: #f8faf8;
+}
+
+.adam-event-meta-item span {
+	display: block;
+	margin-bottom: 8px;
+	color: #64748b;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.adam-event-registration-form label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 13px;
+	font-weight: 700;
+	color: #173f24;
+}
+
+.adam-event-registration-form input {
+	width: 100%;
+	min-height: 42px;
+	padding: 0 12px;
+	border: 1px solid #cbd5e1;
+	border-radius: 8px;
+	background: #fff;
+}
+
+.adam-events-notice {
+	margin: 18px 0;
+	padding: 14px 16px;
+	border-radius: 8px;
+	font-weight: 600;
+}
+
+.adam-events-notice.success {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.adam-events-notice.error {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-events-notice.warning {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-events-notice.info {
+	background: #e0f2fe;
+	color: #0f4c81;
+}
+
+.adam-events-empty {
+	padding: 28px;
+	text-align: center;
+}
+
+.adam-events-back {
+	margin-bottom: 16px;
+}
+
+@media (max-width: 820px) {
+	.adam-events-hero,
+	.adam-event-card-top,
+	.adam-event-header-row,
+	.adam-events-calendar-nav {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.adam-event-meta-grid,
+	.adam-events-form-grid,
+	.adam-events-calendar {
+		grid-template-columns: 1fr;
+	}
+
+	.adam-events-calendar-head {
+		display: none;
+	}
+}

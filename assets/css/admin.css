@@ -20,7 +20,8 @@
 #toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-member"],
 #toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-renewal-request"],
 #toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-notice-edit"],
-#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-document-edit"] {
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-document-edit"],
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-event-edit"] {
 	display: none;
 }
 
@@ -226,6 +227,21 @@
 .adam-admin-badge.quota-expiring_soon {
 	background: #fef3c7;
 	color: #92400e;
+}
+
+.adam-admin-badge.event-status-cancelled,
+.adam-admin-badge.status-expired,
+.adam-admin-badge.registration-status-rejected,
+.adam-admin-badge.registration-status-cancelled {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-admin-badge.event-status-completed,
+.adam-admin-badge.document-status-archived,
+.adam-admin-badge.registration-status-waiting_list {
+	background: #e2e8f0;
+	color: #334155;
 }
 
 .adam-admin-badge.rejeitado,

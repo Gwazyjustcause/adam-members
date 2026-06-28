@@ -55,6 +55,10 @@ register_activation_hook(
 		if ( class_exists( Core\MaintenanceService::class ) ) {
 			Core\MaintenanceService::activate();
 		}
+
+		if ( class_exists( Event\EventFrontend::class ) ) {
+			Event\EventFrontend::activate();
+		}
 	}
 );
 
@@ -63,6 +67,10 @@ register_deactivation_hook(
 	static function (): void {
 		if ( class_exists( Core\MaintenanceService::class ) ) {
 			Core\MaintenanceService::deactivate();
+		}
+
+		if ( class_exists( Event\EventFrontend::class ) ) {
+			Event\EventFrontend::deactivate();
 		}
 	}
 );

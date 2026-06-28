@@ -11,6 +11,7 @@ namespace AdamMembership\Core;
 
 use AdamMembership\Admin\AnnouncementController;
 use AdamMembership\Admin\DocumentController;
+use AdamMembership\Admin\EventController;
 use AdamMembership\Announcement\AnnouncementRepository;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Admin\AdminController;
@@ -21,6 +22,9 @@ use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Event\EventFrontend;
+use AdamMembership\Event\EventRepository;
+use AdamMembership\Event\EventService;
 use AdamMembership\Member\Account;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\CardService;
@@ -92,6 +96,8 @@ final class Plugin {
 		$announcements      = new AnnouncementService( $announcement_repository, $members, $email, $logger );
 		$document_repository = new DocumentRepository();
 		$documents          = new DocumentService( $document_repository, $members, $logger, $history_repository );
+		$event_repository   = new EventRepository();
+		$events             = new EventService( $event_repository, $members, $logger, $history_repository );
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history );
 		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
@@ -105,6 +111,7 @@ final class Plugin {
 		$email_confirmation = new EmailConfirmation( $email_change );
 		$registration       = new UserRegistration( $config, $logger, $history );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
+		$events_frontend    = new EventFrontend( $events, $members );
 		$admin              = new AdminController(
 			$members,
 			$approval,
@@ -118,16 +125,19 @@ final class Plugin {
 		);
 		$announcement_admin = new AnnouncementController( $announcements );
 		$document_admin     = new DocumentController( $documents );
+		$event_admin        = new EventController( $events );
 
 		$registration->register();
 		$renewal_submission->register();
 		$admin->register();
 		$announcement_admin->register();
 		$document_admin->register();
+		$event_admin->register();
 		$maintenance->register();
 		$cards->register();
 		$history->register();
 		$documents->register();
+		$events_frontend->register();
 
 		$member_area->register();
 		$password_recovery->register();
