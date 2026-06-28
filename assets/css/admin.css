@@ -229,6 +229,25 @@
 	color: #991b1b;
 }
 
+.adam-admin-badge.announcement-info,
+.adam-admin-badge.announcement-status-published {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.adam-admin-badge.announcement-important,
+.adam-admin-badge.announcement-status-scheduled {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-admin-badge.announcement-urgent,
+.adam-admin-badge.announcement-status-expired,
+.adam-admin-badge.announcement-status-archived {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
 .adam-admin-table small {
 	display: block;
 	margin-top: 4px;

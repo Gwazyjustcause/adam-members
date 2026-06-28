@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Announcement\Announcement;
+use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\RateLimiter;
 
@@ -46,18 +48,27 @@ final class MemberArea {
 	private CardService $cards;
 
 	/**
+	 * Announcement service.
+	 *
+	 * @var AnnouncementService
+	 */
+	private AnnouncementService $announcements;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
 	 * @param RenewalService     $renewals Renewal service.
 	 * @param SettingsRepository $settings Settings repository.
-	 * @param CardService        $cards    Digital card service.
+	 * @param CardService         $cards         Digital card service.
+	 * @param AnnouncementService $announcements Announcement service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards ) {
-		$this->members  = $members;
-		$this->renewals = $renewals;
-		$this->settings = $settings;
-		$this->cards    = $cards;
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements ) {
+		$this->members       = $members;
+		$this->renewals      = $renewals;
+		$this->settings      = $settings;
+		$this->cards         = $cards;
+		$this->announcements = $announcements;
 	}
 
 	/**
@@ -136,6 +147,8 @@ final class MemberArea {
 			} else {
 				$this->render_unknown_status();
 			}
+
+			$this->render_announcements( $member );
 			?>
 		</div>
 		<?php
@@ -611,6 +624,124 @@ final class MemberArea {
 	}
 
 	/**
+	 * Render Communication Centre.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_announcements( Member $member ): void {
+		$selected_id   = isset( $_GET['announcement_id'] ) ? absint( wp_unslash( $_GET['announcement_id'] ) ) : 0;
+		$announcements = $this->announcements->visible_for_member( $member );
+
+		if ( array() === $announcements ) {
+			return;
+		}
+
+		if ( $selected_id > 0 ) {
+			$selected = $this->announcements->visible_announcement( $member, $selected_id );
+
+			if ( null !== $selected ) {
+				$this->announcements->mark_read( $member, $selected );
+				$this->render_announcement_detail( $selected );
+			}
+		}
+		?>
+		<section class="adam-card adam-announcements-section" aria-label="<?php esc_attr_e( 'Centro de Avisos', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Comunicacoes oficiais da ADAM', 'adam-membership' ); ?></h3>
+				</div>
+			</div>
+
+			<div class="adam-announcement-grid">
+				<?php foreach ( $announcements as $announcement ) : ?>
+					<?php $this->render_announcement_card( $member, $announcement ); ?>
+				<?php endforeach; ?>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render a member-facing announcement card.
+	 *
+	 * @param Member       $member       Member.
+	 * @param Announcement $announcement Announcement.
+	 */
+	private function render_announcement_card( Member $member, Announcement $announcement ): void {
+		$card_classes = array( 'adam-announcement-card' );
+
+		if ( $this->announcements->is_unread( $member, $announcement ) ) {
+			$card_classes[] = 'is-unread';
+		}
+
+		if ( $announcement->pinned() ) {
+			$card_classes[] = 'is-pinned';
+		}
+		?>
+		<article class="<?php echo esc_attr( implode( ' ', $card_classes ) ); ?>">
+			<div class="adam-announcement-card__meta">
+				<span class="adam-announcement-category"><?php echo esc_html( $announcement->category() ); ?></span>
+				<span class="adam-badge adam-announcement-priority adam-announcement-priority--<?php echo esc_attr( $announcement->priority() ); ?>"><?php echo esc_html( $this->announcement_priority_label( $announcement->priority() ) ); ?></span>
+			</div>
+			<h4><?php echo esc_html( $announcement->title() ); ?></h4>
+			<p><?php echo esc_html( $announcement->summary() ); ?></p>
+			<div class="adam-announcement-card__footer">
+				<span><?php echo esc_html( $this->format_date( $announcement->publish_date() ) ); ?></span>
+				<?php if ( '' !== $announcement->expiry_date() ) : ?>
+					<span><?php echo esc_html( sprintf( __( 'Expira %s', 'adam-membership' ), $this->format_date( $announcement->expiry_date() ) ) ); ?></span>
+				<?php endif; ?>
+			</div>
+			<div class="adam-announcement-card__actions">
+				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( add_query_arg( 'announcement_id', $announcement->id(), home_url( '/socio/' ) ) ); ?>">
+					<?php esc_html_e( 'Ler mais', 'adam-membership' ); ?>
+				</a>
+				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
+					<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $announcement->action_url() ); ?>">
+						<?php echo esc_html( $announcement->action_label() ); ?>
+					</a>
+				<?php endif; ?>
+			</div>
+		</article>
+		<?php
+	}
+
+	/**
+	 * Render a selected announcement detail view.
+	 *
+	 * @param Announcement $announcement Announcement.
+	 */
+	private function render_announcement_detail( Announcement $announcement ): void {
+		?>
+		<section class="adam-card adam-announcement-detail" aria-label="<?php esc_attr_e( 'Detalhe do aviso', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></p>
+					<h3><?php echo esc_html( $announcement->title() ); ?></h3>
+				</div>
+				<span class="adam-badge adam-announcement-priority adam-announcement-priority--<?php echo esc_attr( $announcement->priority() ); ?>"><?php echo esc_html( $this->announcement_priority_label( $announcement->priority() ) ); ?></span>
+			</div>
+			<div class="adam-announcement-detail__meta">
+				<span><?php echo esc_html( $announcement->category() ); ?></span>
+				<span><?php echo esc_html( $this->format_date( $announcement->publish_date() ) ); ?></span>
+				<?php if ( '' !== $announcement->expiry_date() ) : ?>
+					<span><?php echo esc_html( sprintf( __( 'Expira %s', 'adam-membership' ), $this->format_date( $announcement->expiry_date() ) ) ); ?></span>
+				<?php endif; ?>
+			</div>
+			<div class="adam-announcement-detail__content">
+				<?php echo wp_kses_post( wpautop( $announcement->content() ) ); ?>
+			</div>
+			<div class="adam-announcement-card__actions">
+				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
+					<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $announcement->action_url() ); ?>"><?php echo esc_html( $announcement->action_label() ); ?></a>
+				<?php endif; ?>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
 	 * Render status card.
 	 *
 	 * @param string $status  Status.
@@ -932,5 +1063,18 @@ final class MemberArea {
 		}
 
 		return $date;
+	}
+
+	/**
+	 * Get a translated announcement priority label.
+	 *
+	 * @param string $priority Priority.
+	 */
+	private function announcement_priority_label( string $priority ): string {
+		return match ( $priority ) {
+			Announcement::PRIORITY_IMPORTANT => __( 'Importante', 'adam-membership' ),
+			Announcement::PRIORITY_URGENT    => __( 'Urgente', 'adam-membership' ),
+			default                          => __( 'Informacao', 'adam-membership' ),
+		};
 	}
 }

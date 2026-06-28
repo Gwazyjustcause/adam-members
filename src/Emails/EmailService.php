@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Emails;
 
+use AdamMembership\Announcement\Announcement;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
@@ -259,6 +260,35 @@ final class EmailService {
 				$button
 			),
 			'quota_expired'
+		);
+	}
+
+	/**
+	 * Send an optional announcement email.
+	 *
+	 * @param Member       $member       Member.
+	 * @param Announcement $announcement Announcement.
+	 */
+	public function send_announcement_email( Member $member, Announcement $announcement ): bool {
+		$button = '';
+
+		if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) {
+			$button = '<p style="text-align:center;">' . $this->button( $announcement->action_url(), $announcement->action_label() ) . '</p>';
+		}
+
+		return $this->send_member_lifecycle_email(
+			$member,
+			$announcement->title(),
+			$announcement->title(),
+			sprintf(
+				'<p>Ol&aacute; <strong>%1$s</strong>,</p><p>%2$s</p><div>%3$s</div>%4$s',
+				esc_html( $member->full_name() ),
+				esc_html( $announcement->summary() ),
+				wp_kses_post( wpautop( $announcement->content() ) ),
+				$button
+			),
+			'announcement',
+			array( 'announcement_id' => $announcement->id() )
 		);
 	}
 
