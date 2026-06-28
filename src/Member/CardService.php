@@ -190,7 +190,8 @@ final class CardService {
 	 * @param bool        $is_valid Whether the member is valid.
 	 */
 	private function render_validation_markup( ?Member $member, bool $is_valid ): void {
-		$status = null !== $member ? $member->effective_status() : __( 'Invalid token', 'adam-membership' );
+		$status       = null !== $member ? $member->effective_status() : __( 'Invalid token', 'adam-membership' );
+		$validated_at = wp_date( 'd/m/Y H:i', current_time( 'timestamp' ) );
 		?>
 		<!doctype html>
 		<html <?php language_attributes(); ?>>
@@ -200,17 +201,20 @@ final class CardService {
 			<title><?php esc_html_e( 'ADAM Member Validation', 'adam-membership' ); ?></title>
 			<?php wp_head(); ?>
 			<style>
-				body { margin: 0; background: #f4faf5; color: #102033; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+				body { margin: 0; background: linear-gradient(135deg, #f4faf5, #e8f4ea); color: #102033; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 				.adam-card-validation { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
-				.adam-card-validation__panel { width: min(540px, 100%); padding: 32px; border: 1px solid #d9e4dc; border-radius: 22px; background: #fff; box-shadow: 0 18px 42px rgba(23, 63, 36, 0.12); text-align: center; }
+				.adam-card-validation__panel { width: min(580px, 100%); padding: 34px; border: 1px solid #d9e4dc; border-radius: 26px; background: #fff; box-shadow: 0 22px 56px rgba(23, 63, 36, 0.16); text-align: center; }
 				.adam-card-validation__logo { max-width: 150px; height: auto; margin-bottom: 18px; }
-				.adam-card-validation__status { display: inline-flex; margin: 12px 0 20px; padding: 8px 14px; border-radius: 999px; font-weight: 800; }
+				.adam-card-validation h1 { margin: 0 0 10px; color: #173f24; font-size: clamp(2rem, 6vw, 3rem); line-height: 1; }
+				.adam-card-validation p { margin: 0; color: #5d6b7c; }
+				.adam-card-validation__status { display: inline-flex; margin: 18px 0 22px; padding: 9px 16px; border-radius: 999px; font-weight: 800; }
 				.adam-card-validation__status.valid { background: #dcfce7; color: #14532d; }
 				.adam-card-validation__status.invalid { background: #fee2e2; color: #991b1b; }
 				.adam-card-validation__data { display: grid; gap: 10px; margin-top: 18px; text-align: left; }
 				.adam-card-validation__row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid #edf3ee; }
 				.adam-card-validation__row span { color: #5d6b7c; font-weight: 700; }
 				.adam-card-validation__row strong { text-align: right; }
+				.adam-card-validation__checked { margin-top: 20px; padding-top: 18px; border-top: 1px solid #edf3ee; font-size: 0.92rem; }
 			</style>
 		</head>
 		<body>
@@ -225,11 +229,23 @@ final class CardService {
 							<?php $this->render_validation_row( __( 'Name', 'adam-membership' ), $member->full_name() ); ?>
 							<?php $this->render_validation_row( __( 'Member number', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
 							<?php $this->render_validation_row( __( 'Status', 'adam-membership' ), $status ); ?>
+							<?php $this->render_validation_row( __( 'Date of subscription', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
 							<?php $this->render_validation_row( __( 'Quota expiry', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 						</div>
 					<?php else : ?>
 						<p><?php esc_html_e( 'The validation token is missing or invalid.', 'adam-membership' ); ?></p>
 					<?php endif; ?>
+					<p class="adam-card-validation__checked">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: validation date and time. */
+								__( 'Validated on %s', 'adam-membership' ),
+								$validated_at
+							)
+						);
+						?>
+					</p>
 				</section>
 			</main>
 			<?php wp_footer(); ?>

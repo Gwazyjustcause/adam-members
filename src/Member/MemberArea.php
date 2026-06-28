@@ -502,32 +502,92 @@ final class MemberArea {
 		if ( ! $member->isActive() ) {
 			return;
 		}
+
+		$photo_url     = $member->media_url( 'profile_photo' );
+		$member_number = (string) $member->field( 'numero_socio' );
+		$joined_date   = $this->format_date( $member->field( 'data_adesao' ) );
+		$expiry_date   = $this->format_date( $member->field( 'validade_quota' ) );
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
-				<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
-				<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver Cartão', 'adam-membership' ); ?></a>
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Cartão de sócio ADAM', 'adam-membership' ); ?></h3>
+				</div>
+				<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 			</div>
-			<div class="adam-digital-card">
-				<div class="adam-digital-card__identity">
+			<article class="adam-digital-card" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+				<div class="adam-digital-card__shine" aria-hidden="true"></div>
+				<header class="adam-digital-card__header">
 					<img class="adam-digital-card__logo" src="<?php echo esc_url( $this->cards->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->cards->association_name() ); ?>">
 					<div>
-						<span><?php echo esc_html( $this->cards->association_name() ); ?></span>
+						<span><?php esc_html_e( 'Associação Desportiva', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( $this->cards->association_name() ); ?></strong>
+					</div>
+					<?php $this->render_status_badge( $member->effective_status() ); ?>
+				</header>
+
+				<div class="adam-digital-card__body">
+					<div class="adam-digital-card__photo">
+						<?php if ( '' !== $photo_url ) : ?>
+							<img src="<?php echo esc_url( $photo_url ); ?>" alt="<?php echo esc_attr( $member->full_name() ); ?>">
+						<?php else : ?>
+							<span><?php echo esc_html( $this->member_initials( $member ) ); ?></span>
+						<?php endif; ?>
+					</div>
+
+					<div class="adam-digital-card__identity">
+						<span><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
-						<small><?php echo esc_html( (string) $member->field( 'numero_socio' ) ); ?></small>
+						<small><?php echo esc_html( '' !== $member_number ? $member_number : __( 'Número por atribuir', 'adam-membership' ) ); ?></small>
+					</div>
+
+					<div class="adam-digital-card__qr">
+						<img src="<?php echo esc_url( $this->cards->qr_image_url( $member ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+						<span><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></span>
 					</div>
 				</div>
-				<div class="adam-digital-card__meta">
-					<?php $this->render_status_badge( $member->effective_status() ); ?>
-					<span><?php echo esc_html( sprintf( __( 'Quota válida até %s', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ) ); ?></span>
+
+				<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
+					<div>
+						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== $member_number ? $member_number : __( 'Por atribuir', 'adam-membership' ) ); ?></strong>
+					</div>
+					<div>
+						<span><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== $joined_date ? $joined_date : __( 'Indisponível', 'adam-membership' ) ); ?></strong>
+					</div>
+					<div>
+						<span><?php esc_html_e( 'Válido até', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== $expiry_date ? $expiry_date : __( 'Indisponível', 'adam-membership' ) ); ?></strong>
+					</div>
 				</div>
-				<div class="adam-digital-card__qr">
-					<img src="<?php echo esc_url( $this->cards->qr_image_url( $member ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					<a href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></a>
-				</div>
-			</div>
+
+				<footer class="adam-digital-card__footer">
+					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
+					<a href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver validação online', 'adam-membership' ); ?></a>
+				</footer>
+			</article>
 		</section>
 		<?php
+	}
+
+	/**
+	 * Get initials for a member photo fallback.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function member_initials( Member $member ): string {
+		$parts    = preg_split( '/\s+/', trim( $member->full_name() ) );
+		$initials = '';
+
+		if ( is_array( $parts ) ) {
+			foreach ( array_slice( $parts, 0, 2 ) as $part ) {
+				$initials .= strtoupper( substr( $part, 0, 1 ) );
+			}
+		}
+
+		return '' !== $initials ? $initials : 'AD';
 	}
 
 	/**
