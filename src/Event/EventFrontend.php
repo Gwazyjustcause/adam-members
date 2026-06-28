@@ -274,7 +274,7 @@ final class EventFrontend {
 	private function render_list_view( array $events ): void {
 		if ( array() === $events ) {
 			echo '<div class="adam-events-empty">';
-			esc_html_e( 'Ainda nao existem eventos publicados.', 'adam-membership' );
+			esc_html_e( 'Ainda não existem eventos publicados.', 'adam-membership' );
 			echo '</div>';
 			return;
 		}
@@ -502,7 +502,7 @@ final class EventFrontend {
 		$authorized     = ( $current_member instanceof Member && $registration->member_id() === $current_member->user_id() ) || ( '' !== $token && hash_equals( $registration->manage_token(), $token ) );
 
 		if ( ! $authorized ) {
-			wp_safe_redirect( add_query_arg( 'adam_event_error', __( 'Nao tem permissao para cancelar esta inscricao.', 'adam-membership' ), $redirect ) );
+			wp_safe_redirect( add_query_arg( 'adam_event_error', __( 'Não tem permissão para cancelar esta inscrição.', 'adam-membership' ), $redirect ) );
 			exit;
 		}
 
@@ -656,7 +656,7 @@ final class EventFrontend {
 	private function event_status_label( string $status ): string {
 		return match ( $status ) {
 			Event::STATUS_CANCELLED => __( 'Cancelado', 'adam-membership' ),
-			Event::STATUS_COMPLETED => __( 'Concluido', 'adam-membership' ),
+			Event::STATUS_COMPLETED => __( 'Concluído', 'adam-membership' ),
 			Event::STATUS_DRAFT     => __( 'Rascunho', 'adam-membership' ),
 			default                 => __( 'Publicado', 'adam-membership' ),
 		};

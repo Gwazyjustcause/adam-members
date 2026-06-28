@@ -55,9 +55,9 @@ final class HistoryService {
 
 		$this->member_event(
 			'member_login',
-			__( 'Member login', 'adam-membership' ),
+			__( 'Início de sessão do sócio', 'adam-membership' ),
 			$member,
-			__( 'Member signed in successfully.', 'adam-membership' ),
+			__( 'O sócio iniciou sessão com sucesso.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -80,9 +80,9 @@ final class HistoryService {
 
 		$this->member_event(
 			'member_logout',
-			__( 'Member logout', 'adam-membership' ),
+			__( 'Fim de sessão do sócio', 'adam-membership' ),
 			$member,
-			__( 'Member signed out.', 'adam-membership' ),
+			__( 'O sócio terminou a sessão.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -96,9 +96,9 @@ final class HistoryService {
 	public function registration_submitted( Member $member, int $entry_id ): void {
 		$this->member_event(
 			'registration_submitted',
-			__( 'Registration submitted', 'adam-membership' ),
+			__( 'Inscrição submetida', 'adam-membership' ),
 			$member,
-			__( 'Registration form submitted successfully.', 'adam-membership' ),
+			__( 'O formulário de inscrição foi submetido com sucesso.', 'adam-membership' ),
 			array(
 				'entry_id' => $entry_id,
 			)
@@ -113,9 +113,9 @@ final class HistoryService {
 	public function password_reset_requested( Member $member ): void {
 		$this->system_event(
 			'password_reset_requested',
-			__( 'Password reset requested', 'adam-membership' ),
+			__( 'Reposição de palavra-passe pedida', 'adam-membership' ),
 			$member,
-			__( 'Password reset instructions were requested.', 'adam-membership' ),
+			__( 'Foram pedidas instruções para repor a palavra-passe.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -128,9 +128,9 @@ final class HistoryService {
 	public function password_reset_completed( Member $member ): void {
 		$this->member_event(
 			'password_reset_completed',
-			__( 'Password reset completed', 'adam-membership' ),
+			__( 'Reposição de palavra-passe concluída', 'adam-membership' ),
 			$member,
-			__( 'Password was reset successfully.', 'adam-membership' ),
+			__( 'A palavra-passe foi reposta com sucesso.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -143,9 +143,9 @@ final class HistoryService {
 	public function password_changed( Member $member ): void {
 		$this->member_event(
 			'password_changed',
-			__( 'Password changed', 'adam-membership' ),
+			__( 'Palavra-passe alterada', 'adam-membership' ),
 			$member,
-			__( 'Member changed the account password.', 'adam-membership' ),
+			__( 'O sócio alterou a palavra-passe da conta.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -158,9 +158,9 @@ final class HistoryService {
 	public function email_change_requested( Member $member ): void {
 		$this->member_event(
 			'email_change_requested',
-			__( 'Email change requested', 'adam-membership' ),
+			__( 'Alteração de email pedida', 'adam-membership' ),
 			$member,
-			__( 'Member requested an email address change.', 'adam-membership' ),
+			__( 'O sócio pediu uma alteração do endereço de email.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -175,9 +175,9 @@ final class HistoryService {
 	public function email_changed( Member $member, string $old_email, string $new_email ): void {
 		$this->member_event(
 			'email_changed',
-			__( 'Email changed', 'adam-membership' ),
+			__( 'Email alterado', 'adam-membership' ),
 			$member,
-			__( 'Member email address updated.', 'adam-membership' ),
+			__( 'O endereço de email do sócio foi atualizado.', 'adam-membership' ),
 			array(
 				'old_email' => sanitize_email( $old_email ),
 				'new_email' => sanitize_email( $new_email ),
@@ -195,9 +195,9 @@ final class HistoryService {
 	public function member_approved( Member $member, string $old_status, string $new_status ): void {
 		$this->admin_event(
 			'member_approved',
-			__( 'Member approved', 'adam-membership' ),
+			__( 'Sócio aprovado', 'adam-membership' ),
 			$member,
-			__( 'Administrator approved the membership.', 'adam-membership' ),
+			__( 'A administração aprovou a inscrição.', 'adam-membership' ),
 			array(
 				'old_status' => $old_status,
 				'new_status' => $new_status,
@@ -216,9 +216,9 @@ final class HistoryService {
 	public function member_rejected( Member $member, string $old_status, string $new_status, string $reason = '' ): void {
 		$this->admin_event(
 			'member_rejected',
-			__( 'Member rejected', 'adam-membership' ),
+			__( 'Sócio rejeitado', 'adam-membership' ),
 			$member,
-			__( 'Administrator rejected the membership.', 'adam-membership' ),
+			__( 'A administração rejeitou a inscrição.', 'adam-membership' ),
 			array(
 				'old_status' => $old_status,
 				'new_status' => $new_status,
@@ -236,9 +236,9 @@ final class HistoryService {
 	public function member_edited_by_admin( Member $member, array $changes ): void {
 		$this->admin_event(
 			'member_edited_by_admin',
-			__( 'Member edited by admin', 'adam-membership' ),
+			__( 'Sócio editado pela administração', 'adam-membership' ),
 			$member,
-			__( 'Administrator updated member details.', 'adam-membership' ),
+			__( 'A administração atualizou os dados do sócio.', 'adam-membership' ),
 			array(
 				'changes' => $changes,
 			)
@@ -255,9 +255,9 @@ final class HistoryService {
 	public function quota_date_changed( Member $member, string $old_expiry, string $new_expiry ): void {
 		$this->admin_event(
 			'quota_date_changed',
-			__( 'Quota date changed', 'adam-membership' ),
+			__( 'Data da quota alterada', 'adam-membership' ),
 			$member,
-			__( 'Administrator changed the quota validity date.', 'adam-membership' ),
+			__( 'A administração alterou a data de validade da quota.', 'adam-membership' ),
 			array(
 				'old_value' => $old_expiry,
 				'new_value' => $new_expiry,
@@ -273,9 +273,9 @@ final class HistoryService {
 	public function approval_email_resent( Member $member ): void {
 		$this->admin_event(
 			'approval_email_resent',
-			__( 'Approval email resent', 'adam-membership' ),
+			__( 'Email de aprovação reenviado', 'adam-membership' ),
 			$member,
-			__( 'Administrator resent the approval email manually.', 'adam-membership' ),
+			__( 'A administração reenviou manualmente o email de aprovação.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -288,9 +288,9 @@ final class HistoryService {
 	public function card_token_regenerated( Member $member ): void {
 		$this->admin_event(
 			'card_token_regenerated',
-			__( 'Card token regenerated', 'adam-membership' ),
+			__( 'Token do cartão regenerado', 'adam-membership' ),
 			$member,
-			__( 'Administrator regenerated the digital card validation token.', 'adam-membership' ),
+			__( 'A administração regenerou o token de validação do cartão digital.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -306,13 +306,13 @@ final class HistoryService {
 	public function renewal_submitted( Member $member, int $renewal_id, int $entry_id, bool $proof_added ): void {
 		$this->member_event(
 			'renewal_submitted',
-			__( 'Renewal submitted', 'adam-membership' ),
+			__( 'Renovação submetida', 'adam-membership' ),
 			$member,
-			__( 'Member submitted a renewal request.', 'adam-membership' ),
+			__( 'O sócio submeteu um pedido de renovação.', 'adam-membership' ),
 			array(
 				'renewal_id'      => $renewal_id,
 				'submission_id'   => $entry_id,
-				'proof_attached'  => $proof_added ? 'yes' : 'no',
+				'proof_attached'  => $proof_added ? 'sim' : 'não',
 			)
 		);
 	}
@@ -326,9 +326,9 @@ final class HistoryService {
 	public function renewal_reviewed( Member $member, int $renewal_id ): void {
 		$this->admin_event(
 			'renewal_reviewed',
-			__( 'Renewal reviewed', 'adam-membership' ),
+			__( 'Renovação revista', 'adam-membership' ),
 			$member,
-			__( 'Administrator reviewed the renewal request.', 'adam-membership' ),
+			__( 'A administração reviu o pedido de renovação.', 'adam-membership' ),
 			array(
 				'renewal_id' => $renewal_id,
 			)
@@ -347,9 +347,9 @@ final class HistoryService {
 	public function renewal_approved( Member $member, int $renewal_id, string $old_expiry, string $new_expiry, array $changes = array() ): void {
 		$this->admin_event(
 			'renewal_approved',
-			__( 'Renewal approved', 'adam-membership' ),
+			__( 'Renovação aprovada', 'adam-membership' ),
 			$member,
-			__( 'Administrator approved the renewal request.', 'adam-membership' ),
+			__( 'A administração aprovou o pedido de renovação.', 'adam-membership' ),
 			array(
 				'renewal_id'  => $renewal_id,
 				'old_expiry'  => $old_expiry,
@@ -369,9 +369,9 @@ final class HistoryService {
 	public function renewal_rejected( Member $member, int $renewal_id, string $reason = '' ): void {
 		$this->admin_event(
 			'renewal_rejected',
-			__( 'Renewal rejected', 'adam-membership' ),
+			__( 'Renovação rejeitada', 'adam-membership' ),
 			$member,
-			__( 'Administrator rejected the renewal request.', 'adam-membership' ),
+			__( 'A administração rejeitou o pedido de renovação.', 'adam-membership' ),
 			array(
 				'renewal_id' => $renewal_id,
 				'reason'     => sanitize_text_field( $reason ),
@@ -388,9 +388,9 @@ final class HistoryService {
 	public function quota_expired( Member $member, string $expiry_date ): void {
 		$this->system_event(
 			'quota_expired',
-			__( 'Quota expired', 'adam-membership' ),
+			__( 'Quota expirada', 'adam-membership' ),
 			$member,
-			__( 'Membership expired automatically after the quota validity date passed.', 'adam-membership' ),
+			__( 'A inscrição expirou automaticamente após a data de validade da quota.', 'adam-membership' ),
 			array(
 				'expiry_date' => $expiry_date,
 			)
@@ -405,9 +405,9 @@ final class HistoryService {
 	public function renewal_reminder_sent( Member $member ): void {
 		$this->system_event(
 			'renewal_reminder_sent',
-			__( 'Renewal reminder sent', 'adam-membership' ),
+			__( 'Lembrete de renovação enviado', 'adam-membership' ),
 			$member,
-			__( 'System sent a renewal reminder email.', 'adam-membership' ),
+			__( 'O sistema enviou um email de lembrete de renovação.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -420,9 +420,9 @@ final class HistoryService {
 	public function quota_expired_notice_sent( Member $member ): void {
 		$this->system_event(
 			'quota_expired_notice_sent',
-			__( 'Quota expired notice sent', 'adam-membership' ),
+			__( 'Aviso de quota expirada enviado', 'adam-membership' ),
 			$member,
-			__( 'System sent the quota expired notice email.', 'adam-membership' ),
+			__( 'O sistema enviou o email de aviso de quota expirada.', 'adam-membership' ),
 			array()
 		);
 	}
@@ -529,7 +529,7 @@ final class HistoryService {
 	 */
 	private function actor_name( string $actor_type, int $actor_id, Member $member ): string {
 		if ( self::ACTOR_SYSTEM === $actor_type ) {
-			return __( 'System', 'adam-membership' );
+			return __( 'Sistema', 'adam-membership' );
 		}
 
 		$user = 0 !== $actor_id ? get_user_by( 'ID', $actor_id ) : null;
@@ -538,7 +538,7 @@ final class HistoryService {
 			return sanitize_text_field( $user->display_name );
 		}
 
-		return self::ACTOR_MEMBER === $actor_type ? sanitize_text_field( $member->full_name() ) : __( 'Administrator', 'adam-membership' );
+		return self::ACTOR_MEMBER === $actor_type ? sanitize_text_field( $member->full_name() ) : __( 'Administrador', 'adam-membership' );
 	}
 
 	/**

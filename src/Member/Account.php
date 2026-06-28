@@ -144,7 +144,7 @@ final class Account {
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
-							<?php esc_html_e( 'Voltar a area de socio', 'adam-membership' ); ?>
+							<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 						</a>
 					</div>
 				</form>
@@ -222,7 +222,7 @@ final class Account {
 							<?php esc_html_e( 'Enviar confirmacao', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
-							<?php esc_html_e( 'Voltar a area de socio', 'adam-membership' ); ?>
+							<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 						</a>
 					</div>
 				</form>

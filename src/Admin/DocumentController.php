@@ -90,7 +90,7 @@ final class DocumentController {
 				<input type="hidden" name="page" value="<?php echo esc_attr( self::MENU_SLUG ); ?>">
 				<label>
 					<span><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></span>
-					<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php esc_attr_e( 'Titulo, descricao, ficheiro', 'adam-membership' ); ?>">
+					<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php esc_attr_e( 'Título, descrição, ficheiro', 'adam-membership' ); ?>">
 				</label>
 				<label>
 					<span><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></span>
@@ -115,19 +115,19 @@ final class DocumentController {
 			</form>
 
 			<?php if ( array() === $documents ) : ?>
-				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem documentos.', 'adam-membership' ); ?></div>
+				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem documentos.', 'adam-membership' ); ?></div>
 			<?php else : ?>
 				<table class="widefat striped adam-admin-table">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Visibilidade', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Versao', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Versão', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Importante', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Atualizado', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -141,7 +141,7 @@ final class DocumentController {
 								<td><?php $this->render_badge( $this->status_label( $document->status() ), 'document-status-' . $document->status() ); ?></td>
 								<td><?php echo esc_html( $this->audience_label( $document->target_audience() ) ); ?></td>
 								<td><?php echo esc_html( $document->version() ); ?></td>
-								<td><?php $this->render_badge( $document->important() ? __( 'Sim', 'adam-membership' ) : __( 'Nao', 'adam-membership' ), $document->important() ? 'document-important' : 'document-normal' ); ?></td>
+								<td><?php $this->render_badge( $document->important() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ), $document->important() ? 'document-important' : 'document-normal' ); ?></td>
 								<td><?php echo esc_html( $this->format_datetime( $document->updated_at() ) ); ?></td>
 								<td class="adam-admin-row-actions">
 									<a class="button button-small" href="<?php echo esc_url( $this->documents->download_url( $document ) ); ?>"><?php esc_html_e( 'Ver/download', 'adam-membership' ); ?></a>
@@ -192,7 +192,7 @@ final class DocumentController {
 					<?php wp_nonce_field( 'adam_membership_save_document' ); ?>
 					<div class="adam-admin-edit-grid">
 						<label>
-							<span><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Título', 'adam-membership' ); ?></span>
 							<input type="text" name="title" value="<?php echo esc_attr( null !== $document ? $document->title() : '' ); ?>" required>
 						</label>
 						<label>
@@ -204,7 +204,7 @@ final class DocumentController {
 							</select>
 						</label>
 						<label>
-							<span><?php esc_html_e( 'Versao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Versão', 'adam-membership' ); ?></span>
 							<input type="text" name="version" value="<?php echo esc_attr( null !== $document ? $document->version() : '1.0' ); ?>">
 						</label>
 						<label>
@@ -232,20 +232,20 @@ final class DocumentController {
 						</label>
 					</div>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full">
-						<span><?php esc_html_e( 'Descricao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Descrição', 'adam-membership' ); ?></span>
 						<textarea name="description" rows="4"><?php echo esc_textarea( null !== $document ? $document->description() : '' ); ?></textarea>
 					</label>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="important" value="1" <?php checked( null !== $document ? $document->important() : false ); ?>> <?php esc_html_e( 'Marcar como importante', 'adam-membership' ); ?></label>
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar documento', 'adam-membership' ); ?></button>
-						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar a lista', 'adam-membership' ); ?></a>
+						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
 					</div>
 				</form>
 			</div>
 			<?php if ( null !== $document ) : ?>
 				<div class="adam-admin-panel">
-					<h2><?php esc_html_e( 'Ligacao protegida', 'adam-membership' ); ?></h2>
-					<p><?php esc_html_e( 'Use este URL no botao de um aviso para ligar diretamente a este documento com controlo de acesso.', 'adam-membership' ); ?></p>
+					<h2><?php esc_html_e( 'Ligação protegida', 'adam-membership' ); ?></h2>
+					<p><?php esc_html_e( 'Use este URL no botão de um aviso para ligar diretamente a este documento com controlo de acesso.', 'adam-membership' ); ?></p>
 					<input type="url" class="large-text" readonly value="<?php echo esc_attr( $this->documents->download_url( $document ) ); ?>">
 				</div>
 			<?php endif; ?>
@@ -436,7 +436,7 @@ final class DocumentController {
 			Document::AUDIENCE_ACTIVE_MEMBERS  => __( 'Socios ativos', 'adam-membership' ),
 			Document::AUDIENCE_RENEWAL_PENDING => __( 'Renovacao pendente', 'adam-membership' ),
 			Document::AUDIENCE_EXPIRED_MEMBERS => __( 'Quotas expiradas', 'adam-membership' ),
-			Document::AUDIENCE_PENDING_MEMBERS => __( 'Inscricoes pendentes', 'adam-membership' ),
+			Document::AUDIENCE_PENDING_MEMBERS => __( 'Inscrições pendentes', 'adam-membership' ),
 			Document::AUDIENCE_ADMINS          => __( 'Admins / Direcao', 'adam-membership' ),
 			default                            => __( 'Todos os socios', 'adam-membership' ),
 		};

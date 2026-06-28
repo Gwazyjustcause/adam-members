@@ -49,11 +49,11 @@ final class EventService {
 		$prepared = $this->sanitize_event_data( $data, $id );
 
 		if ( '' === $prepared['title'] ) {
-			return new WP_Error( 'adam_membership_event_title_required', __( 'Event title is required.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_title_required', __( 'O título do evento é obrigatório.', 'adam-membership' ) );
 		}
 
 		if ( '' === $prepared['event_date'] ) {
-			return new WP_Error( 'adam_membership_event_date_required', __( 'Event date is required.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_date_required', __( 'A data do evento é obrigatória.', 'adam-membership' ) );
 		}
 
 		$now = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
@@ -70,7 +70,7 @@ final class EventService {
 		$current = $this->repository->find_event( $id );
 
 		if ( null === $current ) {
-			return new WP_Error( 'adam_membership_event_not_found', __( 'Event not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_not_found', __( 'Evento não encontrado.', 'adam-membership' ) );
 		}
 
 		$prepared['updated_at'] = $now;
@@ -125,28 +125,28 @@ final class EventService {
 	 */
 	public function register_participant( Event $event, array $data, int $current_user_id = 0 ): EventRegistration|WP_Error {
 		if ( ! $event->is_registration_open() ) {
-			return new WP_Error( 'adam_membership_event_registration_closed', __( 'Event registration is closed.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_registration_closed', __( 'As inscrições para este evento estão encerradas.', 'adam-membership' ) );
 		}
 
 		$member           = $current_user_id > 0 ? $this->members->find( $current_user_id ) : null;
 		$is_active_member = $member instanceof Member && $member->isActive();
 
 		if ( Event::ACCESS_MEMBERS_ONLY === $event->access_mode() && ! $is_active_member ) {
-			return new WP_Error( 'adam_membership_event_members_only', __( 'Only active ADAM members can register for this event.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_members_only', __( 'Sócios ADAM com estado Ativo são os únicos que podem inscrever-se neste evento.', 'adam-membership' ) );
 		}
 
 		$prepared = $this->sanitize_registration_data( $data, $member );
 
 		if ( '' === $prepared['name'] || '' === $prepared['email'] ) {
-			return new WP_Error( 'adam_membership_event_registration_fields', __( 'Name and email are required.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_registration_fields', __( 'O nome e o email são obrigatórios.', 'adam-membership' ) );
 		}
 
 		if ( ! $member instanceof Member && '' === $prepared['phone'] ) {
-			return new WP_Error( 'adam_membership_event_registration_phone_required', __( 'Phone is required for non-member registrations.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_registration_phone_required', __( 'O telefone é obrigatório para inscrições de não sócios.', 'adam-membership' ) );
 		}
 
 		if ( $this->has_existing_registration( $event, $prepared['email'], $prepared['member_id'] ) ) {
-			return new WP_Error( 'adam_membership_event_duplicate_registration', __( 'A registration already exists for this participant.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_duplicate_registration', __( 'Já existe uma inscrição para este participante.', 'adam-membership' ) );
 		}
 
 		$status = $this->determine_registration_status( $event, $is_active_member );
@@ -170,7 +170,7 @@ final class EventService {
 		);
 
 		$this->logger->info(
-			'Event registration created.',
+			'Inscrição em evento criada.',
 			array(
 				'event_id'        => $event->id(),
 				'registration_id' => $registration->id(),
@@ -178,7 +178,7 @@ final class EventService {
 				'member_id'       => $registration->member_id(),
 			)
 		);
-		$this->record_history( $event, $registration, 'event_registered', __( 'Event registration created', 'adam-membership' ) );
+		$this->record_history( $event, $registration, 'event_registered', __( 'Inscrição no evento criada', 'adam-membership' ) );
 
 		return $registration;
 	}
@@ -204,7 +204,7 @@ final class EventService {
 		$event = $this->repository->find_event( $registration->event_id() );
 
 		if ( null !== $event ) {
-			$this->record_history( $event, $updated, 'event_registration_cancelled', __( 'Event registration cancelled', 'adam-membership' ) );
+			$this->record_history( $event, $updated, 'event_registration_cancelled', __( 'Inscrição no evento cancelada', 'adam-membership' ) );
 		}
 
 		return $updated;
@@ -219,23 +219,23 @@ final class EventService {
 		$registration = $this->repository->find_registration( $registration_id );
 
 		if ( null === $registration ) {
-			return new WP_Error( 'adam_membership_registration_not_found', __( 'Registration not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_registration_not_found', __( 'Inscrição não encontrada.', 'adam-membership' ) );
 		}
 
 		$status = sanitize_key( $status );
 
 		if ( ! in_array( $status, EventRegistration::statuses(), true ) ) {
-			return new WP_Error( 'adam_membership_registration_invalid_status', __( 'Invalid registration status.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_registration_invalid_status', __( 'Estado de inscrição inválido.', 'adam-membership' ) );
 		}
 
 		$event = $this->repository->find_event( $registration->event_id() );
 
 		if ( null === $event ) {
-			return new WP_Error( 'adam_membership_event_not_found', __( 'Event not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_not_found', __( 'Evento não encontrado.', 'adam-membership' ) );
 		}
 
 		if ( EventRegistration::STATUS_CONFIRMED === $status && ! $this->has_confirmed_capacity( $event, $registration->id() ) ) {
-			return new WP_Error( 'adam_membership_registration_full', __( 'No confirmed spots are available for this event.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_registration_full', __( 'Não existem vagas confirmadas disponíveis para este evento.', 'adam-membership' ) );
 		}
 
 		$updated = $this->repository->update_registration(
@@ -246,7 +246,7 @@ final class EventService {
 			)
 		);
 
-		$this->record_history( $event, $updated, 'event_registration_status_changed', __( 'Event registration status changed', 'adam-membership' ) );
+		$this->record_history( $event, $updated, 'event_registration_status_changed', __( 'Estado da inscrição no evento alterado', 'adam-membership' ) );
 
 		return $updated;
 	}
@@ -428,7 +428,7 @@ final class EventService {
 				return EventRegistration::STATUS_WAITING_LIST;
 			}
 
-			return new WP_Error( 'adam_membership_event_full', __( 'This event is already full.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_event_full', __( 'Este evento já se encontra lotado.', 'adam-membership' ) );
 		}
 
 		if ( Event::ACCESS_MEMBER_PRIORITY === $event->access_mode() && $event->priority_window_open() && ! $is_active_member ) {
@@ -521,7 +521,7 @@ final class EventService {
 				'action_label'  => $action_label,
 				'description'   => sprintf(
 					/* translators: 1: event title, 2: registration status */
-					__( 'Event "%1$s" registration status: %2$s', 'adam-membership' ),
+					__( 'Estado da inscrição no evento "%1$s": %2$s', 'adam-membership' ),
 					$event->title(),
 					$registration->status()
 				),

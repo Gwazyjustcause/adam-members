@@ -121,7 +121,7 @@ final class EmailChangeConfirmation {
 
 				<div class="adam-form-actions adam-form-actions-center">
 					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/?email_changed=1' ) ); ?>">
-						<?php esc_html_e( 'Voltar a area de socio', 'adam-membership' ); ?>
+						<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 					</a>
 				</div>
 			</section>

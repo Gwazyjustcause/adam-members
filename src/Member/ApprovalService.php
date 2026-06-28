@@ -84,7 +84,7 @@ final class ApprovalService {
 		if ( null === $member ) {
 			return new WP_Error(
 				'adam_membership_member_not_found',
-				__( 'Member not found.', 'adam-membership' )
+				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
 		}
 
@@ -93,7 +93,7 @@ final class ApprovalService {
 		 */
 		$old_status = $member->status();
 		$member->approve();
-		$this->log_status_change( $member, $old_status, $member->status(), 'Member approved.' );
+		$this->log_status_change( $member, $old_status, $member->status(), 'Sócio aprovado.' );
 
 		/*
 		 * Assign member number.
@@ -132,7 +132,7 @@ final class ApprovalService {
 		}
 
 		$this->logger->info(
-			'Member approved.',
+			'Sócio aprovado.',
 			array(
 				'user_id' => $user_id,
 			)
@@ -159,14 +159,14 @@ final class ApprovalService {
 		if ( null === $member ) {
 			return new WP_Error(
 				'adam_membership_member_not_found',
-				__( 'Member not found.', 'adam-membership' )
+				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
 		}
 
 		if ( '' === $reason ) {
 			return new WP_Error(
 				'adam_membership_rejection_reason_required',
-				__( 'Please choose a rejection reason.', 'adam-membership' )
+				__( 'Selecione um motivo de rejeição.', 'adam-membership' )
 			);
 		}
 
@@ -180,18 +180,18 @@ final class ApprovalService {
 					'nota_rejeicao_admin' => $note,
 				)
 			);
-			$this->log_status_change( $member, $old_status, Member::STATUS_EXPIRED, 'Member renewal rejected.' );
+			$this->log_status_change( $member, $old_status, Member::STATUS_EXPIRED, 'Renovação do sócio rejeitada.' );
 			$this->history->renewal_rejected( $member, 0, $reason );
 			$this->email->send_renewal_rejected_email( $member, $reason );
 		} else {
 			$member->reject( $reason, $note );
-			$this->log_status_change( $member, $old_status, $member->status(), 'Member rejected.' );
+			$this->log_status_change( $member, $old_status, $member->status(), 'Sócio rejeitado.' );
 			$this->history->member_rejected( $member, $old_status, $member->status(), $reason );
 			$this->email->send_registration_rejected_email( $member, $reason );
 		}
 
 		$this->logger->info(
-			'Member rejected.',
+			'Sócio rejeitado.',
 			array(
 				'user_id' => $user_id,
 				'reason'  => $reason,
@@ -213,7 +213,7 @@ final class ApprovalService {
 		if ( null === $member ) {
 			return new WP_Error(
 				'adam_membership_member_not_found',
-				__( 'Member not found.', 'adam-membership' )
+				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
 		}
 
@@ -229,8 +229,8 @@ final class ApprovalService {
 			)
 		);
 
-		$this->log_status_change( $member, $old_status, Member::STATUS_ACTIVE, 'Member quota renewed.' );
-		$this->logger->info( 'Member quota renewed.', array( 'user_id' => $user_id ) );
+		$this->log_status_change( $member, $old_status, Member::STATUS_ACTIVE, 'Quota do sócio renovada.' );
+		$this->logger->info( 'Quota do sócio renovada.', array( 'user_id' => $user_id ) );
 		$this->history->quota_date_changed( $member, $old_expiry, $new_expiry );
 		$this->email->send_renewal_approved_email( $member );
 
@@ -250,14 +250,14 @@ final class ApprovalService {
 		if ( null === $member ) {
 			return new WP_Error(
 				'adam_membership_member_not_found',
-				__( 'Member not found.', 'adam-membership' )
+				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
 		}
 
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) || false === strtotime( $date ) ) {
 			return new WP_Error(
 				'adam_membership_invalid_quota_date',
-				__( 'Invalid quota validity date.', 'adam-membership' )
+				__( 'Data de validade da quota inválida.', 'adam-membership' )
 			);
 		}
 
@@ -269,7 +269,7 @@ final class ApprovalService {
 			)
 		);
 
-		$this->logger->info( 'Member quota validity changed.', array( 'user_id' => $user_id ) );
+		$this->logger->info( 'Validade da quota do sócio alterada.', array( 'user_id' => $user_id ) );
 		$this->history->quota_date_changed( $member, $old_expiry, $date );
 
 		return true;
@@ -287,25 +287,25 @@ final class ApprovalService {
 		if ( null === $member ) {
 			return new WP_Error(
 				'adam_membership_member_not_found',
-				__( 'Member not found.', 'adam-membership' )
+				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
 		}
 
 		if ( ! $member->isActive() ) {
 			return new WP_Error(
 				'adam_membership_member_not_active',
-				__( 'Only active members can receive the approval email.', 'adam-membership' )
+				__( 'Apenas sócios ativos podem receber o email de aprovação.', 'adam-membership' )
 			);
 		}
 
 		if ( ! $this->email->send_approval_email( $member ) ) {
 			return new WP_Error(
 				'adam_membership_approval_email_failed',
-				__( 'The approval email could not be sent.', 'adam-membership' )
+				__( 'Não foi possível enviar o email de aprovação.', 'adam-membership' )
 			);
 		}
 
-		$this->logger->info( 'Approval email resent.', array( 'user_id' => $user_id ) );
+		$this->logger->info( 'Email de aprovação reenviado.', array( 'user_id' => $user_id ) );
 		$this->history->approval_email_resent( $member );
 
 		return true;

@@ -90,7 +90,7 @@ final class AnnouncementController {
 				<input type="hidden" name="page" value="<?php echo esc_attr( self::MENU_SLUG ); ?>">
 				<label>
 					<span><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></span>
-					<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php esc_attr_e( 'Titulo, resumo, categoria', 'adam-membership' ); ?>">
+					<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ); ?>" placeholder="<?php esc_attr_e( 'Título, resumo, categoria', 'adam-membership' ); ?>">
 				</label>
 				<label>
 					<span><?php esc_html_e( 'Estado', 'adam-membership' ); ?></span>
@@ -106,20 +106,20 @@ final class AnnouncementController {
 			</form>
 
 			<?php if ( array() === $announcements ) : ?>
-				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem avisos.', 'adam-membership' ); ?></div>
+				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem avisos.', 'adam-membership' ); ?></div>
 			<?php else : ?>
 				<table class="widefat striped adam-admin-table">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Prioridade', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Publicacao', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Publicação', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Expira', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Audiencia', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Audiência', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Leitura', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -187,7 +187,7 @@ final class AnnouncementController {
 					<?php wp_nonce_field( 'adam_membership_save_announcement' ); ?>
 					<div class="adam-admin-edit-grid">
 						<label>
-							<span><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Título', 'adam-membership' ); ?></span>
 							<input type="text" name="title" value="<?php echo esc_attr( null !== $announcement ? $announcement->title() : '' ); ?>" required>
 						</label>
 						<label>
@@ -215,15 +215,15 @@ final class AnnouncementController {
 							</select>
 						</label>
 						<label>
-							<span><?php esc_html_e( 'Data de publicacao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Data de publicação', 'adam-membership' ); ?></span>
 							<input type="date" name="publish_date" value="<?php echo esc_attr( null !== $announcement ? $announcement->publish_date() : wp_date( 'Y-m-d', current_time( 'timestamp' ) ) ); ?>">
 						</label>
 						<label>
-							<span><?php esc_html_e( 'Data de expiracao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Data de expiração', 'adam-membership' ); ?></span>
 							<input type="date" name="expiry_date" value="<?php echo esc_attr( null !== $announcement ? $announcement->expiry_date() : '' ); ?>">
 						</label>
 						<label>
-							<span><?php esc_html_e( 'Audiencia', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Audiência', 'adam-membership' ); ?></span>
 							<select name="target_audience">
 								<?php foreach ( Announcement::audiences() as $audience ) : ?>
 									<?php $this->render_select_option( $audience, $this->audience_label( $audience ), null !== $announcement ? $announcement->target_audience() : Announcement::AUDIENCE_ALL_MEMBERS ); ?>
@@ -231,11 +231,11 @@ final class AnnouncementController {
 							</select>
 						</label>
 						<label>
-							<span><?php esc_html_e( 'Texto do botao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'Texto do botão', 'adam-membership' ); ?></span>
 							<input type="text" name="action_label" value="<?php echo esc_attr( null !== $announcement ? $announcement->action_label() : '' ); ?>">
 						</label>
 						<label>
-							<span><?php esc_html_e( 'URL do botao', 'adam-membership' ); ?></span>
+							<span><?php esc_html_e( 'URL do botão', 'adam-membership' ); ?></span>
 							<input type="url" name="action_url" value="<?php echo esc_attr( null !== $announcement ? $announcement->action_url() : '' ); ?>">
 						</label>
 					</div>
@@ -246,28 +246,28 @@ final class AnnouncementController {
 					</label>
 
 					<label class="adam-admin-edit-field adam-admin-edit-field-full">
-						<span><?php esc_html_e( 'Conteudo completo', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'Conteúdo completo', 'adam-membership' ); ?></span>
 						<textarea name="content" rows="12"><?php echo esc_textarea( null !== $announcement ? $announcement->content() : '' ); ?></textarea>
 					</label>
 
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="pinned" value="1" <?php checked( null !== $announcement ? $announcement->pinned() : false ); ?>> <?php esc_html_e( 'Fixar no topo', 'adam-membership' ); ?></label>
-					<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Mostrar na area de socio e enviar email', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Mostrar na área do sócio e enviar email', 'adam-membership' ); ?></label>
 
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar aviso', 'adam-membership' ); ?></button>
-						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar a lista', 'adam-membership' ); ?></a>
+						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
 					</div>
 				</form>
 			</div>
 
 			<div class="adam-admin-panel">
-				<h2><?php esc_html_e( 'Pre-visualizacao', 'adam-membership' ); ?></h2>
+				<h2><?php esc_html_e( 'Pré-visualização', 'adam-membership' ); ?></h2>
 				<div class="adam-admin-detail-item">
 					<span><?php echo esc_html( null !== $announcement ? $announcement->category() : __( 'Categoria', 'adam-membership' ) ); ?></span>
-					<strong><?php echo esc_html( null !== $announcement ? $announcement->title() : __( 'Titulo do aviso', 'adam-membership' ) ); ?></strong>
+					<strong><?php echo esc_html( null !== $announcement ? $announcement->title() : __( 'Título do aviso', 'adam-membership' ) ); ?></strong>
 				</div>
-				<p><?php echo esc_html( null !== $announcement ? $announcement->summary() : __( 'O resumo sera mostrado aqui.', 'adam-membership' ) ); ?></p>
-				<div><?php echo wp_kses_post( null !== $announcement ? wpautop( $announcement->content() ) : '<p>' . esc_html__( 'O conteudo completo sera mostrado aqui.', 'adam-membership' ) . '</p>' ); ?></div>
+				<p><?php echo esc_html( null !== $announcement ? $announcement->summary() : __( 'O resumo será mostrado aqui.', 'adam-membership' ) ); ?></p>
+				<div><?php echo wp_kses_post( null !== $announcement ? wpautop( $announcement->content() ) : '<p>' . esc_html__( 'O conteúdo completo será mostrado aqui.', 'adam-membership' ) . '</p>' ); ?></div>
 			</div>
 		</div>
 		<?php
@@ -475,8 +475,8 @@ final class AnnouncementController {
 			Announcement::AUDIENCE_ACTIVE_MEMBERS   => __( 'Socios ativos', 'adam-membership' ),
 			Announcement::AUDIENCE_RENEWAL_PENDING  => __( 'Renovacao pendente', 'adam-membership' ),
 			Announcement::AUDIENCE_EXPIRED_MEMBERS  => __( 'Quotas expiradas', 'adam-membership' ),
-			Announcement::AUDIENCE_PENDING_MEMBERS  => __( 'Inscricoes pendentes', 'adam-membership' ),
-			Announcement::AUDIENCE_REJECTED_MEMBERS => __( 'Inscricoes rejeitadas', 'adam-membership' ),
+			Announcement::AUDIENCE_PENDING_MEMBERS  => __( 'Inscrições pendentes', 'adam-membership' ),
+			Announcement::AUDIENCE_REJECTED_MEMBERS => __( 'Inscrições rejeitadas', 'adam-membership' ),
 			Announcement::AUDIENCE_ADMINS           => __( 'Admins / Direcao', 'adam-membership' ),
 			default                                 => __( 'Todos os socios', 'adam-membership' ),
 		};

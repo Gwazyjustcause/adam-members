@@ -92,18 +92,18 @@ final class EventController {
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Filtrar', 'adam-membership' ); ?></button>
 			</form>
 			<?php if ( array() === $events ) : ?>
-				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem eventos.', 'adam-membership' ); ?></div>
+				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem eventos.', 'adam-membership' ); ?></div>
 			<?php else : ?>
 				<table class="widefat striped adam-admin-table">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Local', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Acesso', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Jogadores', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -150,12 +150,12 @@ final class EventController {
 					<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) ( null !== $event ? $event->id() : 0 ) ); ?>">
 					<?php wp_nonce_field( 'adam_membership_save_event' ); ?>
 					<div class="adam-admin-edit-grid">
-						<label><span><?php esc_html_e( 'Titulo', 'adam-membership' ); ?></span><input type="text" name="title" required value="<?php echo esc_attr( null !== $event ? $event->title() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Título', 'adam-membership' ); ?></span><input type="text" name="title" required value="<?php echo esc_attr( null !== $event ? $event->title() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Data do evento', 'adam-membership' ); ?></span><input type="date" name="event_date" required value="<?php echo esc_attr( null !== $event ? $event->event_date() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Hora inicio', 'adam-membership' ); ?></span><input type="time" name="start_time" value="<?php echo esc_attr( null !== $event ? $event->start_time() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Hora fim', 'adam-membership' ); ?></span><input type="time" name="end_time" value="<?php echo esc_attr( null !== $event ? $event->end_time() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Hora de início', 'adam-membership' ); ?></span><input type="time" name="start_time" value="<?php echo esc_attr( null !== $event ? $event->start_time() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Hora de fim', 'adam-membership' ); ?></span><input type="time" name="end_time" value="<?php echo esc_attr( null !== $event ? $event->end_time() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Local', 'adam-membership' ); ?></span><input type="text" name="location" value="<?php echo esc_attr( null !== $event ? $event->location() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Link mapa', 'adam-membership' ); ?></span><input type="url" name="map_link" value="<?php echo esc_attr( null !== $event ? $event->map_link() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Ligação do mapa', 'adam-membership' ); ?></span><input type="url" name="map_link" value="<?php echo esc_attr( null !== $event ? $event->map_link() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Imagem de capa', 'adam-membership' ); ?></span><input type="url" name="cover_image" value="<?php echo esc_attr( null !== $event ? $event->cover_image() : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Modo de acesso', 'adam-membership' ); ?></span>
 							<select name="access_mode">
@@ -164,10 +164,10 @@ final class EventController {
 								<?php endforeach; ?>
 							</select>
 						</label>
-						<label><span><?php esc_html_e( 'Maximo de jogadores', 'adam-membership' ); ?></span><input type="number" min="0" name="max_players" value="<?php echo esc_attr( null !== $event ? (string) $event->max_players() : '30' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Limite lista de espera', 'adam-membership' ); ?></span><input type="number" min="0" name="waiting_list_limit" value="<?php echo esc_attr( null !== $event ? (string) $event->waiting_list_limit() : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Fim das inscricoes', 'adam-membership' ); ?></span><input type="datetime-local" name="registration_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->registration_deadline() ) : '' ); ?>"></label>
-						<label><span><?php esc_html_e( 'Fim da prioridade a socios', 'adam-membership' ); ?></span><input type="datetime-local" name="priority_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->priority_deadline() ) : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Máximo de jogadores', 'adam-membership' ); ?></span><input type="number" min="0" name="max_players" value="<?php echo esc_attr( null !== $event ? (string) $event->max_players() : '30' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Limite da lista de espera', 'adam-membership' ); ?></span><input type="number" min="0" name="waiting_list_limit" value="<?php echo esc_attr( null !== $event ? (string) $event->waiting_list_limit() : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Fim das inscrições', 'adam-membership' ); ?></span><input type="datetime-local" name="registration_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->registration_deadline() ) : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Fim da prioridade a sócios', 'adam-membership' ); ?></span><input type="datetime-local" name="priority_deadline" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->priority_deadline() ) : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Estado', 'adam-membership' ); ?></span>
 							<select name="status">
 								<?php foreach ( Event::statuses() as $status ) : ?>
@@ -177,11 +177,11 @@ final class EventController {
 						</label>
 					</div>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="waiting_list_enabled" value="1" <?php checked( null !== $event ? $event->waiting_list_enabled() : true ); ?>> <?php esc_html_e( 'Ativar lista de espera', 'adam-membership' ); ?></label>
-					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descricao curta', 'adam-membership' ); ?></span><textarea name="short_description" rows="3"><?php echo esc_textarea( null !== $event ? $event->short_description() : '' ); ?></textarea></label>
-					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descricao completa', 'adam-membership' ); ?></span><textarea name="full_description" rows="8"><?php echo esc_textarea( null !== $event ? wp_strip_all_tags( $event->full_description() ) : '' ); ?></textarea></label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição curta', 'adam-membership' ); ?></span><textarea name="short_description" rows="3"><?php echo esc_textarea( null !== $event ? $event->short_description() : '' ); ?></textarea></label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição completa', 'adam-membership' ); ?></span><textarea name="full_description" rows="8"><?php echo esc_textarea( null !== $event ? wp_strip_all_tags( $event->full_description() ) : '' ); ?></textarea></label>
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
-						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar a lista', 'adam-membership' ); ?></a>
+						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
 					</div>
 				</form>
 			</div>
@@ -189,7 +189,7 @@ final class EventController {
 			<?php if ( null !== $event ) : ?>
 				<div class="adam-admin-panel">
 					<div class="adam-admin-actions">
-						<a class="button" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir pagina do evento', 'adam-membership' ); ?></a>
+						<a class="button" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página do evento', 'adam-membership' ); ?></a>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
 							<input type="hidden" name="action" value="adam_membership_export_event_csv">
 							<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>">
@@ -237,7 +237,7 @@ final class EventController {
 			$this->redirect_with_notice( 'adam_error', $result->get_error_message(), $this->edit_url( $event_id ) );
 		}
 
-		$this->redirect_with_notice( 'adam_message', __( 'Inscricao atualizada.', 'adam-membership' ), $this->edit_url( $event_id ) );
+		$this->redirect_with_notice( 'adam_message', __( 'Inscrição atualizada.', 'adam-membership' ), $this->edit_url( $event_id ) );
 	}
 
 	public function handle_export(): void {
@@ -247,7 +247,7 @@ final class EventController {
 		$event = $this->events->repository()->find_event( $event_id );
 
 		if ( null === $event ) {
-			$this->redirect_with_notice( 'adam_error', __( 'Evento nao encontrado.', 'adam-membership' ), admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+			$this->redirect_with_notice( 'adam_error', __( 'Evento não encontrado.', 'adam-membership' ), admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
 		}
 
 		$filename = 'adam-event-' . $event->slug() . '.csv';
@@ -258,7 +258,7 @@ final class EventController {
 		$handle = fopen( 'php://output', 'w' );
 
 		if ( false !== $handle ) {
-			fputcsv( $handle, array( 'Name', 'Email', 'Phone', 'Team', 'Status', 'Member ID', 'Created At' ) );
+			fputcsv( $handle, array( 'Name', 'Email', 'Phone', 'Team', 'Estado', 'ID do sócio', 'Created At' ) );
 
 			foreach ( $this->events->registrations_for_event( $event->id() ) as $registration ) {
 				fputcsv(
@@ -288,9 +288,9 @@ final class EventController {
 		$registrations = $this->events->registrations_for_event( $event->id() );
 		?>
 		<div class="adam-admin-panel">
-			<h2><?php esc_html_e( 'Inscricoes', 'adam-membership' ); ?></h2>
+			<h2><?php esc_html_e( 'Inscrições', 'adam-membership' ); ?></h2>
 			<?php if ( array() === $registrations ) : ?>
-				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem inscricoes.', 'adam-membership' ); ?></div>
+				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem inscrições.', 'adam-membership' ); ?></div>
 			<?php else : ?>
 				<table class="widefat striped adam-admin-table">
 					<thead>
@@ -301,13 +301,13 @@ final class EventController {
 							<th><?php esc_html_e( 'Equipa', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
 							<th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $registrations as $registration ) : ?>
 							<tr>
-								<td><?php echo esc_html( $registration->name() ); ?><?php if ( $registration->member_id() > 0 ) : ?><br><small><?php echo esc_html( 'Member #' . $registration->member_id() ); ?></small><?php endif; ?></td>
+								<td><?php echo esc_html( $registration->name() ); ?><?php if ( $registration->member_id() > 0 ) : ?><br><small><?php echo esc_html( 'Sócio #' . $registration->member_id() ); ?></small><?php endif; ?></td>
 								<td><?php echo esc_html( $registration->email() ); ?></td>
 								<td><?php echo esc_html( $registration->phone() ); ?></td>
 								<td><?php echo esc_html( $registration->team() ); ?></td>
@@ -356,7 +356,7 @@ final class EventController {
 
 	private function ensure_can_manage(): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
-			wp_die( esc_html__( 'Nao tem permissao para gerir eventos ADAM.', 'adam-membership' ) );
+			wp_die( esc_html__( 'Não tem permissão para gerir eventos ADAM.', 'adam-membership' ) );
 		}
 	}
 
@@ -405,7 +405,7 @@ final class EventController {
 		return match ( $status ) {
 			Event::STATUS_PUBLISHED => __( 'Publicado', 'adam-membership' ),
 			Event::STATUS_CANCELLED => __( 'Cancelado', 'adam-membership' ),
-			Event::STATUS_COMPLETED => __( 'Concluido', 'adam-membership' ),
+			Event::STATUS_COMPLETED => __( 'Concluído', 'adam-membership' ),
 			default                 => __( 'Rascunho', 'adam-membership' ),
 		};
 	}
@@ -422,7 +422,7 @@ final class EventController {
 		return match ( $status ) {
 			EventRegistration::STATUS_CONFIRMED    => __( 'Confirmado', 'adam-membership' ),
 			EventRegistration::STATUS_PENDING      => __( 'Pendente', 'adam-membership' ),
-			EventRegistration::STATUS_WAITING_LIST => __( 'Lista de espera', 'adam-membership' ),
+			EventRegistration::STATUS_WAITING_LIST => __( 'Lista de Espera', 'adam-membership' ),
 			EventRegistration::STATUS_CANCELLED    => __( 'Cancelado', 'adam-membership' ),
 			default                                => __( 'Rejeitado', 'adam-membership' ),
 		};

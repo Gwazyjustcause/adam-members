@@ -45,11 +45,11 @@ final class RenewalService {
 		$member = $this->member_from_submission( $field_data );
 
 		if ( null === $member ) {
-			return new WP_Error( 'adam_membership_renewal_member_not_found', __( 'Renewal member not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_member_not_found', __( 'Sócio da renovação não encontrado.', 'adam-membership' ) );
 		}
 
 		if ( array() !== $this->renewals->pending_for_user( $member->user_id() ) ) {
-			return new WP_Error( 'adam_membership_renewal_already_pending', __( 'A renewal request is already pending review.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_already_pending', __( 'Já existe um pedido de renovação pendente de revisão.', 'adam-membership' ) );
 		}
 
 		$submitted_data = $this->submitted_profile_data( $field_data );
@@ -84,20 +84,20 @@ final class RenewalService {
 		$request = $this->renewals->find( $request_id );
 
 		if ( null === $request ) {
-			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Renewal request not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		}
 
 		if ( RenewalRequest::STATUS_PENDING !== $request->status() ) {
-			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Only pending renewal requests can be approved.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Apenas pedidos de renovação pendentes podem ser aprovados.', 'adam-membership' ) );
 		}
 
 		$member = $this->members->find( $request->user_id() );
 
 		if ( null === $member ) {
-			return new WP_Error( 'adam_membership_member_not_found', __( 'Member not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		}
 
-		$this->audit( 'Administrator reviewed renewal.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->audit( 'Um administrador reviu a renovação.', $member, array( 'renewal_id' => $request->id() ) );
 		$this->history->renewal_reviewed( $member, $request->id() );
 		$field_changes = $this->changed_fields( $request, $member );
 
@@ -112,7 +112,7 @@ final class RenewalService {
 				$member->save( array( $field => $change['new'] ) );
 			}
 
-			$this->audit( 'Profile field changed during renewal approval.', $member, array( 'field' => $field, 'old_value' => $change['old'], 'new_value' => $change['new'] ) );
+			$this->audit( 'Campo do perfil alterado durante a aprovação da renovação.', $member, array( 'field' => $field, 'old_value' => $change['old'], 'new_value' => $change['new'] ) );
 		}
 
 		$old_expiry = (string) $member->field( 'validade_quota' );
@@ -137,8 +137,8 @@ final class RenewalService {
 			)
 		);
 
-		$this->audit( 'Expiry date changed during renewal approval.', $member, array( 'old_value' => $old_expiry, 'new_value' => $new_expiry, 'renewal_id' => $request->id() ) );
-		$this->audit( 'Renewal approved.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->audit( 'Data de validade alterada durante a aprovação da renovação.', $member, array( 'old_value' => $old_expiry, 'new_value' => $new_expiry, 'renewal_id' => $request->id() ) );
+		$this->audit( 'Renovação aprovada.', $member, array( 'renewal_id' => $request->id() ) );
 		$this->history->renewal_approved( $member, $request->id(), $old_expiry, $new_expiry, $field_changes );
 		$this->email->send_renewal_approved_email( $member, $request->id() );
 
@@ -156,20 +156,20 @@ final class RenewalService {
 		$request = $this->renewals->find( $request_id );
 
 		if ( null === $request ) {
-			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Renewal request not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		}
 
 		if ( RenewalRequest::STATUS_PENDING !== $request->status() ) {
-			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Only pending renewal requests can be rejected.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Apenas pedidos de renovação pendentes podem ser rejeitados.', 'adam-membership' ) );
 		}
 
 		$member = $this->members->find( $request->user_id() );
 
 		if ( null === $member ) {
-			return new WP_Error( 'adam_membership_member_not_found', __( 'Member not found.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		}
 
-		$this->audit( 'Administrator reviewed renewal.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->audit( 'Um administrador reviu a renovação.', $member, array( 'renewal_id' => $request->id() ) );
 		$this->history->renewal_reviewed( $member, $request->id() );
 
 		$member->save( array( 'estado' => Member::STATUS_EXPIRED ) );
@@ -183,7 +183,7 @@ final class RenewalService {
 			)
 		);
 
-		$this->audit( 'Renewal rejected.', $member, array( 'renewal_id' => $request->id(), 'reason' => $reason ) );
+		$this->audit( 'Renovação rejeitada.', $member, array( 'renewal_id' => $request->id(), 'reason' => $reason ) );
 		$this->history->renewal_rejected( $member, $request->id(), $reason );
 		$this->email->send_renewal_rejected_email( $member, $reason, $request->id() );
 
@@ -236,7 +236,7 @@ final class RenewalService {
 
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_sent', '1' );
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_date', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
-		$this->audit( 'Renewal reminder sent.', $member );
+		$this->audit( 'Lembrete de renovação enviado.', $member );
 		$this->history->renewal_reminder_sent( $member );
 	}
 
@@ -249,7 +249,7 @@ final class RenewalService {
 		$sent = $this->email->send_quota_expired_email( $member );
 
 		if ( $sent ) {
-			$this->audit( 'Quota expired notice sent.', $member );
+			$this->audit( 'Aviso de quota expirada enviado.', $member );
 			$this->history->quota_expired_notice_sent( $member );
 		}
 
@@ -395,13 +395,13 @@ final class RenewalService {
 		$email = sanitize_email( $email );
 
 		if ( ! is_email( $email ) ) {
-			return new WP_Error( 'adam_membership_invalid_email', __( 'Invalid submitted email address.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_invalid_email', __( 'O endereço de email submetido é inválido.', 'adam-membership' ) );
 		}
 
 		$existing = email_exists( $email );
 
 		if ( false !== $existing && (int) $existing !== $member->user_id() ) {
-			return new WP_Error( 'adam_membership_email_exists', __( 'Submitted email address is already used by another user.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_email_exists', __( 'O endereço de email submetido já está a ser utilizado por outro utilizador.', 'adam-membership' ) );
 		}
 
 		$result = wp_update_user(
