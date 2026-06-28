@@ -60,7 +60,7 @@ final class AnnouncementController {
 		);
 
 		add_submenu_page(
-			null,
+			'adam-membership',
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			self::CAPABILITY,

@@ -241,7 +241,10 @@ final class Member {
 	}
 
 	/**
-	 * Retrieve the member status.
+	 * Retrieve the saved membership status from the canonical member field.
+	 *
+	 * The stored source of truth is the "estado" field. Admin/member screens
+	 * should use effective_status() when the lifecycle state matters.
 	 */
 	public function status(): string {
 		$status = $this->field( 'estado' );
@@ -251,6 +254,9 @@ final class Member {
 
 	/**
 	 * Get the effective membership status for frontend and admin screens.
+	 *
+	 * This derives "Expirado" from an otherwise active record when the
+	 * normalized quota expiry field indicates the quota is no longer current.
 	 */
 	public function effective_status(): string {
 		if ( self::STATUS_ACTIVE === $this->status() && self::QUOTA_EXPIRED === $this->quota_status() ) {

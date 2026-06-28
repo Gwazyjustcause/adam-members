@@ -213,7 +213,7 @@ final class AdminController {
 		);
 
 		add_submenu_page(
-			null,
+			self::MENU_SLUG,
 			esc_html__( 'Member Details', 'adam-membership' ),
 			esc_html__( 'Member Details', 'adam-membership' ),
 			self::CAPABILITY,
@@ -222,7 +222,7 @@ final class AdminController {
 		);
 
 		add_submenu_page(
-			null,
+			self::MENU_SLUG,
 			esc_html__( 'Renewal Request', 'adam-membership' ),
 			esc_html__( 'Renewal Request', 'adam-membership' ),
 			self::CAPABILITY,
@@ -916,6 +916,8 @@ final class AdminController {
 					<a class="button" href="<?php echo esc_url( $this->history_url( array( 'member_id' => (string) $member->user_id() ) ) ); ?>"><?php esc_html_e( 'View full history', 'adam-membership' ); ?></a>
 				</p>
 			</div>
+
+			<?php $this->render_member_diagnostics( $member ); ?>
 		</div>
 		<?php
 	}
@@ -1821,6 +1823,118 @@ final class AdminController {
 			<strong><?php echo esc_html( '' !== $value ? $value : '—' ); ?></strong>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render admin-only member diagnostics for status integrity debugging.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_diagnostics( Member $member ): void {
+		$rows = $this->member_diagnostic_rows( $member );
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Status diagnostics', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Source of truth: membership status is stored in the "estado" member field, quota expiry is stored in "validade_quota", and frontend/admin screens should read the Member model for normalized values and effective status.', 'adam-membership' ); ?></p>
+			<table class="widefat striped adam-admin-table">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Check', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Value', 'adam-membership' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $rows as $label => $value ) : ?>
+						<tr>
+							<td><?php echo esc_html( $label ); ?></td>
+							<td><code><?php echo esc_html( '' !== $value ? $value : '(empty)' ); ?></code></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Build member diagnostics for status and quota debugging.
+	 *
+	 * @param Member $member Member.
+	 * @return array<string, string>
+	 */
+	private function member_diagnostic_rows( Member $member ): array {
+		$user  = $member->user();
+		$roles = $user instanceof \WP_User ? implode( ', ', array_map( 'strval', $user->roles ) ) : '';
+
+		$rows = array(
+			'stored status meta (estado)'              => $this->debug_user_meta_value( $member->user_id(), 'estado' ),
+			'normalized member status'                 => $member->status(),
+			'effective display status'                 => $member->effective_status(),
+			'stored quota meta (validade_quota)'       => $this->debug_user_meta_value( $member->user_id(), 'validade_quota' ),
+			'normalized quota date'                    => (string) $member->field( 'validade_quota' ),
+			'quota lifecycle status'                   => $member->quota_status(),
+			'quota expiry timestamp'                   => (string) $member->quota_expiry_timestamp(),
+			'stored join date meta (data_adesao)'      => $this->debug_user_meta_value( $member->user_id(), 'data_adesao' ),
+			'normalized join date'                     => (string) $member->field( 'data_adesao' ),
+			'stored member number meta (numero_socio)' => $this->debug_user_meta_value( $member->user_id(), 'numero_socio' ),
+			'stored rejection reason meta'             => $this->debug_user_meta_value( $member->user_id(), 'motivo_rejeicao' ),
+			'stored rejection note meta'               => $this->debug_user_meta_value( $member->user_id(), 'nota_rejeicao_admin' ),
+			'user roles'                               => $roles,
+			'user can manage_options'                  => $this->member_has_admin_access( $member ) ? 'yes' : 'no',
+			'maintenance auto-expire condition'        => Member::STATUS_ACTIVE === $member->status() ? 'eligible when quota date is past' : 'not eligible unless saved status is Active',
+			'read path used by admin/member screens'   => 'Member::effective_status() + Member::field()',
+			'write path used by admin edit form'       => 'AdminController::save_member_fields() -> Member::save()',
+		);
+
+		foreach ( $this->diagnostic_meta_keys() as $meta_key ) {
+			$rows[ 'raw meta: ' . $meta_key ] = $this->debug_user_meta_value( $member->user_id(), $meta_key );
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Get the member meta keys that commonly drift in legacy status bugs.
+	 *
+	 * @return array<int, string>
+	 */
+	private function diagnostic_meta_keys(): array {
+		return array(
+			'status',
+			'membership_status',
+			'_membership_status',
+			'adam_status',
+			'_adam_status',
+			'member_status',
+			'quota_valid_until',
+			'quota_expiry',
+			'valid_until',
+			'expires_at',
+			'approval_status',
+			'renewal_status',
+		);
+	}
+
+	/**
+	 * Get a raw user meta value for diagnostics.
+	 *
+	 * @param int    $user_id  User ID.
+	 * @param string $meta_key Meta key.
+	 */
+	private function debug_user_meta_value( int $user_id, string $meta_key ): string {
+		$value = get_user_meta( $user_id, $meta_key, true );
+
+		if ( is_array( $value ) || is_object( $value ) ) {
+			$encoded = wp_json_encode( $value );
+
+			return false !== $encoded ? $encoded : '[complex value]';
+		}
+
+		if ( null === $value ) {
+			return '';
+		}
+
+		return trim( (string) $value );
 	}
 
 	/**

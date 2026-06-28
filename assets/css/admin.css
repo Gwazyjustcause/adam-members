@@ -17,6 +17,13 @@
 	letter-spacing: 0;
 }
 
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-member"],
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-renewal-request"],
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-notice-edit"],
+#toplevel_page_adam-membership .wp-submenu a[href="admin.php?page=adam-membership-document-edit"] {
+	display: none;
+}
+
 .adam-admin-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

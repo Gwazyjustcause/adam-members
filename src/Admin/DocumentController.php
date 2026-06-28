@@ -60,7 +60,7 @@ final class DocumentController {
 		);
 
 		add_submenu_page(
-			null,
+			'adam-membership',
 			esc_html__( 'Editar Documento', 'adam-membership' ),
 			esc_html__( 'Editar Documento', 'adam-membership' ),
 			self::CAPABILITY,
