@@ -14,6 +14,9 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\RenewalRepository;
+use AdamMembership\Member\RenewalRequest;
+use AdamMembership\Member\RenewalService;
 use WP_Error;
 
 /**
@@ -29,6 +32,9 @@ final class AdminController {
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
 	private const ACTION_SAVE_MEMBER  = 'save_member';
+	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
+	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
+	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
 
 	/**
 	 * Member repository.
@@ -59,18 +65,36 @@ final class AdminController {
 	private Logger $logger;
 
 	/**
+	 * Renewal request repository.
+	 *
+	 * @var RenewalRepository
+	 */
+	private RenewalRepository $renewal_repository;
+
+	/**
+	 * Renewal service.
+	 *
+	 * @var RenewalService
+	 */
+	private RenewalService $renewal_service;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
 	 * @param ApprovalService    $approval_service Approval service.
 	 * @param SettingsRepository $settings         Settings repository.
 	 * @param Logger             $logger           Logger helper.
+	 * @param RenewalRepository  $renewals         Renewal repository.
+	 * @param RenewalService     $renewal_service  Renewal service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service ) {
 		$this->members          = $members;
 		$this->approval_service = $approval_service;
 		$this->settings         = $settings;
 		$this->logger           = $logger;
+		$this->renewal_repository = $renewals;
+		$this->renewal_service    = $renewal_service;
 	}
 
 	/**
@@ -82,6 +106,8 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_approve_member', array( $this, 'handle_approve_member' ) );
 		add_action( 'admin_post_adam_membership_reject_member', array( $this, 'handle_reject_member' ) );
 		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
+		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
+		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
 	}
 
 	/**
@@ -127,6 +153,15 @@ final class AdminController {
 
 		add_submenu_page(
 			self::MENU_SLUG,
+			esc_html__( 'Renewal Requests', 'adam-membership' ),
+			esc_html__( 'Renewal Requests', 'adam-membership' ),
+			self::CAPABILITY,
+			'adam-membership-renewals',
+			array( $this, 'render_renewals_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
 			esc_html__( 'Settings', 'adam-membership' ),
 			esc_html__( 'Settings', 'adam-membership' ),
 			self::CAPABILITY,
@@ -141,6 +176,15 @@ final class AdminController {
 			self::CAPABILITY,
 			self::MEMBER_PAGE_SLUG,
 			array( $this, 'render_member_page' )
+		);
+
+		add_submenu_page(
+			null,
+			esc_html__( 'Renewal Request', 'adam-membership' ),
+			esc_html__( 'Renewal Request', 'adam-membership' ),
+			self::CAPABILITY,
+			self::RENEWAL_PAGE_SLUG,
+			array( $this, 'render_renewal_page' )
 		);
 	}
 
@@ -213,6 +257,44 @@ final class AdminController {
 	}
 
 	/**
+	 * Render renewal requests page.
+	 */
+	public function render_renewals_page(): void {
+		$this->ensure_can_manage();
+
+		$filters  = $this->current_renewal_filters();
+		$requests = $this->renewal_repository->admin_requests( $filters );
+
+		$this->render_header( __( 'Renewal Requests', 'adam-membership' ) );
+		$this->render_notices();
+		$this->render_renewal_filters( $filters );
+		$this->render_renewals_table( $requests );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render a single renewal request review page.
+	 */
+	public function render_renewal_page(): void {
+		$this->ensure_can_manage();
+
+		$request_id = isset( $_GET['request_id'] ) ? absint( wp_unslash( $_GET['request_id'] ) ) : 0;
+		$request    = $this->renewal_repository->find( $request_id );
+
+		$this->render_header( __( 'Renewal Review', 'adam-membership' ) );
+		$this->render_notices();
+
+		if ( null === $request ) {
+			$this->render_empty_state( __( 'Renewal request not found.', 'adam-membership' ) );
+			$this->render_footer();
+			return;
+		}
+
+		$this->render_renewal_detail( $request );
+		$this->render_footer();
+	}
+
+	/**
 	 * Render a single member page.
 	 */
 	public function render_member_page(): void {
@@ -245,20 +327,29 @@ final class AdminController {
 		?>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Membership numbering', 'adam-membership' ); ?></h2>
-			<table class="form-table" role="presentation">
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Last assigned member number', 'adam-membership' ); ?></th>
-					<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Next member number', 'adam-membership' ); ?></th>
-					<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
-				</tr>
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Member area URL', 'adam-membership' ); ?></th>
-					<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
-				</tr>
-			</table>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_save_settings">
+				<?php wp_nonce_field( 'adam_membership_save_settings' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Last assigned member number', 'adam-membership' ); ?></th>
+						<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Next member number', 'adam-membership' ); ?></th>
+						<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Member area URL', 'adam-membership' ); ?></th>
+						<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_renewal_page_url"><?php esc_html_e( 'Renewal page URL', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_renewal_page_url" name="renewal_page_url" class="regular-text" value="<?php echo esc_attr( $this->settings->renewal_page_url() ); ?>"></td>
+					</tr>
+				</table>
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save settings', 'adam-membership' ); ?></button>
+			</form>
 		</div>
 		<?php
 		$this->render_footer();
@@ -288,6 +379,193 @@ final class AdminController {
 	}
 
 	/**
+	 * Handle renewal request admin actions.
+	 */
+	public function handle_renewal_admin_action(): void {
+		$this->ensure_can_manage();
+
+		$request_id = isset( $_POST['request_id'] ) ? absint( wp_unslash( $_POST['request_id'] ) ) : 0;
+		$action     = isset( $_POST['renewal_action'] ) ? sanitize_key( wp_unslash( $_POST['renewal_action'] ) ) : '';
+
+		check_admin_referer( 'adam_membership_renewal_action_' . $request_id );
+
+		$result = match ( $action ) {
+			self::ACTION_APPROVE_RENEWAL => $this->renewal_service->approve( $request_id ),
+			self::ACTION_REJECT_RENEWAL  => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
+			default                      => new WP_Error( 'adam_membership_invalid_renewal_action', __( 'Invalid renewal action.', 'adam-membership' ) ),
+		};
+
+		if ( $result instanceof WP_Error ) {
+			$this->redirect_with_error( $result->get_error_message() );
+		}
+
+		$this->redirect_with_message( __( 'Renewal request updated successfully.', 'adam-membership' ) );
+	}
+
+	/**
+	 * Save plugin settings.
+	 */
+	public function handle_save_settings(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_save_settings' );
+
+		$url = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : '';
+		$this->settings->save_renewal_page_url( $url );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'         => 'adam-membership-settings',
+					'adam_message' => __( 'Settings saved successfully.', 'adam-membership' ),
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Render renewal request filters.
+	 *
+	 * @param array<string, string> $filters Filters.
+	 */
+	private function render_renewal_filters( array $filters ): void {
+		?>
+		<form method="get" class="adam-admin-filters">
+			<input type="hidden" name="page" value="adam-membership-renewals">
+			<label>
+				<span><?php esc_html_e( 'Status', 'adam-membership' ); ?></span>
+				<select name="status">
+					<?php $this->render_select_option( '', __( 'All requests', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+					<?php $this->render_select_option( RenewalRequest::STATUS_PENDING, __( 'Pending Review', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+					<?php $this->render_select_option( RenewalRequest::STATUS_APPROVED, __( 'Approved', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+					<?php $this->render_select_option( RenewalRequest::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+				</select>
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Order', 'adam-membership' ); ?></span>
+				<select name="order">
+					<?php $this->render_select_option( 'desc', __( 'Newest first', 'adam-membership' ), $filters['order'] ?? 'desc' ); ?>
+					<?php $this->render_select_option( 'asc', __( 'Oldest first', 'adam-membership' ), $filters['order'] ?? 'desc' ); ?>
+				</select>
+			</label>
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply filters', 'adam-membership' ); ?></button>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-renewals' ) ); ?>"><?php esc_html_e( 'Reset', 'adam-membership' ); ?></a>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render renewal requests table.
+	 *
+	 * @param array<int, RenewalRequest> $requests Requests.
+	 */
+	private function render_renewals_table( array $requests ): void {
+		if ( array() === $requests ) {
+			$this->render_empty_state( __( 'No renewal requests found.', 'adam-membership' ) );
+			return;
+		}
+		?>
+		<table class="widefat striped adam-admin-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Member Number', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Member Name', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Email', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Current Quota Expiry', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Submission Date', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Renewal Status', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Actions', 'adam-membership' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $requests as $request ) : ?>
+					<?php $member = $this->members->find( $request->user_id() ); ?>
+					<tr>
+						<td><?php echo esc_html( null !== $member ? $this->member_number_label( $member ) : '—' ); ?></td>
+						<td><?php echo esc_html( null !== $member ? $member->full_name() : __( 'Member not found', 'adam-membership' ) ); ?></td>
+						<td><?php echo esc_html( null !== $member ? $member->email() : '—' ); ?></td>
+						<td><?php echo esc_html( $this->format_date( $request->current_quota_expiry() ) ?: '—' ); ?></td>
+						<td><?php echo esc_html( $request->submitted_at() ); ?></td>
+						<td><?php echo esc_html( $this->renewal_status_label( $request->status() ) ); ?></td>
+						<td class="adam-admin-row-actions">
+							<a class="button button-small" href="<?php echo esc_url( $this->renewal_url( $request ) ); ?>"><?php esc_html_e( 'Review', 'adam-membership' ); ?></a>
+							<a class="button button-small" href="<?php echo esc_url( $this->renewal_service->forminator_submission_url( $request ) ); ?>"><?php esc_html_e( 'Forminator Submission', 'adam-membership' ); ?></a>
+							<?php if ( '' !== $this->renewal_service->proof_url( $request ) ) : ?>
+								<a class="button button-small" href="<?php echo esc_url( $this->renewal_service->proof_url( $request ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Proof', 'adam-membership' ); ?></a>
+							<?php endif; ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Render renewal request detail.
+	 *
+	 * @param RenewalRequest $request Request.
+	 */
+	private function render_renewal_detail( RenewalRequest $request ): void {
+		$member  = $this->members->find( $request->user_id() );
+		$changes = null !== $member ? $this->renewal_service->changed_fields( $request, $member ) : array();
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Renewal request', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-detail-grid">
+				<?php $this->render_detail_item( __( 'Status', 'adam-membership' ), $this->renewal_status_label( $request->status() ) ); ?>
+				<?php $this->render_detail_item( __( 'Submission ID', 'adam-membership' ), (string) $request->submission_id() ); ?>
+				<?php $this->render_detail_item( __( 'Submission date', 'adam-membership' ), $request->submitted_at() ); ?>
+				<?php $this->render_detail_item( __( 'Captured quota expiry', 'adam-membership' ), $this->format_date( $request->current_quota_expiry() ) ); ?>
+			</div>
+			<div class="adam-admin-actions">
+				<a class="button" href="<?php echo esc_url( $this->renewal_service->forminator_submission_url( $request ) ); ?>"><?php esc_html_e( 'View original Forminator submission', 'adam-membership' ); ?></a>
+				<?php if ( '' !== $this->renewal_service->proof_url( $request ) ) : ?>
+					<a class="button" href="<?php echo esc_url( $this->renewal_service->proof_url( $request ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View proof of payment', 'adam-membership' ); ?></a>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Submitted changes', 'adam-membership' ); ?></h2>
+			<?php if ( array() === $changes ) : ?>
+				<?php $this->render_empty_state( __( 'No profile changes were submitted.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<table class="widefat striped adam-admin-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Field', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Current Value', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Submitted Value', 'adam-membership' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $changes as $field => $change ) : ?>
+							<tr>
+								<td><?php echo esc_html( $field ); ?></td>
+								<td><?php echo esc_html( $change['old'] ); ?></td>
+								<td><?php echo esc_html( $change['new'] ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+
+		<?php if ( RenewalRequest::STATUS_PENDING === $request->status() ) : ?>
+			<div class="adam-admin-panel">
+				<h2><?php esc_html_e( 'Review decision', 'adam-membership' ); ?></h2>
+				<div class="adam-admin-actions">
+					<?php $this->render_renewal_action_form( $request, self::ACTION_APPROVE_RENEWAL, __( 'Approve renewal', 'adam-membership' ), 'button-primary' ); ?>
+				</div>
+				<?php $this->render_renewal_rejection_form( $request ); ?>
+			</div>
+		<?php endif; ?>
+		<?php
+	}
+
+	/**
 	 * Render dashboard cards.
 	 *
 	 * @param array<string, int> $counts Dashboard counts.
@@ -297,6 +575,7 @@ final class AdminController {
 			array( 'label' => __( 'Total members', 'adam-membership' ), 'value' => $counts['total'] ?? 0 ),
 			array( 'label' => __( 'Active members', 'adam-membership' ), 'value' => $counts['active'] ?? 0 ),
 			array( 'label' => __( 'Pending members', 'adam-membership' ), 'value' => $counts['pending'] ?? 0 ),
+			array( 'label' => __( 'Renewals pending', 'adam-membership' ), 'value' => $counts['renewal_pending'] ?? 0 ),
 			array( 'label' => __( 'Rejected members', 'adam-membership' ), 'value' => $counts['rejected'] ?? 0 ),
 			array( 'label' => __( 'Expired memberships', 'adam-membership' ), 'value' => $counts['expired'] ?? 0 ),
 			array( 'label' => __( 'Expiring in 30 days', 'adam-membership' ), 'value' => $counts['expiring_soon'] ?? 0 ),
@@ -351,6 +630,8 @@ final class AdminController {
 						<?php $this->render_select_option( '', __( 'All statuses', 'adam-membership' ), $filters['status'] ?? '' ); ?>
 						<?php $this->render_select_option( Member::STATUS_ACTIVE, __( 'Active', 'adam-membership' ), $filters['status'] ?? '' ); ?>
 						<?php $this->render_select_option( Member::STATUS_PENDING, __( 'Pending', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+						<?php $this->render_select_option( Member::STATUS_RENEWAL_PENDING, __( 'Renewal pending', 'adam-membership' ), $filters['status'] ?? '' ); ?>
+						<?php $this->render_select_option( Member::STATUS_EXPIRED, __( 'Expired', 'adam-membership' ), $filters['status'] ?? '' ); ?>
 						<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $filters['status'] ?? '' ); ?>
 					</select>
 				</label>
@@ -416,14 +697,14 @@ final class AdminController {
 						<td><a href="mailto:<?php echo esc_attr( $member->email() ); ?>"><?php echo esc_html( $member->email() ); ?></a></td>
 						<td><?php echo esc_html( (string) $member->field( 'telefone' ) ?: '—' ); ?></td>
 						<td><?php echo esc_html( $member->registration_date() ); ?></td>
-						<td><?php $this->render_status_badge( $member->status() ); ?></td>
+						<td><?php $this->render_status_badge( $member->effective_status() ); ?></td>
 						<td><?php echo esc_html( $this->member_number_label( $member ) ); ?></td>
 						<td><?php $this->render_quota_badge( $member ); ?></td>
 						<td class="adam-admin-row-actions">
 							<a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'View', 'adam-membership' ); ?></a>
 							<?php if ( $show_actions ) : ?>
 								<?php $this->render_inline_action_form( $member, self::ACTION_APPROVE, __( 'Approve', 'adam-membership' ), 'button-primary' ); ?>
-								<?php $this->render_inline_action_form( $member, self::ACTION_REJECT, __( 'Reject', 'adam-membership' ), 'button-link-delete' ); ?>
+								<?php $this->render_inline_rejection_form( $member ); ?>
 							<?php endif; ?>
 						</td>
 					</tr>
@@ -453,7 +734,7 @@ final class AdminController {
 				<?php $this->render_admin_safety_notice( $member ); ?>
 
 				<div class="adam-admin-detail-grid">
-					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->status() ); ?>
+					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->effective_status() ); ?>
 					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
 					<?php $this->render_detail_item( __( 'Quota valid until', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Joined on', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
@@ -463,6 +744,8 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'Citizen card', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
 					<?php $this->render_detail_item( __( 'Birth date', 'adam-membership' ), $this->format_date( $member->field( 'data_nascimento' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Address', 'adam-membership' ), (string) $member->field( 'morada' ) ); ?>
+					<?php $this->render_detail_item( __( 'Rejection reason', 'adam-membership' ), (string) $member->field( 'motivo_rejeicao' ) ); ?>
+					<?php $this->render_detail_item( __( 'Private rejection note', 'adam-membership' ), (string) $member->field( 'nota_rejeicao_admin' ) ); ?>
 				</div>
 			</div>
 
@@ -472,7 +755,7 @@ final class AdminController {
 				<h2><?php esc_html_e( 'Admin actions', 'adam-membership' ); ?></h2>
 				<div class="adam-admin-action-stack">
 					<?php $this->render_action_form( $member, self::ACTION_APPROVE, __( 'Approve member', 'adam-membership' ), 'button-primary' ); ?>
-					<?php $this->render_action_form( $member, self::ACTION_REJECT, __( 'Reject member', 'adam-membership' ), 'button-link-delete' ); ?>
+					<?php $this->render_rejection_form( $member ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renew quota for one year', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Resend approval email', 'adam-membership' ), 'button-secondary' ); ?>
 				</div>
@@ -549,7 +832,11 @@ final class AdminController {
 						<select name="status">
 							<?php $this->render_select_option( Member::STATUS_PENDING, __( 'Pending', 'adam-membership' ), $member->status() ); ?>
 							<?php $this->render_select_option( Member::STATUS_ACTIVE, __( 'Active', 'adam-membership' ), $member->status() ); ?>
-							<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $member->status() ); ?>
+							<?php $this->render_select_option( Member::STATUS_RENEWAL_PENDING, __( 'Renewal pending', 'adam-membership' ), $member->status() ); ?>
+							<?php $this->render_select_option( Member::STATUS_EXPIRED, __( 'Expired', 'adam-membership' ), $member->status() ); ?>
+							<?php if ( $member->isRejected() ) : ?>
+								<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $member->status() ); ?>
+							<?php endif; ?>
 						</select>
 					</label>
 				</div>
@@ -610,7 +897,7 @@ final class AdminController {
 
 		$result = match ( $action ) {
 			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id ),
-			self::ACTION_REJECT       => $this->approval_service->reject( $user_id ),
+			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
@@ -675,6 +962,13 @@ final class AdminController {
 			return new WP_Error(
 				'adam_membership_self_admin_rejection_blocked',
 				__( 'Safety rule: administrators cannot reject their own account. Ask another administrator to review this account.', 'adam-membership' )
+			);
+		}
+
+		if ( Member::STATUS_REJECTED === $status && ! $member->isRejected() ) {
+			return new WP_Error(
+				'adam_membership_use_rejection_form',
+				__( 'Please use the rejection form so a rejection reason is stored.', 'adam-membership' )
 			);
 		}
 
@@ -801,6 +1095,8 @@ final class AdminController {
 		return array(
 			Member::STATUS_PENDING,
 			Member::STATUS_ACTIVE,
+			Member::STATUS_RENEWAL_PENDING,
+			Member::STATUS_EXPIRED,
 			Member::STATUS_REJECTED,
 		);
 	}
@@ -874,6 +1170,18 @@ final class AdminController {
 	}
 
 	/**
+	 * Read current renewal filters from query string.
+	 *
+	 * @return array<string, string>
+	 */
+	private function current_renewal_filters(): array {
+		return array(
+			'status' => isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '',
+			'order'  => isset( $_GET['order'] ) && 'asc' === strtolower( sanitize_text_field( wp_unslash( $_GET['order'] ) ) ) ? 'asc' : 'desc',
+		);
+	}
+
+	/**
 	 * Render a select option.
 	 *
 	 * @param string $value   Option value.
@@ -926,9 +1234,25 @@ final class AdminController {
 	private function render_status_badge( string $status ): void {
 		printf(
 			'<span class="adam-admin-badge %1$s">%2$s</span>',
-			esc_attr( sanitize_html_class( strtolower( $status ) ) ),
+			esc_attr( $this->status_badge_class( $status ) ),
 			esc_html( $status )
 		);
+	}
+
+	/**
+	 * Get a safe status badge class.
+	 *
+	 * @param string $status Status.
+	 */
+	private function status_badge_class( string $status ): string {
+		return match ( $status ) {
+			Member::STATUS_ACTIVE          => 'status-active',
+			Member::STATUS_PENDING         => 'status-pending',
+			Member::STATUS_RENEWAL_PENDING => 'status-renewal-pending',
+			Member::STATUS_EXPIRED         => 'status-expired',
+			Member::STATUS_REJECTED        => 'status-rejected',
+			default                        => 'status-unknown',
+		};
 	}
 
 	/**
@@ -993,6 +1317,30 @@ final class AdminController {
 	}
 
 	/**
+	 * Render an inline rejection form with a reason selector.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_inline_rejection_form( Member $member ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form adam-admin-rejection-inline">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REJECT ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<label class="screen-reader-text" for="adam_rejection_reason_<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php esc_html_e( 'Rejection reason', 'adam-membership' ); ?></label>
+			<select id="adam_rejection_reason_<?php echo esc_attr( (string) $member->user_id() ); ?>" name="rejection_reason" required>
+				<option value=""><?php esc_html_e( 'Reason', 'adam-membership' ); ?></option>
+				<?php foreach ( $this->rejection_reasons() as $reason ) : ?>
+					<option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Reject', 'adam-membership' ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
 	 * Render a full-width member action form.
 	 *
 	 * @param Member $member Member.
@@ -1009,6 +1357,85 @@ final class AdminController {
 			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
 			<button type="submit" class="button <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render a renewal action form.
+	 *
+	 * @param RenewalRequest $request Request.
+	 * @param string         $action  Action.
+	 * @param string         $label   Label.
+	 * @param string         $class   Button class.
+	 */
+	private function render_renewal_action_form( RenewalRequest $request, string $action, string $label, string $class ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="adam_membership_renewal_action">
+			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( $action ); ?>">
+			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
+			<button type="submit" class="button <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render renewal rejection form.
+	 *
+	 * @param RenewalRequest $request Request.
+	 */
+	private function render_renewal_rejection_form( RenewalRequest $request ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-rejection-form">
+			<input type="hidden" name="action" value="adam_membership_renewal_action">
+			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REJECT_RENEWAL ); ?>">
+			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
+			<label>
+				<span><?php esc_html_e( 'Rejection reason', 'adam-membership' ); ?></span>
+				<select name="rejection_reason" required>
+					<option value=""><?php esc_html_e( 'Select a reason', 'adam-membership' ); ?></option>
+					<?php foreach ( $this->rejection_reasons() as $reason ) : ?>
+						<option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+			<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Reject renewal', 'adam-membership' ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render the detailed rejection form.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_rejection_form( Member $member ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-rejection-form">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REJECT ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<label>
+				<span><?php esc_html_e( 'Rejection reason', 'adam-membership' ); ?></span>
+				<select name="rejection_reason" required>
+					<option value=""><?php esc_html_e( 'Select a reason', 'adam-membership' ); ?></option>
+					<?php foreach ( $this->rejection_reasons() as $reason ) : ?>
+						<option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Private admin note', 'adam-membership' ); ?></span>
+				<textarea name="rejection_note" rows="3"></textarea>
+			</label>
+			<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Reject member', 'adam-membership' ); ?></button>
 		</form>
 		<?php
 	}
@@ -1103,10 +1530,69 @@ final class AdminController {
 	}
 
 	/**
+	 * Build a renewal request review URL.
+	 *
+	 * @param RenewalRequest $request Request.
+	 */
+	private function renewal_url( RenewalRequest $request ): string {
+		return add_query_arg(
+			array(
+				'page'       => self::RENEWAL_PAGE_SLUG,
+				'request_id' => $request->id(),
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
+	/**
+	 * Get a human-readable renewal status label.
+	 *
+	 * @param string $status Status.
+	 */
+	private function renewal_status_label( string $status ): string {
+		return match ( $status ) {
+			RenewalRequest::STATUS_APPROVED => __( 'Approved', 'adam-membership' ),
+			RenewalRequest::STATUS_REJECTED => __( 'Rejected', 'adam-membership' ),
+			default                         => __( 'Pending Review', 'adam-membership' ),
+		};
+	}
+
+	/**
 	 * Get posted quota validity.
 	 */
 	private function posted_quota_validity(): string {
 		return isset( $_POST['quota_validity'] ) ? sanitize_text_field( wp_unslash( $_POST['quota_validity'] ) ) : '';
+	}
+
+	/**
+	 * Get the posted rejection reason.
+	 */
+	private function posted_rejection_reason(): string {
+		$reason = isset( $_POST['rejection_reason'] ) ? sanitize_text_field( wp_unslash( $_POST['rejection_reason'] ) ) : '';
+
+		return in_array( $reason, $this->rejection_reasons(), true ) ? $reason : '';
+	}
+
+	/**
+	 * Get the posted private rejection note.
+	 */
+	private function posted_rejection_note(): string {
+		return isset( $_POST['rejection_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['rejection_note'] ) ) : '';
+	}
+
+	/**
+	 * Get allowed rejection reasons.
+	 *
+	 * @return array<int, string>
+	 */
+	private function rejection_reasons(): array {
+		return array(
+			__( 'Dados incompletos', 'adam-membership' ),
+			__( 'Não cumpre os requisitos da associação', 'adam-membership' ),
+			__( 'Informação inconsistente', 'adam-membership' ),
+			__( 'Pedido duplicado', 'adam-membership' ),
+			__( 'Outro', 'adam-membership' ),
+		);
 	}
 
 	/**

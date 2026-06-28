@@ -14,6 +14,7 @@ namespace AdamMembership\Core;
  */
 final class SettingsRepository {
 	private const OPTION_LAST_MEMBER_NUMBER = 'adam_membership_last_member_number';
+	private const OPTION_RENEWAL_PAGE_URL   = 'adam_membership_renewal_page_url';
 
 	/**
 	 * Get the last assigned numeric member number.
@@ -45,6 +46,24 @@ final class SettingsRepository {
 	 */
 	public function member_area_url(): string {
 		return (string) apply_filters( 'adam_membership_member_area_url', wp_login_url() );
+	}
+
+	/**
+	 * Get the renewal page URL.
+	 */
+	public function renewal_page_url(): string {
+		$url = (string) get_option( self::OPTION_RENEWAL_PAGE_URL, '' );
+
+		return '' !== $url ? $url : home_url( '/renovar-quota/' );
+	}
+
+	/**
+	 * Save the renewal page URL.
+	 *
+	 * @param string $url Renewal page URL.
+	 */
+	public function save_renewal_page_url( string $url ): void {
+		update_option( self::OPTION_RENEWAL_PAGE_URL, esc_url_raw( $url ), false );
 	}
 
 	/**

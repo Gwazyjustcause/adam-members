@@ -89,6 +89,128 @@ final class EmailService {
 	}
 
 	/**
+	 * Send registration rejected email.
+	 *
+	 * @param Member $member Member.
+	 * @param string $reason Safe rejection reason.
+	 */
+	public function send_registration_rejected_email( Member $member, string $reason = '' ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'A sua inscrição na ADAM não foi aprovada',
+			'Rejeição da inscrição',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>A sua inscrição foi analisada pela Direção da ADAM e não foi aprovada.</p>
+				%2$s
+				<p>Caso pretenda mais informações, contacte a Direção da ADAM.</p>',
+				esc_html( $member->full_name() ),
+				'' !== $reason ? '<p><strong>Motivo indicado:</strong> ' . esc_html( $reason ) . '</p>' : ''
+			)
+		);
+	}
+
+	/**
+	 * Send renewal pending confirmation email.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function send_renewal_pending_email( Member $member ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'Pedido de renovação recebido',
+			'Renovação em análise',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>Recebemos o seu pedido de renovação de quota.</p>
+				<p>A Direção da ADAM irá analisar o pedido e confirmar a renovação assim que possível.</p>',
+				esc_html( $member->full_name() )
+			)
+		);
+	}
+
+	/**
+	 * Send renewal reminder email.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function send_renewal_reminder_email( Member $member ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'Lembrete de renovação da quota ADAM',
+			'Renovação da quota',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>A validade da sua quota está a aproximar-se.</p>
+				<p>Para manter a inscrição ativa, efetue o pagamento e submeta o formulário de renovação na Área de Sócio.</p>',
+				esc_html( $member->full_name() )
+			)
+		);
+	}
+
+
+	/**
+	 * Send renewal approved email.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function send_renewal_approved_email( Member $member ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'Renovação da quota aprovada',
+			'Quota renovada',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>A sua renovação de quota foi aprovada.</p>
+				<p><strong>Validade da quota:</strong> %2$s</p>',
+				esc_html( $member->full_name() ),
+				esc_html( (string) $member->field( 'validade_quota' ) )
+			)
+		);
+	}
+
+	/**
+	 * Send renewal rejected email.
+	 *
+	 * @param Member $member Member.
+	 * @param string $reason Safe rejection reason.
+	 */
+	public function send_renewal_rejected_email( Member $member, string $reason = '' ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'Renovação da quota não aprovada',
+			'Renovação não aprovada',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>O seu pedido de renovação foi analisado e não foi aprovado.</p>
+				%2$s
+				<p>Caso pretenda mais informações, contacte a Direção da ADAM.</p>',
+				esc_html( $member->full_name() ),
+				'' !== $reason ? '<p><strong>Motivo indicado:</strong> ' . esc_html( $reason ) . '</p>' : ''
+			)
+		);
+	}
+
+	/**
+	 * Send quota expired notice.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function send_quota_expired_email( Member $member ): bool {
+		return $this->send_member_lifecycle_email(
+			$member,
+			'A sua quota ADAM expirou',
+			'Quota expirada',
+			sprintf(
+				'<p>Olá <strong>%1$s</strong>,</p>
+				<p>A sua quota encontra-se expirada.</p>
+				<p>Pode aceder à Área de Sócio para iniciar a renovação.</p>',
+				esc_html( $member->full_name() )
+			)
+		);
+	}
+
+	/**
 	 * Send password reset email.
 	 */
 	public function send_password_reset_email(
@@ -285,6 +407,36 @@ final class EmailService {
 		}
 
 		return $sent;
+	}
+
+	/**
+	 * Send a member lifecycle email using the standard template.
+	 *
+	 * @param Member $member  Member.
+	 * @param string $subject Email subject.
+	 * @param string $title   Email title.
+	 * @param string $content Email body content.
+	 */
+	private function send_member_lifecycle_email( Member $member, string $subject, string $title, string $content ): bool {
+		$recipient = $member->email();
+
+		if ( '' === $recipient ) {
+			$this->logger->error(
+				'Membership lifecycle email was not sent because the member has no email address.',
+				array(
+					'user_id' => $member->user_id(),
+					'subject' => $subject,
+				)
+			);
+
+			return false;
+		}
+
+		return $this->send(
+			$recipient,
+			$subject,
+			$this->render_template( $title, $content )
+		);
 	}
 
 	/**

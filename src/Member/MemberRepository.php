@@ -72,7 +72,7 @@ final class MemberRepository {
 			array_filter(
 				$members,
 				static function ( Member $member ) use ( $search, $status, $quota ): bool {
-					if ( '' !== $status && $member->status() !== $status ) {
+					if ( '' !== $status && $member->effective_status() !== $status ) {
 						return false;
 					}
 
@@ -127,6 +127,7 @@ final class MemberRepository {
 			'total'        => 0,
 			'active'       => 0,
 			'pending'      => 0,
+			'renewal_pending' => 0,
 			'rejected'     => 0,
 			'expired'      => 0,
 			'expiring_soon' => 0,
@@ -135,19 +136,19 @@ final class MemberRepository {
 		foreach ( $this->all_members() as $member ) {
 			++$counts['total'];
 
-			if ( $member->isActive() ) {
+			if ( Member::STATUS_ACTIVE === $member->effective_status() ) {
 				++$counts['active'];
-			} elseif ( $member->isPending() ) {
+			} elseif ( Member::STATUS_PENDING === $member->effective_status() ) {
 				++$counts['pending'];
-			} elseif ( $member->isRejected() ) {
+			} elseif ( Member::STATUS_REJECTED === $member->effective_status() ) {
 				++$counts['rejected'];
-			}
-
-			if ( $member->isActive() && Member::QUOTA_EXPIRED === $member->quota_status() ) {
+			} elseif ( Member::STATUS_EXPIRED === $member->effective_status() ) {
 				++$counts['expired'];
+			} elseif ( Member::STATUS_RENEWAL_PENDING === $member->effective_status() ) {
+				++$counts['renewal_pending'];
 			}
 
-			if ( $member->isActive() && Member::QUOTA_EXPIRING_SOON === $member->quota_status() ) {
+			if ( Member::STATUS_ACTIVE === $member->effective_status() && Member::QUOTA_EXPIRING_SOON === $member->quota_status() ) {
 				++$counts['expiring_soon'];
 			}
 		}
@@ -233,7 +234,7 @@ final class MemberRepository {
 		return match ( $orderby ) {
 			'name'          => strtolower( $member->full_name() ),
 			'email'         => strtolower( $member->email() ),
-			'status'        => $member->status(),
+			'status'        => $member->effective_status(),
 			'member_number' => $member->member_number_value(),
 			'quota'         => $member->quota_expiry_timestamp(),
 			default         => $member->registration_timestamp(),

@@ -12,10 +12,13 @@ namespace AdamMembership\Core;
 use AdamMembership\Admin\AdminController;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Forminator\RegistrationFormConfig;
+use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\RenewalRepository;
+use AdamMembership\Member\RenewalService;
 use AdamMembership\Member\MemberArea;
 use AdamMembership\Member\Account;
 use AdamMembership\Member\PasswordRecovery;
@@ -72,10 +75,12 @@ final class Plugin {
 		$logger    = new Logger();
 		$settings  = new SettingsRepository();
 		$members   = new MemberRepository();
+		$renewal_repository = new RenewalRepository();
 		$email     = new EmailService( $settings, $logger );
 		$approval  = new ApprovalService( $members, $settings, $email, $logger );
+		$renewals  = new RenewalService( $members, $renewal_repository, $email, $logger );
 		$config    = new RegistrationFormConfig();
-		$memberArea = new MemberArea( $members );
+		$memberArea = new MemberArea( $members, $renewals, $settings );
 		$account = new Account(
 	$email
 );
@@ -87,7 +92,8 @@ final class Plugin {
 		$emailConfirmation = new EmailConfirmation();
 
 		( new UserRegistration( $config, $logger ) )->register();
-		( new AdminController( $members, $approval, $settings, $logger ) )->register();
+		( new RenewalSubmission( $renewals, $logger ) )->register();
+		( new AdminController( $members, $approval, $settings, $logger, $renewal_repository, $renewals ) )->register();
 
 		$memberArea->register();
 		$passwordRecovery->register();

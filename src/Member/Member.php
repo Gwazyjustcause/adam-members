@@ -31,6 +31,16 @@ final class Member {
 	public const STATUS_REJECTED = 'Rejeitado';
 
 	/**
+	 * Expired member status.
+	 */
+	public const STATUS_EXPIRED = 'Expirado';
+
+	/**
+	 * Renewal pending member status.
+	 */
+	public const STATUS_RENEWAL_PENDING = 'Renovação em análise';
+
+	/**
 	 * Active quota status.
 	 */
 	public const QUOTA_ACTIVE = 'active';
@@ -60,9 +70,14 @@ final class Member {
 		'cartao_cidadao'  => '',
 		'data_nascimento' => '',
 		'morada'          => '',
+		'codigo_postal'   => '',
+		'cidade'          => '',
+		'contacto_emergencia' => '',
 		'equipa'          => '',
 		'profile_photo'   => '',
 		'payment_receipt' => '',
+		'motivo_rejeicao'     => '',
+		'nota_rejeicao_admin' => '',
 	);
 
 	/**
@@ -224,6 +239,17 @@ final class Member {
 	}
 
 	/**
+	 * Get the effective membership status for frontend and admin screens.
+	 */
+	public function effective_status(): string {
+		if ( self::STATUS_ACTIVE === $this->status() && self::QUOTA_EXPIRED === $this->quota_status() ) {
+			return self::STATUS_EXPIRED;
+		}
+
+		return $this->status();
+	}
+
+	/**
 	 * Get the quota status.
 	 */
 	public function quota_status(): string {
@@ -304,7 +330,7 @@ final class Member {
 	 * Check if the member is active.
 	 */
 	public function isActive(): bool {
-		return self::STATUS_ACTIVE === $this->status();
+		return self::STATUS_ACTIVE === $this->effective_status();
 	}
 
 	/**
@@ -312,6 +338,31 @@ final class Member {
 	 */
 	public function isRejected(): bool {
 		return self::STATUS_REJECTED === $this->status();
+	}
+
+	/**
+	 * Check if the member has expired.
+	 */
+	public function isExpired(): bool {
+		return self::STATUS_EXPIRED === $this->effective_status();
+	}
+
+	/**
+	 * Check if a renewal is waiting for admin review.
+	 */
+	public function isRenewalPending(): bool {
+		return self::STATUS_RENEWAL_PENDING === $this->status();
+	}
+
+	/**
+	 * Check if the member can start renewal from the member area.
+	 */
+	public function can_renew(): bool {
+		if ( $this->isRejected() || $this->isRenewalPending() ) {
+			return false;
+		}
+
+		return $this->isExpired() || self::QUOTA_EXPIRING_SOON === $this->quota_status();
 	}
 
 	/**
@@ -331,8 +382,10 @@ final class Member {
 	/**
  	* Reject the member.
  	*/
-	public function reject(): void {
+	public function reject( string $reason = '', string $note = '' ): void {
 		$this->update_field( 'estado', self::STATUS_REJECTED );
+		$this->update_field( 'motivo_rejeicao', $reason );
+		$this->update_field( 'nota_rejeicao_admin', $note );
 	}
 
 	/**

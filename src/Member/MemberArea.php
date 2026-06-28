@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\RateLimiter;
 
 /**
@@ -24,12 +25,30 @@ final class MemberArea {
 	private MemberRepository $members;
 
 	/**
+	 * Renewal service.
+	 *
+	 * @var RenewalService
+	 */
+	private RenewalService $renewals;
+
+	/**
+	 * Settings repository.
+	 *
+	 * @var SettingsRepository
+	 */
+	private SettingsRepository $settings;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param MemberRepository $members Member repository.
+	 * @param MemberRepository   $members  Member repository.
+	 * @param RenewalService     $renewals Renewal service.
+	 * @param SettingsRepository $settings Settings repository.
 	 */
-	public function __construct( MemberRepository $members ) {
-		$this->members = $members;
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings ) {
+		$this->members  = $members;
+		$this->renewals = $renewals;
+		$this->settings = $settings;
 	}
 
 	/**
@@ -80,12 +99,17 @@ final class MemberArea {
 		ob_start();
 		?>
 		<div class="adam-member-area adam-member-dashboard">
+			<?php $this->renewals->maybe_send_renewal_reminder( $member ); ?>
 			<?php $this->render_header( $member ); ?>
 			<?php $this->render_account_notices(); ?>
 
 			<?php
 			if ( $member->isPending() ) {
 				$this->render_pending( $member );
+			} elseif ( $member->isRenewalPending() ) {
+				$this->render_renewal_pending( $member );
+			} elseif ( $member->isExpired() ) {
+				$this->render_expired( $member );
 			} elseif ( $member->isRejected() ) {
 				$this->render_rejected( $member );
 			} elseif ( $member->isActive() ) {
@@ -276,7 +300,7 @@ final class MemberArea {
 			</div>
 
 			<div class="adam-hero-status">
-				<?php $this->render_status_badge( $member->status() ); ?>
+				<?php $this->render_status_badge( $member->effective_status() ); ?>
 				<span><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: __( 'Número por atribuir', 'adam-membership' ) ); ?></span>
 			</div>
 		</header>
@@ -335,6 +359,66 @@ final class MemberArea {
 	}
 
 	/**
+	 * Render renewal pending dashboard.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_renewal_pending( Member $member ): void {
+		?>
+		<div class="adam-dashboard-grid">
+			<?php
+			$this->render_status_card(
+				$member->effective_status(),
+				__( 'O seu pedido de renovação foi submetido e encontra-se em análise pela ADAM.', 'adam-membership' )
+			);
+
+			$this->render_membership( $member );
+
+			$this->render_notifications_card(
+				array(
+					__( 'Receberá uma atualização assim que a renovação for confirmada.', 'adam-membership' ),
+					__( 'Renovação em análise.', 'adam-membership' ),
+				)
+			);
+
+			$this->render_profile( $member );
+			$this->render_standard_account_actions();
+			?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render expired dashboard.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_expired( Member $member ): void {
+		?>
+		<div class="adam-dashboard-grid">
+			<?php
+			$this->render_status_card(
+				$member->effective_status(),
+				__( 'A sua quota expirou. Para voltar a ter a inscrição ativa, submeta a renovação.', 'adam-membership' )
+			);
+
+			$this->render_membership( $member );
+
+			$this->render_notifications_card(
+				array(
+					__( 'A sua conta continua disponível para consultar dados e iniciar a renovação.', 'adam-membership' ),
+				)
+			);
+
+			$this->render_renewal_action( $member );
+			$this->render_profile( $member );
+			$this->render_standard_account_actions();
+			?>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Render rejected dashboard.
 	 *
 	 * @param Member $member Member.
@@ -348,12 +432,7 @@ final class MemberArea {
 				__( 'Infelizmente a sua inscrição não foi aprovada. Caso pretenda mais informações, contacte a ADAM.', 'adam-membership' )
 			);
 
-			$this->render_notifications_card(
-				array(
-					__( 'A sua conta continua disponível para consulta.', 'adam-membership' ),
-					__( 'Os dados submetidos permanecem guardados para referência administrativa.', 'adam-membership' ),
-				)
-			);
+			$this->render_notifications_card( $this->rejection_messages( $member ) );
 
 			$this->render_profile( $member );
 
@@ -381,7 +460,7 @@ final class MemberArea {
 		<div class="adam-dashboard-grid">
 			<?php
 			$this->render_status_card(
-				$member->status(),
+				$member->effective_status(),
 				__( 'A sua inscrição encontra-se ativa. Pode consultar os seus dados e gerir o acesso à conta.', 'adam-membership' )
 			);
 
@@ -393,27 +472,11 @@ final class MemberArea {
 				)
 			);
 
+			$this->render_renewal_action( $member );
+
 			$this->render_profile( $member );
 
-			$this->render_actions(
-				array(
-					array(
-						'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
-						'description' => '',
-						'url'         => home_url( '/socio-password/' ),
-					),
-					array(
-						'label'       => __( 'Alterar email', 'adam-membership' ),
-						'description' => '',
-						'url'         => home_url( '/socio-email/' ),
-					),
-					array(
-						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => '',
-						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-					),
-				)
-			);
+			$this->render_standard_account_actions();
 			?>
 		</div>
 		<?php
@@ -540,6 +603,77 @@ final class MemberArea {
 	}
 
 	/**
+	 * Render renewal action when the member is eligible.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_renewal_action( Member $member ): void {
+		if ( ! $member->can_renew() ) {
+			return;
+		}
+
+		$this->render_actions(
+			array(
+				array(
+					'label'       => __( 'Renovar quota', 'adam-membership' ),
+					'description' => '',
+					'url'         => $this->settings->renewal_page_url(),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Render standard account management actions.
+	 */
+	private function render_standard_account_actions(): void {
+		$this->render_actions(
+			array(
+				array(
+					'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
+					'description' => '',
+					'url'         => home_url( '/socio-password/' ),
+				),
+				array(
+					'label'       => __( 'Alterar email', 'adam-membership' ),
+					'description' => '',
+					'url'         => home_url( '/socio-email/' ),
+				),
+				array(
+					'label'       => __( 'Terminar sessão', 'adam-membership' ),
+					'description' => '',
+					'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Get safe rejection messages for the member.
+	 *
+	 * @param Member $member Member.
+	 * @return array<int, string>
+	 */
+	private function rejection_messages( Member $member ): array {
+		$messages = array(
+			__( 'A sua inscrição foi analisada e não foi aprovada pela ADAM.', 'adam-membership' ),
+			__( 'Caso pretenda mais informações, contacte a Direção da ADAM.', 'adam-membership' ),
+		);
+
+		$reason = $member->field( 'motivo_rejeicao' );
+
+		if ( is_scalar( $reason ) && '' !== trim( (string) $reason ) ) {
+			$messages[] = sprintf(
+				/* translators: %s: rejection reason. */
+				__( 'Motivo indicado: %s', 'adam-membership' ),
+				trim( (string) $reason )
+			);
+		}
+
+		return $messages;
+	}
+
+	/**
 	 * Render action links.
 	 *
 	 * @param array<int,array{label:string,description:string,url:string}> $actions Actions.
@@ -606,6 +740,14 @@ final class MemberArea {
 
 		if ( Member::STATUS_REJECTED === $status ) {
 			return 'rejected expired';
+		}
+
+		if ( Member::STATUS_EXPIRED === $status ) {
+			return 'expired';
+		}
+
+		if ( Member::STATUS_RENEWAL_PENDING === $status ) {
+			return 'pending warning renewal-pending';
 		}
 
 		if ( Member::STATUS_PENDING === $status ) {

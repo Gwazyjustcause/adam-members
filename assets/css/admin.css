@@ -19,7 +19,7 @@
 
 .adam-admin-cards {
 	display: grid;
-	grid-template-columns: repeat(6, minmax(150px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 	gap: 14px;
 	margin: 18px 0 22px;
 }
@@ -85,6 +85,33 @@
 	text-align: center;
 }
 
+.adam-admin-rejection-form {
+	display: grid;
+	gap: 10px;
+	margin: 10px 0;
+	padding: 12px;
+	border: 1px solid var(--adam-admin-border);
+	border-radius: 8px;
+	background: #f8fafc;
+}
+
+.adam-admin-rejection-form label {
+	display: grid;
+	gap: 6px;
+}
+
+.adam-admin-rejection-form span {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.adam-admin-rejection-form textarea,
+.adam-admin-rejection-form select {
+	width: 100%;
+}
+
 .adam-admin-filters {
 	display: flex;
 	align-items: end;
@@ -137,6 +164,16 @@
 	margin: 0;
 }
 
+.adam-admin-rejection-inline {
+	align-items: center;
+	gap: 6px;
+}
+
+.adam-admin-rejection-inline select {
+	max-width: 150px;
+	min-height: 28px;
+}
+
 .adam-admin-avatar,
 .adam-admin-avatar-placeholder {
 	display: inline-flex;
@@ -170,18 +207,23 @@
 }
 
 .adam-admin-badge.ativo,
+.adam-admin-badge.status-active,
 .adam-admin-badge.quota-active {
 	background: #dcfce7;
 	color: #14532d;
 }
 
 .adam-admin-badge.pendente,
+.adam-admin-badge.status-pending,
+.adam-admin-badge.status-renewal-pending,
 .adam-admin-badge.quota-expiring_soon {
 	background: #fef3c7;
 	color: #92400e;
 }
 
 .adam-admin-badge.rejeitado,
+.adam-admin-badge.status-rejected,
+.adam-admin-badge.status-expired,
 .adam-admin-badge.quota-expired {
 	background: #fee2e2;
 	color: #991b1b;

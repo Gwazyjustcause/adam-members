@@ -13,7 +13,6 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\Logger;
 use WP_Error;
-use WP_User;
 
 /**
  * Applies member approval workflow rules.
@@ -83,23 +82,9 @@ final class ApprovalService {
 		/*
 		 * Approve member.
 		 */
+		$old_status = $member->status();
 		$member->approve();
-
-		/*
-		 * Promote WordPress role.
-		 */
-		$user = $member->user();
-
-		if ( $user instanceof WP_User && ! $user->has_cap( 'manage_options' ) ) {
-			$user->set_role( 'scio' );
-		} elseif ( $user instanceof WP_User ) {
-			$this->logger->info(
-				'Administrator role preserved during member approval.',
-				array(
-					'user_id' => $user_id,
-				)
-			);
-		}
+		$this->log_status_change( $member, $old_status, $member->status(), 'Member approved.' );
 
 		/*
 		 * Assign member number.
@@ -152,10 +137,12 @@ final class ApprovalService {
 	/**
 	 * Reject a member.
 	 *
-	 * @param int $user_id User ID.
+	 * @param int    $user_id User ID.
+	 * @param string $reason  Safe rejection reason.
+	 * @param string $note    Private admin note.
 	 * @return true|WP_Error
 	 */
-	public function reject( int $user_id ): true|WP_Error {
+	public function reject( int $user_id, string $reason = '', string $note = '' ): true|WP_Error {
 
 		$member = $this->members->find( $user_id );
 
@@ -166,25 +153,36 @@ final class ApprovalService {
 			);
 		}
 
-		$member->reject();
+		if ( '' === $reason ) {
+			return new WP_Error(
+				'adam_membership_rejection_reason_required',
+				__( 'Please choose a rejection reason.', 'adam-membership' )
+			);
+		}
 
-		$user = $member->user();
+		$old_status = $member->status();
 
-		if ( $user instanceof WP_User && ! $user->has_cap( 'manage_options' ) ) {
-			$user->set_role( 'visitante' );
-		} elseif ( $user instanceof WP_User ) {
-			$this->logger->info(
-				'Administrator role preserved during member rejection.',
+		if ( Member::STATUS_RENEWAL_PENDING === $old_status ) {
+			$member->save(
 				array(
-					'user_id' => $user_id,
+					'estado'              => Member::STATUS_EXPIRED,
+					'motivo_rejeicao'     => $reason,
+					'nota_rejeicao_admin' => $note,
 				)
 			);
+			$this->log_status_change( $member, $old_status, Member::STATUS_EXPIRED, 'Member renewal rejected.' );
+			$this->email->send_renewal_rejected_email( $member, $reason );
+		} else {
+			$member->reject( $reason, $note );
+			$this->log_status_change( $member, $old_status, $member->status(), 'Member rejected.' );
+			$this->email->send_registration_rejected_email( $member, $reason );
 		}
 
 		$this->logger->info(
 			'Member rejected.',
 			array(
 				'user_id' => $user_id,
+				'reason'  => $reason,
 			)
 		);
 
@@ -208,6 +206,7 @@ final class ApprovalService {
 		}
 
 		$base_timestamp = max( current_time( 'timestamp' ), $member->quota_expiry_timestamp() );
+		$old_status     = $member->status();
 
 		$member->save(
 			array(
@@ -216,7 +215,9 @@ final class ApprovalService {
 			)
 		);
 
+		$this->log_status_change( $member, $old_status, Member::STATUS_ACTIVE, 'Member quota renewed.' );
 		$this->logger->info( 'Member quota renewed.', array( 'user_id' => $user_id ) );
+		$this->email->send_renewal_approved_email( $member );
 
 		return true;
 	}
@@ -310,6 +311,29 @@ final class ApprovalService {
 			strtotime(
 				'+1 year',
 				current_time( 'timestamp' )
+			)
+		);
+	}
+
+	/**
+	 * Log a member status change.
+	 *
+	 * @param Member $member     Member.
+	 * @param string $old_status Old status.
+	 * @param string $new_status New status.
+	 * @param string $message    Log message.
+	 */
+	private function log_status_change( Member $member, string $old_status, string $new_status, string $message ): void {
+		if ( $old_status === $new_status ) {
+			return;
+		}
+
+		$this->logger->info(
+			$message,
+			array(
+				'user_id'    => $member->user_id(),
+				'old_status' => $old_status,
+				'new_status' => $new_status,
 			)
 		);
 	}
