@@ -761,6 +761,10 @@ final class MemberArea {
 	private function render_documents( Member $member ): void {
 		$filters   = $this->current_document_filters();
 		$documents = $this->documents->visible_for_member( $member, $filters );
+
+		if ( array() === $documents ) {
+			return;
+		}
 		?>
 		<section class="adam-card adam-documents-section" aria-label="<?php esc_attr_e( 'Documentos', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -788,15 +792,11 @@ final class MemberArea {
 				<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Limpar', 'adam-membership' ); ?></a>
 			</form>
 
-			<?php if ( array() === $documents ) : ?>
-				<div class="adam-document-empty"><?php esc_html_e( 'Nao existem documentos disponiveis para estes filtros.', 'adam-membership' ); ?></div>
-			<?php else : ?>
-				<div class="adam-document-grid">
-					<?php foreach ( $documents as $document ) : ?>
-						<?php $this->render_document_card( $document ); ?>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
+			<div class="adam-document-grid">
+				<?php foreach ( $documents as $document ) : ?>
+					<?php $this->render_document_card( $document ); ?>
+				<?php endforeach; ?>
+			</div>
 		</section>
 		<?php
 	}

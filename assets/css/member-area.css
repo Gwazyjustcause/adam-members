@@ -725,11 +725,11 @@
 	background: #f8fafc;
 }
 
-.adam-document-filters label {
+.adam-documents-section .adam-document-filters label {
 	margin: 0;
 }
 
-.adam-document-filters span {
+.adam-documents-section .adam-document-filters span {
 	display: block;
 	margin-bottom: 7px;
 	color: var(--adam-muted);
@@ -739,10 +739,11 @@
 	letter-spacing: 0.06em;
 }
 
-.adam-document-filters input,
-.adam-document-filters select {
+.adam-documents-section .adam-document-filters input,
+.adam-documents-section .adam-document-filters select {
 	width: 100%;
 	min-height: 44px;
+	padding: 10px 12px;
 	border: 1px solid #cfd8e3;
 	border-radius: 12px;
 	background: #ffffff;
@@ -750,8 +751,11 @@
 	font-weight: 700;
 }
 
-.adam-document-filters .adam-card-link {
+.adam-documents-section .adam-document-filters .adam-card-link {
+	width: auto;
 	min-width: 120px;
+	min-height: 44px;
+	padding: 10px 16px;
 	box-shadow: none;
 }
 
@@ -1297,7 +1301,7 @@
 		height: 54px;
 	}
 
-	.adam-document-filters .adam-card-link {
+	.adam-documents-section .adam-document-filters .adam-card-link {
 		width: 100%;
 	}
 }
