@@ -43,6 +43,20 @@ final class AdminController {
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
 
 	/**
+	 * Member details page hook suffix.
+	 *
+	 * @var string
+	 */
+	private string $member_page_hook = '';
+
+	/**
+	 * Renewal review page hook suffix.
+	 *
+	 * @var string
+	 */
+	private string $renewal_page_hook = '';
+
+	/**
 	 * Member repository.
 	 *
 	 * @var MemberRepository
@@ -212,7 +226,7 @@ final class AdminController {
 			array( $this, 'render_settings_page' )
 		);
 
-		add_submenu_page(
+		$this->member_page_hook = (string) add_submenu_page(
 			self::MENU_SLUG,
 			esc_html__( 'Member Details', 'adam-membership' ),
 			esc_html__( 'Member Details', 'adam-membership' ),
@@ -221,7 +235,7 @@ final class AdminController {
 			array( $this, 'render_member_page' )
 		);
 
-		add_submenu_page(
+		$this->renewal_page_hook = (string) add_submenu_page(
 			self::MENU_SLUG,
 			esc_html__( 'Renewal Request', 'adam-membership' ),
 			esc_html__( 'Renewal Request', 'adam-membership' ),
@@ -229,6 +243,14 @@ final class AdminController {
 			self::RENEWAL_PAGE_SLUG,
 			array( $this, 'render_renewal_page' )
 		);
+
+		if ( '' !== $this->member_page_hook ) {
+			add_action( 'load-' . $this->member_page_hook, array( $this, 'prepare_member_page_screen' ) );
+		}
+
+		if ( '' !== $this->renewal_page_hook ) {
+			add_action( 'load-' . $this->renewal_page_hook, array( $this, 'prepare_renewal_page_screen' ) );
+		}
 	}
 
 	/**
@@ -373,6 +395,32 @@ final class AdminController {
 
 		$this->render_member_detail( $member );
 		$this->render_footer();
+	}
+
+	/**
+	 * Ensure the hidden member page always has a valid admin title.
+	 */
+	public function prepare_member_page_screen(): void {
+		$user_id = isset( $_GET['member_id'] ) ? absint( wp_unslash( $_GET['member_id'] ) ) : 0;
+		$member  = $user_id > 0 ? $this->members->find( $user_id ) : null;
+		$title   = __( 'Member Details', 'adam-membership' );
+
+		if ( null !== $member ) {
+			$title = sprintf(
+				/* translators: %s: member full name. */
+				__( 'Member Details: %s', 'adam-membership' ),
+				$member->full_name()
+			);
+		}
+
+		$this->prime_admin_page_title( $title );
+	}
+
+	/**
+	 * Ensure the hidden renewal page always has a valid admin title.
+	 */
+	public function prepare_renewal_page_screen(): void {
+		$this->prime_admin_page_title( __( 'Renewal Request', 'adam-membership' ) );
 	}
 
 	/**
@@ -1823,6 +1871,31 @@ final class AdminController {
 			<strong><?php echo esc_html( '' !== $value ? $value : '—' ); ?></strong>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Prime the current admin screen with a guaranteed non-empty page title.
+	 *
+	 * WordPress builds the header title before the page callback runs. Hidden
+	 * submenu routes can still reach admin-header.php with a null global title,
+	 * so we provide a safe fallback on the page load hook.
+	 *
+	 * @param string $title Fallback page title.
+	 */
+	private function prime_admin_page_title( string $title ): void {
+		$safe_title = trim( $title );
+
+		if ( '' === $safe_title ) {
+			$safe_title = __( 'ADAM Membership', 'adam-membership' );
+		}
+
+		$GLOBALS['title'] = $safe_title;
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( null !== $screen && property_exists( $screen, 'title' ) ) {
+			$screen->title = $safe_title;
+		}
 	}
 
 	/**
