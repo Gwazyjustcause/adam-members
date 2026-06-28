@@ -13,6 +13,21 @@ namespace AdamMembership\Member;
  * Handles legacy email confirmation shortcode.
  */
 final class EmailConfirmation {
+	/**
+	 * Email change confirmation handler.
+	 *
+	 * @var EmailChangeConfirmation
+	 */
+	private EmailChangeConfirmation $confirmation;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param EmailChangeConfirmation $confirmation Email change confirmation handler.
+	 */
+	public function __construct( EmailChangeConfirmation $confirmation ) {
+		$this->confirmation = $confirmation;
+	}
 
 	/**
 	 * Register shortcode.
@@ -28,8 +43,6 @@ final class EmailConfirmation {
 	 * Render confirmation page.
 	 */
 	public function render(): string {
-		$confirmation = new EmailChangeConfirmation();
-
-		return $confirmation->render();
+		return $this->confirmation->render();
 	}
 }

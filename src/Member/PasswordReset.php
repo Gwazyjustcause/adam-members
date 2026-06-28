@@ -16,6 +16,19 @@ use WP_User;
  * Handles password reset.
  */
 final class PasswordReset {
+	private MemberRepository $members;
+	private HistoryService $history;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param MemberRepository $members Member repository.
+	 * @param HistoryService   $history Member history service.
+	 */
+	public function __construct( MemberRepository $members, HistoryService $history ) {
+		$this->members = $members;
+		$this->history = $history;
+	}
 
 	/**
 	 * Register shortcode.
@@ -199,6 +212,11 @@ final class PasswordReset {
 
 		reset_password( $user, $password1 );
 		RateLimiter::clear( 'password_reset', $identity );
+		$member = $this->members->find( (int) $user->ID );
+
+		if ( null !== $member ) {
+			$this->history->password_reset_completed( $member );
+		}
 
 		return $this->render_success();
 	}

@@ -11,6 +11,7 @@ namespace AdamMembership\Forminator;
 
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
+use AdamMembership\Member\HistoryService;
 use WP_Error;
 
 /**
@@ -32,14 +33,23 @@ final class UserRegistration {
 	private Logger $logger;
 
 	/**
+	 * Member history service.
+	 *
+	 * @var HistoryService
+	 */
+	private HistoryService $history;
+
+	/**
 	 * Create the registration service.
 	 *
-	 * @param RegistrationFormConfig $config Registration form configuration.
-	 * @param Logger                 $logger Logger helper.
+	 * @param RegistrationFormConfig $config  Registration form configuration.
+	 * @param Logger                 $logger  Logger helper.
+	 * @param HistoryService         $history Member history service.
 	 */
-	public function __construct( RegistrationFormConfig $config, Logger $logger ) {
-		$this->config = $config;
-		$this->logger = $logger;
+	public function __construct( RegistrationFormConfig $config, Logger $logger, HistoryService $history ) {
+		$this->config  = $config;
+		$this->logger  = $logger;
+		$this->history = $history;
 	}
 
 	/**
@@ -107,6 +117,7 @@ final class UserRegistration {
 		$member->initialize( $this->build_member_data( $submission ) );
 
 		$this->logger->info( 'Member initialized.', array( 'user_id' => $user_id ) );
+		$this->history->registration_submitted( $member, absint( $entry_id ) );
 	}
 
 	/**
@@ -126,7 +137,7 @@ final class UserRegistration {
 				'user_login'   => $email,
 				'user_email'   => $email,
 				'user_pass'    => wp_generate_password( 32, true, true ),
-				'role'         => 'visitante',
+				'role'         => 'subscriber',
 				'first_name'   => $first_name,
 				'last_name'    => $last_name,
 				'display_name' => $display_name,

@@ -23,14 +23,20 @@ final class Account {
 	 * @var EmailService
 	 */
 	private EmailService $email;
+	private MemberRepository $members;
+	private HistoryService $history;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param EmailService $email Email service.
+	 * @param EmailService    $email   Email service.
+	 * @param MemberRepository $members Member repository.
+	 * @param HistoryService   $history Member history service.
 	 */
-	public function __construct( EmailService $email ) {
-		$this->email = $email;
+	public function __construct( EmailService $email, MemberRepository $members, HistoryService $history ) {
+		$this->email   = $email;
+		$this->members = $members;
+		$this->history = $history;
 	}
 
 	/**
@@ -269,6 +275,11 @@ final class Account {
 		wp_set_password( $new, $user->ID );
 		wp_set_auth_cookie( $user->ID );
 		RateLimiter::clear( 'change_password', $identity );
+		$member = $this->members->find( (int) $user->ID );
+
+		if ( null !== $member ) {
+			$this->history->password_changed( $member );
+		}
 
 		wp_safe_redirect( home_url( '/socio/?password_changed=1' ) );
 		exit;
@@ -321,6 +332,11 @@ final class Account {
 
 		$this->email->send_email_confirmation( $user, $new, $link );
 		RateLimiter::clear( 'change_email', $identity );
+		$member = $this->members->find( (int) $user->ID );
+
+		if ( null !== $member ) {
+			$this->history->email_change_requested( $member );
+		}
 
 		return $this->notice_markup(
 			'success',

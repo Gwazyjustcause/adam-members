@@ -14,6 +14,8 @@ use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\CardService;
+use AdamMembership\Member\HistoryEntry;
+use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RenewalRepository;
@@ -27,6 +29,7 @@ use WP_Error;
 final class AdminController {
 	private const CAPABILITY          = 'manage_options';
 	private const MENU_SLUG           = 'adam-membership';
+	private const HISTORY_PAGE_SLUG   = 'adam-membership-history';
 	private const MEMBER_PAGE_SLUG    = 'adam-membership-member';
 	private const ACTION_APPROVE      = 'approve';
 	private const ACTION_REJECT       = 'reject';
@@ -96,6 +99,13 @@ final class AdminController {
 	private CardService $cards;
 
 	/**
+	 * Member history repository.
+	 *
+	 * @var HistoryRepository
+	 */
+	private HistoryRepository $history_repository;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -106,16 +116,18 @@ final class AdminController {
 	 * @param RenewalService     $renewal_service  Renewal service.
 	 * @param MaintenanceService $maintenance      Maintenance service.
 	 * @param CardService        $cards            Digital card service.
+	 * @param HistoryRepository  $history          Member history repository.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards ) {
-		$this->members          = $members;
-		$this->approval_service = $approval_service;
-		$this->settings         = $settings;
-		$this->logger           = $logger;
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history ) {
+		$this->members            = $members;
+		$this->approval_service   = $approval_service;
+		$this->settings           = $settings;
+		$this->logger             = $logger;
 		$this->renewal_repository = $renewals;
 		$this->renewal_service    = $renewal_service;
 		$this->maintenance         = $maintenance;
 		$this->cards               = $cards;
+		$this->history_repository  = $history;
 	}
 
 	/**
@@ -171,6 +183,15 @@ final class AdminController {
 			self::CAPABILITY,
 			'adam-membership-members',
 			array( $this, 'render_members_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'History', 'adam-membership' ),
+			esc_html__( 'History', 'adam-membership' ),
+			self::CAPABILITY,
+			self::HISTORY_PAGE_SLUG,
+			array( $this, 'render_history_page' )
 		);
 
 		add_submenu_page(
@@ -275,6 +296,22 @@ final class AdminController {
 		$this->render_notices();
 		$this->render_member_filters( $filters, false );
 		$this->render_members_table( $members, false, $filters );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render the member history page.
+	 */
+	public function render_history_page(): void {
+		$this->ensure_can_manage();
+
+		$filters = $this->current_history_filters();
+		$entries = $this->history_repository->query( $filters );
+
+		$this->render_header( __( 'Member History', 'adam-membership' ) );
+		$this->render_notices();
+		$this->render_history_filters( $filters );
+		$this->render_history_timeline( $entries );
 		$this->render_footer();
 	}
 
@@ -863,6 +900,20 @@ final class AdminController {
 					<a class="button" href="<?php echo esc_url( get_edit_user_link( $member->user_id() ) ); ?>"><?php esc_html_e( 'Open WordPress profile', 'adam-membership' ); ?></a>
 				</div>
 			</div>
+
+			<div class="adam-admin-panel adam-admin-history-panel">
+				<h2><?php esc_html_e( 'Member history', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'This timeline shows important membership, account, and admin events for this member.', 'adam-membership' ); ?></p>
+				<?php
+				$this->render_history_timeline(
+					$this->history_repository->for_member( $member->user_id(), 20 ),
+					$member
+				);
+				?>
+				<p class="adam-admin-history-link">
+					<a class="button" href="<?php echo esc_url( $this->history_url( array( 'member_id' => (string) $member->user_id() ) ) ); ?>"><?php esc_html_e( 'View full history', 'adam-membership' ); ?></a>
+				</p>
+			</div>
 		</div>
 		<?php
 	}
@@ -1072,6 +1123,15 @@ final class AdminController {
 
 		$member->save( $updates );
 		$this->log_member_field_changes( $member, $changes );
+		$this->record_admin_member_history(
+			$member,
+			'member_edited_by_admin',
+			__( 'Member edited by admin', 'adam-membership' ),
+			__( 'Administrator updated member details from the member profile screen.', 'adam-membership' ),
+			array(
+				'changes' => $changes,
+			)
+		);
 
 		return true;
 	}
@@ -1093,6 +1153,13 @@ final class AdminController {
 		}
 
 		$this->cards->regenerate_token( $member );
+		$this->record_admin_member_history(
+			$member,
+			'card_token_regenerated',
+			__( 'Card token regenerated', 'adam-membership' ),
+			__( 'Administrator regenerated the digital card validation token.', 'adam-membership' ),
+			array()
+		);
 
 		return true;
 	}
@@ -1246,6 +1313,160 @@ final class AdminController {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
 		}
+	}
+
+	/**
+	 * Read current history filters from the query string.
+	 *
+	 * @return array<string, string|int>
+	 */
+	private function current_history_filters(): array {
+		return array(
+			'search'     => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
+			'action_key' => isset( $_GET['action_key'] ) ? sanitize_key( wp_unslash( $_GET['action_key'] ) ) : '',
+			'actor_type' => isset( $_GET['actor_type'] ) ? sanitize_key( wp_unslash( $_GET['actor_type'] ) ) : '',
+			'date_from'  => isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '',
+			'date_to'    => isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '',
+			'member_id'  => isset( $_GET['member_id'] ) ? absint( wp_unslash( $_GET['member_id'] ) ) : 0,
+		);
+	}
+
+	/**
+	 * Render history filters.
+	 *
+	 * @param array<string, string|int> $filters Current filters.
+	 */
+	private function render_history_filters( array $filters ): void {
+		$action_types = $this->history_repository->action_types();
+		?>
+		<form method="get" class="adam-admin-filters">
+			<input type="hidden" name="page" value="<?php echo esc_attr( self::HISTORY_PAGE_SLUG ); ?>">
+			<label>
+				<span><?php esc_html_e( 'Search', 'adam-membership' ); ?></span>
+				<input type="search" name="s" value="<?php echo esc_attr( (string) ( $filters['search'] ?? '' ) ); ?>" placeholder="<?php esc_attr_e( 'Member name, email, number, ID', 'adam-membership' ); ?>">
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Action type', 'adam-membership' ); ?></span>
+				<select name="action_key">
+					<?php $this->render_select_option( '', __( 'All actions', 'adam-membership' ), (string) ( $filters['action_key'] ?? '' ) ); ?>
+					<?php foreach ( $action_types as $key => $label ) : ?>
+						<?php $this->render_select_option( $key, $label, (string) ( $filters['action_key'] ?? '' ) ); ?>
+					<?php endforeach; ?>
+				</select>
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Actor type', 'adam-membership' ); ?></span>
+				<select name="actor_type">
+					<?php $this->render_select_option( '', __( 'All actors', 'adam-membership' ), (string) ( $filters['actor_type'] ?? '' ) ); ?>
+					<?php $this->render_select_option( 'admin', __( 'Admin', 'adam-membership' ), (string) ( $filters['actor_type'] ?? '' ) ); ?>
+					<?php $this->render_select_option( 'member', __( 'Member', 'adam-membership' ), (string) ( $filters['actor_type'] ?? '' ) ); ?>
+					<?php $this->render_select_option( 'system', __( 'System', 'adam-membership' ), (string) ( $filters['actor_type'] ?? '' ) ); ?>
+				</select>
+			</label>
+			<label>
+				<span><?php esc_html_e( 'From date', 'adam-membership' ); ?></span>
+				<input type="date" name="date_from" value="<?php echo esc_attr( (string) ( $filters['date_from'] ?? '' ) ); ?>">
+			</label>
+			<label>
+				<span><?php esc_html_e( 'To date', 'adam-membership' ); ?></span>
+				<input type="date" name="date_to" value="<?php echo esc_attr( (string) ( $filters['date_to'] ?? '' ) ); ?>">
+			</label>
+			<?php if ( ! empty( $filters['member_id'] ) ) : ?>
+				<input type="hidden" name="member_id" value="<?php echo esc_attr( (string) $filters['member_id'] ); ?>">
+			<?php endif; ?>
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply filters', 'adam-membership' ); ?></button>
+			<a class="button" href="<?php echo esc_url( $this->history_url( ! empty( $filters['member_id'] ) ? array( 'member_id' => (string) $filters['member_id'] ) : array() ) ); ?>"><?php esc_html_e( 'Reset', 'adam-membership' ); ?></a>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render a history timeline.
+	 *
+	 * @param array<int, HistoryEntry> $entries History entries.
+	 * @param Member|null              $member  Current member when scoped.
+	 */
+	private function render_history_timeline( array $entries, ?Member $member = null ): void {
+		if ( array() === $entries ) {
+			$this->render_empty_state(
+				null !== $member
+					? __( 'No history entries were found for this member yet.', 'adam-membership' )
+					: __( 'No history entries match the current filters.', 'adam-membership' )
+			);
+			return;
+		}
+		?>
+		<div class="adam-admin-history-list">
+			<?php foreach ( $entries as $entry ) : ?>
+				<article class="adam-admin-history-item">
+					<div class="adam-admin-history-item__header">
+						<div>
+							<div class="adam-admin-history-item__meta">
+								<span class="adam-admin-badge adam-admin-history-actor actor-<?php echo esc_attr( $entry->actor_type() ); ?>"><?php echo esc_html( $this->history_actor_label( $entry->actor_type() ) ); ?></span>
+								<span class="adam-admin-history-date"><?php echo esc_html( $this->format_datetime( $entry->created_at() ) ); ?></span>
+							</div>
+							<h3><?php echo esc_html( $entry->action_label() ); ?></h3>
+						</div>
+						<?php if ( null === $member ) : ?>
+							<div class="adam-admin-history-member">
+								<strong><?php echo esc_html( '' !== $entry->member_name() ? $entry->member_name() : __( 'Unknown member', 'adam-membership' ) ); ?></strong>
+								<span><?php echo esc_html( '' !== $entry->member_number() ? $entry->member_number() : __( 'No member number', 'adam-membership' ) ); ?></span>
+							</div>
+						<?php endif; ?>
+					</div>
+					<p class="adam-admin-history-description"><?php echo esc_html( $entry->description() ); ?></p>
+					<div class="adam-admin-history-details">
+						<div><strong><?php esc_html_e( 'Actor', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $entry->actor_name() ); ?></div>
+						<?php if ( null === $member ) : ?>
+							<div><strong><?php esc_html_e( 'Email', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $entry->member_email() ); ?></div>
+						<?php endif; ?>
+						<div><strong><?php esc_html_e( 'Member ID', 'adam-membership' ); ?>:</strong> <?php echo esc_html( (string) $entry->member_id() ); ?></div>
+					</div>
+					<?php $this->render_history_metadata( $entry ); ?>
+				</article>
+			<?php endforeach; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render history metadata.
+	 *
+	 * @param HistoryEntry $entry History entry.
+	 */
+	private function render_history_metadata( HistoryEntry $entry ): void {
+		$details = $entry->details();
+
+		if ( array() === $details ) {
+			return;
+		}
+		?>
+		<div class="adam-admin-history-metadata">
+			<?php foreach ( $details as $key => $value ) : ?>
+				<div class="adam-admin-history-meta-row">
+					<span><?php echo esc_html( $this->history_meta_label( (string) $key ) ); ?></span>
+					<strong><?php echo esc_html( $this->history_meta_value( $value ) ); ?></strong>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Get a history page URL.
+	 *
+	 * @param array<string, string> $args Query arguments.
+	 */
+	private function history_url( array $args = array() ): string {
+		return add_query_arg(
+			array_merge(
+				array(
+					'page' => self::HISTORY_PAGE_SLUG,
+				),
+				$args
+			),
+			admin_url( 'admin.php' )
+		);
 	}
 
 	/**
@@ -1619,6 +1840,36 @@ final class AdminController {
 	}
 
 	/**
+	 * Record an admin-side member history entry.
+	 *
+	 * @param Member               $member      Member.
+	 * @param string               $action_key  Action key.
+	 * @param string               $action_label Action label.
+	 * @param string               $description Description.
+	 * @param array<string, mixed> $details     Details payload.
+	 */
+	private function record_admin_member_history( Member $member, string $action_key, string $action_label, string $description, array $details ): void {
+		$admin = wp_get_current_user();
+
+		$this->history_repository->create(
+			array(
+				'member_id'     => $member->user_id(),
+				'member_number' => sanitize_text_field( (string) $member->field( 'numero_socio' ) ),
+				'member_name'   => sanitize_text_field( $member->full_name() ),
+				'member_email'  => sanitize_email( $member->email() ),
+				'action_key'    => sanitize_key( $action_key ),
+				'action_label'  => sanitize_text_field( $action_label ),
+				'actor_type'    => 'admin',
+				'actor_id'      => get_current_user_id(),
+				'actor_name'    => $admin->exists() ? sanitize_text_field( $admin->display_name ) : __( 'Administrator', 'adam-membership' ),
+				'description'   => sanitize_text_field( $description ),
+				'details'       => $this->sanitize_history_details( $details ),
+				'created_at'    => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
+			)
+		);
+	}
+
+	/**
 	 * Build a member details URL.
 	 *
 	 * @param Member $member Member.
@@ -1659,6 +1910,85 @@ final class AdminController {
 			RenewalRequest::STATUS_REJECTED => __( 'Rejected', 'adam-membership' ),
 			default                         => __( 'Pending Review', 'adam-membership' ),
 		};
+	}
+
+	/**
+	 * Get a history actor label.
+	 *
+	 * @param string $actor_type Actor type key.
+	 */
+	private function history_actor_label( string $actor_type ): string {
+		return match ( $actor_type ) {
+			'admin'  => __( 'Admin', 'adam-membership' ),
+			'member' => __( 'Member', 'adam-membership' ),
+			default  => __( 'System', 'adam-membership' ),
+		};
+	}
+
+	/**
+	 * Format history metadata labels.
+	 *
+	 * @param string $key Metadata key.
+	 */
+	private function history_meta_label( string $key ): string {
+		$label = str_replace( '_', ' ', $key );
+
+		return ucwords( trim( $label ) );
+	}
+
+	/**
+	 * Format a history metadata value.
+	 *
+	 * @param mixed $value Metadata value.
+	 */
+	private function history_meta_value( mixed $value ): string {
+		if ( is_array( $value ) ) {
+			$parts = array();
+
+			foreach ( $value as $key => $item ) {
+				$parts[] = $this->history_meta_label( (string) $key ) . ': ' . $this->history_meta_value( $item );
+			}
+
+			return implode( ' | ', $parts );
+		}
+
+		if ( is_bool( $value ) ) {
+			return $value ? __( 'Yes', 'adam-membership' ) : __( 'No', 'adam-membership' );
+		}
+
+		return '' !== trim( (string) $value ) ? (string) $value : '—';
+	}
+
+	/**
+	 * Sanitize structured history details.
+	 *
+	 * @param array<string, mixed> $details Detail payload.
+	 * @return array<string, mixed>
+	 */
+	private function sanitize_history_details( array $details ): array {
+		$sanitized = array();
+
+		foreach ( $details as $key => $value ) {
+			$key = sanitize_key( (string) $key );
+
+			if ( '' === $key ) {
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$sanitized[ $key ] = $this->sanitize_history_details( $value );
+				continue;
+			}
+
+			if ( is_bool( $value ) || is_int( $value ) || is_float( $value ) ) {
+				$sanitized[ $key ] = $value;
+				continue;
+			}
+
+			$sanitized[ $key ] = sanitize_text_field( (string) $value );
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -1781,6 +2111,21 @@ final class AdminController {
 		}
 
 		return $date;
+	}
+
+	/**
+	 * Format a stored datetime.
+	 *
+	 * @param string $datetime Datetime string.
+	 */
+	private function format_datetime( string $datetime ): string {
+		$timestamp = strtotime( $datetime );
+
+		if ( false === $timestamp ) {
+			return $datetime;
+		}
+
+		return wp_date( 'd/m/Y H:i', $timestamp );
 	}
 
 	/**

@@ -21,15 +21,17 @@ final class RenewalService {
 	private RenewalRepository $renewals;
 	private EmailService $email;
 	private Logger $logger;
+	private HistoryService $history;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger ) {
+	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history ) {
 		$this->members  = $members;
 		$this->renewals = $renewals;
 		$this->email    = $email;
 		$this->logger   = $logger;
+		$this->history  = $history;
 	}
 
 	/**
@@ -66,6 +68,7 @@ final class RenewalService {
 
 		$member->save( array( 'estado' => Member::STATUS_RENEWAL_PENDING ) );
 		$this->logger->info( 'Renewal submitted.', array( 'member_id' => $member->user_id(), 'renewal_id' => $request->id(), 'submission_id' => $entry_id ) );
+		$this->history->renewal_submitted( $member, $request->id(), $entry_id, '' !== $this->proof_url( $request ) );
 		$this->email->send_renewal_submitted_email( $member, $request->id() );
 
 		return $request;
@@ -95,8 +98,10 @@ final class RenewalService {
 		}
 
 		$this->audit( 'Administrator reviewed renewal.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->history->renewal_reviewed( $member, $request->id() );
+		$field_changes = $this->changed_fields( $request, $member );
 
-		foreach ( $this->changed_fields( $request, $member ) as $field => $change ) {
+		foreach ( $field_changes as $field => $change ) {
 			if ( 'email' === $field ) {
 				$email_result = $this->update_member_email( $member, $change['new'] );
 
@@ -134,6 +139,7 @@ final class RenewalService {
 
 		$this->audit( 'Expiry date changed during renewal approval.', $member, array( 'old_value' => $old_expiry, 'new_value' => $new_expiry, 'renewal_id' => $request->id() ) );
 		$this->audit( 'Renewal approved.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->history->renewal_approved( $member, $request->id(), $old_expiry, $new_expiry, $field_changes );
 		$this->email->send_renewal_approved_email( $member, $request->id() );
 
 		return true;
@@ -164,6 +170,7 @@ final class RenewalService {
 		}
 
 		$this->audit( 'Administrator reviewed renewal.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->history->renewal_reviewed( $member, $request->id() );
 
 		$member->save( array( 'estado' => Member::STATUS_EXPIRED ) );
 		$this->renewals->update(
@@ -177,6 +184,7 @@ final class RenewalService {
 		);
 
 		$this->audit( 'Renewal rejected.', $member, array( 'renewal_id' => $request->id(), 'reason' => $reason ) );
+		$this->history->renewal_rejected( $member, $request->id(), $reason );
 		$this->email->send_renewal_rejected_email( $member, $reason, $request->id() );
 
 		return true;
@@ -229,6 +237,7 @@ final class RenewalService {
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_sent', '1' );
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_date', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
 		$this->audit( 'Renewal reminder sent.', $member );
+		$this->history->renewal_reminder_sent( $member );
 	}
 
 	/**
@@ -241,6 +250,7 @@ final class RenewalService {
 
 		if ( $sent ) {
 			$this->audit( 'Quota expired notice sent.', $member );
+			$this->history->quota_expired_notice_sent( $member );
 		}
 
 		return $sent;

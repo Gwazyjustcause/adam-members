@@ -200,9 +200,9 @@
 	position: relative;
 	display: grid;
 	grid-template-rows: auto auto auto auto;
-	gap: 24px;
+	gap: 20px;
 	min-height: 360px;
-	padding: 28px;
+	padding: 36px 38px 34px;
 	border: 1px solid rgba(255, 255, 255, 0.22);
 	border-radius: 28px;
 	background:
@@ -217,7 +217,7 @@
 
 .adam-digital-card::before {
 	position: absolute;
-	inset: 16px;
+	inset: 24px;
 	border: 1px solid rgba(255, 255, 255, 0.16);
 	border-radius: 22px;
 	content: "";
@@ -249,16 +249,16 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 18px;
+	gap: 22px;
 	min-width: 0;
 }
 
 .adam-digital-card__logo {
 	flex: 0 0 auto;
 	display: block;
-	width: 112px;
-	height: 68px;
-	padding: 10px 12px;
+	width: 132px;
+	height: 84px;
+	padding: 14px 16px;
 	box-sizing: border-box;
 	border-radius: 16px;
 	background: #ffffff;
@@ -301,7 +301,7 @@
 .adam-digital-card__body {
 	display: grid;
 	grid-template-columns: 138px minmax(0, 1fr) 168px;
-	gap: 24px;
+	gap: 20px;
 	align-items: center;
 }
 
@@ -388,7 +388,7 @@
 	justify-items: center;
 	align-self: center;
 	gap: 8px;
-	padding: 12px;
+	padding: 13px;
 	border-radius: 20px;
 	background: #ffffff;
 	color: var(--adam-green-900);
@@ -412,9 +412,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
-	padding-top: 8px;
-	padding-bottom: 6px;
+	gap: 22px;
+	padding: 14px 14px 12px;
 	line-height: 1.2;
 }
 
@@ -1017,7 +1016,7 @@
 	}
 
 	.adam-digital-card {
-		gap: 18px;
+		gap: 16px;
 		padding: 22px;
 		text-align: center;
 	}
@@ -1104,17 +1103,19 @@
 		height: 54mm;
 		min-height: 0;
 		grid-template-rows: auto 1fr auto auto;
-		gap: 1.2mm;
-		padding: 2.25mm;
+		gap: 1mm;
+		padding: 3.1mm 3.4mm 3mm;
 		border: 0;
 		border-radius: 3mm;
 		box-shadow: none;
 		print-color-adjust: exact;
 		-webkit-print-color-adjust: exact;
+		transform: scale(0.95);
+		transform-origin: center center;
 	}
 
 	.adam-digital-card::before {
-		inset: 1.6mm;
+		inset: 2.35mm;
 		border-radius: 2.2mm;
 	}
 
@@ -1126,13 +1127,13 @@
 	}
 
 	.adam-digital-card__header {
-		gap: 1.5mm;
+		gap: 1.9mm;
 	}
 
 	.adam-digital-card__logo {
-		width: 15mm;
-		height: 9.2mm;
-		padding: 1.1mm 1.3mm;
+		width: 17.2mm;
+		height: 10.6mm;
+		padding: 1.45mm 1.65mm;
 		box-sizing: border-box;
 		border-radius: 1.5mm;
 		box-shadow: none;
@@ -1164,7 +1165,7 @@
 
 	.adam-digital-card__body {
 		grid-template-columns: 18mm minmax(0, 1fr) 21mm;
-		gap: 2mm;
+		gap: 1.7mm;
 	}
 
 	.adam-digital-card__photo {
@@ -1192,7 +1193,7 @@
 
 	.adam-digital-card__qr {
 		gap: 0.8mm;
-		padding: 1mm;
+		padding: 1.1mm;
 		border-radius: 2mm;
 		box-shadow: none;
 	}
@@ -1207,7 +1208,7 @@
 	}
 
 	.adam-digital-card__details div {
-		padding: 1mm;
+		padding: 0.95mm;
 		border-radius: 1.5mm;
 	}
 
@@ -1217,9 +1218,8 @@
 	}
 
 	.adam-digital-card__footer {
-		gap: 1.5mm;
-		padding-top: 0.8mm;
-		padding-bottom: 0.8mm;
+		gap: 2.2mm;
+		padding: 1.45mm 1.9mm 1.35mm;
 		font-size: 5pt;
 	}
 }

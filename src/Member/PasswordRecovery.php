@@ -23,14 +23,20 @@ final class PasswordRecovery {
 	 * @var EmailService
 	 */
 	private EmailService $email;
+	private MemberRepository $members;
+	private HistoryService $history;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param EmailService $email Email service.
+	 * @param EmailService     $email   Email service.
+	 * @param MemberRepository $members Member repository.
+	 * @param HistoryService   $history Member history service.
 	 */
-	public function __construct( EmailService $email ) {
-		$this->email = $email;
+	public function __construct( EmailService $email, MemberRepository $members, HistoryService $history ) {
+		$this->email   = $email;
+		$this->members = $members;
+		$this->history = $history;
 	}
 
 	/**
@@ -142,6 +148,11 @@ final class PasswordRecovery {
 
 			if ( ! is_wp_error( $key ) ) {
 				$this->email->send_password_reset_email( $user, $key );
+				$member = $this->members->find( (int) $user->ID );
+
+				if ( null !== $member ) {
+					$this->history->password_reset_requested( $member );
+				}
 			}
 		}
 

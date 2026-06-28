@@ -324,6 +324,10 @@
 	grid-column: 1;
 }
 
+.adam-admin-history-panel {
+	grid-column: 1 / -1;
+}
+
 .adam-admin-edit-form {
 	display: grid;
 	gap: 16px;
@@ -368,6 +372,95 @@
 	padding: 28px;
 	color: var(--adam-admin-muted);
 	text-align: center;
+}
+
+.adam-admin-history-list {
+	display: grid;
+	gap: 14px;
+	margin-top: 18px;
+}
+
+.adam-admin-history-item {
+	padding: 18px;
+	border: 1px solid #e5edf0;
+	border-radius: 10px;
+	background: linear-gradient(180deg, #fff, #f8fbf9);
+}
+
+.adam-admin-history-item__header,
+.adam-admin-history-item__meta,
+.adam-admin-history-details,
+.adam-admin-history-meta-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adam-admin-history-item__header {
+	justify-content: space-between;
+	align-items: start;
+	gap: 16px;
+}
+
+.adam-admin-history-item h3 {
+	margin: 6px 0 0;
+	font-size: 18px;
+}
+
+.adam-admin-history-member {
+	display: grid;
+	gap: 4px;
+	text-align: right;
+}
+
+.adam-admin-history-member span,
+.adam-admin-history-date,
+.adam-admin-history-link,
+.adam-admin-history-meta-row span {
+	color: var(--adam-admin-muted);
+}
+
+.adam-admin-history-description {
+	margin: 14px 0;
+	font-size: 14px;
+}
+
+.adam-admin-history-details {
+	margin-bottom: 12px;
+	font-size: 13px;
+}
+
+.adam-admin-history-metadata {
+	display: grid;
+	gap: 8px;
+	padding-top: 12px;
+	border-top: 1px solid var(--adam-admin-border);
+}
+
+.adam-admin-history-meta-row {
+	justify-content: space-between;
+}
+
+.adam-admin-history-meta-row strong {
+	max-width: 70%;
+	text-align: right;
+	overflow-wrap: anywhere;
+}
+
+.adam-admin-history-actor.actor-admin {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.adam-admin-history-actor.actor-member {
+	background: #dcfce7;
+	color: #166534;
+}
+
+.adam-admin-history-actor.actor-system {
+	background: #ede9fe;
+	color: #6d28d9;
 }
 
 .adam-admin-notice {
@@ -420,5 +513,18 @@
 	.adam-admin-row-actions .button,
 	.adam-admin-inline-form {
 		width: 100%;
+	}
+
+	.adam-admin-history-item__header,
+	.adam-admin-history-details,
+	.adam-admin-history-meta-row {
+		flex-direction: column;
+		align-items: start;
+	}
+
+	.adam-admin-history-member,
+	.adam-admin-history-meta-row strong {
+		max-width: 100%;
+		text-align: left;
 	}
 }

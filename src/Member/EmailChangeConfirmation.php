@@ -15,6 +15,30 @@ use WP_User;
  * Handles email change confirmation.
  */
 final class EmailChangeConfirmation {
+	/**
+	 * Member repository.
+	 *
+	 * @var MemberRepository
+	 */
+	private MemberRepository $members;
+
+	/**
+	 * Member history service.
+	 *
+	 * @var HistoryService
+	 */
+	private HistoryService $history;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param MemberRepository $members Member repository.
+	 * @param HistoryService   $history Member history service.
+	 */
+	public function __construct( MemberRepository $members, HistoryService $history ) {
+		$this->members = $members;
+		$this->history = $history;
+	}
 
 	/**
 	 * Register shortcode.
@@ -46,6 +70,7 @@ final class EmailChangeConfirmation {
 		$stored_token_hash = (string) get_user_meta( $user_id, 'adam_email_token', true );
 		$pending_email     = sanitize_email( (string) get_user_meta( $user_id, 'adam_pending_email', true ) );
 		$expires           = absint( get_user_meta( $user_id, 'adam_email_token_expires', true ) );
+		$old_email         = sanitize_email( $user->user_email );
 
 		if ( '' === $stored_token_hash || '' === $pending_email || ! is_email( $pending_email ) ) {
 			return $this->error( __( 'Este pedido ja foi utilizado ou expirou.', 'adam-membership' ) );
@@ -79,6 +104,12 @@ final class EmailChangeConfirmation {
 		}
 
 		$this->delete_pending_change( $user_id );
+
+		$member = $this->members->find( $user_id );
+
+		if ( null !== $member ) {
+			$this->history->email_changed( $member, $old_email, $pending_email );
+		}
 
 		ob_start();
 		?>

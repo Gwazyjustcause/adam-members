@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Core;
 
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RenewalRepository;
@@ -26,15 +27,17 @@ final class MaintenanceService {
 	private RenewalRepository $renewals;
 	private RenewalService $renewal_service;
 	private Logger $logger;
+	private HistoryService $history;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, RenewalRepository $renewals, RenewalService $renewal_service, Logger $logger ) {
+	public function __construct( MemberRepository $members, RenewalRepository $renewals, RenewalService $renewal_service, Logger $logger, HistoryService $history ) {
 		$this->members         = $members;
 		$this->renewals        = $renewals;
 		$this->renewal_service = $renewal_service;
 		$this->logger          = $logger;
+		$this->history         = $history;
 	}
 
 	/**
@@ -148,6 +151,7 @@ final class MaintenanceService {
 				'timestamp'   => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
 			)
 		);
+		$this->history->quota_expired( $member, $expiry_date );
 
 		if ( $expiry_date === (string) get_user_meta( $member->user_id(), 'adam_membership_quota_expired_notice_sent_for', true ) ) {
 			return;

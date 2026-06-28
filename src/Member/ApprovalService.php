@@ -48,18 +48,27 @@ final class ApprovalService {
 	private Logger $logger;
 
 	/**
+	 * Member history service.
+	 *
+	 * @var HistoryService
+	 */
+	private HistoryService $history;
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct(
 		MemberRepository $members,
 		SettingsRepository $settings,
 		EmailService $email,
-		Logger $logger
+		Logger $logger,
+		HistoryService $history
 	) {
 		$this->members  = $members;
 		$this->settings = $settings;
 		$this->email    = $email;
 		$this->logger   = $logger;
+		$this->history  = $history;
 	}
 
 	/**
@@ -128,6 +137,7 @@ final class ApprovalService {
 				'user_id' => $user_id,
 			)
 		);
+		$this->history->member_approved( $member, $old_status, $member->status() );
 
 		$this->email->send_approval_email( $member );
 
@@ -171,10 +181,12 @@ final class ApprovalService {
 				)
 			);
 			$this->log_status_change( $member, $old_status, Member::STATUS_EXPIRED, 'Member renewal rejected.' );
+			$this->history->renewal_rejected( $member, 0, $reason );
 			$this->email->send_renewal_rejected_email( $member, $reason );
 		} else {
 			$member->reject( $reason, $note );
 			$this->log_status_change( $member, $old_status, $member->status(), 'Member rejected.' );
+			$this->history->member_rejected( $member, $old_status, $member->status(), $reason );
 			$this->email->send_registration_rejected_email( $member, $reason );
 		}
 
@@ -207,16 +219,19 @@ final class ApprovalService {
 
 		$base_timestamp = max( current_time( 'timestamp' ), $member->quota_expiry_timestamp() );
 		$old_status     = $member->status();
+		$old_expiry     = (string) $member->field( 'validade_quota' );
+		$new_expiry     = wp_date( 'Y-m-d', strtotime( '+1 year', $base_timestamp ) );
 
 		$member->save(
 			array(
 				'estado'         => Member::STATUS_ACTIVE,
-				'validade_quota' => wp_date( 'Y-m-d', strtotime( '+1 year', $base_timestamp ) ),
+				'validade_quota' => $new_expiry,
 			)
 		);
 
 		$this->log_status_change( $member, $old_status, Member::STATUS_ACTIVE, 'Member quota renewed.' );
 		$this->logger->info( 'Member quota renewed.', array( 'user_id' => $user_id ) );
+		$this->history->quota_date_changed( $member, $old_expiry, $new_expiry );
 		$this->email->send_renewal_approved_email( $member );
 
 		return true;
@@ -246,6 +261,8 @@ final class ApprovalService {
 			);
 		}
 
+		$old_expiry = (string) $member->field( 'validade_quota' );
+
 		$member->save(
 			array(
 				'validade_quota' => $date,
@@ -253,6 +270,7 @@ final class ApprovalService {
 		);
 
 		$this->logger->info( 'Member quota validity changed.', array( 'user_id' => $user_id ) );
+		$this->history->quota_date_changed( $member, $old_expiry, $date );
 
 		return true;
 	}
@@ -288,6 +306,7 @@ final class ApprovalService {
 		}
 
 		$this->logger->info( 'Approval email resent.', array( 'user_id' => $user_id ) );
+		$this->history->approval_email_resent( $member );
 
 		return true;
 	}
