@@ -159,8 +159,10 @@ final class MemberArea {
 				$this->render_unknown_status();
 			}
 
-			$this->render_announcements( $member );
+			$this->render_digital_card( $member );
 			$this->render_documents( $member );
+			$this->render_member_actions( $member );
+			$this->render_announcements( $member );
 			?>
 		</div>
 		<?php
@@ -387,16 +389,6 @@ final class MemberArea {
 			);
 
 			$this->render_future_card();
-
-			$this->render_actions(
-				array(
-					array(
-						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => '',
-						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-					),
-				)
-			);
 			?>
 		</div>
 		<?php
@@ -426,7 +418,6 @@ final class MemberArea {
 			);
 
 			$this->render_profile( $member );
-			$this->render_standard_account_actions();
 			?>
 		</div>
 		<?php
@@ -454,9 +445,7 @@ final class MemberArea {
 				)
 			);
 
-			$this->render_renewal_action( $member );
 			$this->render_profile( $member );
-			$this->render_standard_account_actions();
 			?>
 		</div>
 		<?php
@@ -479,16 +468,6 @@ final class MemberArea {
 			$this->render_notifications_card( $this->rejection_messages( $member ) );
 
 			$this->render_profile( $member );
-
-			$this->render_actions(
-				array(
-					array(
-						'label'       => __( 'Terminar sessão', 'adam-membership' ),
-						'description' => '',
-						'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
-					),
-				)
-			);
 			?>
 		</div>
 		<?php
@@ -517,10 +496,6 @@ final class MemberArea {
 			);
 
 			$this->render_profile( $member );
-
-			$this->render_digital_card( $member );
-
-			$this->render_actions( $this->active_actions( $member ) );
 			?>
 		</div>
 		<?php
@@ -946,23 +921,39 @@ final class MemberArea {
 	}
 
 	/**
-	 * Render renewal action when the member is eligible.
-	 *
-	 * @param Member $member Member.
-	 */
-	private function render_renewal_action( Member $member ): void {
-		$actions = $this->renewal_actions( $member );
-
-		if ( array() !== $actions ) {
-			$this->render_actions( $actions );
-		}
-	}
-
-	/**
 	 * Render standard account management actions.
 	 */
 	private function render_standard_account_actions(): void {
 		$this->render_actions( $this->standard_account_actions() );
+	}
+
+	/**
+	 * Render member actions after feature sections.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_actions( Member $member ): void {
+		if ( $member->isPending() || $member->isRejected() ) {
+			$this->render_actions( $this->logout_actions() );
+			return;
+		}
+
+		if ( $member->isActive() ) {
+			$this->render_actions( $this->active_actions( $member ) );
+			return;
+		}
+
+		if ( $member->isExpired() ) {
+			$this->render_actions(
+				array_merge(
+					$this->renewal_actions( $member ),
+					$this->standard_account_actions()
+				)
+			);
+			return;
+		}
+
+		$this->render_standard_account_actions();
 	}
 
 	/**
@@ -1002,6 +993,21 @@ final class MemberArea {
 				'description' => '',
 				'url'         => home_url( '/socio-email/' ),
 			),
+			array(
+				'label'       => __( 'Terminar sessão', 'adam-membership' ),
+				'description' => '',
+				'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+			),
+		);
+	}
+
+	/**
+	 * Build logout-only actions.
+	 *
+	 * @return array<int,array{label:string,description:string,url:string}>
+	 */
+	private function logout_actions(): array {
+		return array(
 			array(
 				'label'       => __( 'Terminar sessão', 'adam-membership' ),
 				'description' => '',
