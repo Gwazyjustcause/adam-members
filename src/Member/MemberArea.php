@@ -87,6 +87,16 @@ final class MemberArea {
 			array(),
 			file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : ADAM_MEMBERSHIP_VERSION
 		);
+
+		$script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/member-card.js';
+
+		wp_enqueue_script(
+			'adam-member-card',
+			ADAM_MEMBERSHIP_URL . 'assets/js/member-card.js',
+			array(),
+			file_exists( $script_path ) ? (string) filemtime( $script_path ) : ADAM_MEMBERSHIP_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -514,7 +524,10 @@ final class MemberArea {
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
 					<h3><?php esc_html_e( 'Cartão de sócio ADAM', 'adam-membership' ); ?></h3>
 				</div>
-				<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+				<div class="adam-card-actions">
+					<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></button>
+					<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+				</div>
 			</div>
 			<article class="adam-digital-card" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
@@ -565,7 +578,7 @@ final class MemberArea {
 
 				<footer class="adam-digital-card__footer">
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-					<a href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver validação online', 'adam-membership' ); ?></a>
+					<span><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
 			</article>
 		</section>
