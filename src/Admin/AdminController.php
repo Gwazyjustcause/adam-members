@@ -447,9 +447,9 @@ final class AdminController {
 	/**
 	 * Keep hidden ADAM screens attached to the correct parent menu.
 	 *
-	 * @param string $parent_file Current parent file.
+	 * @param string|null $parent_file Current parent file.
 	 */
-	public function filter_hidden_parent_file( string $parent_file ): string {
+	public function filter_hidden_parent_file( ?string $parent_file ): ?string {
 		if ( $this->is_member_page_request() || $this->is_renewal_page_request() ) {
 			return self::MENU_SLUG;
 		}
@@ -460,9 +460,13 @@ final class AdminController {
 	/**
 	 * Keep hidden ADAM screens attached to a valid submenu entry.
 	 *
-	 * @param string $submenu_file Current submenu file.
+	 * @param string|null $submenu_file Current submenu file.
 	 */
-	public function filter_hidden_submenu_file( string $submenu_file ): string {
+	public function filter_hidden_submenu_file( ?string $submenu_file ): ?string {
+		if ( null === $submenu_file ) {
+			return null;
+		}
+
 		if ( $this->is_member_page_request() ) {
 			return self::MEMBER_PAGE_SLUG;
 		}
