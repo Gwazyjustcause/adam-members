@@ -150,6 +150,9 @@ final class AdminController {
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'current_screen', array( $this, 'prepare_hidden_screen_context' ) );
+		add_filter( 'parent_file', array( $this, 'filter_hidden_parent_file' ) );
+		add_filter( 'submenu_file', array( $this, 'filter_hidden_submenu_file' ) );
 		add_action( 'admin_post_adam_membership_approve_member', array( $this, 'handle_approve_member' ) );
 		add_action( 'admin_post_adam_membership_reject_member', array( $this, 'handle_reject_member' ) );
 		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
@@ -421,6 +424,54 @@ final class AdminController {
 	 */
 	public function prepare_renewal_page_screen(): void {
 		$this->prime_admin_page_title( __( 'Renewal Request', 'adam-membership' ) );
+	}
+
+	/**
+	 * Prepare context for hidden ADAM admin screens before the header renders.
+	 *
+	 * @param mixed $screen Current screen object when available.
+	 */
+	public function prepare_hidden_screen_context( mixed $screen ): void {
+		if ( ! $this->is_member_page_request() && ! $this->is_renewal_page_request() ) {
+			return;
+		}
+
+		if ( $this->is_member_page_request() ) {
+			$this->prepare_member_page_screen();
+			return;
+		}
+
+		$this->prepare_renewal_page_screen();
+	}
+
+	/**
+	 * Keep hidden ADAM screens attached to the correct parent menu.
+	 *
+	 * @param string $parent_file Current parent file.
+	 */
+	public function filter_hidden_parent_file( string $parent_file ): string {
+		if ( $this->is_member_page_request() || $this->is_renewal_page_request() ) {
+			return self::MENU_SLUG;
+		}
+
+		return $parent_file;
+	}
+
+	/**
+	 * Keep hidden ADAM screens attached to a valid submenu entry.
+	 *
+	 * @param string $submenu_file Current submenu file.
+	 */
+	public function filter_hidden_submenu_file( string $submenu_file ): string {
+		if ( $this->is_member_page_request() ) {
+			return self::MEMBER_PAGE_SLUG;
+		}
+
+		if ( $this->is_renewal_page_request() ) {
+			return self::RENEWAL_PAGE_SLUG;
+		}
+
+		return $submenu_file;
 	}
 
 	/**
@@ -1896,6 +1947,24 @@ final class AdminController {
 		if ( null !== $screen && property_exists( $screen, 'title' ) ) {
 			$screen->title = $safe_title;
 		}
+	}
+
+	/**
+	 * Determine whether the current request is the hidden member details page.
+	 */
+	private function is_member_page_request(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+		return self::MEMBER_PAGE_SLUG === $page;
+	}
+
+	/**
+	 * Determine whether the current request is the hidden renewal review page.
+	 */
+	private function is_renewal_page_request(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+		return self::RENEWAL_PAGE_SLUG === $page;
 	}
 
 	/**
