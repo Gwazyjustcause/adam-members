@@ -156,6 +156,43 @@ final class MemberRepository {
 	}
 
 	/**
+	 * Determine whether a member number is already assigned to another member.
+	 *
+	 * @param string $member_number  Member number.
+	 * @param int    $exclude_user_id User ID to exclude from the check.
+	 */
+	public function member_number_exists( string $member_number, int $exclude_user_id = 0 ): bool {
+		$member_number = trim( $member_number );
+		$numeric_value = Member::member_number_numeric_value( $member_number );
+
+		if ( '' === $member_number ) {
+			return false;
+		}
+
+		foreach ( $this->all_members() as $member ) {
+			if ( $member->user_id() === $exclude_user_id ) {
+				continue;
+			}
+
+			$existing = trim( (string) $member->field( 'numero_socio' ) );
+
+			if ( '' === $existing ) {
+				continue;
+			}
+
+			if ( strtolower( $existing ) === strtolower( $member_number ) ) {
+				return true;
+			}
+
+			if ( 0 !== $numeric_value && $member->member_number_value() === $numeric_value ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Query members.
 	 *
 	 * @param array<string, mixed> $args User query arguments.
@@ -197,7 +234,7 @@ final class MemberRepository {
 			'name'          => strtolower( $member->full_name() ),
 			'email'         => strtolower( $member->email() ),
 			'status'        => $member->status(),
-			'member_number' => (string) $member->field( 'numero_socio' ),
+			'member_number' => $member->member_number_value(),
 			'quota'         => $member->quota_expiry_timestamp(),
 			default         => $member->registration_timestamp(),
 		};

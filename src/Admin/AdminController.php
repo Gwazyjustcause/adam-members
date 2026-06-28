@@ -28,6 +28,7 @@ final class AdminController {
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
+	private const ACTION_SAVE_MEMBER  = 'save_member';
 
 	/**
 	 * Member repository.
@@ -365,6 +366,15 @@ final class AdminController {
 				</select>
 			</label>
 
+			<label>
+				<span><?php esc_html_e( 'Sort', 'adam-membership' ); ?></span>
+				<select name="member_number_sort">
+					<?php $this->render_select_option( '', __( 'Default', 'adam-membership' ), $filters['member_number_sort'] ?? '' ); ?>
+					<?php $this->render_select_option( 'asc', __( 'Member number: lowest to highest', 'adam-membership' ), $filters['member_number_sort'] ?? '' ); ?>
+					<?php $this->render_select_option( 'desc', __( 'Member number: highest to lowest', 'adam-membership' ), $filters['member_number_sort'] ?? '' ); ?>
+				</select>
+			</label>
+
 			<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply filters', 'adam-membership' ); ?></button>
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . ( $force_pending ? 'adam-membership-pending' : 'adam-membership-members' ) ) ); ?>"><?php esc_html_e( 'Reset', 'adam-membership' ); ?></a>
 		</form>
@@ -407,7 +417,7 @@ final class AdminController {
 						<td><?php echo esc_html( (string) $member->field( 'telefone' ) ?: '—' ); ?></td>
 						<td><?php echo esc_html( $member->registration_date() ); ?></td>
 						<td><?php $this->render_status_badge( $member->status() ); ?></td>
-						<td><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: '—' ); ?></td>
+						<td><?php echo esc_html( $this->member_number_label( $member ) ); ?></td>
 						<td><?php $this->render_quota_badge( $member ); ?></td>
 						<td class="adam-admin-row-actions">
 							<a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'View', 'adam-membership' ); ?></a>
@@ -442,7 +452,7 @@ final class AdminController {
 
 				<div class="adam-admin-detail-grid">
 					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->status() ); ?>
-					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
+					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
 					<?php $this->render_detail_item( __( 'Quota valid until', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Joined on', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Phone', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
@@ -453,6 +463,8 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'Address', 'adam-membership' ), (string) $member->field( 'morada' ) ); ?>
 				</div>
 			</div>
+
+			<?php $this->render_member_edit_form( $member ); ?>
 
 			<div class="adam-admin-panel">
 				<h2><?php esc_html_e( 'Admin actions', 'adam-membership' ); ?></h2>
@@ -489,6 +501,65 @@ final class AdminController {
 	}
 
 	/**
+	 * Render the editable admin member fields form.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_edit_form( Member $member ): void {
+		?>
+		<div class="adam-admin-panel adam-admin-edit-panel">
+			<h2><?php esc_html_e( 'Edit member fields', 'adam-membership' ); ?></h2>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form">
+				<input type="hidden" name="action" value="adam_membership_member_action">
+				<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_SAVE_MEMBER ); ?>">
+				<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+
+				<div class="adam-admin-edit-grid">
+					<label>
+						<span><?php esc_html_e( 'Member number', 'adam-membership' ); ?></span>
+						<input type="text" name="member_number" value="<?php echo esc_attr( (string) $member->field( 'numero_socio' ) ); ?>" placeholder="<?php esc_attr_e( 'Unassigned', 'adam-membership' ); ?>">
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Quota validity date', 'adam-membership' ); ?></span>
+						<input type="date" name="quota_validity" value="<?php echo esc_attr( $this->date_input_value( $member->field( 'validade_quota' ) ) ); ?>">
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Registration date', 'adam-membership' ); ?></span>
+						<input type="date" name="registration_date" value="<?php echo esc_attr( $this->date_input_value( $member->field( 'data_adesao' ) ) ); ?>">
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Phone', 'adam-membership' ); ?></span>
+						<input type="text" name="phone" value="<?php echo esc_attr( (string) $member->field( 'telefone' ) ); ?>">
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Team', 'adam-membership' ); ?></span>
+						<input type="text" name="team" value="<?php echo esc_attr( (string) $member->field( 'equipa' ) ); ?>">
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Status', 'adam-membership' ); ?></span>
+						<select name="status">
+							<?php $this->render_select_option( Member::STATUS_PENDING, __( 'Pending', 'adam-membership' ), $member->status() ); ?>
+							<?php $this->render_select_option( Member::STATUS_ACTIVE, __( 'Active', 'adam-membership' ), $member->status() ); ?>
+							<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejected', 'adam-membership' ), $member->status() ); ?>
+						</select>
+					</label>
+				</div>
+
+				<p class="description"><?php esc_html_e( 'Manual status edits do not send emails. Use the approval actions for the full approval workflow.', 'adam-membership' ); ?></p>
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save member fields', 'adam-membership' ); ?></button>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Handle an approval workflow action.
 	 *
 	 * @param string $action Approval workflow action.
@@ -511,6 +582,7 @@ final class AdminController {
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
+			self::ACTION_SAVE_MEMBER  => $this->save_member_fields( $user_id ),
 			default                   => new WP_Error( 'adam_membership_invalid_action', __( 'Invalid member action.', 'adam-membership' ) ),
 		};
 
@@ -520,6 +592,187 @@ final class AdminController {
 		}
 
 		$this->redirect_with_message( $this->action_success_message( $action ) );
+	}
+
+	/**
+	 * Save manually editable member fields from the admin detail page.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	private function save_member_fields( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error(
+				'adam_membership_member_not_found',
+				__( 'Member not found.', 'adam-membership' )
+			);
+		}
+
+		$member_number = $this->posted_member_number();
+
+		if ( '' !== $member_number && $this->members->member_number_exists( $member_number, $user_id ) ) {
+			return new WP_Error(
+				'adam_membership_duplicate_member_number',
+				__( 'This member number is already assigned to another member.', 'adam-membership' )
+			);
+		}
+
+		$quota_validity    = $this->posted_date( 'quota_validity', __( 'Invalid quota validity date.', 'adam-membership' ) );
+		$registration_date = $this->posted_date( 'registration_date', __( 'Invalid registration date.', 'adam-membership' ) );
+
+		if ( $quota_validity instanceof WP_Error ) {
+			return $quota_validity;
+		}
+
+		if ( $registration_date instanceof WP_Error ) {
+			return $registration_date;
+		}
+
+		$status = isset( $_POST['status'] ) ? sanitize_text_field( wp_unslash( $_POST['status'] ) ) : Member::STATUS_PENDING;
+
+		if ( ! in_array( $status, $this->allowed_member_statuses(), true ) ) {
+			return new WP_Error(
+				'adam_membership_invalid_member_status',
+				__( 'Invalid member status.', 'adam-membership' )
+			);
+		}
+
+		$updates = array(
+			'numero_socio'   => $member_number,
+			'validade_quota' => $quota_validity,
+			'data_adesao'    => $registration_date,
+			'telefone'       => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '',
+			'equipa'         => isset( $_POST['team'] ) ? sanitize_text_field( wp_unslash( $_POST['team'] ) ) : '',
+			'estado'         => $status,
+		);
+
+		$changes = $this->changed_member_fields( $member, $updates );
+
+		if ( array() === $changes ) {
+			return true;
+		}
+
+		$member->save( $updates );
+		$this->log_member_field_changes( $member, $changes );
+
+		return true;
+	}
+
+	/**
+	 * Get changed member fields.
+	 *
+	 * @param Member                $member  Member.
+	 * @param array<string, string> $updates Sanitized updates.
+	 * @return array<string, array{old:string,new:string}>
+	 */
+	private function changed_member_fields( Member $member, array $updates ): array {
+		$changes = array();
+
+		foreach ( $updates as $field => $new_value ) {
+			$old_value = $this->scalar_field_value( $member->field( $field ) );
+
+			if ( $old_value === $new_value ) {
+				continue;
+			}
+
+			$changes[ $field ] = array(
+				'old' => $old_value,
+				'new' => $new_value,
+			);
+		}
+
+		return $changes;
+	}
+
+	/**
+	 * Log changed member fields to the plugin audit log.
+	 *
+	 * @param Member                                      $member  Member.
+	 * @param array<string, array{old:string,new:string}> $changes Changed fields.
+	 */
+	private function log_member_field_changes( Member $member, array $changes ): void {
+		$admin = wp_get_current_user();
+
+		foreach ( $changes as $field => $change ) {
+			$this->logger->info(
+				'Member admin field changed.',
+				array(
+					'user_id'       => $member->user_id(),
+					'field'         => $field,
+					'old_value'     => $change['old'],
+					'new_value'     => $change['new'],
+					'admin_user_id' => get_current_user_id(),
+					'admin_login'   => $admin->exists() ? $admin->user_login : '',
+					'changed_at'    => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Get sanitized posted member number.
+	 */
+	private function posted_member_number(): string {
+		$member_number = isset( $_POST['member_number'] ) ? sanitize_text_field( wp_unslash( $_POST['member_number'] ) ) : '';
+		$member_number = trim( $member_number );
+
+		if ( '' !== $member_number && preg_match( '/^\d+$/', $member_number ) ) {
+			return $this->settings->format_member_number( absint( $member_number ) );
+		}
+
+		return $member_number;
+	}
+
+	/**
+	 * Get a validated posted date.
+	 *
+	 * @param string $key           POST key.
+	 * @param string $error_message Error message.
+	 * @return string|WP_Error
+	 */
+	private function posted_date( string $key, string $error_message ): string|WP_Error {
+		$date = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
+		$date = trim( $date );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return new WP_Error( 'adam_membership_invalid_date', $error_message );
+		}
+
+		$parts = array_map( 'absint', explode( '-', $date ) );
+
+		if ( 3 !== count( $parts ) || ! checkdate( $parts[1], $parts[2], $parts[0] ) ) {
+			return new WP_Error( 'adam_membership_invalid_date', $error_message );
+		}
+
+		return $date;
+	}
+
+	/**
+	 * Get allowed editable member statuses.
+	 *
+	 * @return array<int, string>
+	 */
+	private function allowed_member_statuses(): array {
+		return array(
+			Member::STATUS_PENDING,
+			Member::STATUS_ACTIVE,
+			Member::STATUS_REJECTED,
+		);
+	}
+
+	/**
+	 * Normalize a scalar member field value for comparison and logging.
+	 *
+	 * @param mixed $value Field value.
+	 */
+	private function scalar_field_value( mixed $value ): string {
+		return is_scalar( $value ) ? trim( (string) $value ) : '';
 	}
 
 	/**
@@ -537,12 +790,22 @@ final class AdminController {
 	 * @return array<string, string>
 	 */
 	private function current_member_filters(): array {
+		$member_number_sort = isset( $_GET['member_number_sort'] ) ? sanitize_key( wp_unslash( $_GET['member_number_sort'] ) ) : '';
+		$orderby            = isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'registered';
+		$order              = isset( $_GET['order'] ) && 'asc' === strtolower( sanitize_text_field( wp_unslash( $_GET['order'] ) ) ) ? 'asc' : 'desc';
+
+		if ( in_array( $member_number_sort, array( 'asc', 'desc' ), true ) ) {
+			$orderby = 'member_number';
+			$order   = $member_number_sort;
+		}
+
 		return array(
-			'search'       => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
-			'status'       => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : '',
-			'quota_status' => isset( $_GET['quota_status'] ) ? sanitize_key( wp_unslash( $_GET['quota_status'] ) ) : '',
-			'orderby'      => isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'registered',
-			'order'        => isset( $_GET['order'] ) && 'asc' === strtolower( sanitize_text_field( wp_unslash( $_GET['order'] ) ) ) ? 'asc' : 'desc',
+			'search'             => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
+			'status'             => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : '',
+			'quota_status'       => isset( $_GET['quota_status'] ) ? sanitize_key( wp_unslash( $_GET['quota_status'] ) ) : '',
+			'orderby'            => $orderby,
+			'order'              => $order,
+			'member_number_sort' => $member_number_sort,
 		);
 	}
 
@@ -702,6 +965,17 @@ final class AdminController {
 	}
 
 	/**
+	 * Get a display label for a member number.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function member_number_label( Member $member ): string {
+		$member_number = trim( (string) $member->field( 'numero_socio' ) );
+
+		return '' !== $member_number ? $member_number : __( 'Missing / unassigned', 'adam-membership' );
+	}
+
+	/**
 	 * Render an empty state.
 	 *
 	 * @param string $message Empty state message.
@@ -783,6 +1057,7 @@ final class AdminController {
 			self::ACTION_RENEW        => __( 'Quota renewed successfully.', 'adam-membership' ),
 			self::ACTION_CHANGE_QUOTA => __( 'Quota validity updated successfully.', 'adam-membership' ),
 			self::ACTION_RESEND_EMAIL => __( 'Approval email resent successfully.', 'adam-membership' ),
+			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};
 	}

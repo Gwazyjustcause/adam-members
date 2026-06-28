@@ -270,6 +270,28 @@ final class Member {
 
 		return false === $timestamp ? 0 : $timestamp;
 	}
+
+	/**
+	 * Get the numeric portion of the ADAM member number for sorting and duplicate checks.
+	 */
+	public function member_number_value(): int {
+		return self::member_number_numeric_value( (string) $this->field( 'numero_socio' ) );
+	}
+
+	/**
+	 * Extract a sortable numeric value from a member number.
+	 *
+	 * @param string $member_number Member number.
+	 */
+	public static function member_number_numeric_value( string $member_number ): int {
+		if ( '' === trim( $member_number ) ) {
+			return 0;
+		}
+
+		$digits = preg_replace( '/\D+/', '', $member_number );
+
+		return null === $digits || '' === $digits ? 0 : absint( $digits );
+	}
 	
 	/**
  	* Check if the member is pending.

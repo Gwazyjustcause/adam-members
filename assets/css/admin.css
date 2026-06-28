@@ -111,7 +111,9 @@
 
 .adam-admin-filters input,
 .adam-admin-filters select,
-.adam-admin-quota-form input {
+.adam-admin-quota-form input,
+.adam-admin-edit-form input,
+.adam-admin-edit-form select {
 	min-height: 34px;
 	border-color: #cbd5e1;
 	border-radius: 6px;
@@ -253,6 +255,44 @@
 	font-weight: 700;
 }
 
+.adam-admin-edit-panel {
+	grid-column: 1;
+}
+
+.adam-admin-edit-form {
+	display: grid;
+	gap: 16px;
+}
+
+.adam-admin-edit-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.adam-admin-edit-grid label {
+	display: grid;
+	gap: 6px;
+}
+
+.adam-admin-edit-grid span {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.adam-admin-edit-form input,
+.adam-admin-edit-form select {
+	width: 100%;
+	max-width: 100%;
+}
+
+.adam-admin-edit-form .description {
+	margin: 0;
+	color: var(--adam-admin-muted);
+}
+
 .adam-admin-safe-view {
 	margin-top: 18px;
 	padding-top: 18px;
@@ -298,7 +338,8 @@
 @media (max-width: 782px) {
 	.adam-admin-cards,
 	.adam-admin-member-layout,
-	.adam-admin-detail-grid {
+	.adam-admin-detail-grid,
+	.adam-admin-edit-grid {
 		grid-template-columns: 1fr;
 	}
 
