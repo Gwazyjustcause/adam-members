@@ -60,15 +60,13 @@ final class AnnouncementController {
 		);
 
 		add_submenu_page(
-			'adam-membership',
+			null,
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			self::CAPABILITY,
 			self::EDIT_PAGE_SLUG,
 			array( $this, 'render_edit_page' )
 		);
-
-		remove_submenu_page( 'adam-membership', self::EDIT_PAGE_SLUG );
 	}
 
 	/**
