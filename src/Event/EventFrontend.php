@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Event;
 
+use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 
@@ -20,10 +21,12 @@ final class EventFrontend {
 
 	private EventService $events;
 	private MemberRepository $members;
+	private Logger $logger;
 
-	public function __construct( EventService $events, MemberRepository $members ) {
+	public function __construct( EventService $events, MemberRepository $members, Logger $logger ) {
 		$this->events  = $events;
 		$this->members = $members;
+		$this->logger  = $logger;
 	}
 
 	/**
@@ -78,7 +81,8 @@ final class EventFrontend {
 	 * Activation helper.
 	 */
 	public static function activate(): void {
-		$self = new self( new EventService( new EventRepository(), new MemberRepository(), new \AdamMembership\Helpers\Logger(), new \AdamMembership\Member\HistoryRepository() ), new MemberRepository() );
+		$logger = new \AdamMembership\Helpers\Logger();
+		$self   = new self( new EventService( new EventRepository(), new MemberRepository(), $logger, new \AdamMembership\Member\HistoryRepository() ), new MemberRepository(), $logger );
 		$self->register_routes();
 		flush_rewrite_rules();
 		update_option( self::REWRITE_OPTION, ADAM_MEMBERSHIP_VERSION, false );
@@ -96,7 +100,7 @@ final class EventFrontend {
 	 * Enqueue frontend assets when needed.
 	 */
 	public function enqueue_assets(): void {
-		if ( ! $this->is_events_request() ) {
+		if ( '' === $this->current_events_route() ) {
 			return;
 		}
 
@@ -114,11 +118,21 @@ final class EventFrontend {
 	 * Render custom route.
 	 */
 	public function render_route(): void {
-		if ( ! $this->is_events_request() ) {
+		$route = $this->current_events_route();
+
+		if ( '' === $route ) {
 			return;
 		}
 
-		$route = (string) get_query_var( 'adam_events' );
+		$this->logger->info(
+			'Events frontend route rendering.',
+			array(
+				'route'          => $route,
+				'request_path'   => $this->request_path(),
+				'query_route'    => (string) get_query_var( 'adam_events' ),
+				'event_slug'     => (string) get_query_var( 'adam_event' ),
+			)
+		);
 
 		status_header( 200 );
 		nocache_headers();
@@ -143,6 +157,14 @@ final class EventFrontend {
 		$events = $this->events->visible_events();
 		$view   = isset( $_GET['view'] ) && 'calendar' === sanitize_key( wp_unslash( $_GET['view'] ) ) ? 'calendar' : 'list';
 		$month  = isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( $_GET['month'] ) ) : wp_date( 'Y-m' );
+		$this->logger->info(
+			'Events archive rendered.',
+			array(
+				'event_count' => count( $events ),
+				'view'        => $view,
+				'month'       => $month,
+			)
+		);
 		?>
 		<section class="adam-events-page">
 			<header class="adam-events-hero">
@@ -158,6 +180,11 @@ final class EventFrontend {
 			</header>
 
 			<?php echo wp_kses_post( $this->frontend_notice() ); ?>
+
+			<?php if ( array() === $events ) : ?>
+				<div class="adam-events-empty"><?php esc_html_e( 'Nao existem eventos publicados de momento.', 'adam-membership' ); ?></div>
+				<?php return; ?>
+			<?php endif; ?>
 
 			<?php if ( 'calendar' === $view ) : ?>
 				<?php $this->render_calendar_view( $events, $month ); ?>
@@ -562,7 +589,60 @@ final class EventFrontend {
 	}
 
 	private function is_events_request(): bool {
-		return '' !== (string) get_query_var( 'adam_events' );
+		return '' !== $this->current_events_route();
+	}
+
+	/**
+	 * Determine the current events frontend route.
+	 */
+	private function current_events_route(): string {
+		$route = sanitize_key( (string) get_query_var( 'adam_events' ) );
+
+		if ( in_array( $route, array( 'archive', 'detail' ), true ) ) {
+			return $route;
+		}
+
+		$request_path = $this->request_path();
+
+		if ( 'eventos' === $request_path || is_page( 'eventos' ) ) {
+			return 'archive';
+		}
+
+		if ( str_starts_with( $request_path, 'eventos/' ) ) {
+			$parts = explode( '/', $request_path );
+			$slug  = isset( $parts[1] ) ? sanitize_title( (string) $parts[1] ) : '';
+
+			if ( '' !== $slug ) {
+				set_query_var( 'adam_event', $slug );
+
+				return 'detail';
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Get the current request path relative to the site root.
+	 */
+	private function request_path(): string {
+		global $wp;
+
+		$request_path = isset( $wp->request ) ? trim( (string) $wp->request, '/' ) : '';
+
+		if ( '' !== $request_path ) {
+			return $request_path;
+		}
+
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$path        = trim( (string) wp_parse_url( $request_uri, PHP_URL_PATH ), '/' );
+		$base_path   = trim( (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ), '/' );
+
+		if ( '' !== $base_path && str_starts_with( $path, $base_path ) ) {
+			$path = ltrim( substr( $path, strlen( $base_path ) ), '/' );
+		}
+
+		return $path;
 	}
 
 	private function access_mode_label( string $mode ): string {

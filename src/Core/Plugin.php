@@ -111,7 +111,7 @@ final class Plugin {
 		$email_confirmation = new EmailConfirmation( $email_change );
 		$registration       = new UserRegistration( $config, $logger, $history );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
-		$events_frontend    = new EventFrontend( $events, $members );
+		$events_frontend    = new EventFrontend( $events, $members, $logger );
 		$admin              = new AdminController(
 			$members,
 			$approval,
