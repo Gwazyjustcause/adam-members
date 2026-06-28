@@ -255,12 +255,16 @@
 
 .adam-digital-card__logo {
 	flex: 0 0 auto;
-	width: 86px;
-	height: auto;
-	padding: 8px;
+	display: block;
+	width: 112px;
+	height: 68px;
+	padding: 10px 12px;
+	box-sizing: border-box;
 	border-radius: 16px;
 	background: #ffffff;
 	box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+	object-fit: contain;
+	object-position: center;
 }
 
 .adam-digital-card__header > div {
@@ -409,7 +413,8 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding-top: 2px;
+	padding-top: 8px;
+	padding-bottom: 6px;
 	line-height: 1.2;
 }
 
@@ -1125,10 +1130,14 @@
 	}
 
 	.adam-digital-card__logo {
-		width: 13mm;
-		padding: 1mm;
+		width: 15mm;
+		height: 9.2mm;
+		padding: 1.1mm 1.3mm;
+		box-sizing: border-box;
 		border-radius: 1.5mm;
 		box-shadow: none;
+		object-fit: contain;
+		object-position: center;
 	}
 
 	.adam-digital-card__header span,
@@ -1209,7 +1218,8 @@
 
 	.adam-digital-card__footer {
 		gap: 1.5mm;
-		padding-top: 0;
+		padding-top: 0.8mm;
+		padding-bottom: 0.8mm;
 		font-size: 5pt;
 	}
 }
