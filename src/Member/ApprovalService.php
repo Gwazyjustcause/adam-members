@@ -90,8 +90,15 @@ final class ApprovalService {
 		 */
 		$user = $member->user();
 
-		if ( $user instanceof WP_User ) {
+		if ( $user instanceof WP_User && ! $user->has_cap( 'manage_options' ) ) {
 			$user->set_role( 'scio' );
+		} elseif ( $user instanceof WP_User ) {
+			$this->logger->info(
+				'Administrator role preserved during member approval.',
+				array(
+					'user_id' => $user_id,
+				)
+			);
 		}
 
 		/*
@@ -163,8 +170,15 @@ final class ApprovalService {
 
 		$user = $member->user();
 
-		if ( $user instanceof WP_User ) {
+		if ( $user instanceof WP_User && ! $user->has_cap( 'manage_options' ) ) {
 			$user->set_role( 'visitante' );
+		} elseif ( $user instanceof WP_User ) {
+			$this->logger->info(
+				'Administrator role preserved during member rejection.',
+				array(
+					'user_id' => $user_id,
+				)
+			);
 		}
 
 		$this->logger->info(

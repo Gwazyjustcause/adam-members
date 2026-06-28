@@ -216,6 +216,29 @@
 	color: var(--adam-admin-muted);
 }
 
+.adam-admin-safety-notice {
+	margin-bottom: 20px;
+	padding: 14px 16px;
+	border: 1px solid #fde68a;
+	border-left: 4px solid #d97706;
+	border-radius: 8px;
+	background: #fffbeb;
+	color: #78350f;
+}
+
+.adam-admin-safety-notice strong {
+	display: block;
+	margin-bottom: 6px;
+}
+
+.adam-admin-safety-notice p {
+	margin: 0 0 6px;
+}
+
+.adam-admin-safety-notice p:last-child {
+	margin-bottom: 0;
+}
+
 .adam-admin-detail-grid {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));

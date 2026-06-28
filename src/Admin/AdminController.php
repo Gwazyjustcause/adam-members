@@ -450,6 +450,8 @@ final class AdminController {
 					</div>
 				</div>
 
+				<?php $this->render_admin_safety_notice( $member ); ?>
+
 				<div class="adam-admin-detail-grid">
 					<?php $this->render_detail_item( __( 'Membership status', 'adam-membership' ), $member->status() ); ?>
 					<?php $this->render_detail_item( __( 'Member number', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
@@ -560,6 +562,26 @@ final class AdminController {
 	}
 
 	/**
+	 * Render administrator lockout protection notice when relevant.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_admin_safety_notice( Member $member ): void {
+		if ( ! $this->member_has_admin_access( $member ) ) {
+			return;
+		}
+		?>
+		<div class="adam-admin-safety-notice">
+			<strong><?php esc_html_e( 'Administrator safeguard active', 'adam-membership' ); ?></strong>
+			<p><?php esc_html_e( 'This user has WordPress administrator access. Membership status changes will not remove wp-admin or ADAM Membership admin access.', 'adam-membership' ); ?></p>
+			<?php if ( $this->is_current_admin_target( $member->user_id() ) ) : ?>
+				<p><?php esc_html_e( 'You cannot reject your own administrator account here. Another administrator must review that change.', 'adam-membership' ); ?></p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Handle an approval workflow action.
 	 *
 	 * @param string $action Approval workflow action.
@@ -574,6 +596,16 @@ final class AdminController {
 
 		if ( 0 === $user_id ) {
 			$this->redirect_with_error( __( 'Invalid member.', 'adam-membership' ) );
+		}
+
+		if ( self::ACTION_REJECT === $action && $this->is_current_admin_target( $user_id ) ) {
+			$this->logger->error(
+				'Self-rejection blocked for administrator.',
+				array(
+					'user_id' => $user_id,
+				)
+			);
+			$this->redirect_with_error( __( 'Safety rule: administrators cannot reject their own account. Ask another administrator to review this account.', 'adam-membership' ) );
 		}
 
 		$result = match ( $action ) {
@@ -636,6 +668,13 @@ final class AdminController {
 			return new WP_Error(
 				'adam_membership_invalid_member_status',
 				__( 'Invalid member status.', 'adam-membership' )
+			);
+		}
+
+		if ( Member::STATUS_REJECTED === $status && $this->is_current_admin_target( $user_id ) ) {
+			return new WP_Error(
+				'adam_membership_self_admin_rejection_blocked',
+				__( 'Safety rule: administrators cannot reject their own account. Ask another administrator to review this account.', 'adam-membership' )
 			);
 		}
 
@@ -776,9 +815,34 @@ final class AdminController {
 	}
 
 	/**
+	 * Determine whether the action targets the current administrator account.
+	 *
+	 * @param int $user_id Target user ID.
+	 */
+	private function is_current_admin_target( int $user_id ): bool {
+		return get_current_user_id() === $user_id && current_user_can( self::CAPABILITY );
+	}
+
+	/**
+	 * Determine whether a member's WordPress account has administrator access.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function member_has_admin_access( Member $member ): bool {
+		$user = $member->user();
+
+		return null !== $user && $user->has_cap( self::CAPABILITY );
+	}
+
+	/**
 	 * Ensure the current user can manage ADAM membership data.
 	 */
 	private function ensure_can_manage(): void {
+		/*
+		 * Safety rule: WordPress administrators must always be allowed into
+		 * wp-admin and ADAM Membership admin pages regardless of membership
+		 * status, quota state, or missing member metadata.
+		 */
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
 		}
