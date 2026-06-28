@@ -81,6 +81,17 @@ final class Member {
 	);
 
 	/**
+	 * Member fields that must be read as canonical dates for logic.
+	 *
+	 * @var array<int, string>
+	 */
+	private const DATE_FIELDS = array(
+		'data_adesao',
+		'validade_quota',
+		'data_nascimento',
+	);
+
+	/**
 	 * WordPress user ID.
 	 *
 	 * @var int
@@ -288,10 +299,6 @@ final class Member {
 			return 0;
 		}
 
-		if ( preg_match( '/^\d{8}$/', $date ) ) {
-			$date = substr( $date, 0, 4 ) . '-' . substr( $date, 4, 2 ) . '-' . substr( $date, 6, 2 );
-		}
-
 		$timestamp = strtotime( $date );
 
 		return false === $timestamp ? 0 : $timestamp;
@@ -402,6 +409,10 @@ final class Member {
 	 * @return mixed
 	 */
 	public function field( string $field_name ): mixed {
+		if ( in_array( $field_name, self::DATE_FIELDS, true ) ) {
+			return $this->date_field( $field_name );
+		}
+
 		if ( function_exists( 'get_field' ) ) {
 			$value = get_field( $field_name, 'user_' . $this->user_id );
 
@@ -411,6 +422,56 @@ final class Member {
 		}
 
 		return get_user_meta( $this->user_id, $field_name, true );
+	}
+
+	/**
+	 * Get a date field in canonical Y-m-d format where possible.
+	 *
+	 * @param string $field_name Member date field name.
+	 */
+	private function date_field( string $field_name ): string {
+		$value = null;
+
+		if ( function_exists( 'get_field' ) ) {
+			$value = get_field( $field_name, 'user_' . $this->user_id, false );
+		}
+
+		if ( null === $value || false === $value || '' === $value ) {
+			$value = get_user_meta( $this->user_id, $field_name, true );
+		}
+
+		return $this->normalize_date_value( $value );
+	}
+
+	/**
+	 * Normalize common WordPress/ACF date values to Y-m-d.
+	 *
+	 * @param mixed $value Raw date value.
+	 */
+	private function normalize_date_value( mixed $value ): string {
+		if ( ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		$date = trim( (string) $value );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			return substr( $date, 0, 4 ) . '-' . substr( $date, 4, 2 ) . '-' . substr( $date, 6, 2 );
+		}
+
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return $date;
+		}
+
+		if ( preg_match( '/^(\d{2})\/(\d{2})\/(\d{4})$/', $date, $matches ) && checkdate( absint( $matches[2] ), absint( $matches[1] ), absint( $matches[3] ) ) ) {
+			return $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+		}
+
+		return '';
 	}
 
 	/**
