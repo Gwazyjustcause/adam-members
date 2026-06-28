@@ -363,6 +363,15 @@
 	gap: 6px;
 }
 
+.adam-admin-edit-field {
+	display: grid;
+	gap: 6px;
+}
+
+.adam-admin-edit-field-full {
+	width: 100%;
+}
+
 .adam-admin-edit-grid span {
 	color: var(--adam-admin-muted);
 	font-size: 12px;
@@ -371,9 +380,23 @@
 }
 
 .adam-admin-edit-form input,
-.adam-admin-edit-form select {
+.adam-admin-edit-form select,
+.adam-admin-edit-form textarea {
 	width: 100%;
 	max-width: 100%;
+}
+
+.adam-admin-edit-form textarea {
+	min-height: 110px;
+	border-color: #cbd5e1;
+	border-radius: 6px;
+}
+
+.adam-admin-checkbox-field {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: 600;
 }
 
 .adam-admin-edit-form .description {

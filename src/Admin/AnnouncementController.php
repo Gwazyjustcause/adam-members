@@ -60,13 +60,15 @@ final class AnnouncementController {
 		);
 
 		add_submenu_page(
-			null,
+			'adam-membership',
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			esc_html__( 'Editar Aviso', 'adam-membership' ),
 			self::CAPABILITY,
 			self::EDIT_PAGE_SLUG,
 			array( $this, 'render_edit_page' )
 		);
+
+		remove_submenu_page( 'adam-membership', self::EDIT_PAGE_SLUG );
 	}
 
 	/**
@@ -240,18 +242,18 @@ final class AnnouncementController {
 						</label>
 					</div>
 
-					<label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full">
 						<span><?php esc_html_e( 'Resumo curto', 'adam-membership' ); ?></span>
 						<textarea name="summary" rows="3"><?php echo esc_textarea( null !== $announcement ? $announcement->summary() : '' ); ?></textarea>
 					</label>
 
-					<label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full">
 						<span><?php esc_html_e( 'Conteudo completo', 'adam-membership' ); ?></span>
 						<textarea name="content" rows="12"><?php echo esc_textarea( null !== $announcement ? $announcement->content() : '' ); ?></textarea>
 					</label>
 
-					<label><input type="checkbox" name="pinned" value="1" <?php checked( null !== $announcement ? $announcement->pinned() : false ); ?>> <?php esc_html_e( 'Fixar no topo', 'adam-membership' ); ?></label>
-					<label><input type="checkbox" name="send_email" value="1" <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Mostrar na area de socio e enviar email', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="pinned" value="1" <?php checked( null !== $announcement ? $announcement->pinned() : false ); ?>> <?php esc_html_e( 'Fixar no topo', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Mostrar na area de socio e enviar email', 'adam-membership' ); ?></label>
 
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar aviso', 'adam-membership' ); ?></button>
@@ -499,7 +501,7 @@ final class AnnouncementController {
 	 */
 	private function format_date( string $date ): string {
 		if ( '' === $date ) {
-			return '—';
+			return '';
 		}
 
 		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? substr( $date, 8, 2 ) . '/' . substr( $date, 5, 2 ) . '/' . substr( $date, 0, 4 ) : $date;
