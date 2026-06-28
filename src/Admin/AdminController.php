@@ -13,6 +13,7 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
+use AdamMembership\Member\CardService;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RenewalRepository;
@@ -33,6 +34,7 @@ final class AdminController {
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
 	private const ACTION_SAVE_MEMBER  = 'save_member';
+	private const ACTION_REGENERATE_CARD_TOKEN = 'regenerate_card_token';
 	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
@@ -87,6 +89,13 @@ final class AdminController {
 	private MaintenanceService $maintenance;
 
 	/**
+	 * Digital card service.
+	 *
+	 * @var CardService
+	 */
+	private CardService $cards;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -96,8 +105,9 @@ final class AdminController {
 	 * @param RenewalRepository  $renewals         Renewal repository.
 	 * @param RenewalService     $renewal_service  Renewal service.
 	 * @param MaintenanceService $maintenance      Maintenance service.
+	 * @param CardService        $cards            Digital card service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards ) {
 		$this->members          = $members;
 		$this->approval_service = $approval_service;
 		$this->settings         = $settings;
@@ -105,6 +115,7 @@ final class AdminController {
 		$this->renewal_repository = $renewals;
 		$this->renewal_service    = $renewal_service;
 		$this->maintenance         = $maintenance;
+		$this->cards               = $cards;
 	}
 
 	/**
@@ -366,6 +377,14 @@ final class AdminController {
 						<th scope="row"><label for="adam_email_from_address"><?php esc_html_e( 'Email from address', 'adam-membership' ); ?></label></th>
 						<td><input type="email" id="adam_email_from_address" name="email_from_address" class="regular-text" value="<?php echo esc_attr( $this->settings->email_from_address() ); ?>"></td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="adam_association_name"><?php esc_html_e( 'Association name', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_association_name" name="association_name" class="regular-text" value="<?php echo esc_attr( $this->settings->association_name() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_association_logo"><?php esc_html_e( 'Association logo URL', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_association_logo" name="association_logo" class="regular-text" value="<?php echo esc_attr( $this->settings->association_logo_url() ); ?>"></td>
+					</tr>
 				</table>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save settings', 'adam-membership' ); ?></button>
 			</form>
@@ -442,6 +461,9 @@ final class AdminController {
 		$from_name    = isset( $_POST['email_from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['email_from_name'] ) ) : '';
 		$from_address = isset( $_POST['email_from_address'] ) ? sanitize_email( wp_unslash( $_POST['email_from_address'] ) ) : '';
 		$this->settings->save_email_sender( $from_name, $from_address );
+		$association_name = isset( $_POST['association_name'] ) ? sanitize_text_field( wp_unslash( $_POST['association_name'] ) ) : '';
+		$association_logo = isset( $_POST['association_logo'] ) ? esc_url_raw( wp_unslash( $_POST['association_logo'] ) ) : '';
+		$this->settings->save_association_settings( $association_name, $association_logo );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -817,6 +839,7 @@ final class AdminController {
 					<?php $this->render_rejection_form( $member ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renew quota for one year', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Resend approval email', 'adam-membership' ), 'button-secondary' ); ?>
+					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerate card validation token', 'adam-membership' ), 'button-secondary' ); ?>
 				</div>
 
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-quota-form">
@@ -961,6 +984,7 @@ final class AdminController {
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
 			self::ACTION_SAVE_MEMBER  => $this->save_member_fields( $user_id ),
+			self::ACTION_REGENERATE_CARD_TOKEN => $this->regenerate_card_token( $user_id ),
 			default                   => new WP_Error( 'adam_membership_invalid_action', __( 'Invalid member action.', 'adam-membership' ) ),
 		};
 
@@ -1048,6 +1072,27 @@ final class AdminController {
 
 		$member->save( $updates );
 		$this->log_member_field_changes( $member, $changes );
+
+		return true;
+	}
+
+	/**
+	 * Regenerate a member card validation token.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	private function regenerate_card_token( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error(
+				'adam_membership_member_not_found',
+				__( 'Member not found.', 'adam-membership' )
+			);
+		}
+
+		$this->cards->regenerate_token( $member );
 
 		return true;
 	}
@@ -1667,6 +1712,7 @@ final class AdminController {
 			self::ACTION_CHANGE_QUOTA => __( 'Quota validity updated successfully.', 'adam-membership' ),
 			self::ACTION_RESEND_EMAIL => __( 'Approval email resent successfully.', 'adam-membership' ),
 			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
+			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};
 	}

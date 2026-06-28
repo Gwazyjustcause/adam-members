@@ -39,16 +39,25 @@ final class MemberArea {
 	private SettingsRepository $settings;
 
 	/**
+	 * Digital card service.
+	 *
+	 * @var CardService
+	 */
+	private CardService $cards;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
 	 * @param RenewalService     $renewals Renewal service.
 	 * @param SettingsRepository $settings Settings repository.
+	 * @param CardService        $cards    Digital card service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards ) {
 		$this->members  = $members;
 		$this->renewals = $renewals;
 		$this->settings = $settings;
+		$this->cards    = $cards;
 	}
 
 	/**
@@ -468,17 +477,56 @@ final class MemberArea {
 
 			$this->render_notifications_card(
 				array(
-					__( 'A área de cartão digital, QR code e renovações ficará disponível em futuras atualizações.', 'adam-membership' ),
+					__( 'O seu cartão digital está disponível para validação através de QR code.', 'adam-membership' ),
 				)
 			);
 
 			$this->render_renewal_action( $member );
+
+			$this->render_digital_card( $member );
 
 			$this->render_profile( $member );
 
 			$this->render_standard_account_actions();
 			?>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render the digital membership card.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_digital_card( Member $member ): void {
+		if ( ! $member->isActive() ) {
+			return;
+		}
+		?>
+		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
+				<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver Cartão', 'adam-membership' ); ?></a>
+			</div>
+			<div class="adam-digital-card">
+				<div class="adam-digital-card__identity">
+					<img class="adam-digital-card__logo" src="<?php echo esc_url( $this->cards->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->cards->association_name() ); ?>">
+					<div>
+						<span><?php echo esc_html( $this->cards->association_name() ); ?></span>
+						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
+						<small><?php echo esc_html( (string) $member->field( 'numero_socio' ) ); ?></small>
+					</div>
+				</div>
+				<div class="adam-digital-card__meta">
+					<?php $this->render_status_badge( $member->effective_status() ); ?>
+					<span><?php echo esc_html( sprintf( __( 'Quota válida até %s', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ) ); ?></span>
+				</div>
+				<div class="adam-digital-card__qr">
+					<img src="<?php echo esc_url( $this->cards->qr_image_url( $member ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+					<a href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></a>
+				</div>
+			</div>
+		</section>
 		<?php
 	}
 

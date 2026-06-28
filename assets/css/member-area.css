@@ -153,6 +153,96 @@
 	grid-column: 1 / -1;
 }
 
+.adam-digital-card-section {
+	grid-column: 1 / -1;
+}
+
+.adam-card-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 38px;
+	padding: 8px 14px;
+	border-radius: 999px;
+	background: var(--adam-green-700);
+	color: #ffffff;
+	font-weight: 800;
+}
+
+.adam-digital-card {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 24px;
+	align-items: center;
+	padding: 26px;
+	border-radius: 20px;
+	background:
+		linear-gradient(135deg, rgba(23, 63, 36, 0.96), rgba(47, 107, 59, 0.88)),
+		var(--adam-green-900);
+	color: #ffffff;
+	overflow: hidden;
+}
+
+.adam-digital-card__identity {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	min-width: 0;
+}
+
+.adam-digital-card__logo {
+	width: 96px;
+	height: auto;
+	padding: 10px;
+	border-radius: 16px;
+	background: #ffffff;
+}
+
+.adam-digital-card__identity span,
+.adam-digital-card__identity small,
+.adam-digital-card__meta span {
+	display: block;
+	color: rgba(255, 255, 255, 0.82);
+	font-weight: 700;
+}
+
+.adam-digital-card__identity strong {
+	display: block;
+	margin: 8px 0;
+	font-size: clamp(1.45rem, 3vw, 2.25rem);
+	line-height: 1.05;
+	font-weight: 900;
+	overflow-wrap: anywhere;
+}
+
+.adam-digital-card__meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-top: 22px;
+}
+
+.adam-digital-card__qr {
+	display: grid;
+	justify-items: center;
+	gap: 10px;
+	padding: 14px;
+	border-radius: 18px;
+	background: #ffffff;
+	color: var(--adam-green-900);
+}
+
+.adam-digital-card__qr img {
+	width: 180px;
+	height: 180px;
+}
+
+.adam-digital-card__qr a {
+	color: var(--adam-green-800);
+	font-weight: 800;
+}
+
 .adam-badge {
 	display: inline-flex;
 	align-items: center;
@@ -662,8 +752,13 @@
 	.adam-notifications-card,
 	.adam-profile-card,
 	.adam-actions-card,
-	.adam-future-card {
+	.adam-future-card,
+	.adam-digital-card-section {
 		grid-column: 1 / -1;
+	}
+
+	.adam-digital-card {
+		grid-template-columns: 1fr;
 	}
 
 	.adam-action-grid {
@@ -723,5 +818,47 @@
 	.adam-text-link {
 		width: 100%;
 		text-align: center;
+	}
+
+	.adam-digital-card {
+		padding: 22px;
+		text-align: center;
+	}
+
+	.adam-digital-card__identity,
+	.adam-digital-card__meta {
+		justify-content: center;
+	}
+
+	.adam-digital-card__identity {
+		flex-direction: column;
+	}
+
+	.adam-digital-card__qr {
+		width: 100%;
+	}
+}
+
+@media print {
+	body * {
+		visibility: hidden;
+	}
+
+	.adam-digital-card-section,
+	.adam-digital-card-section * {
+		visibility: visible;
+	}
+
+	.adam-digital-card-section {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		border: 0;
+		box-shadow: none;
+	}
+
+	.adam-card-link {
+		display: none;
 	}
 }

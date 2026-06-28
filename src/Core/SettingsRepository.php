@@ -17,8 +17,12 @@ final class SettingsRepository {
 	private const OPTION_RENEWAL_PAGE_URL   = 'adam_membership_renewal_page_url';
 	private const OPTION_EMAIL_FROM_NAME    = 'adam_membership_email_from_name';
 	private const OPTION_EMAIL_FROM_ADDRESS = 'adam_membership_email_from_address';
+	private const OPTION_ASSOCIATION_NAME   = 'adam_membership_association_name';
+	private const OPTION_ASSOCIATION_LOGO   = 'adam_membership_association_logo';
 	private const DEFAULT_EMAIL_FROM_NAME   = 'ADAM - Associação Desportiva de Airsoft do Mondego';
 	private const DEFAULT_EMAIL_FROM_ADDRESS = 'geral@airsoftmondego.pt';
+	private const DEFAULT_ASSOCIATION_NAME  = 'ADAM - Associação Desportiva de Airsoft do Mondego';
+	private const DEFAULT_ASSOCIATION_LOGO  = 'https://airsoftmondego.pt/wp-content/uploads/2026/06/ADAM.png';
 
 	/**
 	 * Get the last assigned numeric member number.
@@ -97,6 +101,35 @@ final class SettingsRepository {
 	public function save_email_sender( string $name, string $email ): void {
 		update_option( self::OPTION_EMAIL_FROM_NAME, sanitize_text_field( $name ), false );
 		update_option( self::OPTION_EMAIL_FROM_ADDRESS, sanitize_email( $email ), false );
+	}
+
+	/**
+	 * Get association display name.
+	 */
+	public function association_name(): string {
+		$name = (string) get_option( self::OPTION_ASSOCIATION_NAME, '' );
+
+		return '' !== trim( $name ) ? sanitize_text_field( $name ) : self::DEFAULT_ASSOCIATION_NAME;
+	}
+
+	/**
+	 * Get association logo URL.
+	 */
+	public function association_logo_url(): string {
+		$url = esc_url_raw( (string) get_option( self::OPTION_ASSOCIATION_LOGO, '' ) );
+
+		return '' !== $url ? $url : self::DEFAULT_ASSOCIATION_LOGO;
+	}
+
+	/**
+	 * Save association display settings.
+	 *
+	 * @param string $name Association name.
+	 * @param string $logo Logo URL.
+	 */
+	public function save_association_settings( string $name, string $logo ): void {
+		update_option( self::OPTION_ASSOCIATION_NAME, sanitize_text_field( $name ), false );
+		update_option( self::OPTION_ASSOCIATION_LOGO, esc_url_raw( $logo ), false );
 	}
 
 	/**
