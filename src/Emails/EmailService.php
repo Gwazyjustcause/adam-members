@@ -30,6 +30,11 @@ final class EmailService {
 	private const PRIMARY = '#2e7d32';
 
 	/**
+	 * Secondary green colour.
+	 */
+	private const PRIMARY_DARK = '#1b5e20';
+
+	/**
 	 * Settings repository.
 	 *
 	 * @var SettingsRepository
@@ -57,9 +62,7 @@ final class EmailService {
 	/**
 	 * Send approval email.
 	 */
-	public function send_approval_email(
-		Member $member
-	): bool {
+	public function send_approval_email( Member $member ): bool {
 
 		$recipient = $member->email();
 
@@ -84,7 +87,9 @@ final class EmailService {
 		return $this->send(
 			$recipient,
 			$subject,
-			$message
+			$message,
+			'account_approved',
+			array( 'member_id' => $member->user_id() )
 		);
 	}
 
@@ -106,16 +111,18 @@ final class EmailService {
 				<p>Caso pretenda mais informações, contacte a Direção da ADAM.</p>',
 				esc_html( $member->full_name() ),
 				'' !== $reason ? '<p><strong>Motivo indicado:</strong> ' . esc_html( $reason ) . '</p>' : ''
-			)
+			),
+			'registration_rejected'
 		);
 	}
 
 	/**
-	 * Send renewal pending confirmation email.
+	 * Send renewal submitted confirmation email.
 	 *
-	 * @param Member $member Member.
+	 * @param Member $member     Member.
+	 * @param int    $renewal_id Renewal request ID.
 	 */
-	public function send_renewal_pending_email( Member $member ): bool {
+	public function send_renewal_submitted_email( Member $member, int $renewal_id = 0 ): bool {
 		return $this->send_member_lifecycle_email(
 			$member,
 			'Pedido de renovação recebido',
@@ -123,10 +130,23 @@ final class EmailService {
 			sprintf(
 				'<p>Olá <strong>%1$s</strong>,</p>
 				<p>Recebemos o seu pedido de renovação de quota.</p>
-				<p>A Direção da ADAM irá analisar o pedido e confirmar a renovação assim que possível.</p>',
+				<p>A Direção da ADAM irá analisar o comprovativo de pagamento submetido.</p>
+				<p><strong>Estado atual:</strong> Renovação em análise.</p>',
 				esc_html( $member->full_name() )
-			)
+			),
+			'renewal_submitted',
+			array( 'renewal_id' => $renewal_id )
 		);
+	}
+
+	/**
+	 * Send renewal pending confirmation email.
+	 *
+	 * @param Member $member     Member.
+	 * @param int    $renewal_id Renewal request ID.
+	 */
+	public function send_renewal_pending_email( Member $member, int $renewal_id = 0 ): bool {
+		return $this->send_renewal_submitted_email( $member, $renewal_id );
 	}
 
 	/**
@@ -135,6 +155,8 @@ final class EmailService {
 	 * @param Member $member Member.
 	 */
 	public function send_renewal_reminder_email( Member $member ): bool {
+		$button = $this->button( $this->settings->renewal_page_url(), 'Abrir formulário de renovação' );
+
 		return $this->send_member_lifecycle_email(
 			$member,
 			'Lembrete de renovação da quota ADAM',
@@ -142,9 +164,16 @@ final class EmailService {
 			sprintf(
 				'<p>Olá <strong>%1$s</strong>,</p>
 				<p>A validade da sua quota está a aproximar-se.</p>
-				<p>Para manter a inscrição ativa, efetue o pagamento e submeta o formulário de renovação na Área de Sócio.</p>',
-				esc_html( $member->full_name() )
-			)
+				<p><strong>N.º de sócio:</strong> %2$s</p>
+				<p><strong>Validade atual:</strong> %3$s</p>
+				<p>Para manter a inscrição ativa, efetue o pagamento e submeta o formulário de renovação com o comprovativo.</p>
+				<p style="text-align:center;">%4$s</p>',
+				esc_html( $member->full_name() ),
+				esc_html( $this->member_number( $member ) ),
+				esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ),
+				$button
+			),
+			'renewal_reminder'
 		);
 	}
 
@@ -154,7 +183,9 @@ final class EmailService {
 	 *
 	 * @param Member $member Member.
 	 */
-	public function send_renewal_approved_email( Member $member ): bool {
+	public function send_renewal_approved_email( Member $member, int $renewal_id = 0 ): bool {
+		$button = $this->button( $this->settings->member_area_url(), 'Aceder à Área de Sócio' );
+
 		return $this->send_member_lifecycle_email(
 			$member,
 			'Renovação da quota aprovada',
@@ -162,10 +193,16 @@ final class EmailService {
 			sprintf(
 				'<p>Olá <strong>%1$s</strong>,</p>
 				<p>A sua renovação de quota foi aprovada.</p>
-				<p><strong>Validade da quota:</strong> %2$s</p>',
+				<p><strong>N.º de sócio:</strong> %2$s</p>
+				<p><strong>Nova validade da quota:</strong> %3$s</p>
+				<p style="text-align:center;">%4$s</p>',
 				esc_html( $member->full_name() ),
-				esc_html( (string) $member->field( 'validade_quota' ) )
-			)
+				esc_html( $this->member_number( $member ) ),
+				esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ),
+				$button
+			),
+			'renewal_approved',
+			array( 'renewal_id' => $renewal_id )
 		);
 	}
 
@@ -175,7 +212,9 @@ final class EmailService {
 	 * @param Member $member Member.
 	 * @param string $reason Safe rejection reason.
 	 */
-	public function send_renewal_rejected_email( Member $member, string $reason = '' ): bool {
+	public function send_renewal_rejected_email( Member $member, string $reason = '', int $renewal_id = 0 ): bool {
+		$button = $this->button( $this->settings->renewal_page_url(), 'Aceder à renovação' );
+
 		return $this->send_member_lifecycle_email(
 			$member,
 			'Renovação da quota não aprovada',
@@ -184,10 +223,14 @@ final class EmailService {
 				'<p>Olá <strong>%1$s</strong>,</p>
 				<p>O seu pedido de renovação foi analisado e não foi aprovado.</p>
 				%2$s
-				<p>Caso pretenda mais informações, contacte a Direção da ADAM.</p>',
+				<p>Caso pretenda mais informações, contacte a Direção da ADAM.</p>
+				<p style="text-align:center;">%3$s</p>',
 				esc_html( $member->full_name() ),
-				'' !== $reason ? '<p><strong>Motivo indicado:</strong> ' . esc_html( $reason ) . '</p>' : ''
-			)
+				'' !== $reason ? '<p><strong>Motivo indicado:</strong> ' . esc_html( $reason ) . '</p>' : '',
+				$button
+			),
+			'renewal_rejected',
+			array( 'renewal_id' => $renewal_id )
 		);
 	}
 
@@ -197,6 +240,8 @@ final class EmailService {
 	 * @param Member $member Member.
 	 */
 	public function send_quota_expired_email( Member $member ): bool {
+		$button = $this->button( $this->settings->renewal_page_url(), 'Renovar quota' );
+
 		return $this->send_member_lifecycle_email(
 			$member,
 			'A sua quota ADAM expirou',
@@ -204,9 +249,16 @@ final class EmailService {
 			sprintf(
 				'<p>Olá <strong>%1$s</strong>,</p>
 				<p>A sua quota encontra-se expirada.</p>
-				<p>Pode aceder à Área de Sócio para iniciar a renovação.</p>',
-				esc_html( $member->full_name() )
-			)
+				<p><strong>N.º de sócio:</strong> %2$s</p>
+				<p><strong>Validade da quota:</strong> %3$s</p>
+				<p>A inscrição fica inativa até que a renovação seja submetida e aprovada pela ADAM.</p>
+				<p style="text-align:center;">%4$s</p>',
+				esc_html( $member->full_name() ),
+				esc_html( $this->member_number( $member ) ),
+				esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ),
+				$button
+			),
+			'quota_expired'
 		);
 	}
 
@@ -291,7 +343,9 @@ final class EmailService {
 			$this->render_template(
 				'Redefinição da Palavra-passe',
 				$content
-			)
+			),
+			'password_reset',
+			array( 'user_id' => (int) $user->ID )
 		);
 	}
 		/**
@@ -372,7 +426,9 @@ final class EmailService {
 			$this->render_template(
 				'Confirmar alteração de email',
 				$content
-			)
+			),
+			'email_confirmation',
+			array( 'user_id' => (int) $user->ID )
 		);
 	}
 		/**
@@ -381,32 +437,64 @@ final class EmailService {
 	private function send(
 		string $recipient,
 		string $subject,
-		string $message
+		string $message,
+		string $email_type = 'generic',
+		array $context = array()
 	): bool {
 
 		$headers = array(
 			'Content-Type: text/html; charset=UTF-8',
 		);
 
-		$sent = wp_mail(
-			$recipient,
-			$subject,
-			$message,
-			$headers
+		add_filter( 'wp_mail_from', array( $this, 'mail_from' ) );
+		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
+
+		try {
+			$sent = wp_mail(
+				$recipient,
+				$subject,
+				$message,
+				$headers
+			);
+		} finally {
+			remove_filter( 'wp_mail_from', array( $this, 'mail_from' ) );
+			remove_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
+		}
+
+		$log_context = array_merge(
+			$context,
+			array(
+				'email_type'     => $email_type,
+				'recipient_hash' => wp_hash( $recipient ),
+				'subject'        => $subject,
+			)
 		);
 
 		if ( ! $sent ) {
-
 			$this->logger->error(
 				'Email failed.',
-				array(
-					'recipient_hash' => wp_hash( $recipient ),
-					'subject'        => $subject,
-				)
+				$log_context
 			);
+			return false;
 		}
 
-		return $sent;
+		$this->logger->info( 'Email sent.', $log_context );
+
+		return true;
+	}
+
+	/**
+	 * Get branded sender email for ADAM Membership messages.
+	 */
+	public function mail_from(): string {
+		return $this->settings->email_from_address();
+	}
+
+	/**
+	 * Get branded sender name for ADAM Membership messages.
+	 */
+	public function mail_from_name(): string {
+		return $this->settings->email_from_name();
 	}
 
 	/**
@@ -417,7 +505,7 @@ final class EmailService {
 	 * @param string $title   Email title.
 	 * @param string $content Email body content.
 	 */
-	private function send_member_lifecycle_email( Member $member, string $subject, string $title, string $content ): bool {
+	private function send_member_lifecycle_email( Member $member, string $subject, string $title, string $content, string $email_type, array $context = array() ): bool {
 		$recipient = $member->email();
 
 		if ( '' === $recipient ) {
@@ -426,6 +514,7 @@ final class EmailService {
 				array(
 					'user_id' => $member->user_id(),
 					'subject' => $subject,
+					'email_type' => $email_type,
 				)
 			);
 
@@ -435,7 +524,9 @@ final class EmailService {
 		return $this->send(
 			$recipient,
 			$subject,
-			$this->render_template( $title, $content )
+			$this->render_template( $title, $content ),
+			$email_type,
+			array_merge( $context, array( 'member_id' => $member->user_id() ) )
 		);
 	}
 
@@ -446,25 +537,7 @@ final class EmailService {
 		Member $member
 	): string {
 
-		$button = sprintf(
-			'<a href="%1$s"
-				style="
-					display:inline-block;
-					background:%2$s;
-					color:#ffffff;
-					padding:14px 28px;
-					text-decoration:none;
-					border-radius:8px;
-					font-weight:bold;
-					font-size:16px;
-				">
-				Aceder à Área de Sócio
-			</a>',
-			esc_url(
-				$this->settings->member_area_url()
-			),
-			self::PRIMARY
-		);
+		$button = $this->button( $this->settings->member_area_url(), 'Aceder à Área de Sócio' );
 
 		$content = sprintf(
 			'
@@ -520,6 +593,71 @@ final class EmailService {
 			'Bem-vindo à ADAM!',
 			$content
 		);
+	}
+
+	/**
+	 * Build a consistent email button.
+	 *
+	 * @param string $url   Button URL.
+	 * @param string $label Button label.
+	 */
+	private function button( string $url, string $label ): string {
+		return sprintf(
+			'<a href="%1$s"
+				style="
+					display:inline-block;
+					background:%2$s;
+					color:#ffffff;
+					padding:14px 28px;
+					text-decoration:none;
+					border-radius:8px;
+					font-weight:bold;
+					font-size:16px;
+				">
+				%3$s
+			</a>',
+			esc_url( $url ),
+			esc_attr( self::PRIMARY ),
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Get a formatted member number.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function member_number( Member $member ): string {
+		$member_number = trim( (string) $member->field( 'numero_socio' ) );
+
+		return '' !== $member_number ? $member_number : __( 'Por atribuir', 'adam-membership' );
+	}
+
+	/**
+	 * Format a stored date.
+	 *
+	 * @param mixed $date Stored date.
+	 */
+	private function format_date( mixed $date ): string {
+		if ( ! is_scalar( $date ) ) {
+			return '';
+		}
+
+		$date = trim( (string) $date );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		if ( preg_match( '/^\d{8}$/', $date ) ) {
+			return substr( $date, 6, 2 ) . '/' . substr( $date, 4, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return substr( $date, 8, 2 ) . '/' . substr( $date, 5, 2 ) . '/' . substr( $date, 0, 4 );
+		}
+
+		return $date;
 	}
 		/**
 	 * Render the standard ADAM email template.

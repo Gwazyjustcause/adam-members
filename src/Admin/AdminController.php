@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Admin;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\Member;
@@ -79,6 +80,13 @@ final class AdminController {
 	private RenewalService $renewal_service;
 
 	/**
+	 * Maintenance service.
+	 *
+	 * @var MaintenanceService
+	 */
+	private MaintenanceService $maintenance;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -87,14 +95,16 @@ final class AdminController {
 	 * @param Logger             $logger           Logger helper.
 	 * @param RenewalRepository  $renewals         Renewal repository.
 	 * @param RenewalService     $renewal_service  Renewal service.
+	 * @param MaintenanceService $maintenance      Maintenance service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance ) {
 		$this->members          = $members;
 		$this->approval_service = $approval_service;
 		$this->settings         = $settings;
 		$this->logger           = $logger;
 		$this->renewal_repository = $renewals;
 		$this->renewal_service    = $renewal_service;
+		$this->maintenance         = $maintenance;
 	}
 
 	/**
@@ -108,6 +118,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
+		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
 	}
 
 	/**
@@ -347,8 +358,25 @@ final class AdminController {
 						<th scope="row"><label for="adam_renewal_page_url"><?php esc_html_e( 'Renewal page URL', 'adam-membership' ); ?></label></th>
 						<td><input type="url" id="adam_renewal_page_url" name="renewal_page_url" class="regular-text" value="<?php echo esc_attr( $this->settings->renewal_page_url() ); ?>"></td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="adam_email_from_name"><?php esc_html_e( 'Email from name', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_email_from_name" name="email_from_name" class="regular-text" value="<?php echo esc_attr( $this->settings->email_from_name() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_email_from_address"><?php esc_html_e( 'Email from address', 'adam-membership' ); ?></label></th>
+						<td><input type="email" id="adam_email_from_address" name="email_from_address" class="regular-text" value="<?php echo esc_attr( $this->settings->email_from_address() ); ?>"></td>
+					</tr>
 				</table>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Save settings', 'adam-membership' ); ?></button>
+			</form>
+		</div>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Scheduled maintenance', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Membership maintenance runs daily through WP-Cron. Use this button to run the same process immediately for testing.', 'adam-membership' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_run_maintenance">
+				<?php wp_nonce_field( 'adam_membership_run_maintenance' ); ?>
+				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Run Membership Maintenance Now', 'adam-membership' ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -411,12 +439,43 @@ final class AdminController {
 
 		$url = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : '';
 		$this->settings->save_renewal_page_url( $url );
+		$from_name    = isset( $_POST['email_from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['email_from_name'] ) ) : '';
+		$from_address = isset( $_POST['email_from_address'] ) ? sanitize_email( wp_unslash( $_POST['email_from_address'] ) ) : '';
+		$this->settings->save_email_sender( $from_name, $from_address );
 
 		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'         => 'adam-membership-settings',
 					'adam_message' => __( 'Settings saved successfully.', 'adam-membership' ),
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Run scheduled maintenance immediately from the admin.
+	 */
+	public function handle_run_maintenance(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_run_maintenance' );
+
+		$this->logger->info(
+			'Manual membership maintenance requested.',
+			array(
+				'admin_id' => get_current_user_id(),
+			)
+		);
+
+		$this->maintenance->run();
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'         => 'adam-membership-settings',
+					'adam_message' => __( 'Membership maintenance completed.', 'adam-membership' ),
 				),
 				admin_url( 'admin.php' )
 			)

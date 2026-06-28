@@ -49,6 +49,24 @@ if ( file_exists( $adam_membership_autoloader ) ) {
 	);
 }
 
+register_activation_hook(
+	__FILE__,
+	static function (): void {
+		if ( class_exists( Core\MaintenanceService::class ) ) {
+			Core\MaintenanceService::activate();
+		}
+	}
+);
+
+register_deactivation_hook(
+	__FILE__,
+	static function (): void {
+		if ( class_exists( Core\MaintenanceService::class ) ) {
+			Core\MaintenanceService::deactivate();
+		}
+	}
+);
+
 add_action(
 	'plugins_loaded',
 	static function (): void {

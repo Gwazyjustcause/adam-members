@@ -79,6 +79,7 @@ final class Plugin {
 		$email     = new EmailService( $settings, $logger );
 		$approval  = new ApprovalService( $members, $settings, $email, $logger );
 		$renewals  = new RenewalService( $members, $renewal_repository, $email, $logger );
+		$maintenance = new MaintenanceService( $members, $renewal_repository, $renewals, $logger );
 		$config    = new RegistrationFormConfig();
 		$memberArea = new MemberArea( $members, $renewals, $settings );
 		$account = new Account(
@@ -93,7 +94,8 @@ final class Plugin {
 
 		( new UserRegistration( $config, $logger ) )->register();
 		( new RenewalSubmission( $renewals, $logger ) )->register();
-		( new AdminController( $members, $approval, $settings, $logger, $renewal_repository, $renewals ) )->register();
+		( new AdminController( $members, $approval, $settings, $logger, $renewal_repository, $renewals, $maintenance ) )->register();
+		$maintenance->register();
 
 		$memberArea->register();
 		$passwordRecovery->register();

@@ -66,7 +66,7 @@ final class RenewalService {
 
 		$member->save( array( 'estado' => Member::STATUS_RENEWAL_PENDING ) );
 		$this->logger->info( 'Renewal submitted.', array( 'member_id' => $member->user_id(), 'renewal_id' => $request->id(), 'submission_id' => $entry_id ) );
-		$this->email->send_renewal_pending_email( $member );
+		$this->email->send_renewal_submitted_email( $member, $request->id() );
 
 		return $request;
 	}
@@ -134,7 +134,7 @@ final class RenewalService {
 
 		$this->audit( 'Expiry date changed during renewal approval.', $member, array( 'old_value' => $old_expiry, 'new_value' => $new_expiry, 'renewal_id' => $request->id() ) );
 		$this->audit( 'Renewal approved.', $member, array( 'renewal_id' => $request->id() ) );
-		$this->email->send_renewal_approved_email( $member );
+		$this->email->send_renewal_approved_email( $member, $request->id() );
 
 		return true;
 	}
@@ -177,7 +177,7 @@ final class RenewalService {
 		);
 
 		$this->audit( 'Renewal rejected.', $member, array( 'renewal_id' => $request->id(), 'reason' => $reason ) );
-		$this->email->send_renewal_rejected_email( $member, $reason );
+		$this->email->send_renewal_rejected_email( $member, $reason, $request->id() );
 
 		return true;
 	}
@@ -214,7 +214,7 @@ final class RenewalService {
 	 * @param Member $member Member.
 	 */
 	public function maybe_send_renewal_reminder( Member $member ): void {
-		if ( ! $member->can_renew() || $member->isRejected() || $member->isRenewalPending() ) {
+		if ( Member::QUOTA_EXPIRING_SOON !== $member->quota_status() || $member->isRejected() || $member->isRenewalPending() ) {
 			return;
 		}
 
@@ -229,6 +229,21 @@ final class RenewalService {
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_sent', '1' );
 		update_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_date', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
 		$this->audit( 'Renewal reminder sent.', $member );
+	}
+
+	/**
+	 * Send the quota expired notice.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function send_quota_expired_notice( Member $member ): bool {
+		$sent = $this->email->send_quota_expired_email( $member );
+
+		if ( $sent ) {
+			$this->audit( 'Quota expired notice sent.', $member );
+		}
+
+		return $sent;
 	}
 
 	/**
