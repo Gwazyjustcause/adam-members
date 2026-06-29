@@ -168,12 +168,13 @@ final class MemberArea {
 
 		ob_start();
 		?>
-		<div class="adam-member-area adam-member-dashboard">
-			<?php $this->renewals->maybe_send_renewal_reminder( $member ); ?>
-			<?php $this->render_header( $member ); ?>
-			<?php $this->render_account_notices(); ?>
-			<?php $this->render_card_notices(); ?>
-			<?php $this->render_reward_notices(); ?>
+			<div class="adam-member-area adam-member-dashboard">
+				<?php $this->renewals->maybe_send_renewal_reminder( $member ); ?>
+				<?php $this->render_header( $member ); ?>
+				<?php $this->render_rank_showcase( $member ); ?>
+				<?php $this->render_account_notices(); ?>
+				<?php $this->render_card_notices(); ?>
+				<?php $this->render_reward_notices(); ?>
 
 			<?php if ( 'recompensas' === $this->current_member_view() ) : ?>
 				<?php $this->render_rewards_page( $member ); ?>
@@ -369,7 +370,7 @@ final class MemberArea {
 		$card_presentation = $this->cards->card_presentation( $member );
 		?>
 		<header class="adam-member-hero">
-			<div>
+			<div class="adam-member-hero__content">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
 				<h2>
 					<?php
@@ -408,6 +409,39 @@ final class MemberArea {
 				<span><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: __( 'Número por atribuir', 'adam-membership' ) ); ?></span>
 			</div>
 		</header>
+		<?php
+	}
+
+	/**
+	 * Render a dedicated rank showcase card.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_rank_showcase( Member $member ): void {
+		$card_presentation = $this->cards->card_presentation( $member );
+		$active_title      = $card_presentation['active_title'] ?? null;
+
+		if ( ! is_array( $active_title ) ) {
+			return;
+		}
+		?>
+		<section class="adam-card adam-member-rank-showcase adam-member-rank-showcase--<?php echo esc_attr( sanitize_html_class( (string) ( $active_title['rarity'] ?? 'common' ) ) ); ?>" aria-label="<?php esc_attr_e( 'Patente ADAM', 'adam-membership' ); ?>">
+			<div class="adam-member-rank-showcase__copy">
+				<p class="adam-eyebrow"><?php esc_html_e( 'Patente ADAM', 'adam-membership' ); ?></p>
+				<h3><?php echo esc_html( (string) $active_title['name'] ); ?></h3>
+				<p><?php esc_html_e( 'A tua patente ativa acompanha o cartao digital e destaca o teu percurso dentro da ADAM.', 'adam-membership' ); ?></p>
+			</div>
+			<div class="adam-member-rank-showcase__aside">
+				<div class="adam-member-rank-showcase__plate adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) ( $active_title['rarity'] ?? 'common' ) ) ); ?>">
+					<span class="adam-digital-card__title-mark" aria-hidden="true"></span>
+					<?php echo esc_html( (string) $active_title['name'] ); ?>
+				</div>
+				<div class="adam-member-rank-showcase__meta">
+					<span><?php esc_html_e( 'Raridade', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( (string) ( $active_title['rarity_label'] ?? '' ) ); ?></strong>
+				</div>
+			</div>
+		</section>
 		<?php
 	}
 
@@ -649,9 +683,13 @@ final class MemberArea {
 					<div class="adam-digital-card__identity">
 						<span><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></span>
 						<?php if ( is_array( $card_presentation['active_title'] ?? null ) ) : ?>
-							<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) $card_presentation['active_title']['rarity'] ) ); ?>">
-								<?php echo esc_html( (string) $card_presentation['active_title']['name'] ); ?>
-							</em>
+							<div class="adam-digital-card__rank">
+								<small><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></small>
+								<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) $card_presentation['active_title']['rarity'] ) ); ?>">
+									<span class="adam-digital-card__title-mark" aria-hidden="true"></span>
+									<?php echo esc_html( (string) $card_presentation['active_title']['name'] ); ?>
+								</em>
+							</div>
 						<?php endif; ?>
 						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
 						<small><?php echo esc_html( '' !== $member_number ? $member_number : __( 'Número por atribuir', 'adam-membership' ) ); ?></small>

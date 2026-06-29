@@ -51,6 +51,7 @@ final class CardCosmeticsService {
 		}
 
 		if ( is_array( $active_frame ) && isset( $active_frame['css_class'] ) ) {
+			$classes[] = 'adam-digital-card--has-frame';
 			$classes[] = (string) $active_frame['css_class'];
 			$classes[] = 'adam-digital-card--frame-rarity-' . sanitize_html_class( (string) $active_frame['rarity'] );
 		}
