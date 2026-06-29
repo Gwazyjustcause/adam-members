@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace AdamMembership\Core;
 
+use AdamMembership\Admin\StatisticsController;
+use AdamMembership\Analytics\StatisticsService;
 use AdamMembership\Admin\AnnouncementController;
 use AdamMembership\Admin\DocumentController;
 use AdamMembership\Admin\EventController;
@@ -112,6 +114,7 @@ final class Plugin {
 		$recognition        = new RecognitionService( $members, $rewards, $history_repository, $logger );
 		$card_cosmetics     = new CardCosmeticsService( $rewards );
 		$events             = new EventService( $event_repository, $members, $logger, $history_repository, $points );
+		$statistics         = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
 		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
@@ -147,6 +150,7 @@ final class Plugin {
 		$event_admin        = new EventController( $events );
 		$points_admin       = new PointsController( $points, $members, $events );
 		$reward_admin       = new RewardController( $rewards, $members );
+		$statistics_admin   = new StatisticsController( $statistics, $events, $points );
 		$rewards->ensure_initial_catalogue();
 
 		$registration->register();
@@ -157,6 +161,7 @@ final class Plugin {
 		$event_admin->register();
 		$points_admin->register();
 		$reward_admin->register();
+		$statistics_admin->register();
 		$maintenance->register();
 		$cards->register();
 		$history->register();

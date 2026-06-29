@@ -318,6 +318,7 @@
 }
 
 .adam-admin-badge.ativo,
+.adam-admin-badge.aprovada,
 .adam-admin-badge.status-active,
 .adam-admin-badge.quota-active {
 	background: #dcfce7;
@@ -332,6 +333,7 @@
 	color: #92400e;
 }
 
+.adam-admin-badge.expirado,
 .adam-admin-badge.event-status-cancelled,
 .adam-admin-badge.status-expired,
 .adam-admin-badge.registration-status-rejected,
@@ -341,6 +343,7 @@
 }
 
 .adam-admin-badge.event-status-completed,
+.adam-admin-badge.entregue,
 .adam-admin-badge.document-status-archived,
 .adam-admin-badge.registration-status-waiting_list {
 	background: #e2e8f0;
@@ -348,11 +351,29 @@
 }
 
 .adam-admin-badge.rejeitado,
+.adam-admin-badge.rejeitada,
+.adam-admin-badge.reward-status-rejected,
 .adam-admin-badge.status-rejected,
 .adam-admin-badge.status-expired,
 .adam-admin-badge.quota-expired {
 	background: #fee2e2;
 	color: #991b1b;
+}
+
+.adam-admin-badge.renovacao-em-analise,
+.adam-admin-badge.reward-status-pending {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-admin-badge.reward-status-approved {
+	background: #dcfce7;
+	color: #14532d;
+}
+
+.adam-admin-badge.reward-status-delivered {
+	background: #dbeafe;
+	color: #1d4ed8;
 }
 
 .adam-admin-badge.announcement-info,
@@ -676,6 +697,203 @@
 	color: #991b1b;
 }
 
+.adam-admin-stats-titlebar {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 18px;
+}
+
+.adam-admin-stats-titlebar p,
+.adam-admin-section-intro,
+.adam-admin-panel-copy {
+	margin: 6px 0 0;
+	color: var(--adam-admin-muted);
+	line-height: 1.55;
+}
+
+.adam-admin-stats-filters {
+	margin-top: 8px;
+}
+
+.adam-admin-stats-cards {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.adam-admin-stats-grid,
+.adam-admin-stats-recent-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+}
+
+.adam-admin-stats-panel,
+.adam-admin-stats-table-panel {
+	padding: 18px;
+	border: 1px solid #e5edf0;
+	border-radius: 12px;
+	background: linear-gradient(180deg, #ffffff, #f8fbf9);
+}
+
+.adam-admin-stats-panel h3,
+.adam-admin-stats-table-panel h3 {
+	margin: 0 0 10px;
+	font-size: 18px;
+}
+
+.adam-admin-stats-table-panel {
+	margin-top: 18px;
+}
+
+.adam-admin-bar-chart,
+.adam-admin-line-chart__legend,
+.adam-admin-stat-list,
+.adam-admin-compact-list {
+	display: grid;
+	gap: 12px;
+}
+
+.adam-admin-bar-chart__row {
+	display: grid;
+	grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) auto;
+	align-items: center;
+	gap: 12px;
+}
+
+.adam-admin-bar-chart__label,
+.adam-admin-bar-chart__value {
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.adam-admin-bar-chart__label {
+	overflow-wrap: anywhere;
+}
+
+.adam-admin-bar-chart__track {
+	position: relative;
+	height: 10px;
+	border-radius: 999px;
+	background: #e5edf0;
+	overflow: hidden;
+}
+
+.adam-admin-bar-chart__fill {
+	height: 100%;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--adam-admin-green), #7cc08a);
+}
+
+.adam-admin-line-chart svg {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+.adam-admin-line-chart__legend {
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	margin-top: 12px;
+}
+
+.adam-admin-line-chart__legend span {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.adam-admin-donut {
+	display: grid;
+	grid-template-columns: 180px minmax(0, 1fr);
+	align-items: center;
+	gap: 18px;
+}
+
+.adam-admin-donut__chart {
+	position: relative;
+	width: 180px;
+	height: 180px;
+	border-radius: 50%;
+	margin: 0 auto;
+}
+
+.adam-admin-donut__center {
+	position: absolute;
+	inset: 24px;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	background: #ffffff;
+	text-align: center;
+	box-shadow: inset 0 0 0 1px var(--adam-admin-border);
+}
+
+.adam-admin-donut__center strong {
+	display: block;
+	font-size: 28px;
+	line-height: 1;
+	color: var(--adam-admin-green-dark);
+}
+
+.adam-admin-donut__center span {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.adam-admin-donut__legend {
+	display: grid;
+	gap: 10px;
+}
+
+.adam-admin-donut__legend-item {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 10px;
+}
+
+.adam-admin-donut__swatch {
+	width: 12px;
+	height: 12px;
+	border-radius: 999px;
+}
+
+.adam-admin-donut__legend-item small {
+	color: var(--adam-admin-muted);
+	font-weight: 700;
+}
+
+.adam-admin-stat-list__item,
+.adam-admin-compact-list__item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #edf3ee;
+}
+
+.adam-admin-stat-list__item:last-child,
+.adam-admin-compact-list__item:last-child {
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.adam-admin-stat-list__item span,
+.adam-admin-compact-list__item small {
+	color: var(--adam-admin-muted);
+}
+
+.adam-admin-stat-list__item strong,
+.adam-admin-compact-list__item strong {
+	color: var(--adam-admin-green-dark);
+}
+
+.adam-admin-stats-panel--compact .adam-admin-empty {
+	margin-top: 0;
+}
+
 @media (max-width: 1200px) {
 	.adam-admin-cards {
 		grid-template-columns: repeat(3, minmax(150px, 1fr));
@@ -684,12 +902,21 @@
 	.adam-admin-shortcut-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
+
+	.adam-admin-stats-cards,
+	.adam-admin-stats-grid,
+	.adam-admin-stats-recent-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media (max-width: 782px) {
 	.adam-admin-cards,
 	.adam-admin-dashboard-widgets,
 	.adam-admin-shortcut-grid,
+	.adam-admin-stats-cards,
+	.adam-admin-stats-grid,
+	.adam-admin-stats-recent-grid,
 	.adam-admin-member-layout,
 	.adam-admin-detail-grid,
 	.adam-admin-edit-grid {
@@ -701,6 +928,16 @@
 	.adam-admin-row-actions {
 		align-items: stretch;
 		flex-direction: column;
+	}
+
+	.adam-admin-stats-titlebar,
+	.adam-admin-donut,
+	.adam-admin-bar-chart__row,
+	.adam-admin-stat-list__item,
+	.adam-admin-compact-list__item {
+		grid-template-columns: 1fr;
+		flex-direction: column;
+		align-items: flex-start;
 	}
 
 	.adam-admin-filters label,
@@ -727,5 +964,10 @@
 	.adam-admin-widget-item__meta {
 		align-items: flex-start;
 		flex-direction: column;
+	}
+
+	.adam-admin-donut__chart {
+		width: 150px;
+		height: 150px;
 	}
 }
