@@ -171,6 +171,8 @@
 }
 
 .adam-points-section,
+.adam-rewards-page,
+.adam-reward-history-section,
 .adam-documents-section,
 .adam-announcements-section {
 	grid-column: 1 / -1;
@@ -373,6 +375,251 @@
 .adam-points-history {
 	display: grid;
 	gap: 12px;
+}
+
+.adam-rewards-summary {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+	margin-bottom: 22px;
+}
+
+.adam-reward-recent {
+	padding: 18px;
+	border: 1px solid var(--adam-border);
+	border-radius: 14px;
+	background: linear-gradient(180deg, #f8fbf8, #ffffff);
+}
+
+.adam-reward-recent > span {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--adam-muted);
+	font-size: 0.78rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-reward-recent strong {
+	display: block;
+	color: var(--adam-green-900);
+	font-size: 1rem;
+	line-height: 1.35;
+}
+
+.adam-reward-recent__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adam-reward-chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 32px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	background: var(--adam-green-100);
+	color: var(--adam-green-900);
+	font-size: 0.9rem;
+	font-weight: 800;
+}
+
+.adam-reward-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 18px;
+}
+
+.adam-reward-grid__empty {
+	grid-column: 1 / -1;
+}
+
+.adam-reward-card {
+	display: grid;
+	gap: 16px;
+	padding: 18px;
+	border: 1px solid rgba(18, 73, 38, 0.12);
+	border-radius: 18px;
+	background: linear-gradient(180deg, #ffffff, #f7faf8);
+	box-shadow: 0 10px 24px rgba(16, 46, 27, 0.06);
+}
+
+.adam-reward-card--common {
+	border-top: 4px solid #94a3b8;
+}
+
+.adam-reward-card--rare {
+	border-top: 4px solid #2563eb;
+}
+
+.adam-reward-card--epic {
+	border-top: 4px solid #7c3aed;
+}
+
+.adam-reward-card--legendary {
+	border-top: 4px solid #d97706;
+}
+
+.adam-reward-card__media {
+	display: grid;
+	place-items: center;
+	width: 100%;
+	aspect-ratio: 16 / 10;
+	border-radius: 16px;
+	background: linear-gradient(135deg, #eef6ef, #ffffff);
+	overflow: hidden;
+}
+
+.adam-reward-card__media img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.adam-reward-card__media span {
+	color: var(--adam-green-900);
+	font-size: clamp(2rem, 4vw, 3rem);
+	font-weight: 900;
+}
+
+.adam-reward-card__meta,
+.adam-reward-card__stats,
+.adam-reward-card__actions,
+.adam-reward-history__item,
+.adam-reward-history__meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adam-reward-card__body {
+	display: grid;
+	gap: 10px;
+}
+
+.adam-reward-card__body h4 {
+	margin: 0;
+	color: #102033;
+	font-size: 1.08rem;
+	line-height: 1.25;
+	font-weight: 900;
+}
+
+.adam-reward-card__body p {
+	color: #44515c;
+	line-height: 1.65;
+}
+
+.adam-reward-card__stats {
+	justify-content: space-between;
+	gap: 14px;
+}
+
+.adam-reward-card__stats div {
+	min-width: 0;
+}
+
+.adam-reward-card__stats span {
+	display: block;
+	margin-bottom: 4px;
+	color: var(--adam-muted);
+	font-size: 0.78rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-reward-card__stats strong {
+	color: var(--adam-ink);
+	font-size: 1rem;
+	font-weight: 900;
+}
+
+.adam-reward-progress {
+	display: grid;
+	gap: 8px;
+}
+
+.adam-reward-progress small {
+	color: var(--adam-muted);
+	font-size: 0.88rem;
+	font-weight: 700;
+}
+
+.adam-reward-progress__track {
+	width: 100%;
+	height: 10px;
+	border-radius: 999px;
+	background: #e5ece7;
+	overflow: hidden;
+}
+
+.adam-reward-progress__track span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: linear-gradient(90deg, var(--adam-green-600), var(--adam-green-800));
+}
+
+.adam-reward-card__actions {
+	justify-content: space-between;
+}
+
+.adam-reward-card__actions .adam-card-link[disabled] {
+	background: #cbd5d1;
+	box-shadow: none;
+	cursor: not-allowed;
+}
+
+.adam-reward-rarity--common {
+	background: #e2e8f0;
+	color: #334155;
+}
+
+.adam-reward-rarity--rare {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.adam-reward-rarity--epic {
+	background: #ede9fe;
+	color: #6d28d9;
+}
+
+.adam-reward-rarity--legendary {
+	background: #fef3c7;
+	color: #b45309;
+}
+
+.adam-reward-history {
+	display: grid;
+	gap: 12px;
+}
+
+.adam-reward-history__item {
+	justify-content: space-between;
+	padding: 16px 18px;
+	border: 1px solid var(--adam-border);
+	border-radius: 14px;
+	background: #fbfdfb;
+}
+
+.adam-reward-history__main {
+	display: grid;
+	gap: 4px;
+}
+
+.adam-reward-history__main strong {
+	color: var(--adam-ink);
+	font-size: 1rem;
+}
+
+.adam-reward-history__main span,
+.adam-reward-history__meta span {
+	color: var(--adam-muted);
+	font-size: 0.92rem;
+	font-weight: 700;
 }
 
 .adam-points-entry {
@@ -1298,7 +1545,9 @@
 	}
 
 	.adam-document-filters,
-	.adam-document-grid {
+	.adam-document-grid,
+	.adam-reward-grid,
+	.adam-rewards-summary {
 		grid-template-columns: 1fr;
 	}
 
@@ -1414,6 +1663,13 @@
 
 	.adam-points-entry {
 		text-align: center;
+	}
+
+	.adam-reward-card__stats,
+	.adam-reward-card__actions,
+	.adam-reward-history__item {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 
 	.adam-points-entry__date {

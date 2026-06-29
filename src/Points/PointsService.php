@@ -194,6 +194,40 @@ final class PointsService {
 	}
 
 	/**
+	 * Deduct points after an approved reward redemption.
+	 *
+	 * @return PointsEntry|WP_Error
+	 */
+	public function redeem_reward_points( Member $member, int $points_cost, string $reason, int $reward_id, int $actor_user_id = 0 ): PointsEntry|WP_Error {
+		$points_cost = absint( $points_cost );
+		$reason      = trim( sanitize_text_field( $reason ) );
+
+		if ( $points_cost <= 0 ) {
+			return new WP_Error( 'adam_membership_reward_points_invalid', __( 'O custo em pontos da recompensa e invalido.', 'adam-membership' ) );
+		}
+
+		if ( '' === $reason ) {
+			return new WP_Error( 'adam_membership_reward_reason_required', __( 'O motivo do resgate da recompensa e obrigatorio.', 'adam-membership' ) );
+		}
+
+		if ( $this->current_balance( $member ) < $points_cost ) {
+			return new WP_Error( 'adam_membership_reward_not_enough_points', __( 'O socio nao tem pontos suficientes para este resgate.', 'adam-membership' ) );
+		}
+
+		return $this->create_entry(
+			$member,
+			0 - $points_cost,
+			$reason,
+			self::SOURCE_REWARD_REDEMPTION,
+			$reward_id,
+			$actor_user_id,
+			array(
+				'reward_id' => $reward_id,
+			)
+		);
+	}
+
+	/**
 	 * @return array{total_points_awarded:int,total_events_that_awarded_points:int,top_members:array<int, array<string, mixed>>,recent_activity:array<int, PointsEntry>}
 	 */
 	public function dashboard_stats(): array {

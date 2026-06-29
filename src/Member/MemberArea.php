@@ -17,6 +17,9 @@ use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
 use AdamMembership\Points\PointsEntry;
 use AdamMembership\Points\PointsService;
+use AdamMembership\Reward\Reward;
+use AdamMembership\Reward\RewardRedemption;
+use AdamMembership\Reward\RewardService;
 
 /**
  * Handles the frontend member area.
@@ -73,6 +76,13 @@ final class MemberArea {
 	private PointsService $points;
 
 	/**
+	 * Reward service.
+	 *
+	 * @var RewardService
+	 */
+	private RewardService $rewards;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
@@ -82,8 +92,9 @@ final class MemberArea {
 	 * @param AnnouncementService $announcements Announcement service.
 	 * @param DocumentService     $documents     Document service.
 	 * @param PointsService       $points        Points service.
+	 * @param RewardService       $rewards       Reward service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -91,6 +102,7 @@ final class MemberArea {
 		$this->announcements = $announcements;
 		$this->documents     = $documents;
 		$this->points        = $points;
+		$this->rewards       = $rewards;
 	}
 
 	/**
@@ -148,34 +160,42 @@ final class MemberArea {
 			return $this->render_not_found();
 		}
 
+		$this->handle_reward_redemption_request( $member );
+
 		ob_start();
 		?>
 		<div class="adam-member-area adam-member-dashboard">
 			<?php $this->renewals->maybe_send_renewal_reminder( $member ); ?>
 			<?php $this->render_header( $member ); ?>
 			<?php $this->render_account_notices(); ?>
+			<?php $this->render_reward_notices(); ?>
 
-			<?php
-			if ( $member->isPending() ) {
-				$this->render_pending( $member );
-			} elseif ( $member->isRenewalPending() ) {
-				$this->render_renewal_pending( $member );
-			} elseif ( $member->isExpired() ) {
-				$this->render_expired( $member );
-			} elseif ( $member->isRejected() ) {
-				$this->render_rejected( $member );
-			} elseif ( $member->isActive() ) {
-				$this->render_active( $member );
-			} else {
-				$this->render_unknown_status();
-			}
+			<?php if ( 'recompensas' === $this->current_member_view() ) : ?>
+				<?php $this->render_rewards_page( $member ); ?>
+			<?php else : ?>
 
-			$this->render_digital_card( $member );
-			$this->render_points_card( $member );
-			$this->render_documents( $member );
-			$this->render_member_actions( $member );
-			$this->render_announcements( $member );
-			?>
+				<?php
+				if ( $member->isPending() ) {
+					$this->render_pending( $member );
+				} elseif ( $member->isRenewalPending() ) {
+					$this->render_renewal_pending( $member );
+				} elseif ( $member->isExpired() ) {
+					$this->render_expired( $member );
+				} elseif ( $member->isRejected() ) {
+					$this->render_rejected( $member );
+				} elseif ( $member->isActive() ) {
+					$this->render_active( $member );
+				} else {
+					$this->render_unknown_status();
+				}
+
+				$this->render_digital_card( $member );
+				$this->render_points_card( $member );
+				$this->render_documents( $member );
+				$this->render_member_actions( $member );
+				$this->render_announcements( $member );
+				?>
+			<?php endif; ?>
 		</div>
 		<?php
 
@@ -380,6 +400,22 @@ final class MemberArea {
 	}
 
 	/**
+	 * Render reward notices from redirects.
+	 */
+	private function render_reward_notices(): void {
+		$message = isset( $_GET['reward_message'] ) ? sanitize_text_field( wp_unslash( $_GET['reward_message'] ) ) : '';
+		$error   = isset( $_GET['reward_error'] ) ? sanitize_text_field( wp_unslash( $_GET['reward_error'] ) ) : '';
+
+		if ( '' !== $message ) {
+			echo wp_kses_post( $this->notice_markup( 'success', $message ) );
+		}
+
+		if ( '' !== $error ) {
+			echo wp_kses_post( $this->notice_markup( 'error', $error ) );
+		}
+	}
+
+	/**
 	 * Render pending dashboard.
 	 *
 	 * @param Member $member Member.
@@ -534,6 +570,9 @@ final class MemberArea {
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-card-actions">
+					<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'recompensas' ) ) ); ?>">
+						<?php esc_html_e( 'Ver recompensas', 'adam-membership' ); ?>
+					</a>
 					<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></button>
 					<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 				</div>
@@ -669,6 +708,200 @@ final class MemberArea {
 			</div>
 			<div class="adam-points-entry__date">
 				<?php echo esc_html( $this->format_datetime( $entry->created_at() ) ); ?>
+			</div>
+		</article>
+		<?php
+	}
+
+	/**
+	 * Render reward page.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_rewards_page( Member $member ): void {
+		$balance          = $this->points->current_balance( $member );
+		$total_earned     = $this->points->total_earned( $member );
+		$catalogue        = $this->rewards->member_catalogue( $member );
+		$recent_rewards   = $this->rewards->recent_redeemed_rewards( $member, 3 );
+		$reward_history   = $this->rewards->member_redemptions( $member, 20 );
+		$back_url         = $this->member_area_url();
+		?>
+		<section class="adam-card adam-rewards-page" aria-label="<?php esc_attr_e( 'Recompensas ADAM', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Recompensas ADAM', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Desbloqueios, titulos e surpresas', 'adam-membership' ); ?></h3>
+				</div>
+				<div class="adam-card-actions">
+					<a class="adam-card-link" href="<?php echo esc_url( $back_url ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+				</div>
+			</div>
+
+			<div class="adam-rewards-summary">
+				<div class="adam-points-stat">
+					<span><?php esc_html_e( 'Pontos atuais', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( $balance ) ); ?></strong>
+				</div>
+				<div class="adam-points-stat">
+					<span><?php esc_html_e( 'Total acumulado', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( $total_earned ) ); ?></strong>
+				</div>
+				<div class="adam-reward-recent">
+					<span><?php esc_html_e( 'Resgates recentes', 'adam-membership' ); ?></span>
+					<?php if ( array() === $recent_rewards ) : ?>
+						<strong><?php esc_html_e( 'Ainda sem resgates aprovados.', 'adam-membership' ); ?></strong>
+					<?php else : ?>
+						<div class="adam-reward-recent__list">
+							<?php foreach ( $recent_rewards as $redemption ) : ?>
+								<span class="adam-reward-chip"><?php echo esc_html( $redemption->reward_name() ); ?></span>
+							<?php endforeach; ?>
+						</div>
+					<?php endif; ?>
+				</div>
+			</div>
+
+			<div class="adam-reward-grid">
+				<?php if ( array() === $catalogue ) : ?>
+					<div class="adam-empty-inline adam-reward-grid__empty">
+						<?php esc_html_e( 'Ainda nao existem recompensas ativas para resgate.', 'adam-membership' ); ?>
+					</div>
+				<?php else : ?>
+					<?php foreach ( $catalogue as $reward ) : ?>
+						<?php $this->render_reward_card( $member, $reward, $balance ); ?>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</div>
+		</section>
+
+		<section class="adam-card adam-reward-history-section" aria-label="<?php esc_attr_e( 'Historico de recompensas', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Historico', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Os teus resgates ADAM', 'adam-membership' ); ?></h3>
+				</div>
+			</div>
+
+			<?php if ( array() === $reward_history ) : ?>
+				<div class="adam-empty-inline">
+					<?php esc_html_e( 'Ainda nao existem pedidos de recompensa registados.', 'adam-membership' ); ?>
+				</div>
+			<?php else : ?>
+				<div class="adam-reward-history">
+					<?php foreach ( $reward_history as $redemption ) : ?>
+						<?php $this->render_reward_history_item( $redemption ); ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render one reward card.
+	 *
+	 * @param Member $member  Member.
+	 * @param Reward $reward  Reward.
+	 * @param int    $balance Current points balance.
+	 */
+	private function render_reward_card( Member $member, Reward $reward, int $balance ): void {
+		$owned            = $this->rewards->member_owns_reward( $member, $reward );
+		$pending          = $this->rewards->member_has_pending_request( $member, $reward );
+		$can_redeem       = $this->rewards->member_can_redeem( $member, $reward );
+		$shortfall        = max( 0, $reward->points_cost() - $balance );
+		$progress         = $reward->points_cost() > 0 ? min( 100, (int) floor( ( $balance / $reward->points_cost() ) * 100 ) ) : 100;
+		$known_redemption = $owned ? $this->first_owned_reward_redemption( $member, $reward ) : null;
+		?>
+		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?>">
+			<div class="adam-reward-card__media">
+				<?php if ( '' !== $reward->image_url() ) : ?>
+					<img src="<?php echo esc_url( $reward->image_url() ); ?>" alt="<?php echo esc_attr( $reward->name() ); ?>">
+				<?php else : ?>
+					<span><?php echo esc_html( $this->reward_icon_label( $reward ) ); ?></span>
+				<?php endif; ?>
+			</div>
+
+			<div class="adam-reward-card__meta">
+				<span class="adam-badge adam-reward-rarity adam-reward-rarity--<?php echo esc_attr( $reward->rarity() ); ?>"><?php echo esc_html( $this->reward_rarity_label( $reward ) ); ?></span>
+				<span class="adam-announcement-category"><?php echo esc_html( $reward->category() ); ?></span>
+				<?php if ( $owned ) : ?>
+					<span class="adam-badge active"><?php esc_html_e( 'Desbloqueada', 'adam-membership' ); ?></span>
+				<?php elseif ( $pending ) : ?>
+					<span class="adam-badge pending"><?php esc_html_e( 'Pendente', 'adam-membership' ); ?></span>
+				<?php endif; ?>
+			</div>
+
+			<div class="adam-reward-card__body">
+				<h4><?php echo esc_html( $reward->name() ); ?></h4>
+				<p><?php echo esc_html( $this->rewards->public_reward_description( $reward, $known_redemption ) ); ?></p>
+			</div>
+
+			<div class="adam-reward-card__stats">
+				<div>
+					<span><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( (string) $reward->points_cost() ); ?></strong>
+				</div>
+				<div>
+					<span><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( $reward->availability_label() ); ?></strong>
+				</div>
+			</div>
+
+			<div class="adam-reward-progress" aria-hidden="true">
+				<div class="adam-reward-progress__track">
+					<span style="width: <?php echo esc_attr( (string) $progress ); ?>%;"></span>
+				</div>
+				<small>
+					<?php
+					if ( $can_redeem || $owned || $pending ) {
+						esc_html_e( 'Pronto para desbloquear', 'adam-membership' );
+					} else {
+						echo esc_html(
+							sprintf(
+								/* translators: %d: missing points. */
+								__( 'Faltam %d pontos', 'adam-membership' ),
+								$shortfall
+							)
+						);
+					}
+					?>
+				</small>
+			</div>
+
+			<div class="adam-reward-card__actions">
+				<?php if ( $owned && $reward->is_single_claim() ) : ?>
+					<span class="adam-text-link"><?php esc_html_e( 'Ja disponivel na tua conta', 'adam-membership' ); ?></span>
+				<?php elseif ( $pending ) : ?>
+					<span class="adam-text-link"><?php esc_html_e( 'Pedido em analise pela ADAM', 'adam-membership' ); ?></span>
+				<?php elseif ( $can_redeem ) : ?>
+					<form method="post" class="adam-reward-redeem-form">
+						<input type="hidden" name="adam_member_action" value="redeem_reward">
+						<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
+						<?php wp_nonce_field( 'adam_member_redeem_reward_' . $reward->id() ); ?>
+						<button type="submit" class="adam-card-link"><?php esc_html_e( 'Resgatar', 'adam-membership' ); ?></button>
+					</form>
+				<?php else : ?>
+					<button type="button" class="adam-card-link" disabled><?php esc_html_e( 'Pontos insuficientes', 'adam-membership' ); ?></button>
+				<?php endif; ?>
+			</div>
+		</article>
+		<?php
+	}
+
+	/**
+	 * Render reward history item.
+	 *
+	 * @param RewardRedemption $redemption Redemption.
+	 */
+	private function render_reward_history_item( RewardRedemption $redemption ): void {
+		?>
+		<article class="adam-reward-history__item">
+			<div class="adam-reward-history__main">
+				<strong><?php echo esc_html( $redemption->reward_name() ); ?></strong>
+				<span><?php echo esc_html( $this->reward_redemption_status_label( $redemption ) ); ?></span>
+			</div>
+			<div class="adam-reward-history__meta">
+				<span><?php echo esc_html( sprintf( __( '%d pontos', 'adam-membership' ), $redemption->points_cost() ) ); ?></span>
+				<span><?php echo esc_html( $this->format_datetime( $redemption->created_at() ) ); ?></span>
 			</div>
 		</article>
 		<?php
@@ -1020,6 +1253,50 @@ final class MemberArea {
 	}
 
 	/**
+	 * Handle reward redemption submissions.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function handle_reward_redemption_request( Member $member ): void {
+		if (
+			'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ||
+			! isset( $_POST['adam_member_action'] ) ||
+			'redeem_reward' !== sanitize_key( (string) wp_unslash( $_POST['adam_member_action'] ) )
+		) {
+			return;
+		}
+
+		$reward_id = isset( $_POST['reward_id'] ) ? absint( wp_unslash( $_POST['reward_id'] ) ) : 0;
+
+		if ( $reward_id <= 0 ) {
+			$this->redirect_member_notice( 'reward_error', __( 'A recompensa selecionada e invalida.', 'adam-membership' ), array( 'view' => 'recompensas' ) );
+		}
+
+		if (
+			! isset( $_POST['_wpnonce'] ) ||
+			! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_member_redeem_reward_' . $reward_id )
+		) {
+			$this->redirect_member_notice( 'reward_error', __( 'Nao foi possivel validar o pedido de recompensa.', 'adam-membership' ), array( 'view' => 'recompensas' ) );
+		}
+
+		if ( $member->isPending() || $member->isRejected() ) {
+			$this->redirect_member_notice( 'reward_error', __( 'A tua conta nao pode resgatar recompensas neste estado.', 'adam-membership' ), array( 'view' => 'recompensas' ) );
+		}
+
+		$result = $this->rewards->redeem( $member, $reward_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_member_notice( 'reward_error', $result->get_error_message(), array( 'view' => 'recompensas' ) );
+		}
+
+		$message = RewardRedemption::STATUS_PENDING === $result->status()
+			? __( 'Pedido de recompensa registado. Ficou pendente para validacao da ADAM.', 'adam-membership' )
+			: __( 'Recompensa resgatada com sucesso.', 'adam-membership' );
+
+		$this->redirect_member_notice( 'reward_message', $message, array( 'view' => 'recompensas' ) );
+	}
+
+	/**
 	 * Render member actions after feature sections.
 	 *
 	 * @param Member $member Member.
@@ -1076,6 +1353,11 @@ final class MemberArea {
 	private function standard_account_actions(): array {
 		return array(
 			array(
+				'label'       => __( 'Recompensas ADAM', 'adam-membership' ),
+				'description' => '',
+				'url'         => $this->member_area_url( array( 'view' => 'recompensas' ) ),
+			),
+			array(
 				'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
 				'description' => '',
 				'url'         => home_url( '/socio-password/' ),
@@ -1119,6 +1401,100 @@ final class MemberArea {
 			$this->renewal_actions( $member ),
 			$this->standard_account_actions()
 		);
+	}
+
+	/**
+	 * Get current member subview.
+	 */
+	private function current_member_view(): string {
+		return isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
+	}
+
+	/**
+	 * Build member area URL with query args.
+	 *
+	 * @param array<string, string> $args Query arguments.
+	 */
+	private function member_area_url( array $args = array() ): string {
+		$url = home_url( '/socio/' );
+
+		if ( array() === $args ) {
+			return $url;
+		}
+
+		return add_query_arg( $args, $url );
+	}
+
+	/**
+	 * Redirect member area with a notice message.
+	 *
+	 * @param string               $key   Query-string key.
+	 * @param string               $text  Notice text.
+	 * @param array<string,string> $args  Extra query args.
+	 */
+	private function redirect_member_notice( string $key, string $text, array $args = array() ): void {
+		$args[ $key ] = $text;
+		wp_safe_redirect( $this->member_area_url( $args ) );
+		exit;
+	}
+
+	/**
+	 * Get the first owned redemption entry for a reward.
+	 *
+	 * @param Member $member Member.
+	 * @param Reward $reward Reward.
+	 */
+	private function first_owned_reward_redemption( Member $member, Reward $reward ): ?RewardRedemption {
+		foreach ( $this->rewards->member_redemptions( $member ) as $redemption ) {
+			if (
+				$redemption->reward_id() === $reward->id() &&
+				in_array( $redemption->status(), array( RewardRedemption::STATUS_APPROVED, RewardRedemption::STATUS_DELIVERED ), true )
+			) {
+				return $redemption;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get a compact label for reward fallback art.
+	 *
+	 * @param Reward $reward Reward.
+	 */
+	private function reward_icon_label( Reward $reward ): string {
+		$parts = preg_split( '/\s+/', trim( $reward->name() ) );
+		$label = '';
+
+		if ( is_array( $parts ) ) {
+			foreach ( array_slice( $parts, 0, 2 ) as $part ) {
+				$label .= strtoupper( substr( $part, 0, 1 ) );
+			}
+		}
+
+		return '' !== $label ? $label : 'AD';
+	}
+
+	/**
+	 * Get translated reward rarity label.
+	 *
+	 * @param Reward $reward Reward.
+	 */
+	private function reward_rarity_label( Reward $reward ): string {
+		$labels = $this->rewards->rarity_labels();
+
+		return $labels[ $reward->rarity() ] ?? $reward->rarity();
+	}
+
+	/**
+	 * Get translated reward redemption status label.
+	 *
+	 * @param RewardRedemption $redemption Redemption.
+	 */
+	private function reward_redemption_status_label( RewardRedemption $redemption ): string {
+		$labels = $this->rewards->redemption_status_labels();
+
+		return $labels[ $redemption->status() ] ?? $redemption->status();
 	}
 
 	/**
