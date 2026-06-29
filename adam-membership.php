@@ -76,12 +76,25 @@ register_deactivation_hook(
 );
 
 add_action(
-	'plugins_loaded',
+	'init',
+	static function (): void {
+		load_plugin_textdomain(
+			'adam-membership',
+			false,
+			dirname( plugin_basename( __FILE__ ) ) . '/languages'
+		);
+	},
+	0
+);
+
+add_action(
+	'init',
 	static function (): void {
 		if ( ! class_exists( Core\Plugin::class ) ) {
 			return;
 		}
 
 		Core\Plugin::instance()->boot();
-	}
+	},
+	20
 );

@@ -183,6 +183,6 @@ final class Plugin {
 	 * Prevent unserialization.
 	 */
 	public function __wakeup(): void {
-		_doing_it_wrong( __METHOD__, esc_html__( 'Unserializing the plugin bootstrap is not allowed.', 'adam-membership' ), '0.1.0' );
+		_doing_it_wrong( __METHOD__, 'Unserializing the plugin bootstrap is not allowed.', '0.1.0' );
 	}
 }
