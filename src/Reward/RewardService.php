@@ -56,10 +56,11 @@ final class RewardService {
 				continue;
 			}
 
-			$prepared               = $this->sanitize_reward_data( $reward_data );
+			$prepared = $this->sanitize_reward_data( $reward_data );
 
 			if ( isset( $existing_rewards[ $reward_value ] ) ) {
-				$current               = $existing_rewards[ $reward_value ];
+				$current                = $existing_rewards[ $reward_value ];
+				$prepared               = $this->merge_catalogue_reward( $current, $prepared );
 				$prepared['created_at'] = $current->created_at();
 				$prepared['updated_at'] = $now;
 				$this->repository->update_reward( $current, $prepared );
@@ -228,6 +229,42 @@ final class RewardService {
 	 */
 	public function active_rewards(): array {
 		return $this->repository->query_rewards( array( 'active' => true ) );
+	}
+
+	public function is_founder_reward( Reward|string $reward ): bool {
+		return in_array( $this->reward_value_key( $reward ), array( 'title_founder', 'card_theme_founder', 'card_frame_founder_frame' ), true );
+	}
+
+	public function is_loyalty_reward( Reward|string $reward ): bool {
+		return in_array(
+			$this->reward_value_key( $reward ),
+			array(
+				'title_veterano_adam',
+				'title_operador_experiente',
+				'title_guardiao_adam',
+				'title_lenda_adam',
+				'card_theme_carbon_fiber',
+				'card_theme_gold',
+				'card_theme_legendary_loyalty',
+				'card_frame_veteran_bronze',
+				'card_frame_veteran_gold',
+				'card_frame_legendary_loyalty',
+			),
+			true
+		);
+	}
+
+	public function is_seasonal_reward( Reward|string $reward ): bool {
+		return in_array(
+			$this->reward_value_key( $reward ),
+			array(
+				'card_theme_christmas_edition',
+				'card_theme_halloween_edition',
+				'card_theme_anniversary_edition',
+				'card_theme_summer_event_edition',
+			),
+			true
+		);
 	}
 
 	/**
@@ -737,10 +774,10 @@ final class RewardService {
 			$this->seed_reward( 'Platinum', 'Tema lendario de topo para perfis verdadeiramente distinguidos.', 'Cartao Digital', Reward::TYPE_DIGITAL_COSMETIC, Reward::RARITY_LEGENDARY, 200, 'card_theme_platinum' ),
 			$this->seed_reward( 'Founder', 'Fundo exclusivo para um dos primeiros 50 socios aprovados da ADAM.', 'Fundadores', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LEGENDARY, 0, 'card_theme_founder', 'Exclusivo Fundadores', true, false ),
 			$this->seed_reward( 'Legado ADAM', 'Fundo lendario exclusivo desbloqueado aos 10 anos de associacao ativa.', 'Fidelidade ADAM', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LEGENDARY, 0, 'card_theme_legendary_loyalty', 'Fidelidade ADAM', true, false ),
-			$this->seed_reward( 'Christmas Edition', 'Visual sazonal de Natal para campanhas ou atribuicoes especiais.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_christmas_edition', 'Edicao sazonal', true, false ),
-			$this->seed_reward( 'Halloween Edition', 'Tema limitado de Halloween para eventos e campanhas especiais.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_halloween_edition', 'Edicao sazonal', true, false ),
-			$this->seed_reward( 'Anniversary Edition', 'Fundo comemorativo para marcos importantes da ADAM.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_anniversary_edition', 'Edicao sazonal', true, false ),
-			$this->seed_reward( 'Summer Event Edition', 'Tema de verao pensado para eventos especiais e atribuicoes temporarias.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_summer_event_edition', 'Edicao sazonal', true, false ),
+			$this->seed_reward( 'Christmas Edition', 'Visual sazonal de Natal para campanhas ou atribuicoes especiais.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_christmas_edition', 'Edicao sazonal', false, false ),
+			$this->seed_reward( 'Halloween Edition', 'Tema limitado de Halloween para eventos e campanhas especiais.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_halloween_edition', 'Edicao sazonal', false, false ),
+			$this->seed_reward( 'Anniversary Edition', 'Fundo comemorativo para marcos importantes da ADAM.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_anniversary_edition', 'Edicao sazonal', false, false ),
+			$this->seed_reward( 'Summer Event Edition', 'Tema de verao pensado para eventos especiais e atribuicoes temporarias.', 'Cartao Digital', Reward::TYPE_MANUAL_REWARD, Reward::RARITY_LIMITED_EDITION, 0, 'card_theme_summer_event_edition', 'Edicao sazonal', false, false ),
 		);
 	}
 
@@ -825,6 +862,41 @@ final class RewardService {
 		return isset( $file['tmp_name'], $file['error'] ) && UPLOAD_ERR_OK === (int) $file['error'] && is_uploaded_file( (string) $file['tmp_name'] );
 	}
 
+	/**
+	 * @param array<string, mixed> $prepared
+	 * @return array<string, mixed>
+	 */
+	private function merge_catalogue_reward( Reward $current, array $prepared ): array {
+		$current_data = $current->data();
+
+		if ( '' !== $current->image_url() ) {
+			$prepared['image_url'] = $current->image_url();
+		}
+
+		if ( '' !== $current->availability_label() ) {
+			$prepared['availability_label'] = $current->availability_label();
+		}
+
+		$prepared['redeemable']        = $current->redeemable();
+		$prepared['approval_required'] = $current->approval_required();
+
+		if ( $this->is_seasonal_reward( (string) ( $prepared['reward_value'] ?? '' ) ) ) {
+			if ( empty( $current_data['seasonal_visibility_initialized'] ) ) {
+				$prepared['active'] = false;
+			} else {
+				$prepared['active'] = $current->active();
+			}
+
+			$prepared['seasonal_visibility_initialized'] = 1;
+
+			return $prepared;
+		}
+
+		$prepared['active'] = $current->active();
+
+		return $prepared;
+	}
+
 	private function member_reward_rank( Member $member, Reward $reward ): int {
 		if ( $this->member_owns_reward( $member, $reward ) ) {
 			return 3_000_000 + $reward->points_cost();
@@ -864,5 +936,13 @@ final class RewardService {
 				'created_at'    => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
 			)
 		);
+	}
+
+	private function reward_value_key( Reward|string $reward ): string {
+		if ( $reward instanceof Reward ) {
+			return sanitize_key( $reward->reward_value() );
+		}
+
+		return sanitize_key( $reward );
 	}
 }

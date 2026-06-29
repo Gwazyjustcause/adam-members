@@ -195,6 +195,7 @@ final class MemberArea {
 				}
 
 				$this->render_digital_card( $member );
+				$this->render_personalization_section( $member );
 				$this->render_points_card( $member );
 				$this->render_documents( $member );
 				$this->render_member_actions( $member );
@@ -605,7 +606,6 @@ final class MemberArea {
 		$joined_date       = $this->format_date( $member->field( 'data_adesao' ) );
 		$expiry_date       = $this->format_date( $member->field( 'validade_quota' ) );
 		$card_presentation = $this->cards->card_presentation( $member );
-		$cosmetic_options  = $this->cards->member_cosmetic_options( $member );
 		$card_classes      = implode( ' ', array_map( 'sanitize_html_class', (array) ( $card_presentation['classes'] ?? array( 'adam-digital-card' ) ) ) );
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
@@ -614,9 +614,6 @@ final class MemberArea {
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-card-actions">
-					<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'recompensas' ) ) ); ?>">
-						<?php esc_html_e( 'Ver recompensas', 'adam-membership' ); ?>
-					</a>
 					<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></button>
 					<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 				</div>
@@ -686,7 +683,44 @@ final class MemberArea {
 					<span><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
 			</article>
-			<?php $this->render_card_customizer( $member, $cosmetic_options, $card_presentation ); ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render a dedicated member personalization area.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_personalization_section( Member $member ): void {
+		if ( $member->isPending() || $member->isRejected() ) {
+			return;
+		}
+
+		$card_presentation = $this->cards->card_presentation( $member );
+		$cosmetic_options  = $this->cards->member_cosmetic_options( $member );
+		$total_options     = count( $cosmetic_options['titles'] ?? array() ) + count( $cosmetic_options['themes'] ?? array() ) + count( $cosmetic_options['frames'] ?? array() );
+		?>
+		<section id="adam-personalizacao" class="adam-card adam-card-personalization-section" aria-label="<?php esc_attr_e( 'Personalizacao do cartao', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Personalizacao', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Equipar titulos e cosmeticos desbloqueados', 'adam-membership' ); ?></h3>
+				</div>
+				<div class="adam-card-actions">
+					<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'recompensas' ) ) ); ?>">
+						<?php esc_html_e( 'Ver recompensas', 'adam-membership' ); ?>
+					</a>
+				</div>
+			</div>
+
+			<?php if ( 0 === $total_options ) : ?>
+				<div class="adam-empty-inline">
+					<?php esc_html_e( 'Ainda nao tens cosmeticos desbloqueados para equipar. Participa em eventos, acumula pontos e acompanha as recompensas ADAM.', 'adam-membership' ); ?>
+				</div>
+			<?php else : ?>
+				<?php $this->render_card_customizer( $member, $cosmetic_options, $card_presentation ); ?>
+			<?php endif; ?>
 		</section>
 		<?php
 	}
@@ -840,6 +874,15 @@ final class MemberArea {
 		$reward_history   = $this->rewards->member_redemptions( $member, 20 );
 		$back_url         = $this->member_area_url();
 		$loyalty_progress = $this->recognition->loyalty_progress( $member );
+		$card_selection   = $this->cards->card_presentation( $member );
+		$equipped_keys    = array_values(
+			array_filter(
+				array_map(
+					'sanitize_key',
+					(array) ( $card_selection['selected_values'] ?? array() )
+				)
+			)
+		);
 		?>
 		<section class="adam-card adam-rewards-page" aria-label="<?php esc_attr_e( 'Recompensas ADAM', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -905,7 +948,7 @@ final class MemberArea {
 					</div>
 				<?php else : ?>
 					<?php foreach ( $catalogue as $reward ) : ?>
-						<?php $this->render_reward_card( $member, $reward, $balance ); ?>
+						<?php $this->render_reward_card( $member, $reward, $balance, $equipped_keys, $loyalty_progress ); ?>
 					<?php endforeach; ?>
 				<?php endif; ?>
 			</div>
@@ -937,11 +980,13 @@ final class MemberArea {
 	/**
 	 * Render one reward card.
 	 *
-	 * @param Member $member  Member.
-	 * @param Reward $reward  Reward.
-	 * @param int    $balance Current points balance.
+	 * @param Member $member Member.
+	 * @param Reward $reward Reward.
+	 * @param int $balance Current points balance.
+	 * @param array<int, string> $equipped_keys Equipped cosmetic reward keys.
+	 * @param array<string, mixed> $loyalty_progress Loyalty progress.
 	 */
-	private function render_reward_card( Member $member, Reward $reward, int $balance ): void {
+	private function render_reward_card( Member $member, Reward $reward, int $balance, array $equipped_keys, array $loyalty_progress ): void {
 		$owned            = $this->rewards->member_owns_reward( $member, $reward );
 		$pending          = $this->rewards->member_has_pending_request( $member, $reward );
 		$can_redeem       = $this->rewards->member_can_redeem( $member, $reward );
@@ -949,6 +994,12 @@ final class MemberArea {
 		$shortfall        = max( 0, $reward->points_cost() - $balance );
 		$progress         = $reward->points_cost() > 0 ? min( 100, (int) floor( ( $balance / $reward->points_cost() ) * 100 ) ) : 100;
 		$known_redemption = $owned ? $this->first_owned_reward_redemption( $member, $reward ) : null;
+		$reward_key       = sanitize_key( $reward->reward_value() );
+		$is_equipped      = in_array( $reward_key, $equipped_keys, true );
+		$is_founder       = $this->rewards->is_founder_reward( $reward );
+		$is_loyalty       = $this->rewards->is_loyalty_reward( $reward );
+		$progress_label   = $this->reward_progress_label( $member, $reward, $owned, $pending, $can_redeem, $shortfall, $loyalty_progress );
+		$cost_label       = $this->reward_cost_label( $reward );
 		?>
 		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?>">
 			<div class="adam-reward-card__media">
@@ -962,12 +1013,18 @@ final class MemberArea {
 			<div class="adam-reward-card__meta">
 				<span class="adam-badge adam-reward-rarity adam-reward-rarity--<?php echo esc_attr( $reward->rarity() ); ?>"><?php echo esc_html( $this->reward_rarity_label( $reward ) ); ?></span>
 				<span class="adam-announcement-category"><?php echo esc_html( $reward->category() ); ?></span>
-				<?php if ( $owned ) : ?>
+				<?php if ( $owned && $is_equipped ) : ?>
+					<span class="adam-badge active"><?php esc_html_e( 'Em uso', 'adam-membership' ); ?></span>
+				<?php elseif ( $owned ) : ?>
 					<span class="adam-badge active"><?php esc_html_e( 'Desbloqueada', 'adam-membership' ); ?></span>
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-badge pending"><?php esc_html_e( 'Pendente', 'adam-membership' ); ?></span>
+				<?php elseif ( $is_founder ) : ?>
+					<span class="adam-badge warning"><?php esc_html_e( 'Fundadores', 'adam-membership' ); ?></span>
+				<?php elseif ( $is_loyalty ) : ?>
+					<span class="adam-badge warning"><?php esc_html_e( 'Fidelidade', 'adam-membership' ); ?></span>
 				<?php elseif ( ! $redeemable ) : ?>
-					<span class="adam-badge warning"><?php echo esc_html( $reward->availability_label() ); ?></span>
+					<span class="adam-badge warning"><?php echo esc_html( $cost_label ); ?></span>
 				<?php elseif ( $can_redeem ) : ?>
 					<span class="adam-badge active"><?php esc_html_e( 'Disponivel', 'adam-membership' ); ?></span>
 				<?php else : ?>
@@ -982,12 +1039,8 @@ final class MemberArea {
 
 			<div class="adam-reward-card__stats">
 				<div>
-					<span><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( (string) $reward->points_cost() ); ?></strong>
-				</div>
-				<div>
-					<span><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( $reward->availability_label() ); ?></strong>
+					<span><?php echo esc_html( $reward->points_cost() > 0 && $redeemable ? __( 'Pontos', 'adam-membership' ) : __( 'Desbloqueio', 'adam-membership' ) ); ?></span>
+					<strong><?php echo esc_html( $cost_label ); ?></strong>
 				</div>
 			</div>
 
@@ -995,34 +1048,18 @@ final class MemberArea {
 				<div class="adam-reward-progress__track">
 					<span style="width: <?php echo esc_attr( (string) $progress ); ?>%;"></span>
 				</div>
-				<small>
-					<?php
-					if ( $owned || $pending ) {
-						esc_html_e( 'Pronto para desbloquear', 'adam-membership' );
-					} elseif ( ! $redeemable ) {
-						echo esc_html( $reward->availability_label() );
-					} elseif ( $can_redeem ) {
-						esc_html_e( 'Disponivel para resgate', 'adam-membership' );
-					} else {
-						echo esc_html(
-							sprintf(
-								/* translators: %d: missing points. */
-								__( 'Faltam %d pontos', 'adam-membership' ),
-								$shortfall
-							)
-						);
-					}
-					?>
-				</small>
+				<small><?php echo esc_html( $progress_label ); ?></small>
 			</div>
 
 			<div class="adam-reward-card__actions">
-				<?php if ( $owned && $reward->is_single_claim() ) : ?>
-					<span class="adam-text-link"><?php esc_html_e( 'Ja disponivel na tua conta', 'adam-membership' ); ?></span>
+				<?php if ( $owned && $is_equipped ) : ?>
+					<span class="adam-text-link"><?php esc_html_e( 'Atualmente equipada na tua conta', 'adam-membership' ); ?></span>
+				<?php elseif ( $owned && $reward->is_single_claim() ) : ?>
+					<a class="adam-text-link" href="#adam-personalizacao"><?php esc_html_e( 'Gerir na personalizacao', 'adam-membership' ); ?></a>
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-text-link"><?php esc_html_e( 'Pedido em analise pela ADAM', 'adam-membership' ); ?></span>
 				<?php elseif ( ! $redeemable ) : ?>
-					<span class="adam-text-link"><?php echo esc_html( $reward->availability_label() ); ?></span>
+					<span class="adam-text-link"><?php echo esc_html( $progress_label ); ?></span>
 				<?php elseif ( $can_redeem ) : ?>
 					<form method="post" class="adam-reward-redeem-form">
 						<input type="hidden" name="adam_member_action" value="redeem_reward">
@@ -1534,11 +1571,6 @@ final class MemberArea {
 	private function standard_account_actions(): array {
 		return array(
 			array(
-				'label'       => __( 'Recompensas ADAM', 'adam-membership' ),
-				'description' => '',
-				'url'         => $this->member_area_url( array( 'view' => 'recompensas' ) ),
-			),
-			array(
 				'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
 				'description' => '',
 				'url'         => home_url( '/socio-password/' ),
@@ -1610,6 +1642,141 @@ final class MemberArea {
 			(string) ( $cosmetic['name'] ?? '' ),
 			(string) ( $cosmetic['rarity_label'] ?? '' ),
 			(string) ( $cosmetic['unlock_source_label'] ?? '' )
+		);
+	}
+
+	/**
+	 * Get reward cost/unlock label for member-facing cards.
+	 *
+	 * @param Reward $reward Reward.
+	 */
+	private function reward_cost_label( Reward $reward ): string {
+		if ( $reward->points_cost() > 0 && $reward->redeemable() ) {
+			return (string) $reward->points_cost();
+		}
+
+		if ( $this->rewards->is_founder_reward( $reward ) ) {
+			return __( 'Fundadores', 'adam-membership' );
+		}
+
+		if ( $this->rewards->is_loyalty_reward( $reward ) ) {
+			return __( 'Requer renovacao', 'adam-membership' );
+		}
+
+		if ( $this->rewards->is_seasonal_reward( $reward ) ) {
+			return __( 'Sazonal', 'adam-membership' );
+		}
+
+		if ( ! $reward->redeemable() ) {
+			return __( 'Desbloqueio automatico', 'adam-membership' );
+		}
+
+		return __( 'Exclusivo', 'adam-membership' );
+	}
+
+	/**
+	 * Build member-facing reward progress text.
+	 *
+	 * @param Member $member Member.
+	 * @param Reward $reward Reward.
+	 * @param bool $owned Whether the reward is already unlocked.
+	 * @param bool $pending Whether the reward has a pending request.
+	 * @param bool $can_redeem Whether the reward can be redeemed now.
+	 * @param int $shortfall Missing points.
+	 * @param array<string, mixed> $loyalty_progress Loyalty progress payload.
+	 */
+	private function reward_progress_label( Member $member, Reward $reward, bool $owned, bool $pending, bool $can_redeem, int $shortfall, array $loyalty_progress ): string {
+		if ( $owned ) {
+			return __( 'Desbloqueada e pronta a usar na tua personalizacao.', 'adam-membership' );
+		}
+
+		if ( $pending ) {
+			return __( 'Pedido em analise pela ADAM.', 'adam-membership' );
+		}
+
+		if ( $this->rewards->is_founder_reward( $reward ) ) {
+			return $member->is_founder()
+				? __( 'Exclusivo de fundador. Sera desbloqueada automaticamente na tua conta.', 'adam-membership' )
+				: __( 'Exclusivo para um dos primeiros 50 socios da ADAM.', 'adam-membership' );
+		}
+
+		if ( $this->rewards->is_loyalty_reward( $reward ) ) {
+			$tier = $this->loyalty_tier_for_reward( $reward );
+
+			if ( ! $member->isActive() ) {
+				return __( 'Requer associacao ativa e renovacoes confirmadas.', 'adam-membership' );
+			}
+
+			if ( null === $tier ) {
+				return __( 'Desbloqueio automatico por fidelidade ADAM.', 'adam-membership' );
+			}
+
+			if ( (int) ( $loyalty_progress['completed_years'] ?? 0 ) >= $tier['years'] ) {
+				return __( 'Elegivel para desbloqueio automatico pela fidelidade ADAM.', 'adam-membership' );
+			}
+
+			return $this->loyalty_elapsed_label( (int) ( $loyalty_progress['completed_months'] ?? 0 ), $tier['years'] );
+		}
+
+		if ( ! $reward->redeemable() ) {
+			return $this->reward_cost_label( $reward );
+		}
+
+		if ( $can_redeem ) {
+			return __( 'Disponivel para resgate', 'adam-membership' );
+		}
+
+		return sprintf(
+			/* translators: %d: missing points. */
+			__( 'Faltam %d pontos', 'adam-membership' ),
+			$shortfall
+		);
+	}
+
+	/**
+	 * Resolve the loyalty tier attached to a reward.
+	 *
+	 * @param Reward $reward Reward.
+	 * @return array{years:int,label:string,rewards:array<int,string>}|null
+	 */
+	private function loyalty_tier_for_reward( Reward $reward ): ?array {
+		$reward_key = sanitize_key( $reward->reward_value() );
+
+		foreach ( $this->recognition->loyalty_tiers() as $tier ) {
+			if ( in_array( $reward_key, $tier['rewards'], true ) ) {
+				return $tier;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Format progress against a loyalty milestone.
+	 */
+	private function loyalty_elapsed_label( int $completed_months, int $target_years ): string {
+		$months_total = max( 0, $completed_months );
+		$years        = intdiv( $months_total, 12 );
+		$months       = $months_total % 12;
+
+		if ( $months > 0 ) {
+			return sprintf(
+				/* translators: 1: completed years, 2: plural suffix, 3: completed months, 4: plural suffix, 5: target years */
+				__( '%1$d ano%2$s e %3$d mes%4$s / %5$d anos', 'adam-membership' ),
+				$years,
+				1 === $years ? '' : 's',
+				$months,
+				1 === $months ? '' : 'es',
+				$target_years
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: completed years, 2: plural suffix, 3: target years */
+			__( '%1$d ano%2$s / %3$d anos', 'adam-membership' ),
+			$years,
+			1 === $years ? '' : 's',
+			$target_years
 		);
 	}
 
