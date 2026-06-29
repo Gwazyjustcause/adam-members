@@ -398,6 +398,7 @@ final class MemberArea {
 		<?php
 	}
 
+	/**
 	 * Render account notices.
 	 */
 	private function render_account_notices(): void {
