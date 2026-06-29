@@ -54,6 +54,10 @@ final class EventCheckIn {
 		return max( 0, absint( $this->data['points_awarded'] ?? 0 ) );
 	}
 
+	public function created_by_admin(): bool {
+		return ! empty( $this->data['created_by_admin'] );
+	}
+
 	public function checked_in_at(): string {
 		return sanitize_text_field( (string) ( $this->data['checked_in_at'] ?? '' ) );
 	}

@@ -12,6 +12,7 @@ namespace AdamMembership\Core;
 use AdamMembership\Admin\AnnouncementController;
 use AdamMembership\Admin\DocumentController;
 use AdamMembership\Admin\EventController;
+use AdamMembership\Admin\PointsController;
 use AdamMembership\Announcement\AnnouncementRepository;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Admin\AdminController;
@@ -38,6 +39,8 @@ use AdamMembership\Member\PasswordRecovery;
 use AdamMembership\Member\PasswordReset;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\RenewalService;
+use AdamMembership\Points\PointsRepository;
+use AdamMembership\Points\PointsService;
 
 /**
  * Coordinates plugin services.
@@ -97,13 +100,15 @@ final class Plugin {
 		$document_repository = new DocumentRepository();
 		$documents          = new DocumentService( $document_repository, $members, $logger, $history_repository );
 		$event_repository   = new EventRepository();
-		$events             = new EventService( $event_repository, $members, $logger, $history_repository );
+		$points_repository  = new PointsRepository();
+		$points             = new PointsService( $points_repository, $members, $history_repository, $logger );
+		$events             = new EventService( $event_repository, $members, $logger, $history_repository, $points );
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history );
 		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger );
 		$config             = new RegistrationFormConfig();
-		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents );
+		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points );
 		$account            = new Account( $email, $members, $history );
 		$password_recovery  = new PasswordRecovery( $email, $members, $history );
 		$password_reset     = new PasswordReset( $members, $history );
@@ -126,6 +131,7 @@ final class Plugin {
 		$announcement_admin = new AnnouncementController( $announcements );
 		$document_admin     = new DocumentController( $documents );
 		$event_admin        = new EventController( $events );
+		$points_admin       = new PointsController( $points, $members, $events );
 
 		$registration->register();
 		$renewal_submission->register();
@@ -133,6 +139,7 @@ final class Plugin {
 		$announcement_admin->register();
 		$document_admin->register();
 		$event_admin->register();
+		$points_admin->register();
 		$maintenance->register();
 		$cards->register();
 		$history->register();

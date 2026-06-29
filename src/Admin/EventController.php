@@ -164,15 +164,27 @@ final class EventController {
 								<?php endforeach; ?>
 							</select>
 						</label>
-						<label><span><?php esc_html_e( 'Pontos atribuídos no check-in', 'adam-membership' ); ?></span><input type="number" min="1" name="checkin_points" value="<?php echo esc_attr( null !== $event ? (string) $event->checkin_points() : '1' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Pontos atribuídos no check-in', 'adam-membership' ); ?></span><input type="number" min="0" name="checkin_points" value="<?php echo esc_attr( null !== $event ? (string) $event->checkin_points() : '1' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Abertura do check-in', 'adam-membership' ); ?></span><input type="datetime-local" name="checkin_open_at" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->checkin_open_at() ) : '' ); ?>"></label>
 						<label><span><?php esc_html_e( 'Fecho do check-in', 'adam-membership' ); ?></span><input type="datetime-local" name="checkin_close_at" value="<?php echo esc_attr( null !== $event ? $this->datetime_local_value( $event->checkin_close_at() ) : '' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Posição de disparo do bónus', 'adam-membership' ); ?></span><input type="number" min="0" name="checkin_bonus_trigger_position" value="<?php echo esc_attr( null !== $event ? (string) $event->checkin_bonus_trigger_position() : '0' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Pontos do bónus', 'adam-membership' ); ?></span><input type="number" min="0" name="checkin_bonus_points" value="<?php echo esc_attr( null !== $event ? (string) $event->checkin_bonus_points() : '0' ); ?>"></label>
+						<label><span><?php esc_html_e( 'Mensagem de parabéns', 'adam-membership' ); ?></span>
+							<select name="checkin_bonus_template">
+								<?php foreach ( $this->events->bonus_message_templates() as $template => $label ) : ?>
+									<?php $this->render_select_option( $template, $label, null !== $event ? $event->checkin_bonus_template() : 'bonus_unlocked' ); ?>
+								<?php endforeach; ?>
+							</select>
+						</label>
 					</div>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="is_paid" value="1" <?php checked( null !== $event ? $event->is_paid() : false ); ?>> <?php esc_html_e( 'Evento pago', 'adam-membership' ); ?></label>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="checkin_enabled" value="1" <?php checked( null !== $event ? $event->checkin_enabled() : false ); ?>> <?php esc_html_e( 'Ativar check-in com QR', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="checkin_bonus_enabled" value="1" <?php checked( null !== $event ? $event->checkin_bonus_enabled() : false ); ?>> <?php esc_html_e( 'Ativar bónus surpresa no check-in', 'adam-membership' ); ?></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="checkin_bonus_count_manual" value="1" <?php checked( null !== $event ? $event->checkin_bonus_count_manual() : false ); ?>> <?php esc_html_e( 'Contar check-ins manuais para o disparo do bónus', 'adam-membership' ); ?></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição curta', 'adam-membership' ); ?></span><textarea name="short_description" rows="3"><?php echo esc_textarea( null !== $event ? $event->short_description() : '' ); ?></textarea></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição completa', 'adam-membership' ); ?></span><textarea name="full_description" rows="8"><?php echo esc_textarea( null !== $event ? wp_strip_all_tags( $event->full_description() ) : '' ); ?></textarea></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Notas', 'adam-membership' ); ?></span><textarea name="notes" rows="4"><?php echo esc_textarea( null !== $event ? $event->notes() : '' ); ?></textarea></label>
+					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Mensagem personalizada do bónus', 'adam-membership' ); ?></span><textarea name="checkin_bonus_custom_message" rows="4"><?php echo esc_textarea( null !== $event ? $event->checkin_bonus_custom_message() : '' ); ?></textarea></label>
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
@@ -215,6 +227,8 @@ final class EventController {
 
 	private function render_checkin_panel( Event $event ): void {
 		$checkins = $this->events->event_checkins( $event->id() );
+		$bonus    = $this->events->points()->bonus_entry_for_event( $event );
+		$winner   = null !== $bonus ? Member::load( $bonus->member_id() ) : null;
 		?>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'QR de check-in', 'adam-membership' ); ?></h2>
@@ -232,6 +246,22 @@ final class EventController {
 				<a class="button" href="<?php echo esc_url( $this->events->checkin_qr_image_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir / descarregar QR', 'adam-membership' ); ?></a>
 				<a class="button" href="<?php echo esc_url( $this->events->checkin_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página de check-in', 'adam-membership' ); ?></a>
 			</div>
+		</div>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Bónus surpresa do check-in', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-edit-grid">
+				<div><p><strong><?php esc_html_e( 'Ativado', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $event->checkin_bonus_enabled() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?></p></div>
+				<div><p><strong><?php esc_html_e( 'Posição de disparo', 'adam-membership' ); ?>:</strong> <?php echo esc_html( (string) $event->checkin_bonus_trigger_position() ); ?></p></div>
+				<div><p><strong><?php esc_html_e( 'Pontos do bónus', 'adam-membership' ); ?>:</strong> <?php echo esc_html( '+' . $event->checkin_bonus_points() ); ?></p></div>
+				<div><p><strong><?php esc_html_e( 'Check-ins manuais contam', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $event->checkin_bonus_count_manual() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?></p></div>
+			</div>
+			<p><strong><?php esc_html_e( 'Mensagem configurada', 'adam-membership' ); ?>:</strong></p>
+			<div class="adam-admin-empty"><?php echo esc_html( $this->events->bonus_congratulations_message( $event ) ); ?></div>
+			<p><strong><?php esc_html_e( 'Estado do bónus', 'adam-membership' ); ?>:</strong> <?php echo esc_html( null !== $bonus ? __( 'Já atribuído', 'adam-membership' ) : __( 'Por atribuir', 'adam-membership' ) ); ?></p>
+			<?php if ( null !== $bonus ) : ?>
+				<p><strong><?php esc_html_e( 'Sócio premiado', 'adam-membership' ); ?>:</strong> <?php echo esc_html( null !== $winner ? $winner->full_name() : __( 'Sócio removido', 'adam-membership' ) ); ?></p>
+				<p><strong><?php esc_html_e( 'Data de atribuição', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $this->format_datetime( $bonus->created_at() ) ); ?></p>
+			<?php endif; ?>
 		</div>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Sócios com check-in', 'adam-membership' ); ?></h2>

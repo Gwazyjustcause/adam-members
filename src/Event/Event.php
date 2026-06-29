@@ -142,7 +142,31 @@ final class Event {
 	public function checkin_points(): int {
 		$points = absint( $this->data['checkin_points'] ?? 1 );
 
-		return max( 1, $points );
+		return max( 0, $points );
+	}
+
+	public function checkin_bonus_enabled(): bool {
+		return ! empty( $this->data['checkin_bonus_enabled'] );
+	}
+
+	public function checkin_bonus_trigger_position(): int {
+		return max( 0, absint( $this->data['checkin_bonus_trigger_position'] ?? 0 ) );
+	}
+
+	public function checkin_bonus_points(): int {
+		return max( 0, absint( $this->data['checkin_bonus_points'] ?? 0 ) );
+	}
+
+	public function checkin_bonus_template(): string {
+		return sanitize_key( (string) ( $this->data['checkin_bonus_template'] ?? 'bonus_unlocked' ) );
+	}
+
+	public function checkin_bonus_custom_message(): string {
+		return sanitize_textarea_field( (string) ( $this->data['checkin_bonus_custom_message'] ?? '' ) );
+	}
+
+	public function checkin_bonus_count_manual(): bool {
+		return ! empty( $this->data['checkin_bonus_count_manual'] );
 	}
 
 	public function access_mode(): string {

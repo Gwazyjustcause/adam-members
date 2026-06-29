@@ -12,6 +12,8 @@ namespace AdamMembership\Event;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Points\PointsRepository;
+use AdamMembership\Points\PointsService;
 
 /**
  * Renders /eventos/ and the member event check-in flow.
@@ -67,7 +69,9 @@ final class EventFrontend {
 
 	public static function activate(): void {
 		$logger = new \AdamMembership\Helpers\Logger();
-		$self   = new self( new EventService( new EventRepository(), new MemberRepository(), $logger, new \AdamMembership\Member\HistoryRepository() ), new MemberRepository(), $logger );
+		$members = new MemberRepository();
+		$points  = new PointsService( new PointsRepository(), $members, new \AdamMembership\Member\HistoryRepository(), $logger );
+		$self    = new self( new EventService( new EventRepository(), $members, $logger, new \AdamMembership\Member\HistoryRepository(), $points ), $members, $logger );
 		$self->register_routes();
 		flush_rewrite_rules();
 		update_option( self::REWRITE_OPTION, self::ROUTE_VERSION, false );
@@ -259,6 +263,11 @@ final class EventFrontend {
 						__( 'Os +%d ponto(s) desta participação já foram registados.', 'adam-membership' ),
 						$existing_checkin->points_awarded()
 					);
+					$existing_bonus = $this->events->points()->member_bonus_entry_for_event( $member, $event );
+
+					if ( null !== $existing_bonus ) {
+						$message_lines[] = $this->events->bonus_congratulations_message( $event );
+					}
 				} elseif ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_event_checkin_submit'] ) ) {
 					check_admin_referer( 'adam_membership_event_checkin_' . $token );
 					$result = $this->events->check_in_member( $event, $member );
@@ -269,11 +278,18 @@ final class EventFrontend {
 					} else {
 						$message_class = 'success';
 						$message_lines[] = __( 'Check-in efetuado com sucesso!', 'adam-membership' );
-						$message_lines[] = sprintf(
+						if ( 0 === $result->checkin()->points_awarded() ) {
+							$message_lines[] = __( 'O teu check-in ficou registado com sucesso.', 'adam-membership' );
+						} else {
+							$message_lines[] = sprintf(
 							/* translators: %d: points awarded */
 							__( 'Recebeste +%d ponto pela tua participação neste evento.', 'adam-membership' ),
-							$result->points_awarded()
-						);
+							$result->checkin()->points_awarded()
+							);
+						}
+						if ( $result->has_bonus() ) {
+							$message_lines[] = $result->bonus_message();
+						}
 						$message_lines[] = __( 'Obrigado por fazeres parte da ADAM!', 'adam-membership' );
 					}
 				} else {
@@ -298,7 +314,7 @@ final class EventFrontend {
 						<?php $this->render_meta_item( __( 'Evento', 'adam-membership' ), $event->title() ); ?>
 						<?php $this->render_meta_item( __( 'Data', 'adam-membership' ), $this->format_date( $event->event_date() ) ); ?>
 						<?php $this->render_meta_item( __( 'Local', 'adam-membership' ), $event->location() ); ?>
-						<?php $this->render_meta_item( __( 'Pontos', 'adam-membership' ), '+' . $event->checkin_points() ); ?>
+						<?php $this->render_meta_item( __( 'Pontos', 'adam-membership' ), $event->checkin_points() > 0 ? '+' . $event->checkin_points() : '0' ); ?>
 					</div>
 				<?php endif; ?>
 

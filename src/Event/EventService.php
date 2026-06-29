@@ -13,28 +13,35 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Points\PointsService;
 use WP_Error;
 
 /**
  * Coordinates event data, external registration details, and member check-ins.
  */
 final class EventService {
-	private const MEMBER_POINTS_META = 'adam_membership_event_points_balance';
+	private const BONUS_LOCK_OPTION_PREFIX = 'adam_membership_event_bonus_lock_';
 
 	private EventRepository $repository;
 	private MemberRepository $members;
 	private Logger $logger;
 	private HistoryRepository $history;
+	private PointsService $points;
 
-	public function __construct( EventRepository $repository, MemberRepository $members, Logger $logger, HistoryRepository $history ) {
+	public function __construct( EventRepository $repository, MemberRepository $members, Logger $logger, HistoryRepository $history, PointsService $points ) {
 		$this->repository = $repository;
 		$this->members    = $members;
 		$this->logger     = $logger;
 		$this->history    = $history;
+		$this->points     = $points;
 	}
 
 	public function repository(): EventRepository {
 		return $this->repository;
+	}
+
+	public function points(): PointsService {
+		return $this->points;
 	}
 
 	/**
@@ -161,7 +168,7 @@ final class EventService {
 	}
 
 	public function points_balance( Member $member ): int {
-		return max( 0, absint( get_user_meta( $member->user_id(), self::MEMBER_POINTS_META, true ) ) );
+		return $this->points->current_balance( $member );
 	}
 
 	/**
@@ -194,7 +201,7 @@ final class EventService {
 	 *
 	 * @return EventCheckIn|WP_Error
 	 */
-	public function check_in_member( Event $event, Member $member ): EventCheckIn|WP_Error {
+	public function check_in_member( Event $event, Member $member ): EventCheckInResult|WP_Error {
 		$eligibility = $this->validate_checkin_eligibility( $event, $member );
 
 		if ( is_wp_error( $eligibility ) ) {
@@ -208,12 +215,14 @@ final class EventService {
 				'event_id'        => $event->id(),
 				'member_id'       => $member->user_id(),
 				'points_awarded'  => $points,
+				'created_by_admin' => false,
 				'checked_in_at'   => $now,
 				'created_at'      => $now,
 			)
 		);
 
-		update_user_meta( $member->user_id(), self::MEMBER_POINTS_META, $this->points_balance( $member ) + $points );
+		$points_entry = $this->points->award_event_checkin_points( $member, $event, $checkin );
+		$bonus_entry  = $this->maybe_award_event_bonus( $event, $member, $checkin );
 
 		$this->logger->info(
 			'Check-in de evento efetuado.',
@@ -221,6 +230,8 @@ final class EventService {
 				'event_id'   => $event->id(),
 				'member_id'  => $member->user_id(),
 				'points'     => $points,
+				'points_entry_id' => null !== $points_entry ? $points_entry->id() : 0,
+				'bonus_entry_id' => null !== $bonus_entry ? $bonus_entry->id() : 0,
 				'checkin_id' => $checkin->id(),
 			)
 		);
@@ -253,7 +264,11 @@ final class EventService {
 			)
 		);
 
-		return $checkin;
+		return new EventCheckInResult(
+			$checkin,
+			$bonus_entry,
+			null !== $bonus_entry ? $this->bonus_congratulations_message( $event ) : ''
+		);
 	}
 
 	/**
@@ -309,7 +324,13 @@ final class EventService {
 			'checkin_enabled'           => ! empty( $data['checkin_enabled'] ),
 			'checkin_open_at'           => $this->sanitize_datetime_local( (string) ( $data['checkin_open_at'] ?? '' ) ),
 			'checkin_close_at'          => $this->sanitize_datetime_local( (string) ( $data['checkin_close_at'] ?? '' ) ),
-			'checkin_points'            => max( 1, absint( $data['checkin_points'] ?? 1 ) ),
+			'checkin_points'            => max( 0, absint( $data['checkin_points'] ?? 1 ) ),
+			'checkin_bonus_enabled'     => ! empty( $data['checkin_bonus_enabled'] ),
+			'checkin_bonus_trigger_position' => max( 0, absint( $data['checkin_bonus_trigger_position'] ?? 0 ) ),
+			'checkin_bonus_points'      => max( 0, absint( $data['checkin_bonus_points'] ?? 0 ) ),
+			'checkin_bonus_template'    => $this->sanitize_bonus_template( (string) ( $data['checkin_bonus_template'] ?? 'bonus_unlocked' ) ),
+			'checkin_bonus_custom_message' => isset( $data['checkin_bonus_custom_message'] ) ? sanitize_textarea_field( (string) $data['checkin_bonus_custom_message'] ) : '',
+			'checkin_bonus_count_manual' => ! empty( $data['checkin_bonus_count_manual'] ),
 			'access_mode'               => null !== $existing ? $existing->access_mode() : Event::ACCESS_OPEN,
 			'max_players'               => max( 0, absint( $data['player_limit'] ?? $data['max_players'] ?? 0 ) ),
 			'waiting_list_enabled'      => null !== $existing ? $existing->waiting_list_enabled() : false,
@@ -335,5 +356,94 @@ final class EventService {
 		$value = trim( str_replace( 'T', ' ', $value ) );
 
 		return preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value ) ? $value : '';
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	public function bonus_message_templates(): array {
+		return array(
+			'bonus_unlocked' => __( 'Bónus desbloqueado! Recebeste +%points% Pontos ADAM.', 'adam-membership' ),
+			'surprise'       => __( 'Surpresa! Hoje encontraste um bónus especial. +%points% Pontos ADAM foram adicionados à tua conta.', 'adam-membership' ),
+			'special_reward' => __( 'Recompensa especial: recebeste um bónus surpresa de +%points% Pontos ADAM.', 'adam-membership' ),
+			'achievement'    => __( 'Achievement desbloqueado. Recebeste um bónus especial de +%points% Pontos ADAM.', 'adam-membership' ),
+			'found_bonus'    => __( 'Encontraste um bónus especial. Recebeste +%points% Pontos ADAM.', 'adam-membership' ),
+			'custom'         => __( 'Mensagem personalizada', 'adam-membership' ),
+		);
+	}
+
+	public function bonus_congratulations_message( Event $event ): string {
+		$template = $event->checkin_bonus_template();
+
+		if ( 'custom' === $template && '' !== trim( $event->checkin_bonus_custom_message() ) ) {
+			return str_replace( '%points%', (string) $event->checkin_bonus_points(), $event->checkin_bonus_custom_message() );
+		}
+
+		$templates = $this->bonus_message_templates();
+		$message   = 'custom' === $template ? $templates['bonus_unlocked'] : ( $templates[ $template ] ?? $templates['bonus_unlocked'] );
+
+		return str_replace( '%points%', (string) $event->checkin_bonus_points(), $message );
+	}
+
+	private function sanitize_bonus_template( string $template ): string {
+		$template  = sanitize_key( $template );
+		$templates = array_keys( $this->bonus_message_templates() );
+
+		return in_array( $template, $templates, true ) ? $template : 'bonus_unlocked';
+	}
+
+	private function maybe_award_event_bonus( Event $event, Member $member, EventCheckIn $checkin ): ?\AdamMembership\Points\PointsEntry {
+		if ( ! $event->checkin_bonus_enabled() ) {
+			return null;
+		}
+
+		if ( $event->checkin_bonus_trigger_position() <= 0 || $event->checkin_bonus_points() <= 0 ) {
+			return null;
+		}
+
+		$eligible_checkins = $this->eligible_checkin_count_for_bonus( $event );
+
+		if ( $eligible_checkins !== $event->checkin_bonus_trigger_position() ) {
+			return null;
+		}
+
+		$lock_key = self::BONUS_LOCK_OPTION_PREFIX . $event->id();
+
+		if ( ! add_option( $lock_key, (string) $member->user_id(), '', false ) ) {
+			return null;
+		}
+
+		try {
+			if ( null !== $this->points->bonus_entry_for_event( $event ) ) {
+				return null;
+			}
+
+			return $this->points->award_event_checkin_bonus(
+				$member,
+				$event,
+				$checkin,
+				sprintf(
+					/* translators: %s: event title */
+					__( 'Bónus especial do evento %s', 'adam-membership' ),
+					$event->title()
+				)
+			);
+		} finally {
+			delete_option( $lock_key );
+		}
+	}
+
+	private function eligible_checkin_count_for_bonus( Event $event ): int {
+		$count = 0;
+
+		foreach ( $this->event_checkins( $event->id() ) as $checkin ) {
+			if ( ! $event->checkin_bonus_count_manual() && $checkin->created_by_admin() ) {
+				continue;
+			}
+
+			++$count;
+		}
+
+		return $count;
 	}
 }

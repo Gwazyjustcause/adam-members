@@ -170,6 +170,12 @@
 	overflow: hidden;
 }
 
+.adam-points-section,
+.adam-documents-section,
+.adam-announcements-section {
+	grid-column: 1 / -1;
+}
+
 .adam-card-link {
 	display: inline-flex;
 	align-items: center;
@@ -332,6 +338,102 @@
 	font-weight: 900;
 	color: #ffffff;
 	letter-spacing: 0;
+}
+
+.adam-points-summary {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+	margin-bottom: 18px;
+}
+
+.adam-points-stat {
+	padding: 18px;
+	border: 1px solid var(--adam-border);
+	border-radius: 14px;
+	background: linear-gradient(180deg, #f8fbf8, #ffffff);
+}
+
+.adam-points-stat span {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--adam-muted);
+	font-size: 0.78rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-points-stat strong {
+	display: block;
+	color: var(--adam-green-900);
+	font-size: clamp(1.45rem, 2.6vw, 2rem);
+	line-height: 1.1;
+}
+
+.adam-points-history {
+	display: grid;
+	gap: 12px;
+}
+
+.adam-points-entry {
+	display: grid;
+	grid-template-columns: 88px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 18px;
+	border: 1px solid var(--adam-border);
+	border-radius: 14px;
+	background: #fbfdfb;
+}
+
+.adam-points-entry__score {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 42px;
+	padding: 8px 12px;
+	border-radius: 999px;
+	font-size: 1rem;
+	font-weight: 800;
+}
+
+.adam-points-entry__score.is-positive {
+	background: #dcfce7;
+	color: #14532d;
+}
+
+.adam-points-entry__score.is-negative {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-points-entry__body {
+	min-width: 0;
+}
+
+.adam-points-entry__body strong,
+.adam-points-entry__body span {
+	display: block;
+}
+
+.adam-points-entry__body strong {
+	margin-bottom: 4px;
+	color: var(--adam-ink);
+	font-size: 0.98rem;
+}
+
+.adam-points-entry__body span,
+.adam-points-entry__date,
+.adam-empty-inline {
+	color: var(--adam-muted);
+	font-size: 0.92rem;
+}
+
+.adam-empty-inline {
+	padding: 18px;
+	border: 1px dashed var(--adam-border);
+	border-radius: 14px;
+	text-align: center;
 }
 
 .adam-digital-card__identity {
@@ -1199,6 +1301,11 @@
 	.adam-document-grid {
 		grid-template-columns: 1fr;
 	}
+
+	.adam-points-summary,
+	.adam-points-entry {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (max-width: 640px) {
@@ -1303,6 +1410,14 @@
 
 	.adam-documents-section .adam-document-filters .adam-card-link {
 		width: 100%;
+	}
+
+	.adam-points-entry {
+		text-align: center;
+	}
+
+	.adam-points-entry__date {
+		justify-self: center;
 	}
 }
 

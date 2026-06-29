@@ -15,6 +15,8 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
+use AdamMembership\Points\PointsEntry;
+use AdamMembership\Points\PointsService;
 
 /**
  * Handles the frontend member area.
@@ -64,6 +66,13 @@ final class MemberArea {
 	private DocumentService $documents;
 
 	/**
+	 * Points service.
+	 *
+	 * @var PointsService
+	 */
+	private PointsService $points;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
@@ -72,14 +81,16 @@ final class MemberArea {
 	 * @param CardService         $cards         Digital card service.
 	 * @param AnnouncementService $announcements Announcement service.
 	 * @param DocumentService     $documents     Document service.
+	 * @param PointsService       $points        Points service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
 		$this->cards         = $cards;
 		$this->announcements = $announcements;
 		$this->documents     = $documents;
+		$this->points        = $points;
 	}
 
 	/**
@@ -160,6 +171,7 @@ final class MemberArea {
 			}
 
 			$this->render_digital_card( $member );
+			$this->render_points_card( $member );
 			$this->render_documents( $member );
 			$this->render_member_actions( $member );
 			$this->render_announcements( $member );
@@ -579,6 +591,86 @@ final class MemberArea {
 				</footer>
 			</article>
 		</section>
+		<?php
+	}
+
+	/**
+	 * Render the member points card and optional history.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_points_card( Member $member ): void {
+		$balance        = $this->points->current_balance( $member );
+		$total_earned   = $this->points->total_earned( $member );
+		$recent_entries = $this->points->recent_activity( $member, 5 );
+		$show_history   = isset( $_GET['points_history'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['points_history'] ) );
+		$history_url    = add_query_arg( 'points_history', '1', home_url( '/socio/' ) );
+		$back_url       = home_url( '/socio/' );
+		?>
+		<section class="adam-card adam-points-section" aria-label="<?php esc_attr_e( 'Pontos ADAM', 'adam-membership' ); ?>">
+			<div class="adam-card-heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Pontos ADAM', 'adam-membership' ); ?></p>
+					<h3><?php echo esc_html( sprintf( __( 'Tens %d Pontos ADAM', 'adam-membership' ), $balance ) ); ?></h3>
+				</div>
+				<div class="adam-card-actions">
+					<a class="adam-card-link" href="<?php echo esc_url( $show_history ? $back_url : $history_url ); ?>">
+						<?php echo esc_html( $show_history ? __( 'Voltar ao painel', 'adam-membership' ) : __( 'Ver histórico completo', 'adam-membership' ) ); ?>
+					</a>
+				</div>
+			</div>
+
+			<div class="adam-points-summary">
+				<div class="adam-points-stat">
+					<span><?php esc_html_e( 'Saldo atual', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( $balance ) ); ?></strong>
+				</div>
+				<div class="adam-points-stat">
+					<span><?php esc_html_e( 'Total acumulado', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( number_format_i18n( $total_earned ) ); ?></strong>
+				</div>
+			</div>
+
+			<div class="adam-points-history">
+				<?php
+				$entries = $show_history ? $this->points->member_history( $member, array( 'limit' => 50 ) ) : $recent_entries;
+
+				if ( array() === $entries ) :
+					?>
+					<div class="adam-empty-inline">
+						<?php echo esc_html( $show_history ? __( 'Ainda não existem movimentos de pontos.', 'adam-membership' ) : __( 'Ainda não tens atividade de pontos registada.', 'adam-membership' ) ); ?>
+					</div>
+					<?php
+				else :
+					foreach ( $entries as $entry ) :
+						$this->render_points_entry( $entry );
+					endforeach;
+				endif;
+				?>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
+	 * Render one points movement item.
+	 *
+	 * @param PointsEntry $entry Points entry.
+	 */
+	private function render_points_entry( PointsEntry $entry ): void {
+		?>
+		<article class="adam-points-entry">
+			<div class="adam-points-entry__score<?php echo $entry->points() < 0 ? ' is-negative' : ' is-positive'; ?>">
+				<?php echo esc_html( $entry->points() > 0 ? '+' . $entry->points() : (string) $entry->points() ); ?>
+			</div>
+			<div class="adam-points-entry__body">
+				<strong><?php echo esc_html( $entry->reason() ); ?></strong>
+				<span><?php echo esc_html( $this->points->source_label( $entry->source_type() ) ); ?></span>
+			</div>
+			<div class="adam-points-entry__date">
+				<?php echo esc_html( $this->format_datetime( $entry->created_at() ) ); ?>
+			</div>
+		</article>
 		<?php
 	}
 
