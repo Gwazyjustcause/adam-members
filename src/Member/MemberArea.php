@@ -1006,7 +1006,7 @@ final class MemberArea {
 				<?php if ( '' !== $reward->image_url() ) : ?>
 					<img src="<?php echo esc_url( $reward->image_url() ); ?>" alt="<?php echo esc_attr( $reward->name() ); ?>">
 				<?php else : ?>
-					<span><?php echo esc_html( $this->reward_icon_label( $reward ) ); ?></span>
+					<?php $this->render_reward_preview( $reward ); ?>
 				<?php endif; ?>
 			</div>
 
@@ -1637,12 +1637,85 @@ final class MemberArea {
 	 * @param array<string, mixed> $cosmetic Cosmetic metadata.
 	 */
 	private function cosmetic_option_label( array $cosmetic ): string {
+		$name         = (string) ( $cosmetic['name'] ?? '' );
+		$rarity_label = (string) ( $cosmetic['rarity_label'] ?? '' );
+
+		if ( '' === $rarity_label ) {
+			return $name;
+		}
+
 		return sprintf(
-			'%1$s | %2$s | %3$s',
-			(string) ( $cosmetic['name'] ?? '' ),
-			(string) ( $cosmetic['rarity_label'] ?? '' ),
-			(string) ( $cosmetic['unlock_source_label'] ?? '' )
+			/* translators: 1: cosmetic name, 2: cosmetic rarity */
+			__( '%1$s — %2$s', 'adam-membership' ),
+			$name,
+			$rarity_label
 		);
+	}
+
+	/**
+	 * Render a compact reward preview instead of placeholder initials.
+	 *
+	 * @param Reward $reward Reward.
+	 */
+	private function render_reward_preview( Reward $reward ): void {
+		$reward_key = sanitize_key( $reward->reward_value() );
+
+		if ( str_starts_with( $reward_key, 'card_theme_' ) ) {
+			$theme_class = 'adam-digital-card--theme-' . str_replace( '_', '-', substr( $reward_key, strlen( 'card_theme_' ) ) );
+			?>
+			<div class="adam-reward-preview-card <?php echo esc_attr( $theme_class ); ?> adam-digital-card--theme-rarity-<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
+				<div class="adam-reward-preview-card__shine" aria-hidden="true"></div>
+				<div class="adam-reward-preview-card__header">
+					<span>ADAM</span>
+					<small><?php esc_html_e( 'Tema', 'adam-membership' ); ?></small>
+				</div>
+				<div class="adam-reward-preview-card__body">
+					<div class="adam-reward-preview-card__avatar"></div>
+					<div class="adam-reward-preview-card__lines">
+						<span></span>
+						<span></span>
+					</div>
+				</div>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( str_starts_with( $reward_key, 'card_frame_' ) ) {
+			$frame_class = 'adam-digital-card--frame-' . str_replace( '_', '-', substr( $reward_key, strlen( 'card_frame_' ) ) );
+			?>
+			<div class="adam-reward-preview-card adam-reward-preview-card--frame-base <?php echo esc_attr( $frame_class ); ?> adam-digital-card--frame-rarity-<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
+				<div class="adam-reward-preview-card__shine" aria-hidden="true"></div>
+				<div class="adam-reward-preview-card__header">
+					<span>ADAM</span>
+					<small><?php esc_html_e( 'Moldura', 'adam-membership' ); ?></small>
+				</div>
+				<div class="adam-reward-preview-card__body">
+					<div class="adam-reward-preview-card__avatar"></div>
+					<div class="adam-reward-preview-card__lines">
+						<span></span>
+						<span></span>
+					</div>
+				</div>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( str_starts_with( $reward_key, 'title_' ) ) {
+			?>
+			<div class="adam-reward-preview-badge adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
+				<?php echo esc_html( $reward->name() ); ?>
+			</div>
+			<?php
+			return;
+		}
+
+		?>
+		<div class="adam-reward-preview-icon adam-reward-preview-icon--<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
+			<span><?php echo esc_html( $this->reward_icon_label( $reward ) ); ?></span>
+		</div>
+		<?php
 	}
 
 	/**
