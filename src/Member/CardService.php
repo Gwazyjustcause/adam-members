@@ -11,6 +11,7 @@ namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
+use WP_Error;
 use WP_User_Query;
 
 /**
@@ -22,14 +23,16 @@ final class CardService {
 	private MemberRepository $members;
 	private SettingsRepository $settings;
 	private Logger $logger;
+	private CardCosmeticsService $cosmetics;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger ) {
-		$this->members  = $members;
-		$this->settings = $settings;
-		$this->logger   = $logger;
+	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics ) {
+		$this->members   = $members;
+		$this->settings  = $settings;
+		$this->logger    = $logger;
+		$this->cosmetics = $cosmetics;
 	}
 
 	/**
@@ -143,6 +146,34 @@ final class CardService {
 	 */
 	public function association_logo_url(): string {
 		return $this->settings->association_logo_url();
+	}
+
+	/**
+	 * Get the resolved digital card cosmetics for a member.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function card_presentation( Member $member ): array {
+		return $this->cosmetics->card_presentation( $member );
+	}
+
+	/**
+	 * Get unlocked member cosmetic options.
+	 *
+	 * @return array<string, array<int, array<string, mixed>>>
+	 */
+	public function member_cosmetic_options( Member $member ): array {
+		return $this->cosmetics->member_options( $member );
+	}
+
+	/**
+	 * Persist member cosmetic selections.
+	 *
+	 * @param array<string, mixed> $raw_data Raw posted data.
+	 * @return true|WP_Error
+	 */
+	public function save_member_cosmetic_selection( Member $member, array $raw_data ): true|WP_Error {
+		return $this->cosmetics->save_member_selection( $member, $raw_data );
 	}
 
 	/**

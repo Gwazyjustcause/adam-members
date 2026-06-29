@@ -359,6 +359,505 @@
 	letter-spacing: 0;
 }
 
+.adam-member-title-note {
+	margin-top: 10px !important;
+	color: var(--adam-green-900) !important;
+	font-weight: 800;
+}
+
+.adam-digital-card {
+	--adam-card-surface:
+		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
+		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
+		var(--adam-green-900);
+	--adam-card-border: rgba(255, 255, 255, 0.22);
+	--adam-card-shadow: 0 28px 68px rgba(16, 32, 51, 0.22);
+	--adam-card-ink: #ffffff;
+	--adam-card-muted: rgba(255, 255, 255, 0.82);
+	--adam-card-panel-border: rgba(255, 255, 255, 0.16);
+	--adam-card-panel-bg: rgba(255, 255, 255, 0.10);
+	--adam-card-photo-border: rgba(255, 255, 255, 0.82);
+	--adam-card-photo-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+	--adam-card-photo-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+	--adam-card-logo-surface: #ffffff;
+	--adam-card-qr-surface: #ffffff;
+	--adam-card-qr-ink: var(--adam-green-900);
+	--adam-card-frame-outline: rgba(255, 255, 255, 0.16);
+	--adam-card-frame-accent: transparent;
+	--adam-card-frame-shadow: none;
+	--adam-card-shine: rgba(255, 255, 255, 0.10);
+	--adam-card-title-surface: rgba(255, 255, 255, 0.14);
+	--adam-card-title-border: rgba(255, 255, 255, 0.18);
+	--adam-card-chip-surface: rgba(255, 255, 255, 0.16);
+	--adam-card-chip-border: rgba(255, 255, 255, 0.16);
+	background: var(--adam-card-surface);
+	border-color: var(--adam-card-border);
+	box-shadow: var(--adam-card-shadow);
+	color: var(--adam-card-ink);
+}
+
+.adam-digital-card::before {
+	border-color: var(--adam-card-frame-outline);
+}
+
+.adam-digital-card::after {
+	position: absolute;
+	inset: 10px;
+	border: 2px solid var(--adam-card-frame-accent);
+	border-radius: 24px;
+	box-shadow: var(--adam-card-frame-shadow);
+	content: "";
+	pointer-events: none;
+	z-index: 0;
+}
+
+.adam-digital-card__shine {
+	background: var(--adam-card-shine);
+}
+
+.adam-digital-card__header span,
+.adam-digital-card__identity span,
+.adam-digital-card__details span,
+.adam-digital-card__footer span {
+	color: var(--adam-card-muted);
+}
+
+.adam-digital-card__logo {
+	background: var(--adam-card-logo-surface);
+}
+
+.adam-digital-card__header strong,
+.adam-digital-card__identity strong,
+.adam-digital-card__details strong,
+.adam-digital-card__identity small,
+.adam-digital-card__photo span {
+	color: var(--adam-card-ink);
+}
+
+.adam-digital-card__badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.adam-digital-card__founder,
+.adam-digital-card__loyalty {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 0.76rem;
+	font-weight: 800;
+}
+
+.adam-digital-card__founder {
+	background: rgba(255, 245, 200, 0.18);
+	color: #fff4bf;
+	border: 1px solid rgba(255, 230, 150, 0.22);
+}
+
+.adam-digital-card__loyalty {
+	background: rgba(191, 219, 254, 0.18);
+	color: #dbeafe;
+	border: 1px solid rgba(191, 219, 254, 0.26);
+}
+
+.adam-digital-card__photo {
+	border-color: var(--adam-card-photo-border);
+	background: var(--adam-card-photo-surface);
+	box-shadow: var(--adam-card-photo-shadow);
+}
+
+.adam-digital-card__title {
+	display: inline-flex;
+	align-items: center;
+	align-self: flex-start;
+	margin: 8px 0 6px;
+	padding: 6px 12px;
+	border: 1px solid var(--adam-card-title-border);
+	border-radius: 999px;
+	background: var(--adam-card-title-surface);
+	color: var(--adam-card-ink);
+	font-size: 0.78rem;
+	font-style: normal;
+	font-weight: 900;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.adam-digital-card__details div {
+	border-color: var(--adam-card-panel-border);
+	background: var(--adam-card-panel-bg);
+}
+
+.adam-digital-card__identity small {
+	background: var(--adam-card-chip-surface);
+	border: 1px solid var(--adam-card-chip-border);
+}
+
+.adam-digital-card__qr {
+	background: var(--adam-card-qr-surface);
+	color: var(--adam-card-qr-ink);
+}
+
+.adam-digital-card__qr span {
+	color: var(--adam-card-qr-ink);
+}
+
+.adam-card-customizer {
+	display: grid;
+	gap: 18px;
+	margin-top: 18px;
+	padding: 18px;
+	border: 1px solid var(--adam-border);
+	border-radius: 16px;
+	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+}
+
+.adam-card-customizer__heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.adam-card-customizer__heading h3 {
+	margin: 4px 0 0;
+	font-size: 1.05rem;
+}
+
+.adam-card-customizer__grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.adam-card-customizer label {
+	display: grid;
+	gap: 8px;
+}
+
+.adam-card-customizer label > span {
+	color: var(--adam-muted);
+	font-size: 0.78rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-card-customizer select {
+	width: 100%;
+	min-height: 44px;
+	padding: 10px 12px;
+	border: 1px solid var(--adam-border);
+	border-radius: 12px;
+	background: #ffffff;
+	color: var(--adam-ink);
+	font: inherit;
+}
+
+.adam-digital-card--theme-woodland {
+	--adam-card-surface:
+		linear-gradient(135deg, rgba(22, 44, 26, 0.96), rgba(57, 82, 46, 0.92) 35%, rgba(92, 110, 62, 0.9) 70%, rgba(27, 42, 31, 0.98)),
+		repeating-linear-gradient(125deg, rgba(22, 44, 26, 0.18) 0 18px, rgba(119, 141, 88, 0.12) 18px 34px, rgba(53, 72, 38, 0.16) 34px 52px);
+}
+
+.adam-digital-card--theme-desert {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 16%, rgba(255, 247, 221, 0.55), transparent 26%),
+		linear-gradient(135deg, #8c6b3f, #c09a5d 40%, #d8c08d 76%, #8e6d43);
+	--adam-card-ink: #2f2418;
+	--adam-card-muted: rgba(47, 36, 24, 0.75);
+	--adam-card-panel-border: rgba(64, 45, 20, 0.12);
+	--adam-card-panel-bg: rgba(255, 250, 239, 0.24);
+	--adam-card-photo-border: rgba(255, 247, 221, 0.9);
+	--adam-card-title-surface: rgba(255, 248, 230, 0.32);
+	--adam-card-title-border: rgba(82, 61, 28, 0.18);
+	--adam-card-chip-surface: rgba(255, 251, 239, 0.36);
+	--adam-card-chip-border: rgba(82, 61, 28, 0.16);
+}
+
+.adam-digital-card--theme-urban {
+	--adam-card-surface:
+		linear-gradient(135deg, #2b3440, #4c5b69 48%, #1c2530),
+		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 12px, rgba(0, 0, 0, 0.04) 12px 24px);
+}
+
+.adam-digital-card--theme-carbon-fiber {
+	--adam-card-surface:
+		linear-gradient(135deg, #101418, #2a3139 45%, #11161b),
+		repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 6px, rgba(0, 0, 0, 0.08) 6px 12px);
+	--adam-card-frame-shadow: 0 0 28px rgba(148, 163, 184, 0.16);
+}
+
+.adam-digital-card--theme-flecktarn {
+	--adam-card-surface:
+		radial-gradient(circle at 22% 34%, rgba(117, 92, 54, 0.7) 0 11%, transparent 12%),
+		radial-gradient(circle at 62% 54%, rgba(71, 89, 48, 0.7) 0 12%, transparent 13%),
+		radial-gradient(circle at 42% 72%, rgba(37, 45, 29, 0.78) 0 10%, transparent 11%),
+		linear-gradient(135deg, #4d5f3a, #7a734f 48%, #2f3d28);
+}
+
+.adam-digital-card--theme-digital-green {
+	--adam-card-surface:
+		linear-gradient(135deg, #0d3121, #1f5f44 45%, #153f31),
+		repeating-linear-gradient(90deg, rgba(123, 186, 151, 0.12) 0 14px, rgba(255, 255, 255, 0.03) 14px 28px),
+		repeating-linear-gradient(0deg, rgba(12, 29, 18, 0.15) 0 10px, transparent 10px 20px);
+}
+
+.adam-digital-card--theme-blue-steel {
+	--adam-card-surface:
+		linear-gradient(135deg, #11263b, #486b8f 48%, #192d44),
+		linear-gradient(45deg, rgba(255, 255, 255, 0.12), transparent 45%);
+}
+
+.adam-digital-card--theme-midnight-black {
+	--adam-card-surface:
+		radial-gradient(circle at 84% 18%, rgba(96, 165, 250, 0.18), transparent 20%),
+		linear-gradient(135deg, #05070a, #12161d 48%, #090b0f);
+	--adam-card-frame-shadow: 0 0 34px rgba(96, 165, 250, 0.14);
+}
+
+.adam-digital-card--theme-arctic-white {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.82), transparent 20%),
+		linear-gradient(135deg, #eef6ff, #dce9f6 48%, #b9cad8);
+	--adam-card-ink: #0f1f33;
+	--adam-card-muted: rgba(15, 31, 51, 0.76);
+	--adam-card-panel-border: rgba(15, 31, 51, 0.12);
+	--adam-card-panel-bg: rgba(255, 255, 255, 0.3);
+	--adam-card-photo-border: rgba(255, 255, 255, 0.98);
+	--adam-card-title-surface: rgba(255, 255, 255, 0.46);
+	--adam-card-title-border: rgba(15, 31, 51, 0.12);
+	--adam-card-chip-surface: rgba(255, 255, 255, 0.44);
+	--adam-card-chip-border: rgba(15, 31, 51, 0.12);
+}
+
+.adam-digital-card--theme-crimson-strike {
+	--adam-card-surface:
+		radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.16), transparent 18%),
+		linear-gradient(135deg, #55111b, #a61d2d 46%, #2c0912);
+}
+
+.adam-digital-card--theme-purple-nebula {
+	--adam-card-surface:
+		radial-gradient(circle at 22% 28%, rgba(216, 180, 254, 0.22), transparent 18%),
+		radial-gradient(circle at 76% 24%, rgba(196, 181, 253, 0.2), transparent 16%),
+		linear-gradient(135deg, #2f1447, #5f2490 52%, #12061f);
+}
+
+.adam-digital-card--theme-gold {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 12%, rgba(255, 244, 184, 0.34), transparent 24%),
+		linear-gradient(135deg, #7f5a0f, #cda33a 48%, #8a6310);
+	--adam-card-frame-shadow: 0 0 36px rgba(250, 204, 21, 0.24);
+}
+
+.adam-digital-card--theme-emerald {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 14%, rgba(220, 252, 231, 0.18), transparent 22%),
+		linear-gradient(135deg, #0b3f34, #0f766e 48%, #07322b);
+	--adam-card-frame-shadow: 0 0 34px rgba(16, 185, 129, 0.22);
+}
+
+.adam-digital-card--theme-sapphire {
+	--adam-card-surface:
+		radial-gradient(circle at 76% 12%, rgba(191, 219, 254, 0.2), transparent 22%),
+		linear-gradient(135deg, #102c64, #1d4ed8 48%, #0b1f45);
+	--adam-card-frame-shadow: 0 0 34px rgba(59, 130, 246, 0.22);
+}
+
+.adam-digital-card--theme-ruby {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 14%, rgba(254, 202, 202, 0.18), transparent 20%),
+		linear-gradient(135deg, #6b0f1a, #b91c1c 48%, #3f0912);
+	--adam-card-frame-shadow: 0 0 34px rgba(239, 68, 68, 0.2);
+}
+
+.adam-digital-card--theme-obsidian {
+	--adam-card-surface:
+		radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.08), transparent 20%),
+		linear-gradient(135deg, #020305, #151a20 46%, #05070a);
+	--adam-card-frame-shadow: 0 0 44px rgba(255, 255, 255, 0.08);
+}
+
+.adam-digital-card--theme-phoenix {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 18%, rgba(253, 224, 71, 0.26), transparent 20%),
+		linear-gradient(135deg, #5f1d00, #d9480f 40%, #f59e0b 72%, #7c2d12);
+	--adam-card-frame-shadow: 0 0 44px rgba(245, 158, 11, 0.26);
+}
+
+.adam-digital-card--theme-platinum {
+	--adam-card-surface:
+		radial-gradient(circle at 78% 14%, rgba(255, 255, 255, 0.35), transparent 24%),
+		linear-gradient(135deg, #6b7280, #d1d5db 48%, #8c95a3);
+	--adam-card-ink: #172033;
+	--adam-card-muted: rgba(23, 32, 51, 0.76);
+	--adam-card-panel-border: rgba(23, 32, 51, 0.14);
+	--adam-card-panel-bg: rgba(255, 255, 255, 0.28);
+	--adam-card-title-surface: rgba(255, 255, 255, 0.4);
+	--adam-card-title-border: rgba(23, 32, 51, 0.12);
+	--adam-card-chip-surface: rgba(255, 255, 255, 0.42);
+	--adam-card-chip-border: rgba(23, 32, 51, 0.12);
+}
+
+.adam-digital-card--theme-founder {
+	--adam-card-surface:
+		radial-gradient(circle at 82% 14%, rgba(255, 244, 184, 0.28), transparent 20%),
+		linear-gradient(135deg, #113b2f, #1f6a56 40%, #d7aa31 76%, #0a2219);
+	--adam-card-frame-shadow: 0 0 42px rgba(234, 179, 8, 0.26);
+	--adam-card-frame-accent: rgba(250, 204, 21, 0.42);
+}
+
+.adam-digital-card--theme-legendary-loyalty {
+	--adam-card-surface:
+		radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.2), transparent 20%),
+		linear-gradient(135deg, #24103f, #5b21b6 42%, #d97706 76%, #140822);
+	--adam-card-frame-shadow: 0 0 42px rgba(168, 85, 247, 0.24);
+}
+
+.adam-digital-card--theme-christmas-edition {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.18), transparent 20%),
+		linear-gradient(135deg, #0f5132, #15803d 42%, #b91c1c 78%);
+	--adam-card-frame-accent: rgba(255, 255, 255, 0.34);
+}
+
+.adam-digital-card--theme-halloween-edition {
+	--adam-card-surface:
+		radial-gradient(circle at 82% 14%, rgba(255, 184, 0, 0.2), transparent 20%),
+		linear-gradient(135deg, #140c22, #4c1d95 38%, #f97316 74%, #1f1114);
+	--adam-card-frame-accent: rgba(251, 146, 60, 0.32);
+}
+
+.adam-digital-card--theme-anniversary-edition {
+	--adam-card-surface:
+		radial-gradient(circle at 80% 14%, rgba(250, 204, 21, 0.24), transparent 20%),
+		linear-gradient(135deg, #123f3a, #0f766e 38%, #f59e0b 74%, #102033);
+	--adam-card-frame-accent: rgba(250, 204, 21, 0.34);
+}
+
+.adam-digital-card--frame-standard-silver {
+	--adam-card-frame-accent: rgba(203, 213, 225, 0.5);
+}
+
+.adam-digital-card--frame-tactical-green {
+	--adam-card-frame-accent: rgba(110, 231, 183, 0.32);
+	--adam-card-frame-shadow: 0 0 0 1px rgba(21, 128, 61, 0.2) inset;
+}
+
+.adam-digital-card--frame-veteran-bronze {
+	--adam-card-frame-accent: rgba(205, 127, 50, 0.54);
+	--adam-card-frame-shadow: 0 0 22px rgba(180, 83, 9, 0.18);
+}
+
+.adam-digital-card--frame-carbon-edge {
+	--adam-card-frame-accent: rgba(148, 163, 184, 0.42);
+	--adam-card-frame-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.4), 0 0 22px rgba(15, 23, 42, 0.16);
+}
+
+.adam-digital-card--frame-elite-blue {
+	--adam-card-frame-accent: rgba(96, 165, 250, 0.5);
+	--adam-card-frame-shadow: 0 0 24px rgba(37, 99, 235, 0.2);
+}
+
+.adam-digital-card--frame-titanium {
+	--adam-card-frame-accent: rgba(203, 213, 225, 0.58);
+	--adam-card-frame-shadow: 0 0 24px rgba(148, 163, 184, 0.18);
+}
+
+.adam-digital-card--frame-veteran-gold {
+	--adam-card-frame-accent: rgba(245, 158, 11, 0.6);
+	--adam-card-frame-shadow: 0 0 30px rgba(217, 119, 6, 0.2);
+}
+
+.adam-digital-card--frame-golden-honor {
+	--adam-card-frame-accent: rgba(250, 204, 21, 0.62);
+	--adam-card-frame-shadow: 0 0 28px rgba(250, 204, 21, 0.24);
+}
+
+.adam-digital-card--frame-emerald-prestige {
+	--adam-card-frame-accent: rgba(52, 211, 153, 0.56);
+	--adam-card-frame-shadow: 0 0 28px rgba(16, 185, 129, 0.22);
+}
+
+.adam-digital-card--frame-diamond-frame {
+	--adam-card-frame-accent: rgba(255, 255, 255, 0.72);
+	--adam-card-frame-shadow: 0 0 32px rgba(255, 255, 255, 0.18);
+}
+
+.adam-digital-card--frame-founder-frame {
+	--adam-card-frame-accent: rgba(250, 204, 21, 0.78);
+	--adam-card-frame-shadow: 0 0 34px rgba(234, 179, 8, 0.26);
+}
+
+.adam-digital-card--frame-legendary-loyalty {
+	--adam-card-frame-accent: rgba(217, 119, 6, 0.64);
+	--adam-card-frame-shadow: 0 0 32px rgba(168, 85, 247, 0.2);
+}
+
+.adam-digital-card__title--common {
+	color: #f8fafc;
+}
+
+.adam-digital-card__title--uncommon {
+	color: #dcfce7;
+}
+
+.adam-digital-card__title--rare {
+	color: #dbeafe;
+}
+
+.adam-digital-card__title--epic {
+	color: #ede9fe;
+}
+
+.adam-digital-card__title--legendary,
+.adam-digital-card__title--founder {
+	color: #fef3c7;
+}
+
+.adam-digital-card__title--limited_edition {
+	color: #fee2e2;
+}
+
+.adam-digital-card--theme-rarity-common::after,
+.adam-digital-card--frame-rarity-common::after {
+	box-shadow: var(--adam-card-frame-shadow);
+}
+
+.adam-digital-card--theme-rarity-uncommon::after,
+.adam-digital-card--frame-rarity-uncommon::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 20px rgba(74, 222, 128, 0.12);
+}
+
+.adam-digital-card--theme-rarity-rare::after,
+.adam-digital-card--frame-rarity-rare::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 24px rgba(96, 165, 250, 0.14);
+}
+
+.adam-digital-card--theme-rarity-epic::after,
+.adam-digital-card--frame-rarity-epic::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 28px rgba(168, 85, 247, 0.18);
+}
+
+.adam-digital-card--theme-rarity-legendary::after,
+.adam-digital-card--frame-rarity-legendary::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 34px rgba(250, 204, 21, 0.2);
+}
+
+.adam-digital-card--theme-rarity-limited_edition::after,
+.adam-digital-card--frame-rarity-limited_edition::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 32px rgba(248, 113, 113, 0.18);
+}
+
+.adam-digital-card--theme-rarity-founder::after,
+.adam-digital-card--frame-rarity-founder::after,
+.adam-digital-card--is-founder::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 36px rgba(250, 204, 21, 0.22);
+}
+
 .adam-points-summary {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1610,7 +2109,8 @@
 	.adam-document-filters,
 	.adam-document-grid,
 	.adam-reward-grid,
-	.adam-rewards-summary {
+	.adam-rewards-summary,
+	.adam-card-customizer__grid {
 		grid-template-columns: 1fr;
 	}
 
@@ -1711,6 +2211,11 @@
 		justify-content: stretch;
 	}
 
+	.adam-card-customizer__heading {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
 	.adam-document-card {
 		grid-template-columns: 1fr;
 	}
@@ -1783,6 +2288,10 @@
 		display: none;
 	}
 
+	.adam-card-customizer {
+		display: none !important;
+	}
+
 	.adam-digital-card {
 		position: absolute;
 		inset: 0;
@@ -1806,11 +2315,18 @@
 		border-radius: 2.2mm;
 	}
 
+	.adam-digital-card::after {
+		inset: 1.15mm;
+		border-radius: 2.4mm;
+		box-shadow: none;
+	}
+
 	.adam-digital-card__shine {
 		right: -18mm;
 		bottom: -22mm;
 		width: 46mm;
 		height: 46mm;
+		animation: none !important;
 	}
 
 	.adam-digital-card__header {
@@ -1843,6 +2359,19 @@
 		line-height: 1.05;
 	}
 
+	.adam-digital-card__badges {
+		gap: 1mm;
+		margin-top: 0.8mm;
+	}
+
+	.adam-digital-card__founder,
+	.adam-digital-card__loyalty,
+	.adam-digital-card__title {
+		padding: 0.7mm 1.4mm;
+		font-size: 4.9pt;
+		box-shadow: none;
+	}
+
 	.adam-digital-card .adam-badge {
 		min-height: 4.8mm;
 		padding: 1mm 2mm;
@@ -1870,6 +2399,10 @@
 		margin: 0.5mm 0;
 		font-size: 11.5pt;
 		line-height: 1;
+	}
+
+	.adam-digital-card__title {
+		margin: 0.6mm auto 0.8mm;
 	}
 
 	.adam-digital-card__identity small {

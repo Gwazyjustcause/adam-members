@@ -163,6 +163,7 @@ final class MemberArea {
 			return $this->render_not_found();
 		}
 
+		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
 
 		ob_start();
@@ -171,6 +172,7 @@ final class MemberArea {
 			<?php $this->renewals->maybe_send_renewal_reminder( $member ); ?>
 			<?php $this->render_header( $member ); ?>
 			<?php $this->render_account_notices(); ?>
+			<?php $this->render_card_notices(); ?>
 			<?php $this->render_reward_notices(); ?>
 
 			<?php if ( 'recompensas' === $this->current_member_view() ) : ?>
@@ -362,7 +364,8 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_header( Member $member ): void {
-		$founder_number = $member->founder_number();
+		$founder_number    = $member->founder_number();
+		$card_presentation = $this->cards->card_presentation( $member );
 		?>
 		<header class="adam-member-hero">
 			<div>
@@ -379,6 +382,19 @@ final class MemberArea {
 					?>
 				</h2>
 				<p><?php esc_html_e( 'O seu painel central para acompanhar a inscrição, quota, dados de sócio e próximas funcionalidades da ADAM.', 'adam-membership' ); ?></p>
+				<?php if ( is_array( $card_presentation['active_title'] ?? null ) ) : ?>
+					<p class="adam-member-title-note">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: active card title. */
+								__( 'Titulo ativo: %s', 'adam-membership' ),
+								(string) $card_presentation['active_title']['name']
+							)
+						);
+						?>
+					</p>
+				<?php endif; ?>
 				<?php if ( $member->is_founder() ) : ?>
 					<p class="adam-founder-hero-note">
 						<?php echo esc_html( $founder_number > 0 ? sprintf( __( 'Membro Fundador ADAM | Fundador #%d', 'adam-membership' ), $founder_number ) : __( 'Membro Fundador ADAM', 'adam-membership' ) ); ?>
@@ -405,6 +421,22 @@ final class MemberArea {
 
 		if ( isset( $_GET['email_changed'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['email_changed'] ) ) ) {
 			echo wp_kses_post( $this->notice_markup( 'success', __( 'Endereço de email alterado com sucesso.', 'adam-membership' ) ) );
+		}
+	}
+
+	/**
+	 * Render card customization notices from redirects.
+	 */
+	private function render_card_notices(): void {
+		$message = isset( $_GET['card_message'] ) ? sanitize_text_field( wp_unslash( $_GET['card_message'] ) ) : '';
+		$error   = isset( $_GET['card_error'] ) ? sanitize_text_field( wp_unslash( $_GET['card_error'] ) ) : '';
+
+		if ( '' !== $message ) {
+			echo wp_kses_post( $this->notice_markup( 'success', $message ) );
+		}
+
+		if ( '' !== $error ) {
+			echo wp_kses_post( $this->notice_markup( 'error', $error ) );
 		}
 	}
 
@@ -568,10 +600,13 @@ final class MemberArea {
 			return;
 		}
 
-		$photo_url     = $member->media_url( 'profile_photo' );
-		$member_number = (string) $member->field( 'numero_socio' );
-		$joined_date   = $this->format_date( $member->field( 'data_adesao' ) );
-		$expiry_date   = $this->format_date( $member->field( 'validade_quota' ) );
+		$photo_url         = $member->media_url( 'profile_photo' );
+		$member_number     = (string) $member->field( 'numero_socio' );
+		$joined_date       = $this->format_date( $member->field( 'data_adesao' ) );
+		$expiry_date       = $this->format_date( $member->field( 'validade_quota' ) );
+		$card_presentation = $this->cards->card_presentation( $member );
+		$cosmetic_options  = $this->cards->member_cosmetic_options( $member );
+		$card_classes      = implode( ' ', array_map( 'sanitize_html_class', (array) ( $card_presentation['classes'] ?? array( 'adam-digital-card' ) ) ) );
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -586,16 +621,21 @@ final class MemberArea {
 					<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 				</div>
 			</div>
-			<article class="adam-digital-card" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+			<article class="<?php echo esc_attr( $card_classes ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
 				<header class="adam-digital-card__header">
 					<img class="adam-digital-card__logo" src="<?php echo esc_url( $this->cards->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->cards->association_name() ); ?>">
 					<div>
 						<span><?php esc_html_e( 'Associação Desportiva', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( $this->cards->association_name() ); ?></strong>
-						<?php if ( $member->is_founder() ) : ?>
-							<small class="adam-digital-card__founder"><?php echo esc_html( $member->founder_number() > 0 ? sprintf( __( 'Membro Fundador #%d', 'adam-membership' ), $member->founder_number() ) : __( 'Membro Fundador', 'adam-membership' ) ); ?></small>
-						<?php endif; ?>
+						<div class="adam-digital-card__badges">
+							<?php if ( '' !== (string) ( $card_presentation['founder_badge'] ?? '' ) ) : ?>
+								<small class="adam-digital-card__founder"><?php echo esc_html( (string) $card_presentation['founder_badge'] ); ?></small>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $card_presentation['loyalty_badge'] ?? '' ) ) : ?>
+								<small class="adam-digital-card__loyalty"><?php echo esc_html( (string) $card_presentation['loyalty_badge'] ); ?></small>
+							<?php endif; ?>
+						</div>
 					</div>
 					<?php $this->render_status_badge( $member->effective_status() ); ?>
 				</header>
@@ -611,6 +651,11 @@ final class MemberArea {
 
 					<div class="adam-digital-card__identity">
 						<span><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></span>
+						<?php if ( is_array( $card_presentation['active_title'] ?? null ) ) : ?>
+							<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) $card_presentation['active_title']['rarity'] ) ); ?>">
+								<?php echo esc_html( (string) $card_presentation['active_title']['name'] ); ?>
+							</em>
+						<?php endif; ?>
 						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
 						<small><?php echo esc_html( '' !== $member_number ? $member_number : __( 'Número por atribuir', 'adam-membership' ) ); ?></small>
 					</div>
@@ -641,7 +686,64 @@ final class MemberArea {
 					<span><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
 			</article>
+			<?php $this->render_card_customizer( $member, $cosmetic_options, $card_presentation ); ?>
 		</section>
+		<?php
+	}
+
+	/**
+	 * Render card customization controls.
+	 *
+	 * @param Member                                 $member             Member.
+	 * @param array<string, array<int, array<string, mixed>>> $cosmetic_options Available options.
+	 * @param array<string, mixed>                   $card_presentation Current card presentation.
+	 */
+	private function render_card_customizer( Member $member, array $cosmetic_options, array $card_presentation ): void {
+		?>
+		<form method="post" class="adam-card-customizer">
+			<input type="hidden" name="adam_member_action" value="save_card_cosmetics">
+			<?php wp_nonce_field( 'adam_member_save_card_cosmetics_' . $member->user_id() ); ?>
+
+			<div class="adam-card-customizer__heading">
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Personalizacao do cartao', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Escolher cosmeticos desbloqueados', 'adam-membership' ); ?></h3>
+				</div>
+				<button type="submit" class="adam-card-link"><?php esc_html_e( 'Guardar visual', 'adam-membership' ); ?></button>
+			</div>
+
+			<div class="adam-card-customizer__grid">
+				<label>
+					<span><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></span>
+					<select name="active_title_reward">
+						<?php $this->render_cosmetic_option( '', __( 'Predefinido ADAM', 'adam-membership' ), (string) ( $card_presentation['selected_values']['title'] ?? '' ) ); ?>
+						<?php foreach ( $cosmetic_options['titles'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_cosmetic_option( (string) $cosmetic['key'], $this->cosmetic_option_label( $cosmetic ), (string) ( $card_presentation['selected_values']['title'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<label>
+					<span><?php esc_html_e( 'Fundo do cartao', 'adam-membership' ); ?></span>
+					<select name="active_card_theme">
+						<?php $this->render_cosmetic_option( '', __( 'Design ADAM predefinido', 'adam-membership' ), (string) ( $card_presentation['selected_values']['theme'] ?? '' ) ); ?>
+						<?php foreach ( $cosmetic_options['themes'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_cosmetic_option( (string) $cosmetic['key'], $this->cosmetic_option_label( $cosmetic ), (string) ( $card_presentation['selected_values']['theme'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<label>
+					<span><?php esc_html_e( 'Moldura do cartao', 'adam-membership' ); ?></span>
+					<select name="active_card_frame">
+						<?php $this->render_cosmetic_option( '', __( 'Sem moldura especial', 'adam-membership' ), (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
+						<?php foreach ( $cosmetic_options['frames'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_cosmetic_option( (string) $cosmetic['key'], $this->cosmetic_option_label( $cosmetic ), (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			</div>
+		</form>
 		<?php
 	}
 
@@ -1346,6 +1448,36 @@ final class MemberArea {
 	}
 
 	/**
+	 * Handle card cosmetic selection submissions.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function handle_card_cosmetic_selection_request( Member $member ): void {
+		if (
+			'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ||
+			! isset( $_POST['adam_member_action'] ) ||
+			'save_card_cosmetics' !== sanitize_key( (string) wp_unslash( $_POST['adam_member_action'] ) )
+		) {
+			return;
+		}
+
+		if (
+			! isset( $_POST['_wpnonce'] ) ||
+			! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_member_save_card_cosmetics_' . $member->user_id() )
+		) {
+			$this->redirect_member_notice( 'card_error', __( 'Nao foi possivel validar a personalizacao do cartao.', 'adam-membership' ) );
+		}
+
+		$result = $this->cards->save_member_cosmetic_selection( $member, $_POST );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_member_notice( 'card_error', $result->get_error_message() );
+		}
+
+		$this->redirect_member_notice( 'card_message', __( 'Visual do cartao atualizado com sucesso.', 'adam-membership' ) );
+	}
+
+	/**
 	 * Render member actions after feature sections.
 	 *
 	 * @param Member $member Member.
@@ -1449,6 +1581,35 @@ final class MemberArea {
 		return array_merge(
 			$this->renewal_actions( $member ),
 			$this->standard_account_actions()
+		);
+	}
+
+	/**
+	 * Render a select option for a cosmetic choice.
+	 *
+	 * @param string $value   Option value.
+	 * @param string $label   Option label.
+	 * @param string $current Current selected value.
+	 */
+	private function render_cosmetic_option( string $value, string $label, string $current ): void {
+		?>
+		<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $value, $current ); ?>>
+			<?php echo esc_html( $label ); ?>
+		</option>
+		<?php
+	}
+
+	/**
+	 * Build the select label for one cosmetic.
+	 *
+	 * @param array<string, mixed> $cosmetic Cosmetic metadata.
+	 */
+	private function cosmetic_option_label( array $cosmetic ): string {
+		return sprintf(
+			'%1$s | %2$s | %3$s',
+			(string) ( $cosmetic['name'] ?? '' ),
+			(string) ( $cosmetic['rarity_label'] ?? '' ),
+			(string) ( $cosmetic['unlock_source_label'] ?? '' )
 		);
 	}
 

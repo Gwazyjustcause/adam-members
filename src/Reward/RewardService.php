@@ -100,7 +100,7 @@ final class RewardService {
 			return false;
 		}
 
-		if ( $reward->is_single_claim() && $this->member_owns_reward( $member, $reward ) ) {
+		if ( $this->member_owns_reward( $member, $reward ) ) {
 			return true;
 		}
 
