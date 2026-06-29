@@ -131,7 +131,11 @@ final class Plugin {
 			$renewals,
 			$maintenance,
 			$cards,
-			$history_repository
+			$history_repository,
+			$announcements,
+			$documents,
+			$events,
+			$rewards
 		);
 		$announcement_admin = new AnnouncementController( $announcements );
 		$document_admin     = new DocumentController( $documents );

@@ -9,8 +9,14 @@ declare(strict_types=1);
 
 namespace AdamMembership\Admin;
 
+use AdamMembership\Announcement\Announcement;
+use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\MaintenanceService;
+use AdamMembership\Document\DocumentService;
+use AdamMembership\Event\Event;
+use AdamMembership\Event\EventCheckIn;
+use AdamMembership\Event\EventService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\CardService;
@@ -21,6 +27,8 @@ use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\RenewalRequest;
 use AdamMembership\Member\RenewalService;
+use AdamMembership\Reward\RewardRedemption;
+use AdamMembership\Reward\RewardService;
 use WP_Error;
 
 /**
@@ -41,6 +49,7 @@ final class AdminController {
 	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
+	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
 
 	/**
 	 * Member details page hook suffix.
@@ -120,6 +129,34 @@ final class AdminController {
 	private HistoryRepository $history_repository;
 
 	/**
+	 * Announcement service.
+	 *
+	 * @var AnnouncementService
+	 */
+	private AnnouncementService $announcements;
+
+	/**
+	 * Document service.
+	 *
+	 * @var DocumentService
+	 */
+	private DocumentService $documents;
+
+	/**
+	 * Event service.
+	 *
+	 * @var EventService
+	 */
+	private EventService $events;
+
+	/**
+	 * Reward service.
+	 *
+	 * @var RewardService
+	 */
+	private RewardService $rewards;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -131,8 +168,12 @@ final class AdminController {
 	 * @param MaintenanceService $maintenance      Maintenance service.
 	 * @param CardService        $cards            Digital card service.
 	 * @param HistoryRepository  $history          Member history repository.
+	 * @param AnnouncementService $announcements   Announcement service.
+	 * @param DocumentService     $documents       Document service.
+	 * @param EventService        $events          Event service.
+	 * @param RewardService       $rewards         Reward service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -142,6 +183,10 @@ final class AdminController {
 		$this->maintenance         = $maintenance;
 		$this->cards               = $cards;
 		$this->history_repository  = $history;
+		$this->announcements       = $announcements;
+		$this->documents           = $documents;
+		$this->events              = $events;
+		$this->rewards             = $rewards;
 	}
 
 	/**
@@ -159,6 +204,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
+		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
 	}
 
 	/**
@@ -229,6 +275,15 @@ final class AdminController {
 			array( $this, 'render_settings_page' )
 		);
 
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'Diagnósticos', 'adam-membership' ),
+			esc_html__( 'Diagnósticos', 'adam-membership' ),
+			self::CAPABILITY,
+			self::DIAGNOSTICS_PAGE_SLUG,
+			array( $this, 'render_diagnostics_page' )
+		);
+
 		$this->member_page_hook = (string) add_submenu_page(
 			self::MENU_SLUG,
 			esc_html__( 'Detalhes do Sócio', 'adam-membership' ),
@@ -282,12 +337,58 @@ final class AdminController {
 	public function render_dashboard_page(): void {
 		$this->ensure_can_manage();
 
-		$counts = $this->members->dashboard_counts();
+		$counts  = $this->members->dashboard_counts();
+		$context = $this->dashboard_context( $counts );
 
 		$this->render_header( __( 'Painel ADAM Sócios', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_dashboard_cards( $counts );
-		$this->render_dashboard_shortcuts();
+		$this->render_dashboard_shortcuts( $context );
+		$this->render_dashboard_widgets( $context );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render diagnostics page.
+	 */
+	public function render_diagnostics_page(): void {
+		$this->ensure_can_manage();
+
+		$counts            = $this->members->dashboard_counts();
+		$next_maintenance  = wp_next_scheduled( MaintenanceService::CRON_HOOK );
+		$all_announcements = $this->announcements->admin_list();
+		$all_documents     = $this->documents->admin_list();
+		$all_events        = $this->events->admin_events();
+		$all_checkins      = $this->events->repository()->query_checkins();
+		$pending_rewards   = $this->rewards->admin_redemptions( array( 'status' => RewardRedemption::STATUS_PENDING ) );
+		$history_entries   = $this->history_repository->query( array( 'limit' => 10 ) );
+
+		$this->render_header( __( 'Diagnósticos ADAM', 'adam-membership' ) );
+		$this->render_notices();
+		?>
+		<div class="adam-admin-cards">
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Sócios', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $counts['total'] ?? 0 ) ); ?></strong></div>
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Avisos', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $all_announcements ) ) ); ?></strong></div>
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Documentos', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $all_documents ) ) ); ?></strong></div>
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Eventos', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $all_events ) ) ); ?></strong></div>
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Check-ins', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $all_checkins ) ) ); ?></strong></div>
+			<div class="adam-admin-card"><span><?php esc_html_e( 'Pedidos de recompensa', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $pending_rewards ) ) ); ?></strong></div>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Estado do sistema', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-detail-grid">
+				<?php $this->render_detail_item( __( 'Próxima manutenção agendada', 'adam-membership' ), false !== $next_maintenance ? wp_date( 'd/m/Y H:i', $next_maintenance ) : __( 'Sem agendamento ativo', 'adam-membership' ) ); ?>
+				<?php $this->render_detail_item( __( 'URL da Área do Sócio', 'adam-membership' ), $this->settings->member_area_url() ); ?>
+				<?php $this->render_detail_item( __( 'URL da página de renovação', 'adam-membership' ), $this->settings->renewal_page_url() ); ?>
+				<?php $this->render_detail_item( __( 'Último lote de atividade carregado', 'adam-membership' ), count( $history_entries ) > 0 ? $this->format_datetime( $history_entries[0]->created_at() ) : __( 'Sem atividade recente', 'adam-membership' ) ); ?>
+			</div>
+			<div class="adam-admin-actions" style="margin-top:16px;">
+				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-settings' ) ); ?>"><?php esc_html_e( 'Abrir configurações', 'adam-membership' ); ?></a>
+				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Abrir histórico', 'adam-membership' ); ?></a>
+			</div>
+		</div>
+		<?php
 		$this->render_footer();
 	}
 
@@ -646,6 +747,48 @@ final class AdminController {
 	}
 
 	/**
+	 * Export members as CSV.
+	 */
+	public function handle_export_members_csv(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_export_members_csv' );
+
+		$filename = 'adam-socios-' . wp_date( 'Ymd-His', current_time( 'timestamp' ) ) . '.csv';
+		$members  = $this->members->admin_members( array( 'orderby' => 'registered', 'order' => 'desc' ) );
+
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename=' . $filename );
+
+		$output = fopen( 'php://output', 'w' );
+
+		if ( false === $output ) {
+			wp_die( esc_html__( 'Não foi possível gerar o ficheiro CSV.', 'adam-membership' ) );
+		}
+
+		fputcsv( $output, array( 'ID', 'Numero de socio', 'Nome', 'Email', 'Estado', 'Quota', 'Validade quota', 'Data adesao' ) );
+
+		foreach ( $members as $member ) {
+			fputcsv(
+				$output,
+				array(
+					$member->user_id(),
+					(string) $member->field( 'numero_socio' ),
+					$member->full_name(),
+					$member->email(),
+					$member->effective_status(),
+					$member->quota_status(),
+					(string) $member->field( 'validade_quota' ),
+					(string) $member->field( 'data_adesao' ),
+				)
+			);
+		}
+
+		fclose( $output );
+		exit;
+	}
+
+	/**
 	 * Render renewal request filters.
 	 *
 	 * @param array<string, string> $filters Filters.
@@ -816,7 +959,7 @@ final class AdminController {
 	/**
 	 * Render dashboard shortcut links.
 	 */
-	private function render_dashboard_shortcuts(): void {
+	private function render_dashboard_shortcuts_legacy(): void {
 		?>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Ações rápidas', 'adam-membership' ); ?></h2>
@@ -826,6 +969,440 @@ final class AdminController {
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-members&quota_status=expiring_soon' ) ); ?>"><?php esc_html_e( 'Verificar renovações', 'adam-membership' ); ?></a>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render dashboard shortcut sections.
+	 *
+	 * @param array<string, mixed> $context Dashboard context.
+	 */
+	private function render_dashboard_shortcuts( array $context ): void {
+		$sections = array(
+			array(
+				'title' => __( 'Gestão de Sócios', 'adam-membership' ),
+				'items' => array(
+					array(
+						'icon'        => 'groups',
+						'title'       => __( 'Sócios pendentes', 'adam-membership' ),
+						'description' => __( 'Rever novas inscrições e validar pedidos em espera.', 'adam-membership' ),
+						'button'      => __( 'Abrir pendentes', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-pending' ),
+						'badge'       => (int) ( $context['counts']['pending'] ?? 0 ),
+					),
+					array(
+						'icon'        => 'id-alt',
+						'title'       => __( 'Lista de sócios', 'adam-membership' ),
+						'description' => __( 'Pesquisar, filtrar e gerir todos os sócios ADAM.', 'adam-membership' ),
+						'button'      => __( 'Abrir sócios', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-members' ),
+						'badge'       => (int) ( $context['counts']['total'] ?? 0 ),
+					),
+					array(
+						'icon'        => 'update',
+						'title'       => __( 'Pedidos de renovação', 'adam-membership' ),
+						'description' => __( 'Acompanhar renovações submetidas e decisões pendentes.', 'adam-membership' ),
+						'button'      => __( 'Abrir renovações', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-renewals' ),
+						'badge'       => count( $context['pending_renewals_all'] ?? array() ),
+					),
+					array(
+						'icon'        => 'backup',
+						'title'       => __( 'Histórico de sócios', 'adam-membership' ),
+						'description' => __( 'Consultar atividade, alterações e auditoria dos sócios.', 'adam-membership' ),
+						'button'      => __( 'Abrir histórico', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Comunicação e Documentos', 'adam-membership' ),
+				'items' => array(
+					array(
+						'icon'        => 'megaphone',
+						'title'       => __( 'Centro de Avisos', 'adam-membership' ),
+						'description' => __( 'Gerir avisos, prioridades e ações ligadas a documentos.', 'adam-membership' ),
+						'button'      => __( 'Abrir avisos', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-notices' ),
+						'badge'       => count( $context['announcements_all'] ?? array() ),
+					),
+					array(
+						'icon'        => 'media-document',
+						'title'       => __( 'Documentos', 'adam-membership' ),
+						'description' => __( 'Organizar ficheiros oficiais, versões e visibilidade por público.', 'adam-membership' ),
+						'button'      => __( 'Abrir documentos', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-documents' ),
+						'badge'       => count( $context['documents_all'] ?? array() ),
+					),
+					array(
+						'icon'        => 'edit',
+						'title'       => __( 'Criar novo aviso', 'adam-membership' ),
+						'description' => __( 'Publicar comunicações rápidas para a área do sócio.', 'adam-membership' ),
+						'button'      => __( 'Criar aviso', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-notice-edit' ),
+					),
+					array(
+						'icon'        => 'upload',
+						'title'       => __( 'Adicionar documento', 'adam-membership' ),
+						'description' => __( 'Carregar um novo documento oficial para os sócios.', 'adam-membership' ),
+						'button'      => __( 'Adicionar documento', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-document-edit' ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Eventos e Pontos', 'adam-membership' ),
+				'items' => array(
+					array(
+						'icon'        => 'calendar-alt',
+						'title'       => __( 'Eventos', 'adam-membership' ),
+						'description' => __( 'Gerir eventos, páginas públicas e QR codes de check-in.', 'adam-membership' ),
+						'button'      => __( 'Abrir eventos', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-events' ),
+						'badge'       => count( $context['events_all'] ?? array() ),
+					),
+					array(
+						'icon'        => 'plus-alt2',
+						'title'       => __( 'Criar novo evento', 'adam-membership' ),
+						'description' => __( 'Criar rapidamente um novo evento ADAM.', 'adam-membership' ),
+						'button'      => __( 'Criar evento', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-event-edit' ),
+					),
+					array(
+						'icon'        => 'star-half',
+						'title'       => __( 'Pontos', 'adam-membership' ),
+						'description' => __( 'Ver movimentos, rankings e ajustes manuais de pontos.', 'adam-membership' ),
+						'button'      => __( 'Abrir pontos', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-points' ),
+					),
+					array(
+						'icon'        => 'awards',
+						'title'       => __( 'Recompensas', 'adam-membership' ),
+						'description' => __( 'Gerir catálogo, pedidos de resgate e entregas.', 'adam-membership' ),
+						'button'      => __( 'Abrir recompensas', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-rewards' ),
+						'badge'       => count( $context['pending_reward_redemptions'] ?? array() ),
+					),
+				),
+			),
+			array(
+				'title' => __( 'Ferramentas', 'adam-membership' ),
+				'items' => array(
+					array(
+						'icon'        => 'admin-generic',
+						'title'       => __( 'Configurações', 'adam-membership' ),
+						'description' => __( 'Ajustar URLs, identidade da associação e manutenção.', 'adam-membership' ),
+						'button'      => __( 'Abrir configurações', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=adam-membership-settings' ),
+					),
+					array(
+						'icon'        => 'search',
+						'title'       => __( 'Diagnósticos', 'adam-membership' ),
+						'description' => __( 'Ver estado do sistema, manutenção e dados principais do plugin.', 'adam-membership' ),
+						'button'      => __( 'Abrir diagnósticos', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=' . self::DIAGNOSTICS_PAGE_SLUG ),
+					),
+					array(
+						'icon'        => 'download',
+						'title'       => __( 'Exportar CSV', 'adam-membership' ),
+						'description' => __( 'Exportar a lista completa de sócios para análise externa.', 'adam-membership' ),
+						'button'      => __( 'Exportar CSV', 'adam-membership' ),
+						'url'         => wp_nonce_url( admin_url( 'admin-post.php?action=adam_membership_export_members_csv' ), 'adam_membership_export_members_csv' ),
+					),
+					array(
+						'icon'        => 'list-view',
+						'title'       => __( 'Ver logs', 'adam-membership' ),
+						'description' => __( 'Consultar o histórico operacional e a atividade recente.', 'adam-membership' ),
+						'button'      => __( 'Abrir logs', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ),
+					),
+				),
+			),
+		);
+		?>
+		<div class="adam-admin-dashboard-sections">
+			<?php foreach ( $sections as $section ) : ?>
+				<section class="adam-admin-panel adam-admin-shortcut-panel">
+					<div class="adam-admin-dashboard-heading">
+						<h2><?php echo esc_html( $section['title'] ); ?></h2>
+					</div>
+					<div class="adam-admin-shortcut-grid">
+						<?php foreach ( $section['items'] as $item ) : ?>
+							<?php $this->render_dashboard_shortcut_card( $item ); ?>
+						<?php endforeach; ?>
+					</div>
+				</section>
+			<?php endforeach; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Build dashboard context.
+	 *
+	 * @param array<string, int> $counts Dashboard counts.
+	 * @return array<string, mixed>
+	 */
+	private function dashboard_context( array $counts ): array {
+		$all_announcements        = $this->announcements->admin_list();
+		$all_documents            = $this->documents->admin_list();
+		$all_events               = $this->events->admin_events();
+		$all_checkins             = $this->events->repository()->query_checkins();
+		$pending_renewals_all     = $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) );
+		$pending_reward_requests  = $this->rewards->admin_redemptions( array( 'status' => RewardRedemption::STATUS_PENDING ) );
+		$upcoming_events          = array_values(
+			array_filter(
+				$all_events,
+				static function ( Event $event ): bool {
+					return Event::STATUS_DRAFT !== $event->status() && $event->starts_at_timestamp() >= current_time( 'timestamp' );
+				}
+			)
+		);
+
+		return array(
+			'counts'                    => $counts,
+			'latest_members'            => array_slice( $this->members->admin_members( array( 'orderby' => 'registered', 'order' => 'desc' ) ), 0, 5 ),
+			'pending_renewals'          => array_slice( $pending_renewals_all, 0, 5 ),
+			'pending_renewals_all'      => $pending_renewals_all,
+			'upcoming_events'           => array_slice( $upcoming_events, 0, 5 ),
+			'announcements_recent'      => array_slice( $all_announcements, 0, 5 ),
+			'announcements_all'         => $all_announcements,
+			'documents_all'             => $all_documents,
+			'events_all'                => $all_events,
+			'recent_checkins'           => array_slice( $all_checkins, 0, 5 ),
+			'recent_history'            => $this->history_repository->query( array( 'limit' => 6 ) ),
+			'pending_reward_redemptions' => $pending_reward_requests,
+		);
+	}
+
+	/**
+	 * Render dashboard widget grid.
+	 *
+	 * @param array<string, mixed> $context Dashboard context.
+	 */
+	private function render_dashboard_widgets( array $context ): void {
+		?>
+		<div class="adam-admin-dashboard-widgets">
+			<?php $this->render_dashboard_widget_latest_members( $context['latest_members'] ?? array() ); ?>
+			<?php $this->render_dashboard_widget_pending_renewals( $context['pending_renewals'] ?? array() ); ?>
+			<?php $this->render_dashboard_widget_upcoming_events( $context['upcoming_events'] ?? array() ); ?>
+			<?php $this->render_dashboard_widget_recent_announcements( $context['announcements_recent'] ?? array() ); ?>
+			<?php $this->render_dashboard_widget_recent_checkins( $context['recent_checkins'] ?? array() ); ?>
+			<?php $this->render_dashboard_widget_recent_activity( $context['recent_history'] ?? array() ); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render one dashboard shortcut card.
+	 *
+	 * @param array<string, mixed> $item Shortcut data.
+	 */
+	private function render_dashboard_shortcut_card( array $item ): void {
+		$badge = isset( $item['badge'] ) ? (int) $item['badge'] : null;
+		?>
+		<article class="adam-admin-shortcut-card">
+			<div class="adam-admin-shortcut-card__top">
+				<span class="dashicons dashicons-<?php echo esc_attr( (string) $item['icon'] ); ?>" aria-hidden="true"></span>
+				<?php if ( null !== $badge ) : ?>
+					<span class="adam-admin-badge"><?php echo esc_html( number_format_i18n( $badge ) ); ?></span>
+				<?php endif; ?>
+			</div>
+			<h3><?php echo esc_html( (string) $item['title'] ); ?></h3>
+			<p><?php echo esc_html( (string) $item['description'] ); ?></p>
+			<div class="adam-admin-shortcut-card__footer">
+				<a class="button button-secondary" href="<?php echo esc_url( (string) $item['url'] ); ?>"><?php echo esc_html( (string) $item['button'] ); ?></a>
+			</div>
+		</article>
+		<?php
+	}
+
+	/**
+	 * Render recent members widget.
+	 *
+	 * @param array<int, Member> $members Members.
+	 */
+	private function render_dashboard_widget_latest_members( array $members ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Últimos sócios registados', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $members ) : ?>
+				<?php $this->render_empty_state( __( 'Ainda não existem sócios registados.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $members as $member ) : ?>
+						<?php $user = $member->user(); ?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( $member->full_name() ); ?></strong>
+								<small><?php echo esc_html( $member->email() ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<?php $this->render_status_badge( $member->effective_status() ); ?>
+								<span><?php echo esc_html( $this->format_date( (string) $member->field( 'data_adesao' ) ) ?: $this->format_datetime( $user instanceof \WP_User ? (string) $user->user_registered : '' ) ); ?></span>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int, RenewalRequest> $requests Renewal requests.
+	 */
+	private function render_dashboard_widget_pending_renewals( array $requests ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Renovações pendentes', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $requests ) : ?>
+				<?php $this->render_empty_state( __( 'Não existem renovações pendentes neste momento.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $requests as $request ) : ?>
+						<?php $member = $this->members->find( $request->user_id() ); ?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( null !== $member ? $member->full_name() : __( 'Sócio indisponível', 'adam-membership' ) ); ?></strong>
+								<small><?php echo esc_html( $this->format_datetime( $request->submitted_at() ) ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<a class="button button-small" href="<?php echo esc_url( $this->renewal_url( $request ) ); ?>"><?php esc_html_e( 'Abrir', 'adam-membership' ); ?></a>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int, Event> $events Events.
+	 */
+	private function render_dashboard_widget_upcoming_events( array $events ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Próximos eventos', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $events ) : ?>
+				<?php $this->render_empty_state( __( 'Não existem próximos eventos agendados.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $events as $event ) : ?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( $event->title() ); ?></strong>
+								<small><?php echo esc_html( $this->format_date( $event->event_date() ) . ( '' !== $event->start_time() ? ' ' . $event->start_time() : '' ) ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<span><?php echo esc_html( $event->location() ); ?></span>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int, Announcement> $announcements Announcements.
+	 */
+	private function render_dashboard_widget_recent_announcements( array $announcements ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Avisos recentes', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $announcements ) : ?>
+				<?php $this->render_empty_state( __( 'Ainda não existem avisos criados.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $announcements as $announcement ) : ?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( $announcement->title() ); ?></strong>
+								<small><?php echo esc_html( $announcement->category() ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<span><?php echo esc_html( $this->format_date( $announcement->publish_date() ) ); ?></span>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int, EventCheckIn> $checkins Check-ins.
+	 */
+	private function render_dashboard_widget_recent_checkins( array $checkins ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Últimos check-ins', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $checkins ) : ?>
+				<?php $this->render_empty_state( __( 'Ainda não existem check-ins registados.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $checkins as $checkin ) : ?>
+						<?php
+						$member = $this->members->find( $checkin->member_id() );
+						$event  = $this->events->repository()->find_event( $checkin->event_id() );
+						?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( null !== $member ? $member->full_name() : __( 'Sócio indisponível', 'adam-membership' ) ); ?></strong>
+								<small><?php echo esc_html( null !== $event ? $event->title() : __( 'Evento indisponível', 'adam-membership' ) ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<span><?php echo esc_html( $this->format_datetime( $checkin->checked_in_at() ) ); ?></span>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
+	}
+
+	/**
+	 * @param array<int, HistoryEntry> $entries History entries.
+	 */
+	private function render_dashboard_widget_recent_activity( array $entries ): void {
+		?>
+		<section class="adam-admin-panel adam-admin-widget-panel">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Atividade recente', 'adam-membership' ); ?></h2>
+			</div>
+			<?php if ( array() === $entries ) : ?>
+				<?php $this->render_empty_state( __( 'Ainda não existe atividade recente para mostrar.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<div class="adam-admin-widget-list">
+					<?php foreach ( $entries as $entry ) : ?>
+						<div class="adam-admin-widget-item">
+							<div>
+								<strong><?php echo esc_html( $entry->action_label() ); ?></strong>
+								<small><?php echo esc_html( $entry->description() ); ?></small>
+							</div>
+							<div class="adam-admin-widget-item__meta">
+								<span><?php echo esc_html( $this->format_datetime( $entry->created_at() ) ); ?></span>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+		</section>
 		<?php
 	}
 
