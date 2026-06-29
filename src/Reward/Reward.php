@@ -21,10 +21,12 @@ final class Reward {
 	public const TYPE_DIGITAL_COSMETIC = 'digital_cosmetic';
 	public const TYPE_RAFFLE_TICKET    = 'raffle_ticket';
 
-	public const RARITY_COMMON    = 'common';
-	public const RARITY_RARE      = 'rare';
-	public const RARITY_EPIC      = 'epic';
-	public const RARITY_LEGENDARY = 'legendary';
+	public const RARITY_COMMON          = 'common';
+	public const RARITY_UNCOMMON       = 'uncommon';
+	public const RARITY_RARE           = 'rare';
+	public const RARITY_EPIC           = 'epic';
+	public const RARITY_LEGENDARY      = 'legendary';
+	public const RARITY_LIMITED_EDITION = 'limited_edition';
 
 	/**
 	 * @var array<string, mixed>
@@ -86,6 +88,14 @@ final class Reward {
 		return ! empty( $this->data['approval_required'] );
 	}
 
+	public function redeemable(): bool {
+		if ( array_key_exists( 'redeemable', $this->data ) ) {
+			return ! empty( $this->data['redeemable'] );
+		}
+
+		return self::TYPE_MANUAL_REWARD !== $this->type();
+	}
+
 	public function mystery_reveal_text(): string {
 		return sanitize_textarea_field( (string) ( $this->data['mystery_reveal_text'] ?? '' ) );
 	}
@@ -142,9 +152,11 @@ final class Reward {
 	public static function rarities(): array {
 		return array(
 			self::RARITY_COMMON,
+			self::RARITY_UNCOMMON,
 			self::RARITY_RARE,
 			self::RARITY_EPIC,
 			self::RARITY_LEGENDARY,
+			self::RARITY_LIMITED_EDITION,
 		);
 	}
 }

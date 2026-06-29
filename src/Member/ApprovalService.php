@@ -53,6 +53,7 @@ final class ApprovalService {
 	 * @var HistoryService
 	 */
 	private HistoryService $history;
+	private RecognitionService $recognition;
 
 	/**
 	 * Constructor.
@@ -62,13 +63,15 @@ final class ApprovalService {
 		SettingsRepository $settings,
 		EmailService $email,
 		Logger $logger,
-		HistoryService $history
+		HistoryService $history,
+		RecognitionService $recognition
 	) {
 		$this->members  = $members;
 		$this->settings = $settings;
 		$this->email    = $email;
 		$this->logger   = $logger;
 		$this->history  = $history;
+		$this->recognition = $recognition;
 	}
 
 	/**
@@ -137,6 +140,7 @@ final class ApprovalService {
 				'user_id' => $user_id,
 			)
 		);
+		$this->recognition->handle_member_approved( $member );
 		$this->history->member_approved( $member, $old_status, $member->status() );
 
 		$this->email->send_approval_email( $member );

@@ -65,6 +65,9 @@ final class Member {
 		'numero_socio'    => '',
 		'data_adesao'     => '',
 		'validade_quota'  => '',
+		'adam_founder_status' => '',
+		'adam_founder_number' => '',
+		'adam_loyalty_unlocked' => array(),
 		'telefone'        => '',
 		'nif'             => '',
 		'cartao_cidadao'  => '',
@@ -315,6 +318,84 @@ final class Member {
 	 */
 	public function member_number_value(): int {
 		return self::member_number_numeric_value( (string) $this->field( 'numero_socio' ) );
+	}
+
+	/**
+	 * Check whether the member is a permanent founding member.
+	 */
+	public function is_founder(): bool {
+		$value = $this->field( 'adam_founder_status' );
+
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		return in_array( strtolower( trim( (string) $value ) ), array( '1', 'yes', 'sim', 'true' ), true );
+	}
+
+	/**
+	 * Get the founder number.
+	 */
+	public function founder_number(): int {
+		return absint( $this->field( 'adam_founder_number' ) );
+	}
+
+	/**
+	 * Get loyalty reward tiers unlocked for the member.
+	 *
+	 * @return array<int, string>
+	 */
+	public function loyalty_unlocked(): array {
+		$value = $this->field( 'adam_loyalty_unlocked' );
+
+		if ( is_array( $value ) ) {
+			return array_values(
+				array_filter(
+					array_map(
+						static fn ( mixed $item ): string => sanitize_key( (string) $item ),
+						$value
+					)
+				)
+			);
+		}
+
+		if ( is_string( $value ) && '' !== trim( $value ) ) {
+			$decoded = json_decode( $value, true );
+
+			if ( is_array( $decoded ) ) {
+				return array_values(
+					array_filter(
+						array_map(
+							static fn ( mixed $item ): string => sanitize_key( (string) $item ),
+							$decoded
+						)
+					)
+				);
+			}
+		}
+
+		return array();
+	}
+
+	/**
+	 * Get the canonical join-date timestamp.
+	 */
+	public function join_date_timestamp(): int {
+		$value = $this->field( 'data_adesao' );
+
+		if ( ! is_scalar( $value ) ) {
+			return 0;
+		}
+
+		$date = trim( (string) $value );
+
+		if ( '' === $date ) {
+			return 0;
+		}
+
+		$timestamp = strtotime( $date );
+
+		return false === $timestamp ? 0 : $timestamp;
 	}
 
 	/**

@@ -57,6 +57,44 @@ final class MemberRepository {
 	}
 
 	/**
+	 * Get all founding members ordered by founder number.
+	 *
+	 * @return array<int, Member>
+	 */
+	public function founding_members(): array {
+		$members = array_values(
+			array_filter(
+				$this->all_members(),
+				static fn ( Member $member ): bool => $member->is_founder()
+			)
+		);
+
+		usort(
+			$members,
+			static function ( Member $left, Member $right ): int {
+				$left_number  = $left->founder_number();
+				$right_number = $right->founder_number();
+
+				if ( $left_number === $right_number ) {
+					return $left->registration_timestamp() <=> $right->registration_timestamp();
+				}
+
+				if ( 0 === $left_number ) {
+					return 1;
+				}
+
+				if ( 0 === $right_number ) {
+					return -1;
+				}
+
+				return $left_number <=> $right_number;
+			}
+		);
+
+		return $members;
+	}
+
+	/**
 	 * Search, filter, and sort members for admin screens.
 	 *
 	 * @param array{search?:string,status?:string,quota_status?:string,orderby?:string,order?:string} $filters Filters.
@@ -186,6 +224,30 @@ final class MemberRepository {
 			}
 
 			if ( 0 !== $numeric_value && $member->member_number_value() === $numeric_value ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Determine whether a founder number is already assigned to another member.
+	 *
+	 * @param int $founder_number   Founder number.
+	 * @param int $exclude_user_id  User ID to exclude from the check.
+	 */
+	public function founder_number_exists( int $founder_number, int $exclude_user_id = 0 ): bool {
+		if ( $founder_number <= 0 ) {
+			return false;
+		}
+
+		foreach ( $this->founding_members() as $member ) {
+			if ( $member->user_id() === $exclude_user_id ) {
+				continue;
+			}
+
+			if ( $member->founder_number() === $founder_number ) {
 				return true;
 			}
 		}

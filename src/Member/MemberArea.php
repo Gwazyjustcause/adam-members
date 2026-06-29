@@ -81,6 +81,7 @@ final class MemberArea {
 	 * @var RewardService
 	 */
 	private RewardService $rewards;
+	private RecognitionService $recognition;
 
 	/**
 	 * Constructor.
@@ -93,8 +94,9 @@ final class MemberArea {
 	 * @param DocumentService     $documents     Document service.
 	 * @param PointsService       $points        Points service.
 	 * @param RewardService       $rewards       Reward service.
+	 * @param RecognitionService  $recognition   Recognition service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, RecognitionService $recognition ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -103,6 +105,7 @@ final class MemberArea {
 		$this->documents     = $documents;
 		$this->points        = $points;
 		$this->rewards       = $rewards;
+		$this->recognition   = $recognition;
 	}
 
 	/**
@@ -359,6 +362,7 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_header( Member $member ): void {
+		$founder_number = $member->founder_number();
 		?>
 		<header class="adam-member-hero">
 			<div>
@@ -375,6 +379,11 @@ final class MemberArea {
 					?>
 				</h2>
 				<p><?php esc_html_e( 'O seu painel central para acompanhar a inscrição, quota, dados de sócio e próximas funcionalidades da ADAM.', 'adam-membership' ); ?></p>
+				<?php if ( $member->is_founder() ) : ?>
+					<p class="adam-founder-hero-note">
+						<?php echo esc_html( $founder_number > 0 ? sprintf( __( 'Membro Fundador ADAM | Fundador #%d', 'adam-membership' ), $founder_number ) : __( 'Membro Fundador ADAM', 'adam-membership' ) ); ?>
+					</p>
+				<?php endif; ?>
 			</div>
 
 			<div class="adam-hero-status">
@@ -584,6 +593,9 @@ final class MemberArea {
 					<div>
 						<span><?php esc_html_e( 'Associação Desportiva', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( $this->cards->association_name() ); ?></strong>
+						<?php if ( $member->is_founder() ) : ?>
+							<small class="adam-digital-card__founder"><?php echo esc_html( $member->founder_number() > 0 ? sprintf( __( 'Membro Fundador #%d', 'adam-membership' ), $member->founder_number() ) : __( 'Membro Fundador', 'adam-membership' ) ); ?></small>
+						<?php endif; ?>
 					</div>
 					<?php $this->render_status_badge( $member->effective_status() ); ?>
 				</header>
@@ -725,6 +737,7 @@ final class MemberArea {
 		$recent_rewards   = $this->rewards->recent_redeemed_rewards( $member, 3 );
 		$reward_history   = $this->rewards->member_redemptions( $member, 20 );
 		$back_url         = $this->member_area_url();
+		$loyalty_progress = $this->recognition->loyalty_progress( $member );
 		?>
 		<section class="adam-card adam-rewards-page" aria-label="<?php esc_attr_e( 'Recompensas ADAM', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -747,6 +760,14 @@ final class MemberArea {
 					<strong><?php echo esc_html( number_format_i18n( $total_earned ) ); ?></strong>
 				</div>
 				<div class="adam-reward-recent">
+					<span><?php esc_html_e( 'Fidelidade ADAM', 'adam-membership' ); ?></span>
+					<?php if ( null !== $loyalty_progress['next_tier'] ) : ?>
+						<strong><?php echo esc_html( $loyalty_progress['next_tier']['elapsed_label'] ); ?></strong>
+					<?php else : ?>
+						<strong><?php esc_html_e( 'Todos os marcos de fidelidade desbloqueados.', 'adam-membership' ); ?></strong>
+					<?php endif; ?>
+				</div>
+				<div class="adam-reward-recent">
 					<span><?php esc_html_e( 'Resgates recentes', 'adam-membership' ); ?></span>
 					<?php if ( array() === $recent_rewards ) : ?>
 						<strong><?php esc_html_e( 'Ainda sem resgates aprovados.', 'adam-membership' ); ?></strong>
@@ -759,6 +780,21 @@ final class MemberArea {
 					<?php endif; ?>
 				</div>
 			</div>
+
+			<div class="adam-reward-types">
+				<span class="adam-reward-chip"><?php esc_html_e( 'Pontos ADAM', 'adam-membership' ); ?></span>
+				<span class="adam-reward-chip"><?php esc_html_e( 'Fidelidade ADAM', 'adam-membership' ); ?></span>
+				<span class="adam-reward-chip"><?php esc_html_e( 'Fundadores', 'adam-membership' ); ?></span>
+				<span class="adam-reward-chip"><?php esc_html_e( 'Eventos Especiais', 'adam-membership' ); ?></span>
+				<span class="adam-reward-chip"><?php esc_html_e( 'Exclusivos', 'adam-membership' ); ?></span>
+			</div>
+
+			<?php if ( $member->is_founder() ) : ?>
+				<div class="adam-founder-panel">
+					<strong><?php esc_html_e( 'Membro Fundador', 'adam-membership' ); ?></strong>
+					<span><?php echo esc_html( $member->founder_number() > 0 ? sprintf( __( 'Um dos primeiros 50 sócios da ADAM. Fundador #%d.', 'adam-membership' ), $member->founder_number() ) : __( 'Um dos primeiros 50 sócios da ADAM.', 'adam-membership' ) ); ?></span>
+				</div>
+			<?php endif; ?>
 
 			<div class="adam-reward-grid">
 				<?php if ( array() === $catalogue ) : ?>
@@ -807,6 +843,7 @@ final class MemberArea {
 		$owned            = $this->rewards->member_owns_reward( $member, $reward );
 		$pending          = $this->rewards->member_has_pending_request( $member, $reward );
 		$can_redeem       = $this->rewards->member_can_redeem( $member, $reward );
+		$redeemable       = $reward->redeemable();
 		$shortfall        = max( 0, $reward->points_cost() - $balance );
 		$progress         = $reward->points_cost() > 0 ? min( 100, (int) floor( ( $balance / $reward->points_cost() ) * 100 ) ) : 100;
 		$known_redemption = $owned ? $this->first_owned_reward_redemption( $member, $reward ) : null;
@@ -827,6 +864,12 @@ final class MemberArea {
 					<span class="adam-badge active"><?php esc_html_e( 'Desbloqueada', 'adam-membership' ); ?></span>
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-badge pending"><?php esc_html_e( 'Pendente', 'adam-membership' ); ?></span>
+				<?php elseif ( ! $redeemable ) : ?>
+					<span class="adam-badge warning"><?php echo esc_html( $reward->availability_label() ); ?></span>
+				<?php elseif ( $can_redeem ) : ?>
+					<span class="adam-badge active"><?php esc_html_e( 'Disponivel', 'adam-membership' ); ?></span>
+				<?php else : ?>
+					<span class="adam-badge unknown"><?php esc_html_e( 'Bloqueada', 'adam-membership' ); ?></span>
 				<?php endif; ?>
 			</div>
 
@@ -852,8 +895,12 @@ final class MemberArea {
 				</div>
 				<small>
 					<?php
-					if ( $can_redeem || $owned || $pending ) {
+					if ( $owned || $pending ) {
 						esc_html_e( 'Pronto para desbloquear', 'adam-membership' );
+					} elseif ( ! $redeemable ) {
+						echo esc_html( $reward->availability_label() );
+					} elseif ( $can_redeem ) {
+						esc_html_e( 'Disponivel para resgate', 'adam-membership' );
 					} else {
 						echo esc_html(
 							sprintf(
@@ -872,6 +919,8 @@ final class MemberArea {
 					<span class="adam-text-link"><?php esc_html_e( 'Ja disponivel na tua conta', 'adam-membership' ); ?></span>
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-text-link"><?php esc_html_e( 'Pedido em analise pela ADAM', 'adam-membership' ); ?></span>
+				<?php elseif ( ! $redeemable ) : ?>
+					<span class="adam-text-link"><?php echo esc_html( $reward->availability_label() ); ?></span>
 				<?php elseif ( $can_redeem ) : ?>
 					<form method="post" class="adam-reward-redeem-form">
 						<input type="hidden" name="adam_member_action" value="redeem_reward">

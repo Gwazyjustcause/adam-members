@@ -24,6 +24,7 @@ use AdamMembership\Member\HistoryEntry;
 use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\RecognitionService;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\RenewalRequest;
 use AdamMembership\Member\RenewalService;
@@ -50,6 +51,7 @@ final class AdminController {
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
 	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
+	private const FOUNDERS_PAGE_SLUG     = 'adam-membership-founders';
 
 	/**
 	 * Member details page hook suffix.
@@ -155,6 +157,7 @@ final class AdminController {
 	 * @var RewardService
 	 */
 	private RewardService $rewards;
+	private RecognitionService $recognition;
 
 	/**
 	 * Create the admin controller.
@@ -172,8 +175,9 @@ final class AdminController {
 	 * @param DocumentService     $documents       Document service.
 	 * @param EventService        $events          Event service.
 	 * @param RewardService       $rewards         Reward service.
+	 * @param RecognitionService  $recognition     Recognition service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -187,6 +191,7 @@ final class AdminController {
 		$this->documents           = $documents;
 		$this->events              = $events;
 		$this->rewards             = $rewards;
+		$this->recognition         = $recognition;
 	}
 
 	/**
@@ -282,6 +287,15 @@ final class AdminController {
 			self::CAPABILITY,
 			self::DIAGNOSTICS_PAGE_SLUG,
 			array( $this, 'render_diagnostics_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'Fundadores', 'adam-membership' ),
+			esc_html__( 'Fundadores', 'adam-membership' ),
+			self::CAPABILITY,
+			self::FOUNDERS_PAGE_SLUG,
+			array( $this, 'render_founders_page' )
 		);
 
 		$this->member_page_hook = (string) add_submenu_page(
@@ -387,6 +401,53 @@ final class AdminController {
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-settings' ) ); ?>"><?php esc_html_e( 'Abrir configurações', 'adam-membership' ); ?></a>
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Abrir histórico', 'adam-membership' ); ?></a>
 			</div>
+		</div>
+		<?php
+		$this->render_footer();
+	}
+
+	/**
+	 * Render the founders page.
+	 */
+	public function render_founders_page(): void {
+		$this->ensure_can_manage();
+
+		$founders = $this->members->founding_members();
+
+		$this->render_header( __( 'Fundadores ADAM', 'adam-membership' ) );
+		$this->render_notices();
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Lista de membros fundadores', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Primeiros sócios aprovados que mantêm o reconhecimento permanente de Fundador ADAM.', 'adam-membership' ); ?></p>
+			<?php if ( array() === $founders ) : ?>
+				<?php $this->render_empty_state( __( 'Ainda não existem membros fundadores registados.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<table class="widefat striped adam-admin-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'N.º Fundador', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $founders as $founder ) : ?>
+							<tr>
+								<td><?php echo esc_html( (string) $founder->founder_number() ); ?></td>
+								<td><?php echo esc_html( $founder->full_name() ); ?></td>
+								<td><?php echo esc_html( $this->member_number_label( $founder ) ); ?></td>
+								<td><?php echo esc_html( $this->format_date( $founder->field( 'data_adesao' ) ) ); ?></td>
+								<td><?php echo esc_html( $founder->effective_status() ); ?></td>
+								<td><a class="button button-small" href="<?php echo esc_url( $this->member_url( $founder ) ); ?>"><?php esc_html_e( 'Ver sócio', 'adam-membership' ); ?></a></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
 		</div>
 		<?php
 		$this->render_footer();
@@ -1536,6 +1597,8 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'Estado da inscrição', 'adam-membership' ), $member->effective_status() ); ?>
 					<?php $this->render_detail_item( __( 'Estado guardado', 'adam-membership' ), $member->status() ); ?>
 					<?php $this->render_detail_item( __( 'N.º de sócio', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
+					<?php $this->render_detail_item( __( 'Membro Fundador', 'adam-membership' ), $member->is_founder() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?>
+					<?php $this->render_detail_item( __( 'N.º Fundador', 'adam-membership' ), $member->is_founder() ? (string) $member->founder_number() : '—' ); ?>
 					<?php $this->render_detail_item( __( 'Quota válida até', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Data de adesão', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Telefone', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
@@ -1655,6 +1718,19 @@ final class AdminController {
 								<?php $this->render_select_option( Member::STATUS_REJECTED, __( 'Rejeitado', 'adam-membership' ), $member->status() ); ?>
 							<?php endif; ?>
 						</select>
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'Membro Fundador', 'adam-membership' ); ?></span>
+						<select name="founder_status">
+							<?php $this->render_select_option( '0', __( 'Não', 'adam-membership' ), $member->is_founder() ? '1' : '0' ); ?>
+							<?php $this->render_select_option( '1', __( 'Sim', 'adam-membership' ), $member->is_founder() ? '1' : '0' ); ?>
+						</select>
+					</label>
+
+					<label>
+						<span><?php esc_html_e( 'N.º Fundador', 'adam-membership' ); ?></span>
+						<input type="number" min="0" name="founder_number" value="<?php echo esc_attr( (string) $member->founder_number() ); ?>" placeholder="<?php esc_attr_e( 'Atribuição automática', 'adam-membership' ); ?>">
 					</label>
 				</div>
 
@@ -1825,12 +1901,52 @@ final class AdminController {
 		);
 
 		$changes = $this->changed_member_fields( $member, $updates );
+		$founder_status = isset( $_POST['founder_status'] ) ? sanitize_text_field( wp_unslash( $_POST['founder_status'] ) ) : '0';
+		$founder_number = isset( $_POST['founder_number'] ) ? absint( wp_unslash( $_POST['founder_number'] ) ) : 0;
+		$founder_changes = array();
 
-		if ( array() === $changes ) {
+		if ( '1' === $founder_status && $founder_number > 0 && $this->members->founder_number_exists( $founder_number, $user_id ) ) {
+			return new WP_Error(
+				'adam_membership_duplicate_founder_number',
+				__( 'Este numero de fundador ja esta atribuido a outro socio.', 'adam-membership' )
+			);
+		}
+
+		$current_founder_status = $member->is_founder() ? '1' : '0';
+
+		if ( $current_founder_status !== $founder_status ) {
+			$founder_changes['adam_founder_status'] = array(
+				'old' => $current_founder_status,
+				'new' => $founder_status,
+			);
+		}
+
+		$current_founder_number = (string) $member->founder_number();
+		$posted_founder_number  = (string) $founder_number;
+
+		if ( $current_founder_number !== $posted_founder_number ) {
+			$founder_changes['adam_founder_number'] = array(
+				'old' => $current_founder_number,
+				'new' => $posted_founder_number,
+			);
+		}
+
+		if ( array() === $changes && array() === $founder_changes ) {
 			return true;
 		}
 
 		$member->save( $updates );
+
+		if ( '1' === $founder_status && ! $member->is_founder() ) {
+			$this->recognition->assign_founder( $member, $founder_number );
+		} elseif ( '1' === $founder_status && $member->is_founder() && $founder_number > 0 && $founder_number !== $member->founder_number() ) {
+			$member->save( array( 'adam_founder_number' => $founder_number ) );
+		} elseif ( '1' !== $founder_status && $member->is_founder() ) {
+			$this->recognition->revoke_founder( $member );
+		}
+
+		$this->recognition->sync_member( $member );
+		$changes = array_merge( $changes, $founder_changes );
 		$this->log_member_field_changes( $member, $changes );
 		$this->record_admin_member_history(
 			$member,

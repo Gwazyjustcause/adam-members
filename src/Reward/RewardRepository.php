@@ -63,6 +63,28 @@ final class RewardRepository {
 		return new Reward( $rewards[ $reward_id ] );
 	}
 
+	public function find_reward_by_value( string $reward_value ): ?Reward {
+		$reward_value = sanitize_text_field( $reward_value );
+
+		if ( '' === $reward_value ) {
+			return null;
+		}
+
+		foreach ( $this->raw_rewards() as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$reward = new Reward( $item );
+
+			if ( $reward->reward_value() === $reward_value ) {
+				return $reward;
+			}
+		}
+
+		return null;
+	}
+
 	/**
 	 * @param array<string, mixed> $filters Filters.
 	 * @return array<int, Reward>

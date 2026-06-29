@@ -22,16 +22,18 @@ final class RenewalService {
 	private EmailService $email;
 	private Logger $logger;
 	private HistoryService $history;
+	private RecognitionService $recognition;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history ) {
+	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history, RecognitionService $recognition ) {
 		$this->members  = $members;
 		$this->renewals = $renewals;
 		$this->email    = $email;
 		$this->logger   = $logger;
 		$this->history  = $history;
+		$this->recognition = $recognition;
 	}
 
 	/**
@@ -139,6 +141,7 @@ final class RenewalService {
 
 		$this->audit( 'Data de validade alterada durante a aprovação da renovação.', $member, array( 'old_value' => $old_expiry, 'new_value' => $new_expiry, 'renewal_id' => $request->id() ) );
 		$this->audit( 'Renovação aprovada.', $member, array( 'renewal_id' => $request->id() ) );
+		$this->recognition->handle_renewal_approved( $member );
 		$this->history->renewal_approved( $member, $request->id(), $old_expiry, $new_expiry, $field_changes );
 		$this->email->send_renewal_approved_email( $member, $request->id() );
 

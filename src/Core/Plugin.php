@@ -40,6 +40,7 @@ use AdamMembership\Member\PasswordRecovery;
 use AdamMembership\Member\PasswordReset;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\RenewalService;
+use AdamMembership\Member\RecognitionService;
 use AdamMembership\Points\PointsRepository;
 use AdamMembership\Points\PointsService;
 use AdamMembership\Reward\RewardRepository;
@@ -107,13 +108,14 @@ final class Plugin {
 		$points             = new PointsService( $points_repository, $members, $history_repository, $logger );
 		$reward_repository  = new RewardRepository();
 		$rewards            = new RewardService( $reward_repository, $points, $members, $history_repository, $logger );
+		$recognition        = new RecognitionService( $members, $rewards, $history_repository, $logger );
 		$events             = new EventService( $event_repository, $members, $logger, $history_repository, $points );
-		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history );
-		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history );
+		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
+		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger );
 		$config             = new RegistrationFormConfig();
-		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards );
+		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $recognition );
 		$account            = new Account( $email, $members, $history );
 		$password_recovery  = new PasswordRecovery( $email, $members, $history );
 		$password_reset     = new PasswordReset( $members, $history );
@@ -135,13 +137,15 @@ final class Plugin {
 			$announcements,
 			$documents,
 			$events,
-			$rewards
+			$rewards,
+			$recognition
 		);
 		$announcement_admin = new AnnouncementController( $announcements );
 		$document_admin     = new DocumentController( $documents );
 		$event_admin        = new EventController( $events );
 		$points_admin       = new PointsController( $points, $members, $events );
 		$reward_admin       = new RewardController( $rewards, $members );
+		$rewards->ensure_initial_catalogue();
 
 		$registration->register();
 		$renewal_submission->register();
