@@ -81,63 +81,6 @@
 	font-weight: 800;
 }
 
-.adam-member-rank-showcase {
-	display: grid;
-	grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-	align-items: center;
-	gap: 22px;
-}
-
-.adam-member-rank-showcase__copy p:not(.adam-eyebrow) {
-	margin: 10px 0 0;
-	color: var(--adam-muted);
-}
-
-.adam-member-rank-showcase__aside {
-	display: grid;
-	gap: 12px;
-	justify-items: start;
-}
-
-.adam-member-rank-showcase__meta {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 8px;
-	color: var(--adam-muted);
-	font-size: 0.9rem;
-}
-
-.adam-member-rank-showcase__meta strong {
-	color: var(--adam-green-900);
-	font-size: 1rem;
-}
-
-.adam-member-rank-showcase--uncommon,
-.adam-member-rank-showcase--rare,
-.adam-member-rank-showcase--epic,
-.adam-member-rank-showcase--legendary,
-.adam-member-rank-showcase--founder {
-	border-color: rgba(47, 107, 59, 0.16);
-}
-
-.adam-member-rank-showcase--uncommon {
-	background: linear-gradient(135deg, rgba(220, 252, 231, 0.8), #ffffff 58%);
-}
-
-.adam-member-rank-showcase--rare {
-	background: linear-gradient(135deg, rgba(219, 234, 254, 0.82), #ffffff 58%);
-}
-
-.adam-member-rank-showcase--epic {
-	background: linear-gradient(135deg, rgba(237, 233, 254, 0.82), #ffffff 58%);
-}
-
-.adam-member-rank-showcase--legendary,
-.adam-member-rank-showcase--founder {
-	background: linear-gradient(135deg, rgba(254, 243, 199, 0.88), #ffffff 58%);
-}
-
 .adam-hero-status {
 	display: flex;
 	flex-direction: row;
@@ -414,10 +357,6 @@
 	font-weight: 900;
 	color: #ffffff;
 	letter-spacing: 0;
-}
-
-.adam-member-title-note {
-	display: none;
 }
 
 .adam-digital-card {
@@ -2490,8 +2429,7 @@
 	.adam-document-grid,
 	.adam-reward-grid,
 	.adam-rewards-summary,
-	.adam-card-customizer__grid,
-	.adam-member-rank-showcase {
+	.adam-card-customizer__grid {
 		grid-template-columns: 1fr;
 	}
 
@@ -2516,10 +2454,6 @@
 
 	.adam-card-heading {
 		flex-direction: column;
-	}
-
-	.adam-member-rank-showcase__aside {
-		justify-items: stretch;
 	}
 
 	.adam-data-item {
