@@ -192,10 +192,9 @@ final class MembershipForms {
 			return $this->notice_markup( 'info', __( "A renova\u{00E7}\u{00E3}o n\u{00E3}o est\u{00E1} dispon\u{00ED}vel para o estado atual da conta.", 'adam-membership' ) );
 		}
 
-		$state       = $this->handle_renewal_submission( $member );
-		$settings    = $this->settings();
-		$values      = is_array( $state['values'] ?? null ) ? $state['values'] : $this->default_renewal_values( $member );
-		$is_external = $this->member_uses_external_association( $member );
+		$state    = $this->handle_renewal_submission( $member );
+		$settings = $this->settings();
+		$values   = is_array( $state['values'] ?? null ) ? $state['values'] : $this->default_renewal_values( $member );
 
 		ob_start();
 		?>
@@ -229,23 +228,19 @@ final class MembershipForms {
 					</div>
 				</div>
 
-				<?php if ( $is_external ) : ?>
-					<div class="adam-form-section">
-						<h4><?php esc_html_e( "Pretende continuar associado atrav\u{00E9}s de outra associa\u{00E7}\u{00E3}o?", 'adam-membership' ); ?></h4>
-						<div class="adam-choice-grid">
-							<label class="adam-choice-card">
-								<input type="radio" name="renewal_mode" value="external_association" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? '' ), false ); ?> <?php checked( 'external_association', (string) ( $values['renewal_mode'] ?? 'external_association' ) ); ?>>
-								<span><?php echo esc_html( sprintf( __( "Sim, continuo atrav\u{00E9}s da minha associa\u{00E7}\u{00E3}o atual \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
-							</label>
-							<label class="adam-choice-card">
-								<input type="radio" name="renewal_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? '' ) ); ?>>
-								<span><?php echo esc_html( sprintf( __( "N\u{00E3}o, pretendo passar a ter a ADAM como associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
-							</label>
-						</div>
+				<div class="adam-form-section">
+					<h4><?php esc_html_e( 'Como pretende renovar este ano?', 'adam-membership' ); ?></h4>
+					<div class="adam-choice-grid">
+						<label class="adam-choice-card">
+							<input type="radio" name="renewal_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? 'adam_primary' ) ); ?>>
+							<span><?php echo esc_html( sprintf( __( "A ADAM ser\u{00E1} a minha associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
+						</label>
+						<label class="adam-choice-card">
+							<input type="radio" name="renewal_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['renewal_mode'] ?? '' ) ); ?>>
+							<span><?php echo esc_html( sprintf( __( "Continuo associado atrav\u{00E9}s de outra associa\u{00E7}\u{00E3}o de airsoft \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
+						</label>
 					</div>
-				<?php else : ?>
-					<input type="hidden" name="renewal_mode" value="adam_primary">
-				<?php endif; ?>
+				</div>
 
 				<div class="adam-form-section">
 					<h4><?php esc_html_e( "Os seus dados pessoais sofreram altera\u{00E7}\u{00F5}es desde a \u{00FA}ltima renova\u{00E7}\u{00E3}o?", 'adam-membership' ); ?></h4>
@@ -265,13 +260,13 @@ final class MembershipForms {
 					<?php $this->render_text_field( 'renewal', 'country', $values, 'text' ); ?>
 				</div>
 
-				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="renewal-external" <?php echo $is_external && 'adam_primary' !== (string) ( $values['renewal_mode'] ?? 'external_association' ) ? '' : 'hidden'; ?>>
+				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="renewal-external" <?php echo 'external_association' === (string) ( $values['renewal_mode'] ?? '' ) ? '' : 'hidden'; ?>>
 					<?php $this->render_text_field( 'renewal', 'external_association_name', $values, 'text' ); ?>
 					<?php $this->render_text_field( 'renewal', 'external_member_number', $values, 'text' ); ?>
 					<?php $this->render_upload_field( 'renewal', 'external_association_proof', '.pdf,image/*', 'adam-field--full' ); ?>
 				</div>
 
-				<?php $this->render_payment_panel( 'renewal', $values, $is_external ); ?>
+				<?php $this->render_payment_panel( 'renewal', $values ); ?>
 
 				<div class="adam-form-grid">
 					<?php $this->render_upload_field( 'renewal', 'payment_receipt', '.pdf,image/*', 'adam-field--full' ); ?>
@@ -395,10 +390,9 @@ final class MembershipForms {
 			$errors[] = __( "N\u{00E3}o foi poss\u{00ED}vel validar a submiss\u{00E3}o da renova\u{00E7}\u{00E3}o.", 'adam-membership' );
 		}
 
-		$is_external_member = $this->member_uses_external_association( $member );
-		$renewal_mode       = $is_external_member && 'adam_primary' === (string) ( $values['renewal_mode'] ?? '' ) ? 'adam_primary' : ( $is_external_member ? 'external_association' : 'adam_primary' );
-		$profile_changed    = '1' === (string) ( $values['profile_changed'] ?? '0' );
-		$settings           = $this->settings();
+		$renewal_mode    = 'external_association' === (string) ( $values['renewal_mode'] ?? '' ) ? 'external_association' : 'adam_primary';
+		$profile_changed = '1' === (string) ( $values['profile_changed'] ?? '0' );
+		$settings        = $this->settings();
 
 		if ( $profile_changed ) {
 			$this->validate_text_field( 'renewal', 'phone', $values, $errors );
@@ -410,15 +404,15 @@ final class MembershipForms {
 			$this->validate_text_field( 'renewal', 'country', $values, $errors );
 		}
 
-		if ( $is_external_member && 'external_association' === $renewal_mode ) {
+		if ( 'external_association' === $renewal_mode ) {
 			$this->validate_text_field( 'renewal', 'external_association_name', $values, $errors, true );
 			$this->validate_text_field( 'renewal', 'external_member_number', $values, $errors, true );
 		}
 
 		$this->validate_privacy( 'renewal', $values, $errors );
 
-		$receipt = $this->process_upload( 'renewal', 'payment_receipt', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
-		$association_proof = $is_external_member && 'external_association' === $renewal_mode ? $this->process_upload( 'renewal', 'external_association_proof', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
+		$receipt           = $this->process_upload( 'renewal', 'payment_receipt', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
+		$association_proof = 'external_association' === $renewal_mode ? $this->process_upload( 'renewal', 'external_association_proof', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
 
 		if ( array() !== $errors ) {
 			return array(
