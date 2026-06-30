@@ -640,7 +640,7 @@ final class MemberArea {
 					</div>
 				</div>
 			</div>
-			<article class="<?php echo esc_attr( $card_classes ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+			<article class="<?php echo esc_attr( $card_classes ); ?>" data-adam-card-preview aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
 				<header class="adam-digital-card__header">
 					<img class="adam-digital-card__logo" src="<?php echo esc_url( $this->cards->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->cards->association_name() ); ?>">

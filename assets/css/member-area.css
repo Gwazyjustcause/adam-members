@@ -2785,221 +2785,58 @@
 	}
 }
 
+.adam-card-print-document {
+	margin: 0;
+	background: #ffffff;
+}
+
+.adam-card-print-sheet {
+	display: grid;
+	place-items: center;
+	min-height: 100vh;
+	padding: 24px;
+	background: #ffffff;
+}
+
+.adam-card-print-stage {
+	width: min(100%, 1120px);
+}
+
+.adam-card-print-stage .adam-digital-card {
+	width: 100%;
+	margin: 0;
+}
+
 @media print {
 	@page {
-		size: 85.6mm 54mm;
-		margin: 0;
+		size: auto;
+		margin: 12mm;
 	}
 
 	html,
-	body {
-		width: 85.6mm;
-		height: 54mm;
+	body.adam-card-print-document {
 		margin: 0 !important;
 		padding: 0 !important;
 		background: #ffffff !important;
 	}
 
-	body * {
-		visibility: hidden;
-	}
-
-	.adam-digital-card,
-	.adam-digital-card * {
-		visibility: visible;
-	}
-
-	.adam-digital-card-section {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 85.6mm;
-		height: 54mm;
-		margin: 0 !important;
-		padding: 0 !important;
-		border: 0;
-		border-radius: 0;
-		background: transparent;
-		box-shadow: none;
-		overflow: visible;
-	}
-
-	.adam-digital-card-section > .adam-card-heading {
-		display: none;
-	}
-
-	.adam-card-customizer {
-		display: none !important;
-	}
-
-	.adam-digital-card {
-		--adam-card-frame-width: 1.2mm;
-		position: absolute;
-		inset: 0;
-		width: 85.6mm;
-		height: 54mm;
-		min-height: 0;
-		grid-template-rows: auto 1fr auto auto;
-		gap: 1mm;
-		padding: 3.1mm 3.4mm 3mm;
-		border: 0;
-		border-radius: 3mm;
-		box-shadow: none;
+	body.adam-card-print-document {
 		print-color-adjust: exact;
 		-webkit-print-color-adjust: exact;
-		transform: scale(0.95);
-		transform-origin: center center;
 	}
 
-	.adam-digital-card::before {
-		inset: 0;
-		padding: var(--adam-card-frame-width);
-		border-radius: 3mm;
-		box-shadow: none;
+	body.adam-card-print-document .adam-card-print-sheet {
+		min-height: auto;
+		padding: 0;
 	}
 
-	.adam-digital-card::after {
-		inset: calc(var(--adam-card-frame-width) + 0.65mm);
-		border-radius: 2.2mm;
-		box-shadow: none;
+	body.adam-card-print-document .adam-card-print-stage {
+		width: 100% !important;
+		max-width: none !important;
 	}
 
-	.adam-digital-card__shine {
-		right: -18mm;
-		bottom: -22mm;
-		width: 46mm;
-		height: 46mm;
-		animation: none !important;
-	}
-
-	.adam-digital-card__header {
-		gap: 1.9mm;
-	}
-
-	.adam-digital-card__logo {
-		width: 17.2mm;
-		height: 10.6mm;
-		padding: 1.45mm 1.65mm;
-		box-sizing: border-box;
-		border-radius: 1.5mm;
-		box-shadow: none;
-		object-fit: contain;
-		object-position: center;
-	}
-
-	.adam-digital-card__header span,
-	.adam-digital-card__identity span,
-	.adam-digital-card__details span,
-	.adam-digital-card__footer span,
-	.adam-digital-card__qr span {
-		font-size: 5pt;
-		letter-spacing: 0.04em;
-	}
-
-	.adam-digital-card__header strong {
-		margin-top: 0.2mm;
-		font-size: 6.6pt;
-		line-height: 1.05;
-	}
-
-	.adam-digital-card__badges {
-		gap: 1mm;
-		margin-top: 0.8mm;
-	}
-
-	.adam-digital-card__founder,
-	.adam-digital-card__loyalty,
-	.adam-digital-card__title {
-		padding: 0.7mm 1.4mm;
-		font-size: 4.9pt;
-		box-shadow: none;
-	}
-
-	.adam-digital-card__title-mark {
-		width: 3mm;
-		height: 3mm;
-		flex-basis: 3mm;
-		box-shadow: none;
-	}
-
-	.adam-digital-card .adam-badge {
-		min-height: 4.8mm;
-		padding: 1mm 2mm;
-		font-size: 6pt;
-		box-shadow: none;
-	}
-
-	.adam-digital-card__body {
-		grid-template-columns: 18mm minmax(0, 1fr) 21mm;
-		gap: 1.7mm;
-	}
-
-	.adam-digital-card__photo {
-		width: 18mm;
-		border-width: 0.7mm;
-		border-radius: 2mm;
-		box-shadow: none;
-	}
-
-	.adam-digital-card__photo span {
-		font-size: 14pt;
-	}
-
-	.adam-digital-card__identity strong {
-		margin: 0.5mm 0;
-		font-size: 11.5pt;
-		line-height: 1;
-	}
-
-	.adam-digital-card__title {
-		min-height: 0;
-		margin: 0;
-	}
-
-	.adam-digital-card__rank {
-		gap: 0.6mm;
-		margin: 0.8mm 0 0.9mm;
-	}
-
-	.adam-digital-card__rank small {
-		font-size: 4.8pt;
-	}
-
-	.adam-digital-card__identity small {
-		min-height: 4.2mm;
-		padding: 0.6mm 1.5mm;
-		font-size: 5.8pt;
-	}
-
-	.adam-digital-card__qr {
-		gap: 0.8mm;
-		padding: 1.1mm;
-		border-radius: 2mm;
-		box-shadow: none;
-	}
-
-	.adam-digital-card__qr img {
-		width: 16.8mm;
-		height: 16.8mm;
-	}
-
-	.adam-digital-card__details {
-		gap: 1mm;
-	}
-
-	.adam-digital-card__details div {
-		padding: 0.95mm;
-		border-radius: 1.5mm;
-	}
-
-	.adam-digital-card__details strong {
-		margin-top: 0.4mm;
-		font-size: 6.2pt;
-	}
-
-	.adam-digital-card__footer {
-		gap: 2.2mm;
-		padding: 1.45mm 1.9mm 1.35mm;
-		font-size: 5pt;
+	body.adam-card-print-document .adam-digital-card {
+		break-inside: avoid;
+		page-break-inside: avoid;
 	}
 }
