@@ -1,4 +1,5 @@
-.adam-cookie-consent-root {
+.adam-cookie-bar,
+.adam-cookie-preferences {
 	--adam-cookie-green-900: #173f24;
 	--adam-cookie-green-700: #2f6b3b;
 	--adam-cookie-green-100: #e8f4ea;
@@ -8,17 +9,17 @@
 	--adam-cookie-shadow: 0 18px 42px rgba(16, 32, 51, 0.18);
 }
 
-.adam-cookie-banner,
-.adam-cookie-modal {
+.adam-cookie-bar,
+.adam-cookie-preferences {
 	position: fixed;
-	right: 16px;
 	left: 16px;
-	max-width: 1080px;
+	right: 92px;
+	z-index: 900;
+	max-width: 980px;
 	margin: 0 auto;
-	z-index: 99997;
 }
 
-.adam-cookie-banner {
+.adam-cookie-bar {
 	bottom: 16px;
 	padding: 14px 16px;
 	border: 1px solid var(--adam-cookie-border);
@@ -28,9 +29,10 @@
 	backdrop-filter: blur(10px);
 }
 
-.adam-cookie-banner[hidden],
-.adam-cookie-banner.is-hidden,
-.adam-cookie-modal[hidden] {
+.adam-cookie-bar[hidden],
+.adam-cookie-bar.is-hidden,
+.adam-cookie-preferences[hidden],
+.adam-cookie-footer-template[hidden] {
 	display: none !important;
 }
 
@@ -41,21 +43,21 @@
 	align-items: center;
 }
 
-.adam-cookie-banner h2,
-.adam-cookie-modal h2,
-.adam-cookie-modal h3 {
+.adam-cookie-bar h2,
+.adam-cookie-preferences h2,
+.adam-cookie-preferences h3 {
 	margin: 0;
 	color: var(--adam-cookie-green-900);
 	letter-spacing: 0;
 }
 
-.adam-cookie-banner h2 {
+.adam-cookie-bar h2 {
 	font-size: 1rem;
 	line-height: 1.3;
 }
 
-.adam-cookie-banner p,
-.adam-cookie-modal p {
+.adam-cookie-bar p,
+.adam-cookie-preferences p {
 	margin: 8px 0 0;
 	color: var(--adam-cookie-muted);
 	line-height: 1.55;
@@ -70,7 +72,7 @@
 
 .adam-cookie-banner__links a,
 .adam-cookie-footer-link__button,
-.adam-cookie-modal a {
+.adam-cookie-preferences a {
 	color: var(--adam-cookie-green-900);
 	font-weight: 700;
 	text-decoration: underline;
@@ -116,22 +118,8 @@
 	color: var(--adam-cookie-green-900);
 }
 
-.adam-cookie-footer-link {
-	position: fixed;
-	right: 18px;
-	bottom: 84px;
-	z-index: 99996;
-}
-
-.adam-cookie-footer-link__button {
-	border: 0;
-	padding: 0;
-	background: transparent;
-	cursor: pointer;
-}
-
-.adam-cookie-modal {
-	bottom: 96px;
+.adam-cookie-preferences {
+	bottom: 92px;
 	pointer-events: none;
 }
 
@@ -228,6 +216,22 @@
 	font-weight: 800;
 }
 
+.adam-cookie-footer-mount {
+	margin-top: 14px;
+}
+
+.adam-cookie-footer-link {
+	display: inline-flex;
+	align-items: center;
+}
+
+.adam-cookie-footer-link__button {
+	border: 0;
+	padding: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
 .adam-cookie-button:focus-visible,
 .adam-cookie-footer-link__button:focus-visible,
 .adam-cookie-icon-button:focus-visible,
@@ -256,13 +260,13 @@
 }
 
 @media (max-width: 782px) {
-	.adam-cookie-banner,
-	.adam-cookie-modal {
-		right: 12px;
+	.adam-cookie-bar,
+	.adam-cookie-preferences {
 		left: 12px;
+		right: 12px;
 	}
 
-	.adam-cookie-banner {
+	.adam-cookie-bar {
 		bottom: 12px;
 		padding: 14px;
 	}
@@ -277,13 +281,8 @@
 		width: 100%;
 	}
 
-	.adam-cookie-footer-link {
-		right: 12px;
-		bottom: 70px;
-	}
-
-	.adam-cookie-modal {
-		bottom: 138px;
+	.adam-cookie-preferences {
+		bottom: 136px;
 	}
 
 	.adam-cookie-modal__dialog {

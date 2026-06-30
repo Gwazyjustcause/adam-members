@@ -40,7 +40,7 @@ final class ConsentManager {
 	public function register(): void {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_head', array( $this, 'render_bootstrap_script' ), 1 );
-		add_action( 'wp_footer', array( $this, 'render_markup' ), 40 );
+		add_action( 'wp_footer', array( $this, 'render_markup' ), 5 );
 		add_filter( 'script_loader_tag', array( $this, 'filter_script_loader_tag' ), 20, 3 );
 	}
 
@@ -114,7 +114,7 @@ final class ConsentManager {
 		?>
 		<div class="adam-cookie-consent-root" data-adam-cookie-root>
 			<div
-				class="adam-cookie-banner<?php echo $has_decision ? ' is-hidden' : ''; ?>"
+				class="adam-cookie-bar adam-cookie-banner<?php echo $has_decision ? ' is-hidden' : ''; ?>"
 				role="region"
 				aria-label="<?php esc_attr_e( 'Preferências de cookies', 'adam-membership' ); ?>"
 				data-adam-cookie-banner
@@ -148,7 +148,7 @@ final class ConsentManager {
 				</div>
 			</div>
 
-			<div class="adam-cookie-modal" data-adam-cookie-modal hidden>
+			<div class="adam-cookie-preferences adam-cookie-modal" data-adam-cookie-modal hidden>
 				<div class="adam-cookie-modal__dialog" id="adam-cookie-preferences" role="dialog" aria-modal="false" aria-labelledby="adam-cookie-modal-title">
 					<div class="adam-cookie-modal__header">
 						<div>
@@ -194,10 +194,12 @@ final class ConsentManager {
 				</div>
 			</div>
 
-			<div class="adam-cookie-footer-link">
-				<button type="button" class="adam-cookie-footer-link__button" data-adam-cookie-action="reopen">
-					<?php esc_html_e( 'Preferências de cookies', 'adam-membership' ); ?>
-				</button>
+			<div class="adam-cookie-footer-template" data-adam-cookie-footer-template hidden>
+				<div class="adam-cookie-footer-link">
+					<button type="button" class="adam-cookie-footer-link__button" data-adam-cookie-action="reopen">
+						<?php esc_html_e( 'Preferências de cookies', 'adam-membership' ); ?>
+					</button>
+				</div>
 			</div>
 		</div>
 		<?php
