@@ -586,7 +586,7 @@ final class MembershipForms {
 		<label class="adam-form-field adam-field--full adam-checkbox-field">
 			<span class="adam-checkbox-row">
 				<input type="checkbox" name="privacy_acceptance" value="1" <?php checked( '1', (string) ( $values['privacy_acceptance'] ?? '' ) ); ?>>
-				<strong><?php echo esc_html( '' !== $text ? $text : $config['label'] ); ?></strong>
+				<span class="adam-checkbox-label"><?php echo esc_html( '' !== $text ? $text : $config['label'] ); ?></span>
 			</span>
 			<?php if ( '' !== $config['help'] ) : ?>
 				<small><?php echo esc_html( $config['help'] ); ?></small>

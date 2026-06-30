@@ -144,7 +144,7 @@
 
 .adam-choice-card span,
 .adam-inline-choice label,
-.adam-checkbox-row strong {
+.adam-checkbox-label {
 	color: var(--adam-ink, #102033);
 	font-weight: 700;
 	line-height: 1.45;
@@ -180,10 +180,12 @@
 }
 
 .adam-checkbox-field {
-	padding: 14px 16px;
-	border: 1px solid var(--adam-border, #d9e4dc);
-	border-radius: 16px;
-	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+	display: grid;
+	gap: 8px;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
 }
 
 .adam-checkbox-row {
@@ -192,16 +194,21 @@
 	align-items: center;
 	justify-content: flex-start;
 	gap: 12px;
+	width: 100%;
 	line-height: 1.5;
+	cursor: pointer;
 }
 
 .adam-checkbox-row input {
 	flex: 0 0 auto;
 	margin: 0;
+	align-self: center;
 }
 
-.adam-checkbox-row strong {
-	font-weight: 700;
+.adam-checkbox-label {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 .adam-form-summary,
