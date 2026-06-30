@@ -367,16 +367,16 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'external_association_name' => array(
-					'label'    => 'Associação atual',
+					'label'    => 'Nome da Associacao',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_member_number' => array(
-					'label'    => 'Número de Sócio',
+					'label'    => 'Numero de Socio na Associacao',
 					'help'     => '',
 					'enabled'  => true,
-					'required' => false,
+					'required' => true,
 				),
 				'external_ana_number' => array(
 					'label'    => 'Número ANA (opcional)',
@@ -385,8 +385,8 @@ final class SettingsRepository {
 					'required' => false,
 				),
 				'external_association_proof' => array(
-					'label'    => 'Comprovativo de associação',
-					'help'     => '',
+					'label'    => 'Comprovativo de Associacao',
+					'help'     => 'Pode enviar, por exemplo, cartao de socio, declaracao emitida pela associacao ou outro documento comprovativo.',
 					'enabled'  => true,
 					'required' => true,
 				),
@@ -447,16 +447,16 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'external_association_name' => array(
-					'label'    => 'Associação atual',
+					'label'    => 'Nome da Associacao',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_member_number' => array(
-					'label'    => 'Número de Sócio',
+					'label'    => 'Numero de Socio na Associacao',
 					'help'     => '',
 					'enabled'  => true,
-					'required' => false,
+					'required' => true,
 				),
 				'external_ana_number' => array(
 					'label'    => 'Número ANA',
@@ -465,8 +465,8 @@ final class SettingsRepository {
 					'required' => false,
 				),
 				'external_association_proof' => array(
-					'label'    => 'Comprovativo de associação',
-					'help'     => '',
+					'label'    => 'Comprovativo de Associacao',
+					'help'     => 'Pode enviar, por exemplo, cartao de socio, declaracao emitida pela associacao ou outro documento comprovativo.',
 					'enabled'  => true,
 					'required' => true,
 				),

@@ -115,16 +115,10 @@ final class MembershipForms {
 				<?php wp_nonce_field( 'adam_membership_registration_form' ); ?>
 
 				<div class="adam-form-section">
-					<h4><?php esc_html_e( 'Como pretende aderir à ADAM?', 'adam-membership' ); ?></h4>
-					<div class="adam-choice-grid">
-						<label class="adam-choice-card">
-							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( 'A ADAM será a minha associação principal — %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
-						</label>
-						<label class="adam-choice-card">
-							<input type="radio" name="membership_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['membership_mode'] ?? '' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( 'Já pertenço a outra associação de airsoft — %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
-						</label>
+					<h4><?php esc_html_e( 'Ja pertence a outra associacao de airsoft?', 'adam-membership' ); ?></h4>
+					<div class="adam-inline-choice">
+						<label><input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>> <?php esc_html_e( 'Nao', 'adam-membership' ); ?></label>
+						<label><input type="radio" name="membership_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['membership_mode'] ?? '' ) ); ?>> <?php esc_html_e( 'Sim', 'adam-membership' ); ?></label>
 					</div>
 				</div>
 
@@ -148,12 +142,10 @@ final class MembershipForms {
 				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="registration-external" <?php echo 'external_association' === (string) ( $values['membership_mode'] ?? '' ) ? '' : 'hidden'; ?>>
 					<?php $this->render_text_field( 'registration', 'external_association_name', $values, 'text' ); ?>
 					<?php $this->render_text_field( 'registration', 'external_member_number', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'external_ana_number', $values, 'text' ); ?>
 					<?php $this->render_upload_field( 'registration', 'external_association_proof', '.pdf,image/*', 'adam-field--full' ); ?>
 				</div>
 
 				<?php $this->render_payment_panel( 'registration', $values ); ?>
-
 				<div class="adam-form-grid">
 					<?php $this->render_upload_field( 'registration', 'payment_receipt', '.pdf,image/*', 'adam-field--full' ); ?>
 					<?php $this->render_privacy_field( 'registration', $values ); ?>
@@ -329,8 +321,7 @@ final class MembershipForms {
 
 		if ( 'external_association' === $mode ) {
 			$this->validate_text_field( 'registration', 'external_association_name', $values, $errors, true );
-			$this->validate_text_field( 'registration', 'external_member_number', $values, $errors );
-			$this->validate_text_field( 'registration', 'external_ana_number', $values, $errors );
+			$this->validate_text_field( 'registration', 'external_member_number', $values, $errors, true );
 		}
 
 		$profile_photo = $this->process_upload( 'registration', 'profile_photo', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) );
@@ -417,8 +408,7 @@ final class MembershipForms {
 
 		if ( $is_external_member && 'external_association' === $renewal_mode ) {
 			$this->validate_text_field( 'renewal', 'external_association_name', $values, $errors, true );
-			$this->validate_text_field( 'renewal', 'external_member_number', $values, $errors );
-			$this->validate_text_field( 'renewal', 'external_ana_number', $values, $errors );
+			$this->validate_text_field( 'renewal', 'external_member_number', $values, $errors, true );
 		}
 
 		$this->validate_privacy( 'renewal', $values, $errors );
