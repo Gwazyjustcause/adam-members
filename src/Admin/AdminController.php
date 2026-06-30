@@ -14,6 +14,7 @@ use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Emails\EmailService;
 use AdamMembership\Event\Event;
 use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
@@ -52,6 +53,8 @@ final class AdminController {
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
 	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
 	private const FOUNDERS_PAGE_SLUG     = 'adam-membership-founders';
+	private const FORMS_PAGE_SLUG        = 'adam-membership-forms';
+	private const EMAILS_PAGE_SLUG       = 'adam-membership-emails';
 
 	/**
 	 * Member details page hook suffix.
@@ -158,6 +161,7 @@ final class AdminController {
 	 */
 	private RewardService $rewards;
 	private RecognitionService $recognition;
+	private EmailService $email;
 
 	/**
 	 * Create the admin controller.
@@ -176,8 +180,9 @@ final class AdminController {
 	 * @param EventService        $events          Event service.
 	 * @param RewardService       $rewards         Reward service.
 	 * @param RecognitionService  $recognition     Recognition service.
+	 * @param EmailService        $email           Email service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -192,6 +197,7 @@ final class AdminController {
 		$this->events              = $events;
 		$this->rewards             = $rewards;
 		$this->recognition         = $recognition;
+		$this->email               = $email;
 	}
 
 	/**
@@ -208,6 +214,9 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
+		add_action( 'admin_post_adam_membership_save_forms_settings', array( $this, 'handle_save_forms_settings' ) );
+		add_action( 'admin_post_adam_membership_save_email_settings', array( $this, 'handle_save_email_settings' ) );
+		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
 		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
 		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
 	}
@@ -269,6 +278,24 @@ final class AdminController {
 			self::CAPABILITY,
 			'adam-membership-renewals',
 			array( $this, 'render_renewals_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'Formulários', 'adam-membership' ),
+			esc_html__( 'Formulários', 'adam-membership' ),
+			self::CAPABILITY,
+			self::FORMS_PAGE_SLUG,
+			array( $this, 'render_forms_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'Emails', 'adam-membership' ),
+			esc_html__( 'Emails', 'adam-membership' ),
+			self::CAPABILITY,
+			self::EMAILS_PAGE_SLUG,
+			array( $this, 'render_emails_page' )
 		);
 
 		add_submenu_page(
@@ -707,7 +734,6 @@ final class AdminController {
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar configurações', 'adam-membership' ); ?></button>
 			</form>
 		</div>
-		<?php $this->render_membership_forms_settings_panel(); ?>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Manutenção agendada', 'adam-membership' ); ?></h2>
 			<p><?php esc_html_e( 'A manutenção de sócios é executada diariamente através do WP-Cron. Utilize este botão para executar o mesmo processo imediatamente para testes.', 'adam-membership' ); ?></p>
@@ -715,6 +741,180 @@ final class AdminController {
 				<input type="hidden" name="action" value="adam_membership_run_maintenance">
 				<?php wp_nonce_field( 'adam_membership_run_maintenance' ); ?>
 				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Executar manutenção agora', 'adam-membership' ); ?></button>
+			</form>
+		</div>
+		<?php
+		$this->render_footer();
+	}
+
+	/**
+	 * Render the native forms admin page.
+	 */
+	public function render_forms_page(): void {
+		$this->ensure_can_manage();
+
+		$settings = $this->settings->membership_form_settings();
+
+		$this->render_header( __( 'Formulários ADAM', 'adam-membership' ) );
+		$this->render_notices();
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Inscrição e renovação nativas', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Gerir os formulários públicos /inscricao/ e /renovar-quota/, incluindo estados, páginas atribuídas, campos, quotas, instruções de pagamento e textos legais.', 'adam-membership' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_save_forms_settings">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::FORMS_PAGE_SLUG ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_save_forms_settings' ); ?>
+
+				<h3><?php esc_html_e( 'Estado e publicação', 'adam-membership' ); ?></h3>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Formulário de inscrição', 'adam-membership' ); ?></th>
+						<td>
+							<label><input type="checkbox" name="membership_forms[forms][registration][enabled]" value="1" <?php checked( ! empty( $settings['forms']['registration']['enabled'] ) ); ?>> <?php esc_html_e( 'Ativado', 'adam-membership' ); ?></label>
+							<p><strong><?php esc_html_e( 'Página atribuída:', 'adam-membership' ); ?></strong> <input type="url" name="registration_page_url" class="regular-text" value="<?php echo esc_attr( $this->settings->registration_page_url() ); ?>"></p>
+							<p><strong><?php esc_html_e( 'Shortcode:', 'adam-membership' ); ?></strong> <code>[adam_registration_form]</code></p>
+							<p><strong><?php esc_html_e( 'Bloco/atalho genérico:', 'adam-membership' ); ?></strong> <code>[adam_membership_form type="registration"]</code></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Formulário de renovação', 'adam-membership' ); ?></th>
+						<td>
+							<label><input type="checkbox" name="membership_forms[forms][renewal][enabled]" value="1" <?php checked( ! empty( $settings['forms']['renewal']['enabled'] ) ); ?>> <?php esc_html_e( 'Ativado', 'adam-membership' ); ?></label>
+							<p><strong><?php esc_html_e( 'Página atribuída:', 'adam-membership' ); ?></strong> <input type="url" name="renewal_page_url" class="regular-text" value="<?php echo esc_attr( $this->settings->renewal_page_url() ); ?>"></p>
+							<p><strong><?php esc_html_e( 'Shortcode:', 'adam-membership' ); ?></strong> <code>[adam_renewal_form]</code></p>
+							<p><strong><?php esc_html_e( 'Bloco/atalho genérico:', 'adam-membership' ); ?></strong> <code>[adam_membership_form type="renewal"]</code></p>
+						</td>
+					</tr>
+				</table>
+
+				<h3><?php esc_html_e( 'Quotas e pagamento', 'adam-membership' ); ?></h3>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="adam_fee_primary"><?php esc_html_e( 'Quota anual ADAM principal', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_fee_primary" name="membership_forms[fees][primary]" class="small-text" value="<?php echo esc_attr( (string) $settings['fees']['primary'] ); ?>"> €</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_fee_secondary"><?php esc_html_e( 'Quota anual outra associação', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_fee_secondary" name="membership_forms[fees][secondary]" class="small-text" value="<?php echo esc_attr( (string) $settings['fees']['secondary'] ); ?>"> €</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_payment_mbway"><?php esc_html_e( 'MB Way', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_payment_mbway" name="membership_forms[payment][mbway]" class="regular-text" value="<?php echo esc_attr( (string) $settings['payment']['mbway'] ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_payment_iban"><?php esc_html_e( 'IBAN', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_payment_iban" name="membership_forms[payment][iban]" class="regular-text" value="<?php echo esc_attr( (string) $settings['payment']['iban'] ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_payment_instructions"><?php esc_html_e( 'Instruções de pagamento', 'adam-membership' ); ?></label></th>
+						<td><textarea id="adam_payment_instructions" name="membership_forms[payment][instructions]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['payment']['instructions'] ); ?></textarea></td>
+					</tr>
+				</table>
+
+				<h3><?php esc_html_e( 'Textos legais e ajuda', 'adam-membership' ); ?></h3>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="adam_registration_help"><?php esc_html_e( 'Ajuda da inscrição', 'adam-membership' ); ?></label></th>
+						<td><textarea id="adam_registration_help" name="membership_forms[legal][registration_help]" class="large-text" rows="3"><?php echo esc_textarea( (string) $settings['legal']['registration_help'] ); ?></textarea></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_renewal_help"><?php esc_html_e( 'Ajuda da renovação', 'adam-membership' ); ?></label></th>
+						<td><textarea id="adam_renewal_help" name="membership_forms[legal][renewal_help]" class="large-text" rows="3"><?php echo esc_textarea( (string) $settings['legal']['renewal_help'] ); ?></textarea></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_registration_privacy_text"><?php esc_html_e( 'Texto de privacidade da inscrição', 'adam-membership' ); ?></label></th>
+						<td><textarea id="adam_registration_privacy_text" name="membership_forms[legal][registration_privacy_text]" class="large-text" rows="2"><?php echo esc_textarea( (string) $settings['legal']['registration_privacy_text'] ); ?></textarea></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_renewal_privacy_text"><?php esc_html_e( 'Texto de privacidade da renovação', 'adam-membership' ); ?></label></th>
+						<td><textarea id="adam_renewal_privacy_text" name="membership_forms[legal][renewal_privacy_text]" class="large-text" rows="2"><?php echo esc_textarea( (string) $settings['legal']['renewal_privacy_text'] ); ?></textarea></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_forms_privacy_policy_url"><?php esc_html_e( 'Ligação da Política de Privacidade', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_forms_privacy_policy_url" name="privacy_policy_url" class="regular-text" value="<?php echo esc_attr( $this->settings->privacy_policy_url() ); ?>"></td>
+					</tr>
+				</table>
+
+				<h3><?php esc_html_e( 'Campos da inscrição', 'adam-membership' ); ?></h3>
+				<?php $this->render_membership_form_fields_table( 'registration_fields', (array) $settings['registration_fields'] ); ?>
+
+				<h3><?php esc_html_e( 'Campos da renovação', 'adam-membership' ); ?></h3>
+				<?php $this->render_membership_form_fields_table( 'renewal_fields', (array) $settings['renewal_fields'] ); ?>
+
+				<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar formulários', 'adam-membership' ); ?></button></p>
+			</form>
+		</div>
+		<?php
+		$this->render_footer();
+	}
+
+	/**
+	 * Render the automatic emails admin page.
+	 */
+	public function render_emails_page(): void {
+		$this->ensure_can_manage();
+
+		$templates = $this->email->admin_templates();
+		$settings  = $this->settings->email_template_settings();
+		$user      = wp_get_current_user();
+		$test_to   = $user instanceof \WP_User ? $user->user_email : '';
+
+		$this->render_header( __( 'Emails ADAM', 'adam-membership' ) );
+		$this->render_notices();
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Emails automáticos do plugin', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Gerir assunto, conteúdo, estado, pré-visualização e envio de teste dos emails automáticos da plataforma ADAM.', 'adam-membership' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_save_email_settings">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::EMAILS_PAGE_SLUG ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_save_email_settings' ); ?>
+
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="adam_email_from_name"><?php esc_html_e( 'Nome do remetente', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_email_from_name" name="email_from_name" class="regular-text" value="<?php echo esc_attr( $this->settings->email_from_name() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_email_from_address"><?php esc_html_e( 'Email do remetente', 'adam-membership' ); ?></label></th>
+						<td><input type="email" id="adam_email_from_address" name="email_from_address" class="regular-text" value="<?php echo esc_attr( $this->settings->email_from_address() ); ?>"></td>
+					</tr>
+				</table>
+
+				<?php foreach ( $templates as $template_key => $template_meta ) : ?>
+					<?php $template_config = is_array( $settings[ $template_key ] ?? null ) ? $settings[ $template_key ] : array(); ?>
+					<?php $preview = $this->email->preview_email_template( $template_key ); ?>
+					<div class="adam-admin-panel" style="margin-top:20px;">
+						<h3><?php echo esc_html( (string) $template_meta['label'] ); ?></h3>
+						<p><?php echo esc_html( (string) $template_meta['description'] ); ?></p>
+						<p><label><input type="checkbox" name="email_templates[<?php echo esc_attr( $template_key ); ?>][enabled]" value="1" <?php checked( ! empty( $template_config['enabled'] ) ); ?>> <?php esc_html_e( 'Email ativado', 'adam-membership' ); ?></label></p>
+						<p>
+							<label><?php esc_html_e( 'Assunto', 'adam-membership' ); ?></label><br>
+							<input type="text" class="large-text" name="email_templates[<?php echo esc_attr( $template_key ); ?>][subject]" value="<?php echo esc_attr( (string) ( $template_config['subject'] ?? '' ) ); ?>">
+						</p>
+						<p>
+							<label><?php esc_html_e( 'Conteúdo', 'adam-membership' ); ?></label><br>
+							<textarea class="large-text" rows="8" name="email_templates[<?php echo esc_attr( $template_key ); ?>][body]"><?php echo esc_textarea( (string) ( $template_config['body'] ?? '' ) ); ?></textarea>
+						</p>
+						<p><strong><?php esc_html_e( 'Placeholders disponíveis:', 'adam-membership' ); ?></strong>
+							<?php foreach ( (array) $template_meta['placeholders'] as $placeholder ) : ?>
+								<code>{{<?php echo esc_html( (string) $placeholder ); ?>}}</code>
+							<?php endforeach; ?>
+						</p>
+						<?php if ( is_array( $preview ) ) : ?>
+							<div style="border:1px solid #d9e4dc;border-radius:12px;background:#fff;padding:16px;margin-top:16px;">
+								<p><strong><?php esc_html_e( 'Pré-visualização do assunto:', 'adam-membership' ); ?></strong> <?php echo esc_html( $preview['subject'] ); ?></p>
+								<div><?php echo wp_kses_post( $preview['html'] ); ?></div>
+							</div>
+						<?php endif; ?>
+						<p style="margin-top:16px;">
+							<button type="submit" class="button button-secondary" formaction="<?php echo esc_url( admin_url( 'admin-post.php?action=adam_membership_send_test_email' ) ); ?>" formmethod="post" name="template_key" value="<?php echo esc_attr( $template_key ); ?>"><?php echo esc_html( sprintf( __( 'Enviar teste para %s', 'adam-membership' ), $test_to ) ); ?></button>
+						</p>
+					</div>
+				<?php endforeach; ?>
+
+				<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar emails', 'adam-membership' ); ?></button></p>
 			</form>
 		</div>
 		<?php
@@ -804,6 +1004,7 @@ final class AdminController {
 					<th><?php esc_html_e( 'Campo', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Ativo', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Obrigatório', 'adam-membership' ); ?></th>
+					<th><?php esc_html_e( 'Condicional', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Rótulo', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Texto de ajuda', 'adam-membership' ); ?></th>
 				</tr>
@@ -814,6 +1015,7 @@ final class AdminController {
 						<td><code><?php echo esc_html( (string) $field_key ); ?></code></td>
 						<td><label><input type="checkbox" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>></label></td>
 						<td><label><input type="checkbox" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][required]" value="1" <?php checked( ! empty( $config['required'] ) ); ?>></label></td>
+						<td><?php echo esc_html( $this->membership_form_field_condition_label( $group, (string) $field_key ) ); ?></td>
 						<td><input type="text" class="regular-text" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][label]" value="<?php echo esc_attr( (string) ( $config['label'] ?? '' ) ); ?>"></td>
 						<td><input type="text" class="regular-text" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][help]" value="<?php echo esc_attr( (string) ( $config['help'] ?? '' ) ); ?>"></td>
 					</tr>
@@ -904,6 +1106,69 @@ final class AdminController {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * Save native forms settings.
+	 */
+	public function handle_save_forms_settings(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_save_forms_settings' );
+
+		$registration_url = isset( $_POST['registration_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['registration_page_url'] ) ) : $this->settings->registration_page_url();
+		$renewal_url      = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : $this->settings->renewal_page_url();
+		$privacy_url      = isset( $_POST['privacy_policy_url'] ) ? esc_url_raw( wp_unslash( $_POST['privacy_policy_url'] ) ) : $this->settings->privacy_policy_url();
+		$form_settings    = isset( $_POST['membership_forms'] ) && is_array( $_POST['membership_forms'] ) ? wp_unslash( $_POST['membership_forms'] ) : $this->settings->membership_form_settings();
+
+		$this->settings->save_registration_page_url( $registration_url );
+		$this->settings->save_renewal_page_url( $renewal_url );
+		$this->settings->save_compliance_pages( $privacy_url, $this->settings->cookie_policy_url(), $this->settings->membership_terms_url() );
+		$this->settings->save_membership_form_settings( $form_settings );
+
+		$this->redirect_with_message( __( 'Formulários guardados com sucesso.', 'adam-membership' ) );
+	}
+
+	/**
+	 * Save automatic email settings.
+	 */
+	public function handle_save_email_settings(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_save_email_settings' );
+
+		if ( isset( $_POST['template_key'] ) ) {
+			$this->handle_send_test_email();
+		}
+
+		$from_name      = isset( $_POST['email_from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['email_from_name'] ) ) : $this->settings->email_from_name();
+		$from_address   = isset( $_POST['email_from_address'] ) ? sanitize_email( wp_unslash( $_POST['email_from_address'] ) ) : $this->settings->email_from_address();
+		$email_settings = isset( $_POST['email_templates'] ) && is_array( $_POST['email_templates'] ) ? wp_unslash( $_POST['email_templates'] ) : $this->settings->email_template_settings();
+
+		$this->settings->save_email_sender( $from_name, $from_address );
+		$this->settings->save_email_template_settings( $email_settings );
+
+		$this->redirect_with_message( __( 'Emails guardados com sucesso.', 'adam-membership' ) );
+	}
+
+	/**
+	 * Send a test message for a configured email template.
+	 */
+	public function handle_send_test_email(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_save_email_settings' );
+
+		$template_key = isset( $_POST['template_key'] ) ? sanitize_key( wp_unslash( $_POST['template_key'] ) ) : '';
+		$user         = wp_get_current_user();
+		$recipient    = $user instanceof \WP_User ? sanitize_email( $user->user_email ) : '';
+
+		if ( '' === $template_key || ! is_email( $recipient ) ) {
+			$this->redirect_with_error( __( 'Não foi possível enviar o email de teste.', 'adam-membership' ) );
+		}
+
+		if ( $this->email->send_test_email_template( $template_key, $recipient ) ) {
+			$this->redirect_with_message( sprintf( __( 'Email de teste enviado para %s.', 'adam-membership' ), $recipient ) );
+		}
+
+		$this->redirect_with_error( __( 'Não foi possível enviar o email de teste.', 'adam-membership' ) );
 	}
 
 	/**
@@ -1005,6 +1270,40 @@ final class AdminController {
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-renewals' ) ); ?>"><?php esc_html_e( 'Repor', 'adam-membership' ); ?></a>
 		</form>
 		<?php
+	}
+
+	/**
+	 * Get the conditional visibility label for a form field.
+	 *
+	 * @param string $group     Form group key.
+	 * @param string $field_key Field key.
+	 */
+	private function membership_form_field_condition_label( string $group, string $field_key ): string {
+		$conditions = array(
+			'registration_fields' => array(
+				'external_association_name'  => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
+				'external_member_number'     => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
+				'external_ana_number'        => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
+				'external_association_proof' => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
+			),
+			'renewal_fields' => array(
+				'phone'                     => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'address_line_1'            => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'address_line_2'            => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'city'                      => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'municipality'              => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'postcode'                  => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'country'                   => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
+				'external_association_name' => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
+				'external_member_number'    => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
+				'external_ana_number'       => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
+				'external_association_proof' => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
+			),
+		);
+
+		return isset( $conditions[ $group ][ $field_key ] )
+			? (string) $conditions[ $group ][ $field_key ]
+			: __( 'Sempre visível', 'adam-membership' );
 	}
 
 	/**

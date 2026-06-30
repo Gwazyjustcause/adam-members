@@ -24,6 +24,7 @@ final class SettingsRepository {
 	private const OPTION_COOKIE_POLICY_URL         = 'adam_membership_cookie_policy_url';
 	private const OPTION_MEMBERSHIP_TERMS_URL      = 'adam_membership_membership_terms_url';
 	private const OPTION_MEMBERSHIP_FORM_SETTINGS  = 'adam_membership_form_settings';
+	private const OPTION_EMAIL_TEMPLATE_SETTINGS   = 'adam_membership_email_template_settings';
 	private const DEFAULT_EMAIL_FROM_NAME          = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
 	private const DEFAULT_EMAIL_FROM_ADDRESS       = 'geral@airsoftmondego.pt';
 	private const DEFAULT_ASSOCIATION_NAME         = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
@@ -216,6 +217,9 @@ final class SettingsRepository {
 		$defaults = $this->default_membership_form_settings();
 		$clean    = $defaults;
 
+		$clean['forms']['registration']['enabled'] = ! empty( $settings['forms']['registration']['enabled'] );
+		$clean['forms']['renewal']['enabled']      = ! empty( $settings['forms']['renewal']['enabled'] );
+
 		$clean['fees']['primary']   = $this->sanitize_money( $settings['fees']['primary'] ?? $defaults['fees']['primary'] );
 		$clean['fees']['secondary'] = $this->sanitize_money( $settings['fees']['secondary'] ?? $defaults['fees']['secondary'] );
 
@@ -241,6 +245,42 @@ final class SettingsRepository {
 	}
 
 	/**
+	 * Get configurable email template settings.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function email_template_settings(): array {
+		$stored = get_option( self::OPTION_EMAIL_TEMPLATE_SETTINGS, array() );
+
+		return $this->normalize_membership_form_settings(
+			$this->merge_membership_form_settings(
+				$this->default_email_template_settings(),
+				is_array( $stored ) ? $stored : array()
+			)
+		);
+	}
+
+	/**
+	 * Save configurable email template settings.
+	 *
+	 * @param array<string, mixed> $settings Raw email settings.
+	 */
+	public function save_email_template_settings( array $settings ): void {
+		$defaults = $this->default_email_template_settings();
+		$clean    = $defaults;
+
+		foreach ( $defaults as $key => $config ) {
+			$input = isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ? $settings[ $key ] : array();
+
+			$clean[ $key ]['enabled'] = ! empty( $input['enabled'] );
+			$clean[ $key ]['subject'] = sanitize_text_field( (string) ( $input['subject'] ?? $config['subject'] ) );
+			$clean[ $key ]['body']    = wp_kses_post( (string) ( $input['body'] ?? $config['body'] ) );
+		}
+
+		update_option( self::OPTION_EMAIL_TEMPLATE_SETTINGS, $clean, false );
+	}
+
+	/**
 	 * Format a numeric member number.
 	 *
 	 * @param int $number Numeric member number.
@@ -256,6 +296,14 @@ final class SettingsRepository {
 	 */
 	private function default_membership_form_settings(): array {
 		return array(
+			'forms' => array(
+				'registration' => array(
+					'enabled' => true,
+				),
+				'renewal' => array(
+					'enabled' => true,
+				),
+			),
 			'fees' => array(
 				'primary'   => '22.00',
 				'secondary' => '12.00',
@@ -472,6 +520,61 @@ final class SettingsRepository {
 					'enabled'  => true,
 					'required' => true,
 				),
+			),
+		);
+	}
+
+	/**
+	 * Get default automatic email template settings.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function default_email_template_settings(): array {
+		return array(
+			'member_approved' => array(
+				'enabled' => true,
+				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM foi aprovada",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>\u{00C9} com enorme satisfa\u{00E7}\u{00E3}o que informamos que a sua inscri\u{00E7}\u{00E3}o na ADAM foi aprovada.</p><p><strong>N.\u{00BA} de s\u{00F3}cio:</strong> {{member_number}}</p><p>O seu registo encontra-se agora ativo.</p><p><a href=\"{{member_area_link}}\">Aceder \u{00E0} \u{00C1}rea de S\u{00F3}cio</a></p><p>Cumprimentos,<br><strong>A Dire\u{00E7}\u{00E3}o da ADAM</strong></p>",
+			),
+			'member_rejected' => array(
+				'enabled' => true,
+				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM n\u{00E3}o foi aprovada",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua inscri\u{00E7}\u{00E3}o foi analisada pela Dire\u{00E7}\u{00E3}o da ADAM e n\u{00E3}o foi aprovada.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p>Caso pretenda mais informa\u{00E7}\u{00F5}es, contacte a Dire\u{00E7}\u{00E3}o da ADAM.</p>",
+			),
+			'renewal_submitted' => array(
+				'enabled' => true,
+				'subject' => "Pedido de renova\u{00E7}\u{00E3}o recebido",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos o seu pedido de renova\u{00E7}\u{00E3}o de quota e o respetivo comprovativo de pagamento.</p><p><strong>Estado atual:</strong> {{payment_status}}</p><p><strong>Valor indicado:</strong> {{quota_value}}</p>",
+			),
+			'renewal_approved' => array(
+				'enabled' => true,
+				'subject' => "Renova\u{00E7}\u{00E3}o da quota aprovada",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua renova\u{00E7}\u{00E3}o de quota foi aprovada.</p><p><strong>N.\u{00BA} de s\u{00F3}cio:</strong> {{member_number}}</p><p><strong>Nova validade da quota:</strong> {{expiry_date}}</p><p><a href=\"{{member_area_link}}\">Aceder \u{00E0} \u{00C1}rea de S\u{00F3}cio</a></p>",
+			),
+			'renewal_rejected' => array(
+				'enabled' => true,
+				'subject' => "Renova\u{00E7}\u{00E3}o da quota n\u{00E3}o aprovada",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>O seu pedido de renova\u{00E7}\u{00E3}o foi analisado e n\u{00E3}o foi aprovado.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p><a href=\"{{renewal_link}}\">Aceder \u{00E0} renova\u{00E7}\u{00E3}o</a></p>",
+			),
+			'renewal_reminder' => array(
+				'enabled' => true,
+				'subject' => "Lembrete de renova\u{00E7}\u{00E3}o da quota ADAM",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A validade da sua quota est\u{00E1} a aproximar-se.</p><p><strong>N.\u{00BA} de s\u{00F3}cio:</strong> {{member_number}}</p><p><strong>Validade atual:</strong> {{expiry_date}}</p><p><a href=\"{{renewal_link}}\">Abrir formul\u{00E1}rio de renova\u{00E7}\u{00E3}o</a></p>",
+			),
+			'quota_expired' => array(
+				'enabled' => true,
+				'subject' => "A sua quota ADAM expirou",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua quota encontra-se expirada.</p><p><strong>N.\u{00BA} de s\u{00F3}cio:</strong> {{member_number}}</p><p><strong>Validade da quota:</strong> {{expiry_date}}</p><p><a href=\"{{renewal_link}}\">Renovar quota</a></p>",
+			),
+			'password_reset' => array(
+				'enabled' => true,
+				'subject' => "Redefini\u{00E7}\u{00E3}o da Palavra-passe",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos um pedido para redefinir a palavra-passe da sua conta.</p><p><a href=\"{{reset_link}}\">Redefinir Palavra-passe</a></p><p>Se n\u{00E3}o efetuou este pedido, pode ignorar este email.</p>",
+			),
+			'email_confirmation' => array(
+				'enabled' => true,
+				'subject' => "Confirmar altera\u{00E7}\u{00E3}o de email",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos um pedido para alterar o endere\u{00E7}o de email da sua conta.</p><p><strong>Novo endere\u{00E7}o:</strong> {{new_email}}</p><p><a href=\"{{confirmation_link}}\">Confirmar altera\u{00E7}\u{00E3}o de email</a></p><p>Se n\u{00E3}o efetuou este pedido, ignore este email.</p>",
 			),
 		);
 	}

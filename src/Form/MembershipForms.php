@@ -89,6 +89,10 @@ final class MembershipForms {
 	 * Render native registration form.
 	 */
 	public function render_registration_shortcode(): string {
+		if ( empty( $this->settings()['forms']['registration']['enabled'] ) ) {
+			return $this->notice_markup( 'info', __( "O formulário de inscrição está temporariamente indisponível.", 'adam-membership' ) );
+		}
+
 		if ( is_user_logged_in() && $this->members->find( get_current_user_id() ) instanceof Member ) {
 			return $this->notice_markup( 'info', __( "J\u{00E1} existe uma sess\u{00E3}o iniciada. Caso pretenda renovar ou gerir a sua conta, utilize a \u{00C1}rea do S\u{00F3}cio.", 'adam-membership' ) );
 		}
@@ -171,6 +175,10 @@ final class MembershipForms {
 	 * Render native renewal form.
 	 */
 	public function render_renewal_shortcode(): string {
+		if ( empty( $this->settings()['forms']['renewal']['enabled'] ) ) {
+			return $this->notice_markup( 'info', __( "O formulário de renovação está temporariamente indisponível.", 'adam-membership' ) );
+		}
+
 		if ( ! is_user_logged_in() ) {
 			return $this->notice_markup(
 				'info',

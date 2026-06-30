@@ -149,7 +149,8 @@ final class Plugin {
 			$documents,
 			$events,
 			$rewards,
-			$recognition
+			$recognition,
+			$email
 		);
 		$announcement_admin = new AnnouncementController( $announcements );
 		$document_admin     = new DocumentController( $documents );
