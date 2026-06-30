@@ -2223,8 +2223,8 @@
 	gap: 18px;
 }
 
-.adam-form-field label,
-.adam-card label {
+.adam-member-area .adam-form-field label,
+.adam-member-area .adam-card label {
 	display: block;
 	margin-bottom: 8px;
 	font-size: 0.93rem;
@@ -2232,8 +2232,8 @@
 	color: #344256;
 }
 
-.adam-card input,
-.adam-card select {
+.adam-member-area .adam-card input,
+.adam-member-area .adam-card select {
 	width: 100%;
 	max-width: 100%;
 	min-height: 46px;
@@ -2244,14 +2244,14 @@
 	font-weight: 600;
 }
 
-.adam-card input[readonly] {
+.adam-member-area .adam-card input[readonly] {
 	background: #f8fafc;
 	color: var(--adam-muted);
 	cursor: default;
 }
 
-.adam-card input:focus,
-.adam-card select:focus {
+.adam-member-area .adam-card input:focus,
+.adam-member-area .adam-card select:focus {
 	border-color: var(--adam-green-600);
 	box-shadow: 0 0 0 3px rgba(63, 143, 77, 0.16);
 	outline: none;
@@ -2272,9 +2272,9 @@
 }
 
 .adam-primary-action,
-.adam-card .button,
-.adam-card button,
-.adam-card input[type="submit"] {
+.adam-member-area .adam-card .button,
+.adam-member-area .adam-card button,
+.adam-member-area .adam-card input[type="submit"] {
 	width: fit-content;
 	min-height: 44px;
 	min-width: 180px;
@@ -2287,9 +2287,9 @@
 }
 
 .adam-primary-action:hover,
-.adam-card .button:hover,
-.adam-card button:hover,
-.adam-card input[type="submit"]:hover {
+.adam-member-area .adam-card .button:hover,
+.adam-member-area .adam-card button:hover,
+.adam-member-area .adam-card input[type="submit"]:hover {
 	transform: translateY(-1px);
 }
 
