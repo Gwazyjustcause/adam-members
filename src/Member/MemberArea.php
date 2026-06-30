@@ -588,12 +588,15 @@ final class MemberArea {
 			return;
 		}
 
-		$photo_url         = $member->media_url( 'profile_photo' );
-		$member_number     = (string) $member->field( 'numero_socio' );
-		$joined_date       = $this->format_date( $member->field( 'data_adesao' ) );
-		$expiry_date       = $this->format_date( $member->field( 'validade_quota' ) );
-		$card_presentation = $this->cards->card_presentation( $member );
-		$card_classes      = implode( ' ', array_map( 'sanitize_html_class', (array) ( $card_presentation['classes'] ?? array( 'adam-digital-card' ) ) ) );
+		$photo_url          = $member->media_url( 'profile_photo' );
+		$member_number      = (string) $member->field( 'numero_socio' );
+		$member_number_text = '' !== $member_number ? $member_number : __( 'Por atribuir', 'adam-membership' );
+		$joined_date        = $this->format_date( $member->field( 'data_adesao' ) );
+		$expiry_date        = $this->format_date( $member->field( 'validade_quota' ) );
+		$validation_url     = $this->cards->validation_url( $member );
+		$qr_image_url       = $this->cards->qr_image_url( $member );
+		$card_presentation  = $this->cards->card_presentation( $member );
+		$card_classes       = implode( ' ', array_map( 'sanitize_html_class', (array) ( $card_presentation['classes'] ?? array( 'adam-digital-card' ) ) ) );
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -602,7 +605,39 @@ final class MemberArea {
 				</div>
 				<div class="adam-card-actions">
 					<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></button>
-					<a class="adam-card-link" href="<?php echo esc_url( $this->cards->validation_url( $member ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+					<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+				</div>
+			</div>
+			<div class="adam-digital-card-mobile" aria-label="<?php esc_attr_e( 'Resumo do cartao digital', 'adam-membership' ); ?>">
+				<div class="adam-digital-card-mobile__summary">
+					<div class="adam-digital-card-mobile__identity">
+						<span><?php esc_html_e( 'Cartao ADAM', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
+						<small><?php echo esc_html( $member_number_text ); ?></small>
+					</div>
+					<div class="adam-digital-card-mobile__status">
+						<?php $this->render_status_badge( $member->effective_status() ); ?>
+					</div>
+				</div>
+				<div class="adam-digital-card-mobile__meta">
+					<div>
+						<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== $expiry_date ? $expiry_date : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+					</div>
+					<div>
+						<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== $joined_date ? $joined_date : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+					</div>
+				</div>
+				<div class="adam-digital-card-mobile__utility">
+					<div class="adam-digital-card-mobile__qr">
+						<img src="<?php echo esc_url( $qr_image_url ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+					</div>
+					<div class="adam-digital-card-mobile__actions">
+						<a class="adam-card-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
+						<button type="button" class="adam-card-link adam-card-print-button" data-adam-print-card><?php esc_html_e( 'Imprimir / descarregar cartao', 'adam-membership' ); ?></button>
+						<a class="adam-text-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+					</div>
 				</div>
 			</div>
 			<article class="<?php echo esc_attr( $card_classes ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
@@ -649,7 +684,7 @@ final class MemberArea {
 					</div>
 
 					<div class="adam-digital-card__qr">
-						<img src="<?php echo esc_url( $this->cards->qr_image_url( $member ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+						<img src="<?php echo esc_url( $qr_image_url ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
 						<span><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></span>
 					</div>
 				</div>
@@ -657,7 +692,7 @@ final class MemberArea {
 				<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
 					<div>
 						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( '' !== $member_number ? $member_number : __( 'Por atribuir', 'adam-membership' ) ); ?></strong>
+						<strong><?php echo esc_html( $member_number_text ); ?></strong>
 					</div>
 					<div>
 						<span><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></span>
@@ -993,14 +1028,6 @@ final class MemberArea {
 		$cost_label       = $this->reward_cost_label( $reward );
 		?>
 		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?>">
-			<div class="adam-reward-card__media">
-				<?php if ( '' !== $reward->image_url() ) : ?>
-					<img src="<?php echo esc_url( $reward->image_url() ); ?>" alt="<?php echo esc_attr( $reward->name() ); ?>">
-				<?php else : ?>
-					<?php $this->render_reward_preview( $reward ); ?>
-				<?php endif; ?>
-			</div>
-
 			<div class="adam-reward-card__meta">
 				<span class="adam-badge adam-reward-rarity adam-reward-rarity--<?php echo esc_attr( $reward->rarity() ); ?>"><?php echo esc_html( $this->reward_rarity_label( $reward ) ); ?></span>
 				<span class="adam-announcement-category"><?php echo esc_html( $reward->category() ); ?></span>
@@ -1025,7 +1052,6 @@ final class MemberArea {
 
 			<div class="adam-reward-card__body">
 				<h4><?php echo esc_html( $reward->name() ); ?></h4>
-				<p><?php echo esc_html( $this->rewards->public_reward_description( $reward, $known_redemption ) ); ?></p>
 			</div>
 
 			<div class="adam-reward-card__stats">
@@ -1644,72 +1670,6 @@ final class MemberArea {
 	}
 
 	/**
-	 * Render a compact reward preview instead of placeholder initials.
-	 *
-	 * @param Reward $reward Reward.
-	 */
-	private function render_reward_preview( Reward $reward ): void {
-		$reward_key = sanitize_key( $reward->reward_value() );
-
-		if ( str_starts_with( $reward_key, 'card_theme_' ) ) {
-			$theme_class = 'adam-digital-card--theme-' . str_replace( '_', '-', substr( $reward_key, strlen( 'card_theme_' ) ) );
-			?>
-			<div class="adam-reward-preview-card <?php echo esc_attr( $theme_class ); ?> adam-digital-card--theme-rarity-<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
-				<div class="adam-reward-preview-card__shine" aria-hidden="true"></div>
-				<div class="adam-reward-preview-card__header">
-					<span>ADAM</span>
-					<small><?php esc_html_e( 'Tema', 'adam-membership' ); ?></small>
-				</div>
-				<div class="adam-reward-preview-card__body">
-					<div class="adam-reward-preview-card__avatar"></div>
-					<div class="adam-reward-preview-card__lines">
-						<span></span>
-						<span></span>
-					</div>
-				</div>
-			</div>
-			<?php
-			return;
-		}
-
-		if ( str_starts_with( $reward_key, 'card_frame_' ) ) {
-			$frame_class = 'adam-digital-card--frame-' . str_replace( '_', '-', substr( $reward_key, strlen( 'card_frame_' ) ) );
-			?>
-			<div class="adam-reward-preview-card adam-reward-preview-card--frame-base <?php echo esc_attr( $frame_class ); ?> adam-digital-card--frame-rarity-<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
-				<div class="adam-reward-preview-card__shine" aria-hidden="true"></div>
-				<div class="adam-reward-preview-card__header">
-					<span>ADAM</span>
-					<small><?php esc_html_e( 'Moldura', 'adam-membership' ); ?></small>
-				</div>
-				<div class="adam-reward-preview-card__body">
-					<div class="adam-reward-preview-card__avatar"></div>
-					<div class="adam-reward-preview-card__lines">
-						<span></span>
-						<span></span>
-					</div>
-				</div>
-			</div>
-			<?php
-			return;
-		}
-
-		if ( str_starts_with( $reward_key, 'title_' ) ) {
-			?>
-			<div class="adam-reward-preview-badge adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
-				<?php echo esc_html( $reward->name() ); ?>
-			</div>
-			<?php
-			return;
-		}
-
-		?>
-		<div class="adam-reward-preview-icon adam-reward-preview-icon--<?php echo esc_attr( sanitize_html_class( $reward->rarity() ) ); ?>">
-			<span><?php echo esc_html( $this->reward_icon_label( $reward ) ); ?></span>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Get reward cost/unlock label for member-facing cards.
 	 *
 	 * @param Reward $reward Reward.
@@ -1896,24 +1856,6 @@ final class MemberArea {
 		}
 
 		return null;
-	}
-
-	/**
-	 * Get a compact label for reward fallback art.
-	 *
-	 * @param Reward $reward Reward.
-	 */
-	private function reward_icon_label( Reward $reward ): string {
-		$parts = preg_split( '/\s+/', trim( $reward->name() ) );
-		$label = '';
-
-		if ( is_array( $parts ) ) {
-			foreach ( array_slice( $parts, 0, 2 ) as $part ) {
-				$label .= strtoupper( substr( $part, 0, 1 ) );
-			}
-		}
-
-		return '' !== $label ? $label : 'AD';
 	}
 
 	/**
