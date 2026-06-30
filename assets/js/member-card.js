@@ -1,6 +1,9 @@
 ( function () {
 	'use strict';
 
+	var CREDIT_CARD_WIDTH_MM = 85.6;
+	var CREDIT_CARD_HEIGHT_MM = 53.98;
+
 	function stylesheetMarkup() {
 		var styles = '';
 
@@ -73,6 +76,7 @@
 		var rect = card.getBoundingClientRect();
 		var width = Math.max( Math.ceil( rect.width ), 320 );
 		var height = Math.max( Math.ceil( rect.height ), 220 );
+		var scale = Math.min( CREDIT_CARD_WIDTH_MM / pxToMm( width ), CREDIT_CARD_HEIGHT_MM / pxToMm( height ) );
 		var printHtml =
 			'<!doctype html>' +
 			'<html>' +
@@ -84,8 +88,10 @@
 			'</head>' +
 			'<body class="adam-card-print-document">' +
 			'<main class="adam-card-print-sheet">' +
-			'<div class="adam-card-print-stage" style="width:' + width + 'px">' +
+			'<div class="adam-card-print-stage">' +
+			'<div class="adam-card-print-capture" style="width:' + width + 'px;height:' + height + 'px;transform:scale(' + scale + ');">' +
 			card.outerHTML +
+			'</div>' +
 			'</div>' +
 			'</main>' +
 			'</body>' +
@@ -110,6 +116,14 @@
 		waitForFrameAssets(
 			frame,
 			function () {
+				var printedCard = frame.contentDocument.querySelector( '[data-adam-card-preview]' );
+
+				if ( printedCard ) {
+					printedCard.style.width = String( width ) + 'px';
+					printedCard.style.minHeight = String( height ) + 'px';
+					printedCard.style.margin = '0';
+				}
+
 				var cleanup = function () {
 					window.setTimeout( function () {
 						if ( frame.parentNode ) {
@@ -140,4 +154,8 @@
 
 		printCard( card );
 	} );
+
+	function pxToMm( pixels ) {
+		return pixels * 25.4 / 96;
+	}
 }() );
