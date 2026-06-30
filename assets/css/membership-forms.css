@@ -157,8 +157,7 @@
 	margin-top: 12px;
 }
 
-.adam-inline-choice label,
-.adam-checkbox-control {
+.adam-inline-choice label {
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
@@ -189,31 +188,35 @@
 }
 
 .adam-checkbox-control {
-	display: flex;
-	flex-wrap: nowrap;
-	align-items: center;
-	justify-content: flex-start;
-	gap: 12px;
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	align-items: start;
+	column-gap: 12px;
 	width: 100%;
+	margin: 0;
+	padding: 0;
 	line-height: 1.5;
+	text-align: left;
 	cursor: pointer;
 }
 
 .adam-checkbox-control input {
-	flex: 0 0 auto;
-	margin: 0;
-	align-self: center;
+	width: 18px;
+	height: 18px;
+	margin: 2px 0 0;
+	justify-self: start;
+	align-self: start;
 }
 
 .adam-checkbox-label {
 	display: block;
-	flex: 1 1 auto;
 	min-width: 0;
 	font-size: 1rem;
 	font-weight: 500;
 	letter-spacing: 0;
 	text-transform: none;
 	line-height: 1.5;
+	overflow-wrap: anywhere;
 }
 
 .adam-form-summary,
