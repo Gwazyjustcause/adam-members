@@ -24,6 +24,10 @@
 	gap: 8px;
 }
 
+.adam-membership-native-form {
+	padding: 0;
+}
+
 .adam-field--full,
 .adam-checkbox-field {
 	grid-column: 1 / -1;
@@ -51,12 +55,25 @@
 	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
 	background: #ffffff;
+	box-shadow: inset 0 1px 2px rgba(16, 32, 51, 0.03);
 	color: var(--adam-ink, #102033);
 	font: inherit;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .adam-form-field input[type="file"] {
 	padding: 10px 12px;
+	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+	cursor: pointer;
+}
+
+.adam-form-field input[type="text"]:focus,
+.adam-form-field input[type="email"]:focus,
+.adam-form-field input[type="date"]:focus,
+.adam-form-field input[type="file"]:focus {
+	outline: none;
+	border-color: var(--adam-green-600, #3f7a47);
+	box-shadow: 0 0 0 4px rgba(63, 122, 71, 0.12);
 }
 
 .adam-form-field small,
@@ -87,8 +104,22 @@
 	padding: 16px;
 	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 16px;
-	background: #ffffff;
+	background: linear-gradient(180deg, #ffffff, #f8fcf9);
+	box-shadow: 0 10px 30px rgba(16, 32, 51, 0.04);
 	cursor: pointer;
+	transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adam-choice-card:hover {
+	border-color: rgba(47, 107, 59, 0.28);
+	transform: translateY(-1px);
+	box-shadow: 0 14px 34px rgba(16, 32, 51, 0.08);
+}
+
+.adam-choice-card:has(input:checked) {
+	border-color: var(--adam-green-700, #2f6b3b);
+	background: linear-gradient(180deg, rgba(240, 249, 243, 0.95), #ffffff);
+	box-shadow: 0 16px 36px rgba(47, 107, 59, 0.12);
 }
 
 .adam-choice-card input,
@@ -117,6 +148,37 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
+}
+
+.adam-inline-choice label {
+	padding: 12px 14px;
+	border: 1px solid var(--adam-border, #d9e4dc);
+	border-radius: 14px;
+	background: #ffffff;
+}
+
+.adam-checkbox-field {
+	padding: 14px 16px;
+	border: 1px solid var(--adam-border, #d9e4dc);
+	border-radius: 16px;
+	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+}
+
+.adam-checkbox-row {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 12px;
+}
+
+.adam-checkbox-row input {
+	flex: 0 0 auto;
+	margin: 0;
+}
+
+.adam-checkbox-row strong {
+	font-weight: 700;
 }
 
 .adam-form-summary,
@@ -173,6 +235,35 @@
 	padding-left: 20px;
 }
 
+.adam-form-actions .adam-card-link,
+.adam-membership-native-form button[type="submit"] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 48px;
+	padding: 0 22px;
+	border: 0;
+	border-radius: 14px;
+	background: linear-gradient(180deg, #3f7a47, #24562d);
+	box-shadow: 0 14px 28px rgba(36, 86, 45, 0.22);
+	color: #ffffff;
+	font-weight: 800;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.adam-form-actions .adam-card-link:hover,
+.adam-membership-native-form button[type="submit"]:hover {
+	background: linear-gradient(180deg, #45864d, #214c29);
+	color: #ffffff;
+}
+
+.adam-form-actions .adam-card-link:focus-visible,
+.adam-membership-native-form button[type="submit"]:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(63, 122, 71, 0.16), 0 14px 28px rgba(36, 86, 45, 0.22);
+}
+
 @media (max-width: 768px) {
 	.adam-form-grid,
 	.adam-choice-grid,
@@ -180,5 +271,17 @@
 	.adam-payment-panel__grid,
 	.adam-payment-panel__header {
 		grid-template-columns: 1fr;
+	}
+
+	.adam-inline-choice,
+	.adam-inline-choice label,
+	.adam-checkbox-row,
+	.adam-form-actions .adam-card-link,
+	.adam-membership-native-form button[type="submit"] {
+		width: 100%;
+	}
+
+	.adam-inline-choice label {
+		justify-content: flex-start;
 	}
 }

@@ -90,7 +90,7 @@ final class MembershipForms {
 	 */
 	public function render_registration_shortcode(): string {
 		if ( is_user_logged_in() && $this->members->find( get_current_user_id() ) instanceof Member ) {
-			return $this->notice_markup( 'info', __( 'Já existe uma sessão iniciada. Caso pretenda renovar ou gerir a sua conta, utilize a Área do Sócio.', 'adam-membership' ) );
+			return $this->notice_markup( 'info', __( 'Ja existe uma sessao iniciada. Caso pretenda renovar ou gerir a sua conta, utilize a Area do Socio.', 'adam-membership' ) );
 		}
 
 		$state    = $this->handle_registration_submission();
@@ -102,8 +102,8 @@ final class MembershipForms {
 		<section class="adam-public-form adam-card" data-adam-membership-form="registration">
 			<div class="adam-card-heading">
 				<div>
-					<p class="adam-eyebrow"><?php esc_html_e( 'Inscrição ADAM', 'adam-membership' ); ?></p>
-					<h3><?php esc_html_e( 'Novo Sócio', 'adam-membership' ); ?></h3>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Inscricao ADAM', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Novo Socio', 'adam-membership' ); ?></h3>
 				</div>
 			</div>
 
@@ -152,7 +152,7 @@ final class MembershipForms {
 				</div>
 
 				<div class="adam-form-actions">
-					<button type="submit" class="adam-card-link"><?php esc_html_e( 'Submeter inscrição', 'adam-membership' ); ?></button>
+					<button type="submit" class="adam-card-link"><?php esc_html_e( 'Submeter inscricao', 'adam-membership' ); ?></button>
 				</div>
 			</form>
 		</section>
@@ -170,7 +170,7 @@ final class MembershipForms {
 				'info',
 				sprintf(
 					/* translators: %s: login URL. */
-					__( 'Para renovar a quota, inicie sessão na sua conta ADAM. <a href="%s">Entrar</a>', 'adam-membership' ),
+					__( 'Para renovar a quota, inicie sessao na sua conta ADAM. <a href="%s">Entrar</a>', 'adam-membership' ),
 					esc_url( wp_login_url( $this->current_url() ) )
 				)
 			);
@@ -179,24 +179,24 @@ final class MembershipForms {
 		$member = $this->members->find( get_current_user_id() );
 
 		if ( null === $member ) {
-			return $this->notice_markup( 'error', __( 'Não foi possível localizar a conta de sócio associada a esta sessão.', 'adam-membership' ) );
+			return $this->notice_markup( 'error', __( 'Nao foi possivel localizar a conta de socio associada a esta sessao.', 'adam-membership' ) );
 		}
 
 		if ( $member->isPending() || $member->isRejected() || $member->isRenewalPending() ) {
-			return $this->notice_markup( 'info', __( 'A renovação não está disponível para o estado atual da conta.', 'adam-membership' ) );
+			return $this->notice_markup( 'info', __( 'A renovacao nao esta disponivel para o estado atual da conta.', 'adam-membership' ) );
 		}
 
 		$state      = $this->handle_renewal_submission( $member );
 		$settings   = $this->settings();
 		$values     = is_array( $state['values'] ?? null ) ? $state['values'] : $this->default_renewal_values( $member );
-		$is_external = 'external_association' === (string) $member->field( 'adam_membership_origin' );
+		$is_external = $this->member_uses_external_association( $member );
 
 		ob_start();
 		?>
 		<section class="adam-public-form adam-card" data-adam-membership-form="renewal">
 			<div class="adam-card-heading">
 				<div>
-					<p class="adam-eyebrow"><?php esc_html_e( 'Renovação ADAM', 'adam-membership' ); ?></p>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Renovacao ADAM', 'adam-membership' ); ?></p>
 					<h3><?php esc_html_e( 'Renovar quota', 'adam-membership' ); ?></h3>
 				</div>
 			</div>
@@ -210,11 +210,11 @@ final class MembershipForms {
 
 				<div class="adam-form-summary">
 					<div>
-						<span><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'Socio', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( $member->full_name() ); ?></strong>
 					</div>
 					<div>
-						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'N.o de socio', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( (string) $member->field( 'numero_socio' ) ); ?></strong>
 					</div>
 					<div>
@@ -225,15 +225,15 @@ final class MembershipForms {
 
 				<?php if ( $is_external ) : ?>
 					<div class="adam-form-section">
-						<h4><?php esc_html_e( 'Como pretende renovar este ano?', 'adam-membership' ); ?></h4>
+						<h4><?php esc_html_e( 'Pretende continuar associado atraves de outra associacao?', 'adam-membership' ); ?></h4>
 						<div class="adam-choice-grid">
 							<label class="adam-choice-card">
 								<input type="radio" name="renewal_mode" value="external_association" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? '' ), false ); ?> <?php checked( 'external_association', (string) ( $values['renewal_mode'] ?? 'external_association' ) ); ?>>
-								<span><?php echo esc_html( sprintf( __( 'Continuar através da minha associação atual — %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
+								<span><?php echo esc_html( sprintf( __( 'Sim, continuo atraves da minha associacao atual - %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
 							</label>
 							<label class="adam-choice-card">
 								<input type="radio" name="renewal_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? '' ) ); ?>>
-								<span><?php echo esc_html( sprintf( __( 'Passar a ter a ADAM como associação principal — %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
+								<span><?php echo esc_html( sprintf( __( 'Nao, pretendo passar a ter a ADAM como associacao principal - %s/ano', 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
 							</label>
 						</div>
 					</div>
@@ -242,9 +242,9 @@ final class MembershipForms {
 				<?php endif; ?>
 
 				<div class="adam-form-section">
-					<h4><?php esc_html_e( 'Os seus dados pessoais sofreram alterações desde a última renovação?', 'adam-membership' ); ?></h4>
+					<h4><?php esc_html_e( 'Os seus dados pessoais sofreram alteracoes desde a ultima renovacao?', 'adam-membership' ); ?></h4>
 					<div class="adam-inline-choice">
-						<label><input type="radio" name="profile_changed" value="0" <?php checked( '1', (string) ( $values['profile_changed'] ?? '' ), false ); ?> <?php checked( '0', (string) ( $values['profile_changed'] ?? '0' ) ); ?>> <?php esc_html_e( 'Não', 'adam-membership' ); ?></label>
+						<label><input type="radio" name="profile_changed" value="0" <?php checked( '1', (string) ( $values['profile_changed'] ?? '' ), false ); ?> <?php checked( '0', (string) ( $values['profile_changed'] ?? '0' ) ); ?>> <?php esc_html_e( 'Nao', 'adam-membership' ); ?></label>
 						<label><input type="radio" name="profile_changed" value="1" <?php checked( '1', (string) ( $values['profile_changed'] ?? '' ) ); ?>> <?php esc_html_e( 'Sim', 'adam-membership' ); ?></label>
 					</div>
 				</div>
@@ -262,7 +262,6 @@ final class MembershipForms {
 				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="renewal-external" <?php echo $is_external && 'adam_primary' !== (string) ( $values['renewal_mode'] ?? 'external_association' ) ? '' : 'hidden'; ?>>
 					<?php $this->render_text_field( 'renewal', 'external_association_name', $values, 'text' ); ?>
 					<?php $this->render_text_field( 'renewal', 'external_member_number', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'external_ana_number', $values, 'text' ); ?>
 					<?php $this->render_upload_field( 'renewal', 'external_association_proof', '.pdf,image/*', 'adam-field--full' ); ?>
 				</div>
 
@@ -274,7 +273,7 @@ final class MembershipForms {
 				</div>
 
 				<div class="adam-form-actions">
-					<button type="submit" class="adam-card-link"><?php esc_html_e( 'Submeter renovação', 'adam-membership' ); ?></button>
+					<button type="submit" class="adam-card-link"><?php esc_html_e( 'Submeter renovacao', 'adam-membership' ); ?></button>
 				</div>
 			</form>
 		</section>
@@ -298,7 +297,7 @@ final class MembershipForms {
 		$errors = array();
 
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_membership_registration_form' ) ) {
-			$errors[] = __( 'Não foi possível validar a submissão da inscrição.', 'adam-membership' );
+			$errors[] = __( 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel validar a submissÃƒÆ’Ã‚Â£o da inscriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.', 'adam-membership' );
 		}
 
 		$mode     = 'external_association' === (string) ( $values['membership_mode'] ?? '' ) ? 'external_association' : 'adam_primary';
@@ -388,10 +387,10 @@ final class MembershipForms {
 		$errors = array();
 
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_membership_renewal_form' ) ) {
-			$errors[] = __( 'Não foi possível validar a submissão da renovação.', 'adam-membership' );
+			$errors[] = __( 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel validar a submissÃƒÆ’Ã‚Â£o da renovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.', 'adam-membership' );
 		}
 
-		$is_external_member = 'external_association' === (string) $member->field( 'adam_membership_origin' );
+		$is_external_member = $this->member_uses_external_association( $member );
 		$renewal_mode       = $is_external_member && 'adam_primary' === (string) ( $values['renewal_mode'] ?? '' ) ? 'adam_primary' : ( $is_external_member ? 'external_association' : 'adam_primary' );
 		$profile_changed    = '1' === (string) ( $values['profile_changed'] ?? '0' );
 		$settings           = $this->settings();
@@ -608,7 +607,7 @@ final class MembershipForms {
 			<div class="adam-payment-panel__header">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Pagamento da Quota', 'adam-membership' ); ?></p>
-					<h4><?php esc_html_e( 'Instruções de pagamento', 'adam-membership' ); ?></h4>
+					<h4><?php esc_html_e( 'InstruÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de pagamento', 'adam-membership' ); ?></h4>
 				</div>
 				<div class="adam-payment-panel__fee">
 					<span><?php esc_html_e( 'Valor da Quota', 'adam-membership' ); ?></span>
@@ -657,7 +656,7 @@ final class MembershipForms {
 		}
 
 		if ( '' === trim( (string) ( $values[ $field ] ?? '' ) ) ) {
-			$errors[] = sprintf( __( 'O campo "%s" é obrigatório.', 'adam-membership' ), $config['label'] );
+			$errors[] = sprintf( __( 'O campo "%s" ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³rio.', 'adam-membership' ), $config['label'] );
 		}
 	}
 
@@ -681,7 +680,7 @@ final class MembershipForms {
 		$email = sanitize_email( (string) ( $values[ $field ] ?? '' ) );
 
 		if ( '' !== $email && ! is_email( $email ) ) {
-			$errors[] = __( 'Introduza um endereço de email válido.', 'adam-membership' );
+			$errors[] = __( 'Introduza um endereÃƒÆ’Ã‚Â§o de email vÃƒÆ’Ã‚Â¡lido.', 'adam-membership' );
 		}
 	}
 
@@ -705,7 +704,7 @@ final class MembershipForms {
 		$value = (string) ( $values[ $field ] ?? '' );
 
 		if ( '' !== $value && ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) || false === strtotime( $value ) ) ) {
-			$errors[] = sprintf( __( 'O campo "%s" tem um formato de data inválido.', 'adam-membership' ), $config['label'] );
+			$errors[] = sprintf( __( 'O campo "%s" tem um formato de data invÃƒÆ’Ã‚Â¡lido.', 'adam-membership' ), $config['label'] );
 		}
 	}
 
@@ -720,7 +719,7 @@ final class MembershipForms {
 		$config = $this->field_config( $form, 'privacy_acceptance' );
 
 		if ( $config['enabled'] && $config['required'] && '1' !== (string) ( $values['privacy_acceptance'] ?? '' ) ) {
-			$errors[] = __( 'É necessário aceitar a política de privacidade para continuar.', 'adam-membership' );
+			$errors[] = __( 'ÃƒÆ’Ã¢â‚¬Â° necessÃƒÆ’Ã‚Â¡rio aceitar a polÃƒÆ’Ã‚Â­tica de privacidade para continuar.', 'adam-membership' );
 		}
 	}
 
@@ -746,14 +745,14 @@ final class MembershipForms {
 
 		if ( ! is_array( $file ) || UPLOAD_ERR_NO_FILE === (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
 			if ( $required ) {
-				$errors[] = sprintf( __( 'O ficheiro "%s" é obrigatório.', 'adam-membership' ), $config['label'] );
+				$errors[] = sprintf( __( 'O ficheiro "%s" ÃƒÆ’Ã‚Â© obrigatÃƒÆ’Ã‚Â³rio.', 'adam-membership' ), $config['label'] );
 			}
 
 			return '';
 		}
 
 		if ( UPLOAD_ERR_OK !== (int) ( $file['error'] ?? UPLOAD_ERR_OK ) ) {
-			$errors[] = sprintf( __( 'Não foi possível carregar o ficheiro "%s".', 'adam-membership' ), $config['label'] );
+			$errors[] = sprintf( __( 'NÃƒÆ’Ã‚Â£o foi possÃƒÆ’Ã‚Â­vel carregar o ficheiro "%s".', 'adam-membership' ), $config['label'] );
 			return '';
 		}
 
@@ -797,9 +796,27 @@ final class MembershipForms {
 			'external_association_name' => (string) $member->field( 'adam_external_association_name' ),
 			'external_member_number'    => (string) $member->field( 'adam_external_member_number' ),
 			'external_ana_number'       => (string) $member->field( 'adam_external_ana_number' ),
-			'renewal_mode'              => 'external_association' === (string) $member->field( 'adam_membership_origin' ) ? 'external_association' : 'adam_primary',
+			'renewal_mode'              => $this->member_uses_external_association( $member ) ? 'external_association' : 'adam_primary',
 			'profile_changed'           => '0',
 		);
+	}
+
+	/**
+	 * Determine whether the member currently renews through another association.
+	 *
+	 * Supports both the current source-of-truth field and older records that
+	 * still only have external association metadata populated.
+	 *
+	 * @param Member $member Member record.
+	 */
+	private function member_uses_external_association( Member $member ): bool {
+		if ( 'external_association' === (string) $member->field( 'adam_membership_origin' ) ) {
+			return true;
+		}
+
+		return '' !== trim( (string) $member->field( 'adam_external_association_name' ) )
+			|| '' !== trim( (string) $member->field( 'adam_external_member_number' ) )
+			|| '' !== trim( (string) $member->field( 'adam_external_association_proof' ) );
 	}
 
 	/**
@@ -860,8 +877,8 @@ final class MembershipForms {
 			return $this->notice_markup(
 				'success',
 				'renewal' === $form
-					? __( 'O pedido de renovação foi submetido com sucesso e está agora em análise.', 'adam-membership' )
-					: __( 'A inscrição foi submetida com sucesso. A conta ficou pendente de aprovação pela ADAM.', 'adam-membership' )
+					? __( 'O pedido de renovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o foi submetido com sucesso e estÃƒÆ’Ã‚Â¡ agora em anÃƒÆ’Ã‚Â¡lise.', 'adam-membership' )
+					: __( 'A inscriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o foi submetida com sucesso. A conta ficou pendente de aprovaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o pela ADAM.', 'adam-membership' )
 			);
 		}
 
@@ -905,7 +922,7 @@ final class MembershipForms {
 	 * @param string $fee Fee value.
 	 */
 	private function format_fee( string $fee ): string {
-		return number_format_i18n( (float) str_replace( ',', '.', $fee ), 2 ) . ' €';
+		return number_format_i18n( (float) str_replace( ',', '.', $fee ), 2 ) . ' ' . html_entity_decode( '&#8364;', ENT_QUOTES, 'UTF-8' );
 	}
 
 	/**
