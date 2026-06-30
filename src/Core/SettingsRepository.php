@@ -19,6 +19,9 @@ final class SettingsRepository {
 	private const OPTION_EMAIL_FROM_ADDRESS = 'adam_membership_email_from_address';
 	private const OPTION_ASSOCIATION_NAME   = 'adam_membership_association_name';
 	private const OPTION_ASSOCIATION_LOGO   = 'adam_membership_association_logo';
+	private const OPTION_PRIVACY_POLICY_URL = 'adam_membership_privacy_policy_url';
+	private const OPTION_COOKIE_POLICY_URL  = 'adam_membership_cookie_policy_url';
+	private const OPTION_MEMBERSHIP_TERMS_URL = 'adam_membership_membership_terms_url';
 	private const DEFAULT_EMAIL_FROM_NAME   = 'ADAM - Associação Desportiva de Airsoft do Mondego';
 	private const DEFAULT_EMAIL_FROM_ADDRESS = 'geral@airsoftmondego.pt';
 	private const DEFAULT_ASSOCIATION_NAME  = 'ADAM - Associação Desportiva de Airsoft do Mondego';
@@ -130,6 +133,42 @@ final class SettingsRepository {
 	public function save_association_settings( string $name, string $logo ): void {
 		update_option( self::OPTION_ASSOCIATION_NAME, sanitize_text_field( $name ), false );
 		update_option( self::OPTION_ASSOCIATION_LOGO, esc_url_raw( $logo ), false );
+	}
+
+	/**
+	 * Get privacy policy URL.
+	 */
+	public function privacy_policy_url(): string {
+		$url = esc_url_raw( (string) get_option( self::OPTION_PRIVACY_POLICY_URL, '' ) );
+
+		return '' !== $url ? $url : get_privacy_policy_url();
+	}
+
+	/**
+	 * Get cookie policy URL.
+	 */
+	public function cookie_policy_url(): string {
+		return esc_url_raw( (string) get_option( self::OPTION_COOKIE_POLICY_URL, '' ) );
+	}
+
+	/**
+	 * Get membership terms URL.
+	 */
+	public function membership_terms_url(): string {
+		return esc_url_raw( (string) get_option( self::OPTION_MEMBERSHIP_TERMS_URL, '' ) );
+	}
+
+	/**
+	 * Save compliance page URLs.
+	 *
+	 * @param string $privacy Privacy policy URL.
+	 * @param string $cookie Cookie policy URL.
+	 * @param string $terms Membership terms URL.
+	 */
+	public function save_compliance_pages( string $privacy, string $cookie, string $terms ): void {
+		update_option( self::OPTION_PRIVACY_POLICY_URL, esc_url_raw( $privacy ), false );
+		update_option( self::OPTION_COOKIE_POLICY_URL, esc_url_raw( $cookie ), false );
+		update_option( self::OPTION_MEMBERSHIP_TERMS_URL, esc_url_raw( $terms ), false );
 	}
 
 	/**

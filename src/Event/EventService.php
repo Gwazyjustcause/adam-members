@@ -319,6 +319,7 @@ final class EventService {
 			'price'                     => isset( $data['price'] ) ? sanitize_text_field( (string) $data['price'] ) : '',
 			'player_limit'              => max( 0, absint( $data['player_limit'] ?? $data['max_players'] ?? 0 ) ),
 			'notes'                     => isset( $data['notes'] ) ? sanitize_textarea_field( (string) $data['notes'] ) : '',
+			'image_video_notice_disabled' => ! empty( $data['image_video_notice_disabled'] ),
 			'status'                    => $status,
 			'checkin_token'             => $checkin_token,
 			'checkin_enabled'           => ! empty( $data['checkin_enabled'] ),

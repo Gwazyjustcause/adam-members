@@ -123,6 +123,10 @@ final class Event {
 		return sanitize_textarea_field( (string) ( $this->data['notes'] ?? '' ) );
 	}
 
+	public function image_video_notice_disabled(): bool {
+		return ! empty( $this->data['image_video_notice_disabled'] );
+	}
+
 	public function checkin_token(): string {
 		return sanitize_text_field( (string) ( $this->data['checkin_token'] ?? '' ) );
 	}

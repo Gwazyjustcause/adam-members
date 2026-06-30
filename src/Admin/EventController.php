@@ -185,6 +185,7 @@ final class EventController {
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descrição completa', 'adam-membership' ); ?></span><textarea name="full_description" rows="8"><?php echo esc_textarea( null !== $event ? wp_strip_all_tags( $event->full_description() ) : '' ); ?></textarea></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Notas', 'adam-membership' ); ?></span><textarea name="notes" rows="4"><?php echo esc_textarea( null !== $event ? $event->notes() : '' ); ?></textarea></label>
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Mensagem personalizada do bónus', 'adam-membership' ); ?></span><textarea name="checkin_bonus_custom_message" rows="4"><?php echo esc_textarea( null !== $event ? $event->checkin_bonus_custom_message() : '' ); ?></textarea></label>
+					<label class="adam-admin-checkbox-field"><input type="checkbox" name="image_video_notice_disabled" value="1" <?php checked( null !== $event ? $event->image_video_notice_disabled() : false ); ?>> <?php esc_html_e( 'Desativar aviso de imagem e video nesta pagina de evento', 'adam-membership' ); ?></label>
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>

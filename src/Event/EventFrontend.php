@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Event;
 
+use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
@@ -25,11 +26,13 @@ final class EventFrontend {
 	private EventService $events;
 	private MemberRepository $members;
 	private Logger $logger;
+	private SettingsRepository $settings;
 
-	public function __construct( EventService $events, MemberRepository $members, Logger $logger ) {
-		$this->events  = $events;
-		$this->members = $members;
-		$this->logger  = $logger;
+	public function __construct( EventService $events, MemberRepository $members, Logger $logger, SettingsRepository $settings ) {
+		$this->events   = $events;
+		$this->members  = $members;
+		$this->logger   = $logger;
+		$this->settings = $settings;
 	}
 
 	public function register(): void {
@@ -71,7 +74,7 @@ final class EventFrontend {
 		$logger = new \AdamMembership\Helpers\Logger();
 		$members = new MemberRepository();
 		$points  = new PointsService( new PointsRepository(), $members, new \AdamMembership\Member\HistoryRepository(), $logger );
-		$self    = new self( new EventService( new EventRepository(), $members, $logger, new \AdamMembership\Member\HistoryRepository(), $points ), $members, $logger );
+		$self    = new self( new EventService( new EventRepository(), $members, $logger, new \AdamMembership\Member\HistoryRepository(), $points ), $members, $logger, new \AdamMembership\Core\SettingsRepository() );
 		$self->register_routes();
 		flush_rewrite_rules();
 		update_option( self::REWRITE_OPTION, self::ROUTE_VERSION, false );
@@ -220,6 +223,8 @@ final class EventFrontend {
 							<p><?php echo esc_html( $event->notes() ); ?></p>
 						</div>
 					<?php endif; ?>
+
+					<?php echo wp_kses_post( $this->image_video_notice_markup( $event ) ); ?>
 
 					<div class="adam-event-registration-box">
 						<h2><?php esc_html_e( 'Inscrição', 'adam-membership' ); ?></h2>
@@ -498,6 +503,25 @@ final class EventFrontend {
 		}
 
 		return '';
+	}
+
+	private function image_video_notice_markup( Event $event ): string {
+		if ( $event->image_video_notice_disabled() ) {
+			return '';
+		}
+
+		$policy_url = $this->settings->privacy_policy_url();
+		$message    = __( 'Ao participares neste evento, reconheces que podem ser captadas imagens e vídeo para fins institucionais, promocionais e de arquivo da ADAM. Caso pretendas esclarecer a utilização da tua imagem, contacta a organização antes do início do evento.', 'adam-membership' );
+
+		if ( '' !== $policy_url ) {
+			$message .= ' ' . sprintf(
+				/* translators: %s: privacy policy URL */
+				__( 'Consulta também a <a href="%s">Política de Privacidade</a>.', 'adam-membership' ),
+				esc_url( $policy_url )
+			);
+		}
+
+		return '<section class="adam-events-media-notice" aria-label="' . esc_attr__( 'Aviso de imagem e vídeo', 'adam-membership' ) . '"><h2>' . esc_html__( 'Aviso de imagem e vídeo', 'adam-membership' ) . '</h2><p>' . wp_kses_post( $message ) . '</p></section>';
 	}
 
 	private function current_member(): ?Member {

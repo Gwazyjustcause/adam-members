@@ -687,6 +687,18 @@ final class AdminController {
 						<th scope="row"><label for="adam_association_logo"><?php esc_html_e( 'URL do logótipo da associação', 'adam-membership' ); ?></label></th>
 						<td><input type="url" id="adam_association_logo" name="association_logo" class="regular-text" value="<?php echo esc_attr( $this->settings->association_logo_url() ); ?>"></td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="adam_privacy_policy_url"><?php esc_html_e( 'URL da Politica de Privacidade', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_privacy_policy_url" name="privacy_policy_url" class="regular-text" value="<?php echo esc_attr( $this->settings->privacy_policy_url() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_cookie_policy_url"><?php esc_html_e( 'URL da Politica de Cookies', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_cookie_policy_url" name="cookie_policy_url" class="regular-text" value="<?php echo esc_attr( $this->settings->cookie_policy_url() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_membership_terms_url"><?php esc_html_e( 'URL dos Termos de Socio', 'adam-membership' ); ?></label></th>
+						<td><input type="url" id="adam_membership_terms_url" name="membership_terms_url" class="regular-text" value="<?php echo esc_attr( $this->settings->membership_terms_url() ); ?>"></td>
+					</tr>
 				</table>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar configurações', 'adam-membership' ); ?></button>
 			</form>
@@ -766,6 +778,10 @@ final class AdminController {
 		$association_name = isset( $_POST['association_name'] ) ? sanitize_text_field( wp_unslash( $_POST['association_name'] ) ) : '';
 		$association_logo = isset( $_POST['association_logo'] ) ? esc_url_raw( wp_unslash( $_POST['association_logo'] ) ) : '';
 		$this->settings->save_association_settings( $association_name, $association_logo );
+		$privacy_policy_url = isset( $_POST['privacy_policy_url'] ) ? esc_url_raw( wp_unslash( $_POST['privacy_policy_url'] ) ) : '';
+		$cookie_policy_url  = isset( $_POST['cookie_policy_url'] ) ? esc_url_raw( wp_unslash( $_POST['cookie_policy_url'] ) ) : '';
+		$membership_terms_url = isset( $_POST['membership_terms_url'] ) ? esc_url_raw( wp_unslash( $_POST['membership_terms_url'] ) ) : '';
+		$this->settings->save_compliance_pages( $privacy_policy_url, $cookie_policy_url, $membership_terms_url );
 
 		wp_safe_redirect(
 			add_query_arg(

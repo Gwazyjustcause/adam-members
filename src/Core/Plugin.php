@@ -46,6 +46,7 @@ use AdamMembership\Member\RenewalService;
 use AdamMembership\Member\RecognitionService;
 use AdamMembership\Points\PointsRepository;
 use AdamMembership\Points\PointsService;
+use AdamMembership\Privacy\ConsentManager;
 use AdamMembership\Reward\RewardRepository;
 use AdamMembership\Reward\RewardService;
 
@@ -128,7 +129,8 @@ final class Plugin {
 		$email_confirmation = new EmailConfirmation( $email_change );
 		$registration       = new UserRegistration( $config, $logger, $history );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
-		$events_frontend    = new EventFrontend( $events, $members, $logger );
+		$events_frontend    = new EventFrontend( $events, $members, $logger, $settings );
+		$consent            = new ConsentManager( $settings );
 		$admin              = new AdminController(
 			$members,
 			$approval,
@@ -167,6 +169,7 @@ final class Plugin {
 		$history->register();
 		$documents->register();
 		$events_frontend->register();
+		$consent->register();
 
 		$member_area->register();
 		$password_recovery->register();
