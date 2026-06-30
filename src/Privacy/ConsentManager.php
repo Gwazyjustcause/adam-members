@@ -99,7 +99,7 @@ final class ConsentManager {
 	}
 
 	/**
-	 * Render banner, modal, and footer preferences link.
+	 * Render banner, preferences sheet, and footer preferences link.
 	 */
 	public function render_markup(): void {
 		if ( is_admin() ) {
@@ -118,6 +118,7 @@ final class ConsentManager {
 				role="region"
 				aria-label="<?php esc_attr_e( 'Preferências de cookies', 'adam-membership' ); ?>"
 				data-adam-cookie-banner
+				hidden
 			>
 				<div class="adam-cookie-banner__content">
 					<div>
@@ -141,15 +142,14 @@ final class ConsentManager {
 					</div>
 					<div class="adam-cookie-banner__actions">
 						<button type="button" class="adam-cookie-button is-secondary" data-adam-cookie-action="reject"><?php esc_html_e( 'Rejeitar não essenciais', 'adam-membership' ); ?></button>
-						<button type="button" class="adam-cookie-button is-ghost" data-adam-cookie-action="customize" aria-haspopup="dialog"><?php esc_html_e( 'Personalizar', 'adam-membership' ); ?></button>
+						<button type="button" class="adam-cookie-button is-ghost" data-adam-cookie-action="customize" aria-expanded="false" aria-controls="adam-cookie-preferences"><?php esc_html_e( 'Personalizar', 'adam-membership' ); ?></button>
 						<button type="button" class="adam-cookie-button" data-adam-cookie-action="accept"><?php esc_html_e( 'Aceitar tudo', 'adam-membership' ); ?></button>
 					</div>
 				</div>
 			</div>
 
 			<div class="adam-cookie-modal" data-adam-cookie-modal hidden>
-				<div class="adam-cookie-modal__backdrop" data-adam-cookie-close></div>
-				<div class="adam-cookie-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="adam-cookie-modal-title">
+				<div class="adam-cookie-modal__dialog" id="adam-cookie-preferences" role="dialog" aria-modal="false" aria-labelledby="adam-cookie-modal-title">
 					<div class="adam-cookie-modal__header">
 						<div>
 							<p class="adam-cookie-modal__eyebrow"><?php esc_html_e( 'Cookies ADAM', 'adam-membership' ); ?></p>

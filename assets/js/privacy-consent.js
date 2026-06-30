@@ -9,7 +9,8 @@
 	}
 
 	var banner = root.querySelector("[data-adam-cookie-banner]");
-	var modal = root.querySelector("[data-adam-cookie-modal]");
+	var panel = root.querySelector("[data-adam-cookie-modal]");
+	var customizeButtons = root.querySelectorAll("[data-adam-cookie-action='customize']");
 	var state = Object.assign(
 		{
 			has_decision: false,
@@ -20,9 +21,10 @@
 		},
 		config.state || {}
 	);
+	var storageKey = (config.cookieName || "adam_cookie_consent") + "_state";
 	var lastTrigger = null;
 
-	function setCookie(value) {
+	function writeCookie(value) {
 		var secure = window.location.protocol === "https:" ? "; Secure" : "";
 
 		document.cookie =
@@ -35,58 +37,89 @@
 			secure;
 	}
 
+	function writeStorage(value) {
+		try {
+			window.localStorage.setItem(storageKey, JSON.stringify(value));
+		} catch (error) {
+			return;
+		}
+	}
+
+	function readStorage() {
+		try {
+			var stored = window.localStorage.getItem(storageKey);
+
+			return stored ? JSON.parse(stored) : null;
+		} catch (error) {
+			return null;
+		}
+	}
+
 	function syncInputs() {
 		root.querySelectorAll("[data-adam-cookie-category]").forEach(function (input) {
 			var category = input.getAttribute("data-adam-cookie-category");
 
-			if (!category) {
-				return;
+			if (category) {
+				input.checked = Boolean(state[category]);
 			}
+		});
+	}
 
-			input.checked = Boolean(state[category]);
+	function syncCustomizeButtons(expanded) {
+		customizeButtons.forEach(function (button) {
+			button.setAttribute("aria-expanded", expanded ? "true" : "false");
 		});
 	}
 
 	function hideBanner() {
-		if (banner) {
-			banner.classList.add("is-hidden");
+		if (!banner) {
+			return;
 		}
+
+		banner.hidden = true;
+		banner.classList.add("is-hidden");
+		root.classList.remove("is-banner-visible");
 	}
 
 	function showBanner() {
-		if (banner) {
-			banner.classList.remove("is-hidden");
-		}
-	}
-
-	function openModal(trigger) {
-		lastTrigger = trigger || document.activeElement;
-		syncInputs();
-
-		if (!modal) {
+		if (!banner) {
 			return;
 		}
 
-		modal.hidden = false;
-		document.documentElement.classList.add("adam-cookie-modal-open");
-
-		var firstControl = modal.querySelector("[data-adam-cookie-category], [data-adam-cookie-action='save']");
-
-		if (firstControl) {
-			firstControl.focus();
-		}
+		banner.hidden = false;
+		banner.classList.remove("is-hidden");
+		root.classList.add("is-banner-visible");
 	}
 
-	function closeModal() {
-		if (!modal) {
+	function closePanel() {
+		if (!panel) {
 			return;
 		}
 
-		modal.hidden = true;
-		document.documentElement.classList.remove("adam-cookie-modal-open");
+		panel.hidden = true;
+		root.classList.remove("is-panel-open");
+		syncCustomizeButtons(false);
 
 		if (lastTrigger && typeof lastTrigger.focus === "function") {
 			lastTrigger.focus();
+		}
+	}
+
+	function openPanel(trigger) {
+		if (!panel) {
+			return;
+		}
+
+		lastTrigger = trigger || document.activeElement;
+		syncInputs();
+		panel.hidden = false;
+		root.classList.add("is-panel-open");
+		syncCustomizeButtons(true);
+
+		var firstControl = panel.querySelector("[data-adam-cookie-category]");
+
+		if (firstControl) {
+			firstControl.focus();
 		}
 	}
 
@@ -120,29 +153,18 @@
 			necessary: true,
 		});
 
-		setCookie(state);
+		writeCookie(state);
+		writeStorage(state);
 		hideBanner();
-		closeModal();
+		closePanel();
 		activateDeferredScripts();
 		window.adamCookieConsent = window.adamCookieConsent || {};
 		window.adamCookieConsent.state = state;
-		window.dispatchEvent(new CustomEvent("adam:cookie-consent-updated", { detail: state }));
-	}
-
-	function acceptAll() {
-		persist({
-			preferences: true,
-			analytics: true,
-			marketing: true,
-		});
-	}
-
-	function rejectNonEssential() {
-		persist({
-			preferences: false,
-			analytics: false,
-			marketing: false,
-		});
+		window.dispatchEvent(
+			new CustomEvent("adam:cookie-consent-updated", {
+				detail: state,
+			})
+		);
 	}
 
 	function saveSelection() {
@@ -157,6 +179,29 @@
 		});
 	}
 
+	function initializeState() {
+		var stored = readStorage();
+
+		if (stored && typeof stored === "object") {
+			state = Object.assign({}, state, stored);
+		}
+
+		window.adamCookieConsent = window.adamCookieConsent || {};
+		window.adamCookieConsent.state = state;
+		syncInputs();
+		syncCustomizeButtons(false);
+
+		if (state.has_decision) {
+			hideBanner();
+			closePanel();
+			activateDeferredScripts();
+			return;
+		}
+
+		showBanner();
+		closePanel();
+	}
+
 	root.addEventListener("click", function (event) {
 		var target = event.target;
 
@@ -164,29 +209,39 @@
 			return;
 		}
 
-		if (target.hasAttribute("data-adam-cookie-close")) {
-			closeModal();
+		var button = target.closest("[data-adam-cookie-action], [data-adam-cookie-close]");
+
+		if (!button || !root.contains(button)) {
 			return;
 		}
 
-		var action = target.getAttribute("data-adam-cookie-action");
-
-		if (!action) {
+		if (button.hasAttribute("data-adam-cookie-close")) {
+			closePanel();
 			return;
 		}
+
+		var action = button.getAttribute("data-adam-cookie-action");
 
 		if (action === "accept") {
-			acceptAll();
+			persist({
+				preferences: true,
+				analytics: true,
+				marketing: true,
+			});
 			return;
 		}
 
 		if (action === "reject") {
-			rejectNonEssential();
+			persist({
+				preferences: false,
+				analytics: false,
+				marketing: false,
+			});
 			return;
 		}
 
 		if (action === "customize" || action === "reopen") {
-			openModal(target);
+			openPanel(button);
 			return;
 		}
 
@@ -196,17 +251,10 @@
 	});
 
 	document.addEventListener("keydown", function (event) {
-		if (event.key === "Escape" && modal && !modal.hidden) {
-			closeModal();
+		if (event.key === "Escape" && panel && !panel.hidden) {
+			closePanel();
 		}
 	});
 
-	syncInputs();
-
-	if (!state.has_decision) {
-		showBanner();
-	} else {
-		hideBanner();
-		activateDeferredScripts();
-	}
+	initializeState();
 })();
