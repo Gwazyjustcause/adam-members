@@ -13,21 +13,21 @@ namespace AdamMembership\Core;
  * Reads and writes plugin settings.
  */
 final class SettingsRepository {
-	private const OPTION_LAST_MEMBER_NUMBER = 'adam_membership_last_member_number';
-	private const OPTION_REGISTRATION_PAGE_URL = 'adam_membership_registration_page_url';
-	private const OPTION_RENEWAL_PAGE_URL   = 'adam_membership_renewal_page_url';
-	private const OPTION_EMAIL_FROM_NAME    = 'adam_membership_email_from_name';
-	private const OPTION_EMAIL_FROM_ADDRESS = 'adam_membership_email_from_address';
-	private const OPTION_ASSOCIATION_NAME   = 'adam_membership_association_name';
-	private const OPTION_ASSOCIATION_LOGO   = 'adam_membership_association_logo';
-	private const OPTION_PRIVACY_POLICY_URL = 'adam_membership_privacy_policy_url';
-	private const OPTION_COOKIE_POLICY_URL  = 'adam_membership_cookie_policy_url';
-	private const OPTION_MEMBERSHIP_TERMS_URL = 'adam_membership_membership_terms_url';
-	private const OPTION_MEMBERSHIP_FORM_SETTINGS = 'adam_membership_form_settings';
-	private const DEFAULT_EMAIL_FROM_NAME   = 'ADAM - Associação Desportiva de Airsoft do Mondego';
-	private const DEFAULT_EMAIL_FROM_ADDRESS = 'geral@airsoftmondego.pt';
-	private const DEFAULT_ASSOCIATION_NAME  = 'ADAM - Associação Desportiva de Airsoft do Mondego';
-	private const DEFAULT_ASSOCIATION_LOGO  = 'https://airsoftmondego.pt/wp-content/uploads/2026/06/ADAM.png';
+	private const OPTION_LAST_MEMBER_NUMBER        = 'adam_membership_last_member_number';
+	private const OPTION_REGISTRATION_PAGE_URL     = 'adam_membership_registration_page_url';
+	private const OPTION_RENEWAL_PAGE_URL          = 'adam_membership_renewal_page_url';
+	private const OPTION_EMAIL_FROM_NAME           = 'adam_membership_email_from_name';
+	private const OPTION_EMAIL_FROM_ADDRESS        = 'adam_membership_email_from_address';
+	private const OPTION_ASSOCIATION_NAME          = 'adam_membership_association_name';
+	private const OPTION_ASSOCIATION_LOGO          = 'adam_membership_association_logo';
+	private const OPTION_PRIVACY_POLICY_URL        = 'adam_membership_privacy_policy_url';
+	private const OPTION_COOKIE_POLICY_URL         = 'adam_membership_cookie_policy_url';
+	private const OPTION_MEMBERSHIP_TERMS_URL      = 'adam_membership_membership_terms_url';
+	private const OPTION_MEMBERSHIP_FORM_SETTINGS  = 'adam_membership_form_settings';
+	private const DEFAULT_EMAIL_FROM_NAME          = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
+	private const DEFAULT_EMAIL_FROM_ADDRESS       = 'geral@airsoftmondego.pt';
+	private const DEFAULT_ASSOCIATION_NAME         = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
+	private const DEFAULT_ASSOCIATION_LOGO         = 'https://airsoftmondego.pt/wp-content/uploads/2026/06/ADAM.png';
 
 	/**
 	 * Get the last assigned numeric member number.
@@ -199,9 +199,11 @@ final class SettingsRepository {
 	public function membership_form_settings(): array {
 		$stored = get_option( self::OPTION_MEMBERSHIP_FORM_SETTINGS, array() );
 
-		return $this->merge_membership_form_settings(
+		return $this->normalize_membership_form_settings(
+			$this->merge_membership_form_settings(
 			$this->default_membership_form_settings(),
 			is_array( $stored ) ? $stored : array()
+			)
 		);
 	}
 
@@ -261,13 +263,13 @@ final class SettingsRepository {
 			'payment' => array(
 				'mbway'        => '',
 				'iban'         => '',
-				'instructions' => 'Envie o comprovativo de pagamento com o formulário.',
+				'instructions' => "Envie o comprovativo de pagamento com o formul\u{00E1}rio.",
 			),
 			'legal' => array(
-				'registration_privacy_text' => 'Li e aceito a Política de Privacidade da ADAM.',
-				'renewal_privacy_text'      => 'Li e aceito a Política de Privacidade da ADAM.',
-				'registration_help'         => 'Preencha todos os campos obrigatórios e anexe os comprovativos necessários.',
-				'renewal_help'              => 'Confirme os dados da sua renovação e anexe o comprovativo de pagamento.',
+				'registration_privacy_text' => "Li e aceito a Pol\u{00ED}tica de Privacidade da ADAM.",
+				'renewal_privacy_text'      => "Li e aceito a Pol\u{00ED}tica de Privacidade da ADAM.",
+				'registration_help'         => "Preencha todos os campos obrigat\u{00F3}rios e anexe os comprovativos necess\u{00E1}rios.",
+				'renewal_help'              => "Confirme os dados da sua renova\u{00E7}\u{00E3}o e anexe o comprovativo de pagamento.",
 			),
 			'registration_fields' => array(
 				'full_name' => array(
@@ -283,7 +285,7 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'citizen_card' => array(
-					'label'    => 'BI / Cartão de Cidadão',
+					'label'    => "BI / Cart\u{00E3}o de Cidad\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
@@ -301,7 +303,7 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'phone' => array(
-					'label'    => 'Número de Telemóvel',
+					'label'    => "N\u{00FA}mero de Telem\u{00F3}vel",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
@@ -325,19 +327,19 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'municipality' => array(
-					'label'    => 'Município',
+					'label'    => "Munic\u{00ED}pio",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'postcode' => array(
-					'label'    => 'ZIP / Código Postal',
+					'label'    => "ZIP / C\u{00F3}digo Postal",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'country' => array(
-					'label'    => 'País',
+					'label'    => "Pa\u{00ED}s",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
@@ -361,39 +363,39 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'privacy_acceptance' => array(
-					'label'    => 'Aceitação da Política de Privacidade',
+					'label'    => "Aceita\u{00E7}\u{00E3}o da Pol\u{00ED}tica de Privacidade",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_association_name' => array(
-					'label'    => 'Nome da Associacao',
+					'label'    => "Nome da Associa\u{00E7}\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_member_number' => array(
-					'label'    => 'Numero de Socio na Associacao',
+					'label'    => "N\u{00FA}mero de S\u{00F3}cio na Associa\u{00E7}\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_ana_number' => array(
-					'label'    => 'Número ANA (opcional)',
+					'label'    => "N\u{00FA}mero ANA (opcional)",
 					'help'     => '',
-					'enabled'  => true,
+					'enabled'  => false,
 					'required' => false,
 				),
 				'external_association_proof' => array(
-					'label'    => 'Comprovativo de Associacao',
-					'help'     => 'Pode enviar, por exemplo, cartao de socio, declaracao emitida pela associacao ou outro documento comprovativo.',
+					'label'    => "Comprovativo de Associa\u{00E7}\u{00E3}o",
+					'help'     => "Pode enviar, por exemplo, cart\u{00E3}o de s\u{00F3}cio, declara\u{00E7}\u{00E3}o emitida pela associa\u{00E7}\u{00E3}o ou outro documento comprovativo.",
 					'enabled'  => true,
 					'required' => true,
 				),
 			),
 			'renewal_fields' => array(
 				'phone' => array(
-					'label'    => 'Telemóvel',
+					'label'    => "Telem\u{00F3}vel",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
@@ -417,19 +419,19 @@ final class SettingsRepository {
 					'required' => false,
 				),
 				'municipality' => array(
-					'label'    => 'Município',
+					'label'    => "Munic\u{00ED}pio",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
 				),
 				'postcode' => array(
-					'label'    => 'ZIP / Código Postal',
+					'label'    => "ZIP / C\u{00F3}digo Postal",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
 				),
 				'country' => array(
-					'label'    => 'País',
+					'label'    => "Pa\u{00ED}s",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
@@ -441,32 +443,32 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'privacy_acceptance' => array(
-					'label'    => 'Aceitação da Política de Privacidade',
+					'label'    => "Aceita\u{00E7}\u{00E3}o da Pol\u{00ED}tica de Privacidade",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_association_name' => array(
-					'label'    => 'Nome da Associacao',
+					'label'    => "Nome da Associa\u{00E7}\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_member_number' => array(
-					'label'    => 'Numero de Socio na Associacao',
+					'label'    => "N\u{00FA}mero de S\u{00F3}cio na Associa\u{00E7}\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
 				),
 				'external_ana_number' => array(
-					'label'    => 'Número ANA',
+					'label'    => "N\u{00FA}mero ANA",
 					'help'     => '',
-					'enabled'  => true,
+					'enabled'  => false,
 					'required' => false,
 				),
 				'external_association_proof' => array(
-					'label'    => 'Comprovativo de Associacao',
-					'help'     => 'Pode enviar, por exemplo, cartao de socio, declaracao emitida pela associacao ou outro documento comprovativo.',
+					'label'    => "Comprovativo de Associa\u{00E7}\u{00E3}o",
+					'help'     => "Pode enviar, por exemplo, cart\u{00E3}o de s\u{00F3}cio, declara\u{00E7}\u{00E3}o emitida pela associa\u{00E7}\u{00E3}o ou outro documento comprovativo.",
 					'enabled'  => true,
 					'required' => true,
 				),
@@ -495,6 +497,27 @@ final class SettingsRepository {
 	}
 
 	/**
+	 * Normalize legacy mojibake in stored form settings.
+	 *
+	 * @param array<string, mixed> $settings Settings array.
+	 * @return array<string, mixed>
+	 */
+	private function normalize_membership_form_settings( array $settings ): array {
+		foreach ( $settings as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$settings[ $key ] = $this->normalize_membership_form_settings( $value );
+				continue;
+			}
+
+			if ( is_string( $value ) ) {
+				$settings[ $key ] = $this->normalize_legacy_text( $value );
+			}
+		}
+
+		return $settings;
+	}
+
+	/**
 	 * Sanitize field configuration arrays.
 	 *
 	 * @param array<string, mixed> $input Input field settings.
@@ -514,6 +537,43 @@ final class SettingsRepository {
 		}
 
 		return $clean;
+	}
+
+	/**
+	 * Repair common legacy mojibake sequences from older form settings.
+	 *
+	 * @param string $value Raw text.
+	 */
+	private function normalize_legacy_text( string $value ): string {
+		if ( ! str_contains( $value, "\u{00C3}" ) && ! str_contains( $value, "\u{00C2}" ) && ! str_contains( $value, "\u{FFFD}" ) ) {
+			return $value;
+		}
+
+		return strtr(
+			$value,
+			array(
+				"\u{00C3}\u{00A1}" => "\u{00E1}",
+				"\u{00C3}\u{00A0}" => "\u{00E0}",
+				"\u{00C3}\u{00A2}" => "\u{00E2}",
+				"\u{00C3}\u{00A3}" => "\u{00E3}",
+				"\u{00C3}\u{00A9}" => "\u{00E9}",
+				"\u{00C3}\u{00AA}" => "\u{00EA}",
+				"\u{00C3}\u{00AD}" => "\u{00ED}",
+				"\u{00C3}\u{00B3}" => "\u{00F3}",
+				"\u{00C3}\u{00B4}" => "\u{00F4}",
+				"\u{00C3}\u{00B5}" => "\u{00F5}",
+				"\u{00C3}\u{00BA}" => "\u{00FA}",
+				"\u{00C3}\u{00A7}" => "\u{00E7}",
+				"\u{00C3}\u{0081}" => "\u{00C1}",
+				"\u{00C3}\u{0089}" => "\u{00C9}",
+				"\u{00C3}\u{0093}" => "\u{00D3}",
+				"\u{00C3}\u{009A}" => "\u{00DA}",
+				"\u{00C3}\u{0087}" => "\u{00C7}",
+				"\u{00C2}\u{00BA}" => "\u{00BA}",
+				"\u{00C2}\u{00AA}" => "\u{00AA}",
+				"\u{FFFD}"         => '',
+			)
+		);
 	}
 
 	/**
