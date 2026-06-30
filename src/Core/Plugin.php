@@ -22,6 +22,8 @@ use AdamMembership\Admin\AdminController;
 use AdamMembership\Document\DocumentRepository;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Emails\EmailService;
+use AdamMembership\Form\MembershipForms;
+use AdamMembership\Form\RegistrationService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
@@ -121,13 +123,15 @@ final class Plugin {
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics );
 		$config             = new RegistrationFormConfig();
+		$registration_service = new RegistrationService( $logger, $history );
 		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $recognition );
+		$membership_forms   = new MembershipForms( $settings, $members, $registration_service, $renewals );
 		$account            = new Account( $email, $members, $history );
 		$password_recovery  = new PasswordRecovery( $email, $members, $history );
 		$password_reset     = new PasswordReset( $members, $history );
 		$email_change       = new EmailChangeConfirmation( $members, $history );
 		$email_confirmation = new EmailConfirmation( $email_change );
-		$registration       = new UserRegistration( $config, $logger, $history );
+		$registration       = new UserRegistration( $config, $logger, $registration_service );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
 		$events_frontend    = new EventFrontend( $events, $members, $logger, $settings );
 		$consent            = new ConsentManager( $settings );
@@ -172,6 +176,7 @@ final class Plugin {
 		$consent->register();
 
 		$member_area->register();
+		$membership_forms->register();
 		$password_recovery->register();
 		$password_reset->register();
 		$account->register();

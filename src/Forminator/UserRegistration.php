@@ -9,10 +9,8 @@ declare(strict_types=1);
 
 namespace AdamMembership\Forminator;
 
+use AdamMembership\Form\RegistrationService;
 use AdamMembership\Helpers\Logger;
-use AdamMembership\Member\Member;
-use AdamMembership\Member\HistoryService;
-use WP_Error;
 
 /**
  * Creates WordPress users and initializes member records from approved Forminator submissions.
@@ -31,25 +29,19 @@ final class UserRegistration {
 	 * @var Logger
 	 */
 	private Logger $logger;
-
-	/**
-	 * Member history service.
-	 *
-	 * @var HistoryService
-	 */
-	private HistoryService $history;
+	private RegistrationService $registration;
 
 	/**
 	 * Create the registration service.
 	 *
 	 * @param RegistrationFormConfig $config  Registration form configuration.
 	 * @param Logger                 $logger  Logger helper.
-	 * @param HistoryService         $history Member history service.
+	 * @param RegistrationService    $registration Native registration service.
 	 */
-	public function __construct( RegistrationFormConfig $config, Logger $logger, HistoryService $history ) {
-		$this->config  = $config;
-		$this->logger  = $logger;
-		$this->history = $history;
+	public function __construct( RegistrationFormConfig $config, Logger $logger, RegistrationService $registration ) {
+		$this->config       = $config;
+		$this->logger       = $logger;
+		$this->registration = $registration;
 	}
 
 	/**
@@ -96,76 +88,41 @@ final class UserRegistration {
 			return;
 		}
 
-		$user_id = $this->create_user( $submission, $email );
+		$result = $this->registration->register( $this->build_payload( $submission, $email ), absint( $entry_id ) );
 
-		if ( is_wp_error( $user_id ) ) {
+		if ( is_wp_error( $result ) ) {
 			$this->logger->error(
 				'Registration failed during WordPress user creation.',
 				array(
 					'email_hash' => wp_hash( $email ),
-					'error'      => $user_id->get_error_message(),
+					'error'      => $result->get_error_message(),
 				)
 			);
 			return;
 		}
-
-		$this->logger->info( 'User created.', array( 'user_id' => $user_id ) );
-
-		wp_new_user_notification( (int) $user_id, null, 'user' );
-
-		$member = new Member( (int) $user_id );
-		$member->initialize( $this->build_member_data( $submission ) );
-
-		$this->logger->info( 'Member initialized.', array( 'user_id' => $user_id ) );
-		$this->history->registration_submitted( $member, absint( $entry_id ) );
 	}
 
 	/**
-	 * Create a WordPress visitor user from submitted data.
+	 * Build a normalized registration payload.
 	 *
 	 * @param SubmissionData $submission Submitted registration data.
 	 * @param string         $email      Submitted email address.
-	 * @return int|WP_Error
-	 */
-	private function create_user( SubmissionData $submission, string $email ): int|WP_Error {
-		$first_name   = $submission->get_string( 'first_name' );
-		$last_name    = $submission->get_string( 'last_name' );
-		$display_name = $this->build_display_name( $first_name, $last_name, $email );
-
-		return wp_insert_user(
-			array(
-				'user_login'   => $email,
-				'user_email'   => $email,
-				'user_pass'    => wp_generate_password( 32, true, true ),
-				'role'         => 'subscriber',
-				'first_name'   => $first_name,
-				'last_name'    => $last_name,
-				'display_name' => $display_name,
-				'nickname'     => $display_name,
-			)
-		);
-	}
-
-	/**
-	 * Build member data from submitted registration values.
-	 *
-	 * @param SubmissionData $submission Submitted registration data.
 	 * @return array<string, mixed>
 	 */
-	private function build_member_data( SubmissionData $submission ): array {
+	private function build_payload( SubmissionData $submission, string $email ): array {
 		return array(
-			'estado'          => Member::STATUS_PENDING,
-			'numero_socio'    => '',
-			'data_adesao'     => '',
-			'validade_quota'  => '',
-			'telefone'        => $submission->get_string( 'phone' ),
-			'nif'             => $submission->get_string( 'nif' ),
-			'cartao_cidadao'  => $submission->get_string( 'citizen_card' ),
-			'data_nascimento' => $submission->get_string( 'birth_date' ),
-			'morada'          => $submission->get_string( 'address' ),
-			'equipa'          => $submission->get_string( 'team' ),
-			'profile_photo'   => $submission->get( 'profile_photo' ),
-			'payment_receipt' => $submission->get( 'payment_receipt' ),
+			'email'             => $email,
+			'full_name'         => $this->build_display_name( $submission->get_string( 'first_name' ), $submission->get_string( 'last_name' ), $email ),
+			'phone'             => $submission->get_string( 'phone' ),
+			'nif'               => $submission->get_string( 'nif' ),
+			'citizen_card'      => $submission->get_string( 'citizen_card' ),
+			'birth_date'        => $submission->get_string( 'birth_date' ),
+			'address_line_1'    => $submission->get_string( 'address' ),
+			'team'              => $submission->get_string( 'team' ),
+			'profile_photo'     => $submission->get( 'profile_photo' ),
+			'payment_receipt'   => $submission->get( 'payment_receipt' ),
+			'membership_mode'   => 'adam_primary',
+			'membership_fee'    => '',
 		);
 	}
 

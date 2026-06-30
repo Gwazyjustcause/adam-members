@@ -50,12 +50,25 @@ final class RenewalService {
 			return new WP_Error( 'adam_membership_renewal_member_not_found', __( 'Sócio da renovação não encontrado.', 'adam-membership' ) );
 		}
 
+		return $this->submit( $member, $this->submitted_profile_data( $field_data ), $this->proof_of_payment( $field_data ), $entry_id );
+	}
+
+	/**
+	 * Create a renewal request from native or normalized form data.
+	 *
+	 * @param Member               $member Member.
+	 * @param array<string, mixed> $submitted_data Submitted profile and renewal data.
+	 * @param mixed                $proof_of_payment Proof of payment reference.
+	 * @param int                  $entry_id Optional source entry ID.
+	 * @return RenewalRequest|WP_Error
+	 */
+	public function submit( Member $member, array $submitted_data, mixed $proof_of_payment, int $entry_id = 0 ): RenewalRequest|WP_Error {
 		if ( array() !== $this->renewals->pending_for_user( $member->user_id() ) ) {
 			return new WP_Error( 'adam_membership_renewal_already_pending', __( 'Já existe um pedido de renovação pendente de revisão.', 'adam-membership' ) );
 		}
 
-		$submitted_data = $this->submitted_profile_data( $field_data );
-		$request        = $this->renewals->create(
+		$normalized_data = $this->sanitize_submitted_data( $submitted_data );
+		$request         = $this->renewals->create(
 			array(
 				'user_id'              => $member->user_id(),
 				'member_id'            => $member->user_id(),
@@ -63,8 +76,8 @@ final class RenewalService {
 				'submission_id'        => $entry_id,
 				'submitted_at'         => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
 				'current_quota_expiry' => (string) $member->field( 'validade_quota' ),
-				'proof_of_payment'     => $this->proof_of_payment( $field_data ),
-				'submitted_data'       => $submitted_data,
+				'proof_of_payment'     => $proof_of_payment,
+				'submitted_data'       => $normalized_data,
 			)
 		);
 
@@ -330,6 +343,36 @@ final class RenewalService {
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Sanitize submitted renewal fields.
+	 *
+	 * @param array<string, mixed> $submitted_data Submitted data.
+	 * @return array<string, string>
+	 */
+	private function sanitize_submitted_data( array $submitted_data ): array {
+		$clean = array();
+
+		foreach ( $submitted_data as $field => $value ) {
+			$field = sanitize_key( (string) $field );
+
+			if ( '' === $field ) {
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$value = implode( ' ', array_filter( array_map( 'strval', $value ) ) );
+			}
+
+			if ( ! is_scalar( $value ) ) {
+				continue;
+			}
+
+			$clean[ $field ] = sanitize_text_field( (string) $value );
+		}
+
+		return $clean;
 	}
 
 	/**
