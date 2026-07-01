@@ -1048,6 +1048,42 @@
 	font-size: 16px;
 }
 
+.adam-reward-editor__accordion-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--adam-admin-ink);
+	font-size: 16px;
+	font-weight: 800;
+	text-align: left;
+	cursor: pointer;
+}
+
+.adam-reward-editor__accordion-toggle::after {
+	content: "+";
+	color: var(--adam-admin-muted);
+	font-size: 18px;
+	line-height: 1;
+}
+
+.adam-reward-editor__section.is-open .adam-reward-editor__accordion-toggle::after {
+	content: "-";
+}
+
+.adam-reward-editor__accordion-body {
+	display: none;
+	margin-top: 14px;
+}
+
+.adam-reward-editor__section.is-open .adam-reward-editor__accordion-body {
+	display: grid;
+	gap: 14px;
+}
+
 .adam-reward-editor__section p {
 	margin: 0;
 	color: var(--adam-admin-muted);
@@ -1281,13 +1317,14 @@
 	position: relative;
 	z-index: 2;
 	display: grid;
-	gap: 14px;
+	gap: var(--adam-reward-card-content-gap, 14px);
 }
 
 .adam-reward-card__meta {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
+	justify-content: var(--adam-reward-card-meta-align, space-between);
 }
 
 .adam-reward-card__body h4,
@@ -1303,17 +1340,21 @@
 	font-weight: 900;
 	line-height: 0.95;
 	text-transform: uppercase;
+	max-width: var(--adam-reward-card-title-width, 100%);
+	text-align: var(--adam-reward-card-title-align, left);
 }
 
 .adam-reward-card__body p {
-	max-width: 420px;
+	max-width: var(--adam-reward-card-description-width, 66%);
 	color: var(--adam-reward-card-muted);
 	font-size: 1rem;
 	line-height: 1.55;
+	text-align: var(--adam-reward-card-description-align, left);
 }
 
 .adam-reward-card__stats {
 	display: flex;
+	justify-content: var(--adam-reward-card-stats-align, flex-start);
 }
 
 .adam-reward-card__stats div {
@@ -1496,16 +1537,23 @@
 	--adam-reward-card-frame-inner-width: 1px;
 	--adam-reward-card-frame-inner-color: rgba(255, 255, 255, 0.22);
 	--adam-reward-card-frame-corner: 0px;
+	--adam-reward-card-frame-inset: 12px;
+	--adam-reward-card-content-padding: 22px;
+	--adam-reward-card-content-gap: 14px;
+	--adam-reward-card-meta-align: space-between;
+	--adam-reward-card-stats-align: flex-start;
 	--adam-reward-card-title-color: var(--adam-reward-card-text);
 	--adam-reward-card-title-size: clamp(2rem, 4vw, 3.2rem);
 	--adam-reward-card-title-weight: 900;
 	--adam-reward-card-title-align: left;
 	--adam-reward-card-title-shadow: 0px;
+	--adam-reward-card-title-width: 100%;
 	--adam-reward-card-description-color: var(--adam-reward-card-muted);
 	--adam-reward-card-description-size: 1rem;
 	--adam-reward-card-description-weight: 500;
 	--adam-reward-card-description-align: left;
 	--adam-reward-card-description-shadow: 0px;
+	--adam-reward-card-description-width: 66%;
 	border-color: color-mix(in srgb, var(--adam-reward-card-border) calc(var(--adam-reward-card-frame-opacity) * 100%), transparent);
 	box-shadow:
 		0 24px 46px rgba(16, 46, 27, 0.18),
@@ -1591,6 +1639,7 @@
 	font-weight: var(--adam-reward-card-title-weight);
 	text-align: var(--adam-reward-card-title-align);
 	text-shadow: 0 0 var(--adam-reward-card-title-shadow) rgba(0, 0, 0, 0.45);
+	max-width: var(--adam-reward-card-title-width);
 }
 
 .adam-reward-card__body p {
@@ -1599,6 +1648,7 @@
 	font-weight: var(--adam-reward-card-description-weight);
 	text-align: var(--adam-reward-card-description-align);
 	text-shadow: 0 0 var(--adam-reward-card-description-shadow) rgba(0, 0, 0, 0.4);
+	max-width: var(--adam-reward-card-description-width);
 }
 
 .adam-reward-card--frame-double {
@@ -1638,4 +1688,16 @@
 
 .adam-reward-card--corner-pill {
 	border-radius: 28px;
+}
+
+.adam-reward-card--editor-preview {
+	padding: var(--adam-reward-card-content-padding);
+}
+
+.adam-reward-card--editor-preview .adam-reward-card__background,
+.adam-reward-card--editor-preview .adam-reward-card__pattern,
+.adam-reward-card--editor-preview .adam-reward-card__backdrop,
+.adam-reward-card--editor-preview .adam-reward-card__art,
+.adam-reward-card--editor-preview .adam-reward-card__shapes {
+	inset: var(--adam-reward-card-frame-inset);
 }

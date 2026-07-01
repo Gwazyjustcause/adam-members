@@ -19,7 +19,34 @@
 	}
 
 	function currentSubtype() {
-		return previewStyleValue('card_subtype') || 'background';
+		var subtype = previewStyleValue('card_subtype') || 'background';
+
+		if (subtype === 'frame') {
+			return 'card_style';
+		}
+
+		return subtype;
+	}
+
+	function flexAlignment(value, allowSpaceBetween) {
+		if (value === 'center') {
+			return 'center';
+		}
+
+		if (value === 'right') {
+			return 'flex-end';
+		}
+
+		if (value === 'space-between' && allowSpaceBetween) {
+			return 'space-between';
+		}
+
+		return 'flex-start';
+	}
+
+	function setAccordionState($section, open) {
+		$section.toggleClass('is-open', open);
+		$section.find('[data-adam-accordion-toggle]').attr('aria-expanded', open ? 'true' : 'false');
 	}
 
 	function previewStyleValue(key) {
@@ -84,7 +111,7 @@
 			var value = previewStyleValue(key);
 			var suffix = '';
 
-			if (key.indexOf('opacity') !== -1) {
+			if (key.indexOf('opacity') !== -1 || key.indexOf('width') !== -1 && (key === 'title_width' || key === 'description_width')) {
 				suffix = '%';
 			}
 
@@ -185,7 +212,16 @@
 		$('[data-adam-digital-workspace], [data-adam-card-subtype-field]').toggleClass('is-hidden', !digital);
 		$('[data-adam-non-digital-notice]').toggleClass('is-hidden', digital);
 		$('[data-adam-background-controls], [data-adam-image-controls]').toggleClass('is-hidden', !digital || subtype !== 'background');
-		$('[data-adam-frame-controls]').toggleClass('is-hidden', !digital || subtype !== 'frame');
+		$('[data-adam-style-controls]').toggleClass('is-hidden', !digital || subtype !== 'card_style');
+		$('[data-adam-details-controls]').toggleClass('is-hidden', false);
+
+		if (digital && subtype === 'background') {
+			setAccordionState($('[data-adam-background-controls]').first(), true);
+		}
+
+		if (digital && subtype === 'card_style') {
+			setAccordionState($('[data-adam-style-controls]').first(), true);
+		}
 	}
 
 	function updatePreview() {
@@ -233,16 +269,23 @@
 			.css('--adam-reward-card-frame-inner-width', clamp(previewStyleValue('frame_inner_width'), 0, 10) + 'px')
 			.css('--adam-reward-card-frame-inner-color', previewStyleValue('frame_inner_color') || '#86efac')
 			.css('--adam-reward-card-frame-corner', clamp(previewStyleValue('frame_corner_accent'), 0, 40) + 'px')
+			.css('--adam-reward-card-frame-inset', clamp(previewStyleValue('frame_inset'), 0, 40) + 'px')
+			.css('--adam-reward-card-content-padding', clamp(previewStyleValue('content_padding'), 12, 40) + 'px')
+			.css('--adam-reward-card-content-gap', clamp(previewStyleValue('content_gap'), 6, 32) + 'px')
+			.css('--adam-reward-card-meta-align', flexAlignment(previewStyleValue('meta_align') || 'space-between', true))
+			.css('--adam-reward-card-stats-align', flexAlignment(previewStyleValue('stats_align') || 'left', false))
 			.css('--adam-reward-card-title-color', previewStyleValue('title_color') || '#f8fafc')
 			.css('--adam-reward-card-title-size', clamp(previewStyleValue('title_size'), 20, 76) + 'px')
 			.css('--adam-reward-card-title-weight', clamp(previewStyleValue('title_weight'), 400, 900))
 			.css('--adam-reward-card-title-align', previewStyleValue('title_align') || 'left')
 			.css('--adam-reward-card-title-shadow', clamp(previewStyleValue('title_shadow'), 0, 40) / 3 + 'px')
+			.css('--adam-reward-card-title-width', clamp(previewStyleValue('title_width'), 40, 100) + '%')
 			.css('--adam-reward-card-description-color', previewStyleValue('description_color') || 'rgba(226,232,240,0.78)')
 			.css('--adam-reward-card-description-size', clamp(previewStyleValue('description_size'), 12, 32) + 'px')
 			.css('--adam-reward-card-description-weight', clamp(previewStyleValue('description_weight'), 300, 900))
 			.css('--adam-reward-card-description-align', previewStyleValue('description_align') || 'left')
-			.css('--adam-reward-card-description-shadow', clamp(previewStyleValue('description_shadow'), 0, 32) / 3 + 'px');
+			.css('--adam-reward-card-description-shadow', clamp(previewStyleValue('description_shadow'), 0, 32) / 3 + 'px')
+			.css('--adam-reward-card-description-width', clamp(previewStyleValue('description_width'), 40, 100) + '%');
 
 		$preview
 			.removeClass(function (index, className) {
@@ -316,6 +359,10 @@
 	}
 
 	$editor.on('input change', '[data-adam-style], [data-adam-preview-name], [data-adam-preview-description], [data-adam-preview-points], [data-adam-preview-category], [data-adam-reward-type], [data-adam-reward-category]', updatePreview);
+	$editor.on('click', '[data-adam-accordion-toggle]', function () {
+		var $section = $(this).closest('.adam-reward-editor__section');
+		setAccordionState($section, !$section.hasClass('is-open'));
+	});
 	$editor.on('change', '[data-adam-preview-image-upload]', function () {
 		setPreviewImageFromFile(this);
 		updatePreview();

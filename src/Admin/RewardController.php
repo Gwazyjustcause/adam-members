@@ -248,8 +248,9 @@ final class RewardController {
 
 					<div class="adam-reward-editor__workspace adam-reward-editor__conditional-field<?php echo $is_digital_reward ? '' : ' is-hidden'; ?>" data-adam-digital-workspace>
 						<div class="adam-reward-editor__sidebar">
-							<section class="adam-reward-editor__section" data-adam-background-controls>
-								<h2><?php esc_html_e( 'Fundo do cartao', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-background-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Fundo do cartao', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<div class="adam-reward-editor__radio-group">
 									<?php $this->render_style_mode_option( 'gradient', __( 'Gradiente', 'adam-membership' ), (string) $resolved_style['background_mode'] ); ?>
 									<?php $this->render_style_mode_option( 'solid', __( 'Cor solida', 'adam-membership' ), (string) $resolved_style['background_mode'] ); ?>
@@ -265,10 +266,12 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Fim do gradiente', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[gradient_stop_tertiary]" value="<?php echo esc_attr( (string) $resolved_style['gradient_stop_tertiary'] ); ?>" data-adam-style="gradient_stop_tertiary"><small data-adam-value-for="gradient_stop_tertiary"><?php echo esc_html( (string) $resolved_style['gradient_stop_tertiary'] ); ?>%</small></label>
 									<label><span><?php esc_html_e( 'Opacidade do gradiente', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[gradient_opacity]" value="<?php echo esc_attr( (string) $resolved_style['gradient_opacity'] ); ?>" data-adam-style="gradient_opacity"><small data-adam-value-for="gradient_opacity"><?php echo esc_html( (string) $resolved_style['gradient_opacity'] ); ?>%</small></label>
 								</div>
+								</div>
 							</section>
 
-							<section class="adam-reward-editor__section" data-adam-background-controls>
-								<h2><?php esc_html_e( 'Padrao', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Padrao', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<div class="adam-reward-editor__field-grid adam-reward-editor__field-grid--compact">
 									<label><span><?php esc_html_e( 'Tipo de padrao', 'adam-membership' ); ?></span><select name="visual_style[pattern]" data-adam-style="pattern"><?php $this->render_pattern_options( (string) $resolved_style['pattern'] ); ?></select></label>
 									<label><span><?php esc_html_e( 'Cor do padrao', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[pattern_color]" value="<?php echo esc_attr( (string) $resolved_style['pattern_color'] ); ?>" data-adam-style="pattern_color"></label>
@@ -279,10 +282,12 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Espacamento', 'adam-membership' ); ?></span><input type="range" min="6" max="120" name="visual_style[pattern_spacing]" value="<?php echo esc_attr( (string) $resolved_style['pattern_spacing'] ); ?>" data-adam-style="pattern_spacing"><small data-adam-value-for="pattern_spacing"><?php echo esc_html( (string) $resolved_style['pattern_spacing'] ); ?>px</small></label>
 									<label><span><?php esc_html_e( 'Opacidade do padrao', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[pattern_opacity]" value="<?php echo esc_attr( (string) $resolved_style['pattern_opacity'] ); ?>" data-adam-style="pattern_opacity"><small data-adam-value-for="pattern_opacity"><?php echo esc_html( (string) $resolved_style['pattern_opacity'] ); ?>%</small></label>
 								</div>
+								</div>
 							</section>
 
-							<section class="adam-reward-editor__section" data-adam-background-controls data-adam-image-controls>
-								<h2><?php esc_html_e( 'Imagem e textura', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls data-adam-image-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Imagem e textura', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<label class="adam-reward-editor__media-field"><span><?php esc_html_e( 'Imagem de fundo / textura', 'adam-membership' ); ?></span><input type="url" name="visual_style[background_image_url]" value="<?php echo esc_attr( (string) $resolved_style['background_image_url'] ); ?>" data-adam-style="background_image_url"><button type="button" class="button" data-adam-media-target="input[name='visual_style[background_image_url]']"><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></button></label>
 								<div class="adam-reward-editor__field-grid adam-reward-editor__field-grid--compact">
 									<label><span><?php esc_html_e( 'Posicao da imagem de fundo', 'adam-membership' ); ?></span><select name="visual_style[background_image_position]" data-adam-style="background_image_position"><?php $this->render_gradient_origin_options( (string) $resolved_style['background_image_position'] ); ?></select></label>
@@ -290,10 +295,12 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Opacidade da imagem de fundo', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[background_image_opacity]" value="<?php echo esc_attr( (string) $resolved_style['background_image_opacity'] ); ?>" data-adam-style="background_image_opacity"><small data-adam-value-for="background_image_opacity"><?php echo esc_html( (string) $resolved_style['background_image_opacity'] ); ?>%</small></label>
 									<label><span><?php esc_html_e( 'Modo de mistura', 'adam-membership' ); ?></span><select name="visual_style[background_image_blend_mode]" data-adam-style="background_image_blend_mode"><?php $this->render_background_blend_options( (string) $resolved_style['background_image_blend_mode'] ); ?></select></label>
 								</div>
+								</div>
 							</section>
 
-							<section class="adam-reward-editor__section">
-								<h2><?php esc_html_e( 'Imagem decorativa e elementos', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-style-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Elementos decorativos', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<label><span><?php esc_html_e( 'Arte local', 'adam-membership' ); ?></span><input type="file" name="reward_image" accept=".jpg,.jpeg,.png,.webp" data-adam-preview-image-upload></label>
 								<label class="adam-reward-editor__media-field"><span><?php esc_html_e( 'Imagem decorativa', 'adam-membership' ); ?></span><input type="url" name="image_url" value="<?php echo esc_attr( $reward_image ); ?>" data-adam-preview-image><button type="button" class="button" data-adam-media-target="input[name='image_url']"><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></button></label>
 								<div class="adam-reward-editor__field-grid adam-reward-editor__field-grid--compact">
@@ -312,6 +319,7 @@ final class RewardController {
 									<?php foreach ( $resolved_style['shapes'] as $index => $shape ) : ?>
 										<?php $this->render_shape_row( (int) $index, (array) $shape ); ?>
 									<?php endforeach; ?>
+								</div>
 								</div>
 							</section>
 						</div>
@@ -355,8 +363,9 @@ final class RewardController {
 						</div>
 
 						<div class="adam-reward-editor__inspector">
-							<section class="adam-reward-editor__section">
-								<h2><?php esc_html_e( 'Texto', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-style-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Tipografia e badges', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<div class="adam-reward-editor__field-grid">
 									<label><span><?php esc_html_e( 'Cor do texto', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[text_color]" value="<?php echo esc_attr( (string) $resolved_style['text_color'] ); ?>" data-adam-style="text_color"></label>
 									<label><span><?php esc_html_e( 'Cor do texto secundario', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[muted_text_color]" value="<?php echo esc_attr( (string) $resolved_style['muted_text_color'] ); ?>" data-adam-style="muted_text_color"></label>
@@ -374,10 +383,12 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Estilo dos badges', 'adam-membership' ); ?></span><select name="visual_style[badge_style]" data-adam-style="badge_style"><?php $this->render_badge_style_options( (string) $resolved_style['badge_style'] ); ?></select></label>
 									<label><span><?php esc_html_e( 'Efeito de raridade', 'adam-membership' ); ?></span><select name="visual_style[rarity_effect]" data-adam-style="rarity_effect"><?php $this->render_rarity_effect_options( (string) $resolved_style['rarity_effect'] ); ?></select></label>
 								</div>
+								</div>
 							</section>
 
-							<section class="adam-reward-editor__section" data-adam-frame-controls>
-								<h2><?php esc_html_e( 'Moldura', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-style-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Estilo do cartao', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<div class="adam-reward-editor__field-grid">
 									<label><span><?php esc_html_e( 'Cor da moldura', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[border_color]" value="<?php echo esc_attr( (string) $resolved_style['border_color'] ); ?>" data-adam-style="border_color"></label>
 									<label><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="1" max="16" name="visual_style[border_width]" value="<?php echo esc_attr( (string) $resolved_style['border_width'] ); ?>" data-adam-style="border_width"><small data-adam-value-for="border_width"><?php echo esc_html( (string) $resolved_style['border_width'] ); ?>px</small></label>
@@ -390,16 +401,26 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Cor da linha interna', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_inner_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_color'] ); ?>" data-adam-style="frame_inner_color"></label>
 									<label><span><?php esc_html_e( 'Estilo dos cantos', 'adam-membership' ); ?></span><select name="visual_style[frame_corner_style]" data-adam-style="frame_corner_style"><?php $this->render_frame_corner_options( (string) $resolved_style['frame_corner_style'] ); ?></select></label>
 									<label><span><?php esc_html_e( 'Detalhe dos cantos', 'adam-membership' ); ?></span><input type="range" min="0" max="40" name="visual_style[frame_corner_accent]" value="<?php echo esc_attr( (string) $resolved_style['frame_corner_accent'] ); ?>" data-adam-style="frame_corner_accent"><small data-adam-value-for="frame_corner_accent"><?php echo esc_html( (string) $resolved_style['frame_corner_accent'] ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Margem entre moldura e fundo', 'adam-membership' ); ?></span><input type="range" min="0" max="40" name="visual_style[frame_inset]" value="<?php echo esc_attr( (string) $resolved_style['frame_inset'] ); ?>" data-adam-style="frame_inset"><small data-adam-value-for="frame_inset"><?php echo esc_html( (string) $resolved_style['frame_inset'] ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Padding do conteudo', 'adam-membership' ); ?></span><input type="range" min="12" max="40" name="visual_style[content_padding]" value="<?php echo esc_attr( (string) $resolved_style['content_padding'] ); ?>" data-adam-style="content_padding"><small data-adam-value-for="content_padding"><?php echo esc_html( (string) $resolved_style['content_padding'] ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Espacamento interno', 'adam-membership' ); ?></span><input type="range" min="6" max="32" name="visual_style[content_gap]" value="<?php echo esc_attr( (string) $resolved_style['content_gap'] ); ?>" data-adam-style="content_gap"><small data-adam-value-for="content_gap"><?php echo esc_html( (string) $resolved_style['content_gap'] ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Alinhamento da faixa superior', 'adam-membership' ); ?></span><select name="visual_style[meta_align]" data-adam-style="meta_align"><?php $this->render_meta_align_options( (string) $resolved_style['meta_align'] ); ?></select></label>
+									<label><span><?php esc_html_e( 'Alinhamento do bloco de pontos', 'adam-membership' ); ?></span><select name="visual_style[stats_align]" data-adam-style="stats_align"><?php $this->render_text_align_options( (string) $resolved_style['stats_align'] ); ?></select></label>
+									<label><span><?php esc_html_e( 'Largura do titulo', 'adam-membership' ); ?></span><input type="range" min="40" max="100" name="visual_style[title_width]" value="<?php echo esc_attr( (string) $resolved_style['title_width'] ); ?>" data-adam-style="title_width"><small data-adam-value-for="title_width"><?php echo esc_html( (string) $resolved_style['title_width'] ); ?>%</small></label>
+									<label><span><?php esc_html_e( 'Largura da descricao', 'adam-membership' ); ?></span><input type="range" min="40" max="100" name="visual_style[description_width]" value="<?php echo esc_attr( (string) $resolved_style['description_width'] ); ?>" data-adam-style="description_width"><small data-adam-value-for="description_width"><?php echo esc_html( (string) $resolved_style['description_width'] ); ?>%</small></label>
+								</div>
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section">
-								<h2><?php esc_html_e( 'Detalhes da recompensa', 'adam-membership' ); ?></h2>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-details-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Detalhes da recompensa', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
 								<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Descricao', 'adam-membership' ); ?></span><textarea name="description" rows="5" data-adam-preview-description><?php echo esc_textarea( $reward_description ); ?></textarea></label>
 								<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Valor/identificador interno', 'adam-membership' ); ?></span><input type="text" name="reward_value" value="<?php echo esc_attr( null !== $reward ? $reward->reward_value() : '' ); ?>"></label>
 								<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Revelacao da recompensa misterio', 'adam-membership' ); ?></span><textarea name="mystery_reveal_text" rows="3"><?php echo esc_textarea( null !== $reward ? $reward->mystery_reveal_text() : '' ); ?></textarea></label>
 								<label class="adam-admin-checkbox-field"><input type="checkbox" name="active" value="1" <?php checked( null !== $reward ? $reward->active() : true ); ?>> <?php esc_html_e( 'Recompensa ativa', 'adam-membership' ); ?></label>
 								<label class="adam-admin-checkbox-field"><input type="checkbox" name="approval_required" value="1" <?php checked( null !== $reward ? $reward->approval_required() : true ); ?>> <?php esc_html_e( 'Exige aprovacao administrativa', 'adam-membership' ); ?></label>
+								</div>
 							</section>
 						</div>
 					</div>
@@ -581,8 +602,8 @@ final class RewardController {
 
 	private function render_card_subtype_options( string $current ): void {
 		$options = array(
-			'background' => __( 'Cor / fundo do cartao', 'adam-membership' ),
-			'frame'      => __( 'Moldura do cartao', 'adam-membership' ),
+			'background' => __( 'Cor do cartao', 'adam-membership' ),
+			'card_style' => __( 'Estilo do cartao', 'adam-membership' ),
 		);
 
 		foreach ( $options as $value => $label ) {
@@ -711,6 +732,19 @@ final class RewardController {
 		}
 	}
 
+	private function render_meta_align_options( string $current ): void {
+		$options = array(
+			'left'          => __( 'Esquerda', 'adam-membership' ),
+			'center'        => __( 'Centro', 'adam-membership' ),
+			'right'         => __( 'Direita', 'adam-membership' ),
+			'space-between' => __( 'Extremos', 'adam-membership' ),
+		);
+
+		foreach ( $options as $value => $label ) {
+			$this->render_select_option( $value, $label, $current );
+		}
+	}
+
 	private function render_style_mode_option( string $value, string $label, string $current ): void {
 		?>
 		<label class="adam-reward-editor__radio-option">
@@ -810,16 +844,23 @@ final class RewardController {
 			'--adam-reward-card-frame-inner-width'   => (int) ( $style['frame_inner_width'] ?? 1 ) . 'px',
 			'--adam-reward-card-frame-inner-color'   => (string) ( $style['frame_inner_color'] ?? '#86efac' ),
 			'--adam-reward-card-frame-corner'        => (int) ( $style['frame_corner_accent'] ?? 0 ) . 'px',
+			'--adam-reward-card-frame-inset'         => (int) ( $style['frame_inset'] ?? 12 ) . 'px',
+			'--adam-reward-card-content-padding'     => (int) ( $style['content_padding'] ?? 22 ) . 'px',
+			'--adam-reward-card-content-gap'         => (int) ( $style['content_gap'] ?? 14 ) . 'px',
+			'--adam-reward-card-meta-align'          => $this->css_alignment_value( (string) ( $style['meta_align'] ?? 'space-between' ), true ),
+			'--adam-reward-card-stats-align'         => $this->css_alignment_value( (string) ( $style['stats_align'] ?? 'left' ), false ),
 			'--adam-reward-card-title-color'         => (string) ( $style['title_color'] ?? '#f8fafc' ),
 			'--adam-reward-card-title-size'          => (int) ( $style['title_size'] ?? 52 ) . 'px',
 			'--adam-reward-card-title-weight'        => (string) (int) ( $style['title_weight'] ?? 900 ),
 			'--adam-reward-card-title-align'         => (string) ( $style['title_align'] ?? 'left' ),
 			'--adam-reward-card-title-shadow'        => ( max( 0, min( 40, (int) ( $style['title_shadow'] ?? 18 ) ) ) / 3 ) . 'px',
+			'--adam-reward-card-title-width'         => (int) ( $style['title_width'] ?? 100 ) . '%',
 			'--adam-reward-card-description-color'   => (string) ( $style['description_color'] ?? 'rgba(226,232,240,0.78)' ),
 			'--adam-reward-card-description-size'    => (int) ( $style['description_size'] ?? 16 ) . 'px',
 			'--adam-reward-card-description-weight'  => (string) (int) ( $style['description_weight'] ?? 500 ),
 			'--adam-reward-card-description-align'   => (string) ( $style['description_align'] ?? 'left' ),
 			'--adam-reward-card-description-shadow'  => ( max( 0, min( 32, (int) ( $style['description_shadow'] ?? 0 ) ) ) / 3 ) . 'px',
+			'--adam-reward-card-description-width'   => (int) ( $style['description_width'] ?? 66 ) . '%',
 		);
 
 		$parts = array();
@@ -835,5 +876,15 @@ final class RewardController {
 		$timestamp = strtotime( $datetime );
 
 		return false === $timestamp ? $datetime : wp_date( get_option( 'date_format' ) . ' H:i', $timestamp );
+	}
+
+	private function css_alignment_value( string $alignment, bool $allow_space_between ): string {
+		return match ( $alignment ) {
+			'left' => 'flex-start',
+			'right' => 'flex-end',
+			'center' => 'center',
+			'space-between' => $allow_space_between ? 'space-between' : 'flex-start',
+			default => 'flex-start',
+		};
 	}
 }

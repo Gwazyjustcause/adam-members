@@ -725,10 +725,14 @@ final class RewardService {
 		$stored = $this->sanitize_visual_style( $reward->visual_style() );
 		$subtype = (string) ( $stored['card_subtype'] ?? '' );
 
+		if ( 'frame' === $subtype ) {
+			$subtype = 'card_style';
+		}
+
 		if ( '' === $subtype ) {
 			$value   = strtolower( $reward->reward_value() );
 			$name    = strtolower( $reward->name() );
-			$subtype = str_contains( $value, 'frame' ) || str_contains( $name, 'frame' ) || str_contains( $name, 'moldura' ) ? 'frame' : 'background';
+			$subtype = str_contains( $value, 'frame' ) || str_contains( $value, 'style' ) || str_contains( $name, 'frame' ) || str_contains( $name, 'moldura' ) || str_contains( $name, 'estilo' ) ? 'card_style' : 'background';
 		}
 
 		return array_merge(
@@ -832,6 +836,13 @@ final class RewardService {
 				'frame_inner_color'           => $palette['accent_color'],
 				'frame_corner_style'          => 'rounded',
 				'frame_corner_accent'         => 0,
+				'frame_inset'                 => 12,
+				'content_padding'             => 22,
+				'content_gap'                 => 14,
+				'meta_align'                  => 'space-between',
+				'stats_align'                 => 'left',
+				'title_width'                 => 100,
+				'description_width'           => 66,
 				'background_image_url'        => '',
 				'background_image_opacity'    => 18,
 				'background_image_position'   => 'center',
@@ -969,10 +980,16 @@ final class RewardService {
 		$card_image_layer       = isset( $style['card_image_layer'] ) ? sanitize_key( (string) $style['card_image_layer'] ) : 'overlay';
 		$frame_style            = isset( $style['frame_style'] ) ? sanitize_key( (string) $style['frame_style'] ) : 'solid';
 		$frame_corner_style     = isset( $style['frame_corner_style'] ) ? sanitize_key( (string) $style['frame_corner_style'] ) : 'rounded';
+		$meta_align             = isset( $style['meta_align'] ) ? sanitize_key( (string) $style['meta_align'] ) : 'space-between';
+		$stats_align            = isset( $style['stats_align'] ) ? sanitize_key( (string) $style['stats_align'] ) : 'left';
 		$title_align            = isset( $style['title_align'] ) ? sanitize_key( (string) $style['title_align'] ) : 'left';
 		$description_align      = isset( $style['description_align'] ) ? sanitize_key( (string) $style['description_align'] ) : 'left';
 
-		if ( ! in_array( $card_subtype, array( 'background', 'frame' ), true ) ) {
+		if ( 'frame' === $card_subtype ) {
+			$card_subtype = 'card_style';
+		}
+
+		if ( ! in_array( $card_subtype, array( 'background', 'card_style' ), true ) ) {
 			$card_subtype = 'background';
 		}
 
@@ -1020,6 +1037,14 @@ final class RewardService {
 			$frame_corner_style = 'rounded';
 		}
 
+		if ( ! in_array( $meta_align, array( 'left', 'center', 'right', 'space-between' ), true ) ) {
+			$meta_align = 'space-between';
+		}
+
+		if ( ! in_array( $stats_align, array( 'left', 'center', 'right' ), true ) ) {
+			$stats_align = 'left';
+		}
+
 		if ( ! in_array( $title_align, array( 'left', 'center', 'right' ), true ) ) {
 			$title_align = 'left';
 		}
@@ -1054,6 +1079,13 @@ final class RewardService {
 			'frame_inner_color'           => $this->sanitize_color_value( $style['frame_inner_color'] ?? '#86efac' ),
 			'frame_corner_style'          => $frame_corner_style,
 			'frame_corner_accent'         => max( 0, min( 40, (int) ( $style['frame_corner_accent'] ?? 0 ) ) ),
+			'frame_inset'                 => max( 0, min( 40, (int) ( $style['frame_inset'] ?? 12 ) ) ),
+			'content_padding'             => max( 12, min( 40, (int) ( $style['content_padding'] ?? 22 ) ) ),
+			'content_gap'                 => max( 6, min( 32, (int) ( $style['content_gap'] ?? 14 ) ) ),
+			'meta_align'                  => $meta_align,
+			'stats_align'                 => $stats_align,
+			'title_width'                 => max( 40, min( 100, (int) ( $style['title_width'] ?? 100 ) ) ),
+			'description_width'           => max( 40, min( 100, (int) ( $style['description_width'] ?? 66 ) ) ),
 			'background_image_url'        => esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ),
 			'background_image_opacity'    => max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ),
 			'background_image_position'   => $background_image_pos,
@@ -1204,16 +1236,23 @@ final class RewardService {
 			'--adam-reward-card-frame-inner-width'   => (string) (int) $style['frame_inner_width'] . 'px',
 			'--adam-reward-card-frame-inner-color'   => (string) $style['frame_inner_color'],
 			'--adam-reward-card-frame-corner'        => (string) (int) $style['frame_corner_accent'] . 'px',
+			'--adam-reward-card-frame-inset'         => (string) (int) $style['frame_inset'] . 'px',
+			'--adam-reward-card-content-padding'     => (string) (int) $style['content_padding'] . 'px',
+			'--adam-reward-card-content-gap'         => (string) (int) $style['content_gap'] . 'px',
+			'--adam-reward-card-meta-align'          => $this->css_alignment_value( (string) $style['meta_align'], true ),
+			'--adam-reward-card-stats-align'         => $this->css_alignment_value( (string) $style['stats_align'], false ),
 			'--adam-reward-card-title-color'         => (string) $style['title_color'],
 			'--adam-reward-card-title-size'          => (string) (int) $style['title_size'] . 'px',
 			'--adam-reward-card-title-weight'        => (string) (int) $style['title_weight'],
 			'--adam-reward-card-title-align'         => (string) $style['title_align'],
 			'--adam-reward-card-title-shadow'        => (string) ( (int) $style['title_shadow'] / 3 ) . 'px',
+			'--adam-reward-card-title-width'         => (string) (int) $style['title_width'] . '%',
 			'--adam-reward-card-description-color'   => (string) $style['description_color'],
 			'--adam-reward-card-description-size'    => (string) (int) $style['description_size'] . 'px',
 			'--adam-reward-card-description-weight'  => (string) (int) $style['description_weight'],
 			'--adam-reward-card-description-align'   => (string) $style['description_align'],
 			'--adam-reward-card-description-shadow'  => (string) ( (int) $style['description_shadow'] / 3 ) . 'px',
+			'--adam-reward-card-description-width'   => (string) (int) $style['description_width'] . '%',
 		);
 
 		$declarations = array();
@@ -1244,6 +1283,16 @@ final class RewardService {
 		}
 
 		return '#ffffff';
+	}
+
+	private function css_alignment_value( string $alignment, bool $allow_space_between ): string {
+		return match ( $alignment ) {
+			'left' => 'flex-start',
+			'right' => 'flex-end',
+			'center' => 'center',
+			'space-between' => $allow_space_between ? 'space-between' : 'flex-start',
+			default => 'flex-start',
+		};
 	}
 
 	/**

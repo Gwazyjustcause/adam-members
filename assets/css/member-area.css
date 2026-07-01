@@ -1823,16 +1823,23 @@
 	--adam-reward-card-frame-inner-width: 1px;
 	--adam-reward-card-frame-inner-color: rgba(255, 255, 255, 0.22);
 	--adam-reward-card-frame-corner: 0px;
+	--adam-reward-card-frame-inset: 12px;
+	--adam-reward-card-content-padding: 22px;
+	--adam-reward-card-content-gap: 14px;
+	--adam-reward-card-meta-align: space-between;
+	--adam-reward-card-stats-align: flex-start;
 	--adam-reward-card-title-color: var(--adam-reward-card-text);
 	--adam-reward-card-title-size: clamp(2rem, 4vw, 3.2rem);
 	--adam-reward-card-title-weight: 900;
 	--adam-reward-card-title-align: left;
 	--adam-reward-card-title-shadow: 0px;
+	--adam-reward-card-title-width: 100%;
 	--adam-reward-card-description-color: var(--adam-reward-card-muted);
 	--adam-reward-card-description-size: 1rem;
 	--adam-reward-card-description-weight: 500;
 	--adam-reward-card-description-align: left;
 	--adam-reward-card-description-shadow: 0px;
+	--adam-reward-card-description-width: 66%;
 	box-shadow:
 		0 12px 28px rgba(16, 46, 27, 0.07),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 24%, transparent),
@@ -1909,6 +1916,7 @@
 	font-weight: var(--adam-reward-card-title-weight);
 	text-align: var(--adam-reward-card-title-align);
 	text-shadow: 0 0 var(--adam-reward-card-title-shadow) rgba(0, 0, 0, 0.45);
+	max-width: var(--adam-reward-card-title-width);
 }
 
 .adam-reward-card__body p {
@@ -1917,6 +1925,7 @@
 	font-weight: var(--adam-reward-card-description-weight);
 	text-align: var(--adam-reward-card-description-align);
 	text-shadow: 0 0 var(--adam-reward-card-description-shadow) rgba(0, 0, 0, 0.4);
+	max-width: var(--adam-reward-card-description-width);
 }
 
 .adam-reward-card--frame-double {
@@ -1956,6 +1965,30 @@
 
 .adam-reward-card--corner-pill {
 	border-radius: 28px;
+}
+
+.adam-reward-card {
+	padding: var(--adam-reward-card-content-padding);
+}
+
+.adam-reward-card .adam-reward-card__background,
+.adam-reward-card .adam-reward-card__pattern,
+.adam-reward-card .adam-reward-card__backdrop,
+.adam-reward-card .adam-reward-card__art,
+.adam-reward-card .adam-reward-card__shapes {
+	inset: var(--adam-reward-card-frame-inset);
+}
+
+.adam-reward-card .adam-reward-card__content {
+	gap: var(--adam-reward-card-content-gap);
+}
+
+.adam-reward-card .adam-reward-card__meta {
+	justify-content: var(--adam-reward-card-meta-align);
+}
+
+.adam-reward-card .adam-reward-card__stats {
+	justify-content: var(--adam-reward-card-stats-align);
 }
 
 .adam-reward-history {
