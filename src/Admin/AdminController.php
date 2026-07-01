@@ -2335,13 +2335,49 @@ final class AdminController {
 						</select>
 					</label>
 
-					<label>
-						<span><?php esc_html_e( 'N.º Fundador', 'adam-membership' ); ?></span>
-						<input type="number" min="0" name="founder_number" value="<?php echo esc_attr( (string) $member->founder_number() ); ?>" placeholder="<?php esc_attr_e( 'Atribuição automática', 'adam-membership' ); ?>">
-					</label>
+				<label>
+					<span><?php esc_html_e( 'N.º Fundador', 'adam-membership' ); ?></span>
+					<input type="number" min="0" name="founder_number" value="<?php echo esc_attr( (string) $member->founder_number() ); ?>" placeholder="<?php esc_attr_e( 'Atribuição automática', 'adam-membership' ); ?>">
+				</label>
+
+				<?php
+				$card_presentation = $this->cards->card_presentation( $member );
+				$cosmetic_options  = $this->cards->member_cosmetic_options( $member );
+				?>
+
+				<label>
+					<span><?php esc_html_e( 'Título ativo', 'adam-membership' ); ?></span>
+					<select name="active_title_reward">
+						<option value=""><?php esc_html_e( 'Sem título especial', 'adam-membership' ); ?></option>
+						<?php foreach ( $cosmetic_options['titles'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_member_cosmetic_option( $cosmetic, (string) ( $card_presentation['selected_values']['title'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<label>
+					<span><?php esc_html_e( 'Fundo do cartão', 'adam-membership' ); ?></span>
+					<select name="active_card_theme">
+						<option value=""><?php esc_html_e( 'Design ADAM predefinido', 'adam-membership' ); ?></option>
+						<?php foreach ( $cosmetic_options['themes'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_member_cosmetic_option( $cosmetic, (string) ( $card_presentation['selected_values']['theme'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
+
+				<label>
+					<span><?php esc_html_e( 'Moldura do cartão', 'adam-membership' ); ?></span>
+					<select name="active_card_frame">
+						<option value=""><?php esc_html_e( 'Sem moldura especial', 'adam-membership' ); ?></option>
+						<?php foreach ( $cosmetic_options['frames'] ?? array() as $cosmetic ) : ?>
+							<?php $this->render_member_cosmetic_option( $cosmetic, (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
+						<?php endforeach; ?>
+					</select>
+				</label>
 				</div>
 
 				<p class="description"><?php esc_html_e( 'As alterações manuais de estado não enviam emails. O estado Ativo exige uma data de validade da quota igual ou posterior a hoje.', 'adam-membership' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Os títulos e cosméticos automáticos de Fundador/Fidelidade só se mantêm disponíveis enquanto o sócio conservar essa elegibilidade. Ao remover o estatuto de fundador, as recompensas exclusivas deixam de poder ser usadas.', 'adam-membership' ); ?></p>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar campos do sócio', 'adam-membership' ); ?></button>
 			</form>
 		</div>
@@ -2532,6 +2568,17 @@ final class AdminController {
 
 		$current_founder_number = (string) $member->founder_number();
 		$posted_founder_number  = (string) $founder_number;
+		$current_cosmetics      = $this->cards->card_presentation( $member );
+		$posted_cosmetics       = array(
+			'title' => isset( $_POST['active_title_reward'] ) ? sanitize_key( wp_unslash( $_POST['active_title_reward'] ) ) : '',
+			'theme' => isset( $_POST['active_card_theme'] ) ? sanitize_key( wp_unslash( $_POST['active_card_theme'] ) ) : '',
+			'frame' => isset( $_POST['active_card_frame'] ) ? sanitize_key( wp_unslash( $_POST['active_card_frame'] ) ) : '',
+		);
+		$cosmetic_changed       = $posted_cosmetics !== array(
+			'title' => sanitize_key( (string) ( $current_cosmetics['selected_values']['title'] ?? '' ) ),
+			'theme' => sanitize_key( (string) ( $current_cosmetics['selected_values']['theme'] ?? '' ) ),
+			'frame' => sanitize_key( (string) ( $current_cosmetics['selected_values']['frame'] ?? '' ) ),
+		);
 
 		if ( $current_founder_number !== $posted_founder_number ) {
 			$founder_changes['adam_founder_number'] = array(
@@ -2540,11 +2587,28 @@ final class AdminController {
 			);
 		}
 
-		if ( array() === $changes && array() === $founder_changes ) {
+		if ( array() === $changes && array() === $founder_changes && ! $cosmetic_changed ) {
 			return true;
 		}
 
 		$member->save( $updates );
+
+		if ( '' !== $member_number ) {
+			$this->settings->ensure_member_number_floor( Member::member_number_numeric_value( $member_number ) );
+		}
+
+		$cosmetic_result = $this->cards->save_member_cosmetic_selection(
+			$member,
+			array(
+				'active_title_reward' => isset( $_POST['active_title_reward'] ) ? sanitize_text_field( wp_unslash( $_POST['active_title_reward'] ) ) : '',
+				'active_card_theme'   => isset( $_POST['active_card_theme'] ) ? sanitize_text_field( wp_unslash( $_POST['active_card_theme'] ) ) : '',
+				'active_card_frame'   => isset( $_POST['active_card_frame'] ) ? sanitize_text_field( wp_unslash( $_POST['active_card_frame'] ) ) : '',
+			)
+		);
+
+		if ( $cosmetic_result instanceof WP_Error ) {
+			return $cosmetic_result;
+		}
 
 		if ( '1' === $founder_status && ! $member->is_founder() ) {
 			$this->recognition->assign_founder( $member, $founder_number );
@@ -2879,6 +2943,40 @@ final class AdminController {
 		}
 
 		return $member_number;
+	}
+
+	/**
+	 * Render one member cosmetic option for admin selects.
+	 *
+	 * @param array<string, mixed> $cosmetic Cosmetic data.
+	 * @param string               $selected Selected key.
+	 */
+	private function render_member_cosmetic_option( array $cosmetic, string $selected ): void {
+		$key   = isset( $cosmetic['key'] ) ? sanitize_key( (string) $cosmetic['key'] ) : '';
+		$name  = isset( $cosmetic['name'] ) ? sanitize_text_field( (string) $cosmetic['name'] ) : $key;
+		$rarity = isset( $cosmetic['rarity_label'] ) ? sanitize_text_field( (string) $cosmetic['rarity_label'] ) : '';
+		$source = isset( $cosmetic['unlock_source_label'] ) ? sanitize_text_field( (string) $cosmetic['unlock_source_label'] ) : '';
+
+		if ( '' === $key ) {
+			return;
+		}
+
+		$label = $name;
+
+		if ( '' !== $rarity ) {
+			$label .= ' — ' . $rarity;
+		}
+
+		if ( '' !== $source && ! in_array( $source, array( 'Pontos ADAM', 'Evento especial' ), true ) ) {
+			$label .= ' · ' . $source;
+		}
+
+		printf(
+			'<option value="%1$s"%2$s>%3$s</option>',
+			esc_attr( $key ),
+			selected( $selected, $key, false ),
+			esc_html( $label )
+		);
 	}
 
 	/**

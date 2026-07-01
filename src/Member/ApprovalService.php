@@ -111,10 +111,11 @@ final class ApprovalService {
 		 * Assign member number.
 		 */
 		if ( '' === (string) $member->field( 'numero_socio' ) ) {
+			$member_number = $this->next_available_member_number();
 
 			$member->save(
 				array(
-					'numero_socio' => $this->settings->reserve_next_member_number(),
+					'numero_socio' => $member_number,
 				)
 			);
 		}
@@ -479,5 +480,16 @@ final class ApprovalService {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Reserve the next unique ADAM member number.
+	 */
+	private function next_available_member_number(): string {
+		do {
+			$member_number = $this->settings->reserve_next_member_number();
+		} while ( $this->members->member_number_exists( $member_number ) );
+
+		return $member_number;
 	}
 }

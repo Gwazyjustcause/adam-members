@@ -50,6 +50,21 @@ final class SettingsRepository {
 	}
 
 	/**
+	 * Ensure the stored member-number counter is at least the provided value.
+	 *
+	 * @param int $number Numeric member number.
+	 */
+	public function ensure_member_number_floor( int $number ): void {
+		$number = max( 0, $number );
+
+		if ( $number <= $this->last_assigned_member_number() ) {
+			return;
+		}
+
+		update_option( self::OPTION_LAST_MEMBER_NUMBER, $number, false );
+	}
+
+	/**
 	 * Preview the next formatted member number without reserving it.
 	 */
 	public function preview_next_member_number(): string {

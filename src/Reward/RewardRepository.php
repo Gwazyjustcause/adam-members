@@ -196,6 +196,49 @@ final class RewardRepository {
 	}
 
 	/**
+	 * Delete redemptions matching the provided filters.
+	 *
+	 * @param array{member_id?:int,reward_id?:int,status?:string} $filters Filters.
+	 * @return int
+	 */
+	public function delete_redemptions( array $filters = array() ): int {
+		$member_id   = isset( $filters['member_id'] ) ? absint( $filters['member_id'] ) : 0;
+		$reward_id   = isset( $filters['reward_id'] ) ? absint( $filters['reward_id'] ) : 0;
+		$status      = isset( $filters['status'] ) ? sanitize_key( (string) $filters['status'] ) : '';
+		$redemptions = $this->raw_redemptions();
+		$removed     = 0;
+
+		foreach ( $redemptions as $id => $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$redemption = new RewardRedemption( $item );
+
+			if ( 0 !== $member_id && $redemption->member_id() !== $member_id ) {
+				continue;
+			}
+
+			if ( 0 !== $reward_id && $redemption->reward_id() !== $reward_id ) {
+				continue;
+			}
+
+			if ( '' !== $status && $redemption->status() !== $status ) {
+				continue;
+			}
+
+			unset( $redemptions[ $id ] );
+			++$removed;
+		}
+
+		if ( $removed > 0 ) {
+			update_option( self::OPTION_REDEMPTIONS, $redemptions, false );
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * @param array<string, mixed> $filters Filters.
 	 * @return array<int, RewardRedemption>
 	 */

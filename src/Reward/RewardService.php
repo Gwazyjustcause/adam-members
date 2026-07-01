@@ -140,6 +140,52 @@ final class RewardService {
 	}
 
 	/**
+	 * Remove a previously granted reward from a member.
+	 */
+	public function revoke_reward_from_member( Member $member, string $reward_value, string $action_key = 'reward_revoked', string $action_label = 'Recompensa removida', string $description = '' ): bool {
+		$reward = $this->repository->find_reward_by_value( $reward_value );
+
+		if ( null === $reward ) {
+			return false;
+		}
+
+		$removed = $this->repository->delete_redemptions(
+			array(
+				'member_id' => $member->user_id(),
+				'reward_id' => $reward->id(),
+			)
+		);
+
+		if ( 0 === $removed ) {
+			return false;
+		}
+
+		$this->record_history(
+			$member->user_id(),
+			$action_key,
+			$action_label,
+			'' !== $description ? $description : sprintf( __( 'A recompensa %s foi removida manualmente.', 'adam-membership' ), $reward->name() ),
+			array(
+				'reward_id'    => $reward->id(),
+				'reward_value' => $reward->reward_value(),
+				'removed'      => $removed,
+			)
+		);
+
+		$this->logger->info(
+			'Recompensa removida.',
+			array(
+				'member_id'     => $member->user_id(),
+				'reward_id'     => $reward->id(),
+				'reward_value'  => $reward->reward_value(),
+				'removed_count' => $removed,
+			)
+		);
+
+		return true;
+	}
+
+	/**
 	 * @param array<string, mixed> $data Reward data.
 	 * @param array<string, mixed> $file Uploaded image.
 	 * @return Reward|WP_Error

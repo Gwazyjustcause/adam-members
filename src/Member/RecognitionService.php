@@ -92,10 +92,14 @@ final class RecognitionService {
 	 * Manually revoke founder status.
 	 */
 	public function revoke_founder( Member $member ): void {
+		$this->revoke_founder_rewards( $member );
 		$member->save(
 			array(
 				'adam_founder_status' => '',
 				'adam_founder_number' => '',
+				'adam_active_title_reward' => $this->founder_reward_values()[0] === (string) $member->field( 'adam_active_title_reward' ) ? '' : (string) $member->field( 'adam_active_title_reward' ),
+				'adam_active_card_theme' => $this->founder_reward_values()[1] === (string) $member->field( 'adam_active_card_theme' ) ? '' : (string) $member->field( 'adam_active_card_theme' ),
+				'adam_active_card_frame' => $this->founder_reward_values()[2] === (string) $member->field( 'adam_active_card_frame' ) ? '' : (string) $member->field( 'adam_active_card_frame' ),
 			)
 		);
 
@@ -289,6 +293,21 @@ final class RecognitionService {
 				'founder_reward_granted',
 				'Recompensa de fundador atribuida',
 				__( 'Foram atribuidas recompensas exclusivas de membro fundador.', 'adam-membership' )
+			);
+		}
+	}
+
+	/**
+	 * Remove founder-specific rewards after a manual revocation.
+	 */
+	private function revoke_founder_rewards( Member $member ): void {
+		foreach ( $this->founder_reward_values() as $reward_value ) {
+			$this->rewards->revoke_reward_from_member(
+				$member,
+				$reward_value,
+				'founder_reward_revoked',
+				'Recompensa de fundador removida',
+				__( 'As recompensas exclusivas de membro fundador foram removidas manualmente.', 'adam-membership' )
 			);
 		}
 	}
