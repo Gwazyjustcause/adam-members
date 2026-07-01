@@ -1804,6 +1804,160 @@
 	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07);
 }
 
+.adam-reward-card {
+	--adam-reward-card-gradient-origin: center;
+	--adam-reward-card-gradient-opacity: 1;
+	--adam-reward-card-pattern-color: rgba(255, 255, 255, 0.18);
+	--adam-reward-card-pattern-base: transparent;
+	--adam-reward-card-pattern-size: 24px;
+	--adam-reward-card-pattern-spacing: 24px;
+	--adam-reward-card-pattern-density: 2;
+	--adam-reward-card-pattern-rotation: 45deg;
+	--adam-reward-card-image-size: 36%;
+	--adam-reward-card-background-size: 100%;
+	--adam-reward-card-background-position: center;
+	--adam-reward-card-background-blend: screen;
+	--adam-reward-card-frame-opacity: 1;
+	--adam-reward-card-frame-glow: 12px;
+	--adam-reward-card-frame-shadow: 12px;
+	--adam-reward-card-frame-inner-width: 1px;
+	--adam-reward-card-frame-inner-color: rgba(255, 255, 255, 0.22);
+	--adam-reward-card-frame-corner: 0px;
+	--adam-reward-card-title-color: var(--adam-reward-card-text);
+	--adam-reward-card-title-size: clamp(2rem, 4vw, 3.2rem);
+	--adam-reward-card-title-weight: 900;
+	--adam-reward-card-title-align: left;
+	--adam-reward-card-title-shadow: 0px;
+	--adam-reward-card-description-color: var(--adam-reward-card-muted);
+	--adam-reward-card-description-size: 1rem;
+	--adam-reward-card-description-weight: 500;
+	--adam-reward-card-description-align: left;
+	--adam-reward-card-description-shadow: 0px;
+	box-shadow:
+		0 12px 28px rgba(16, 46, 27, 0.07),
+		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 24%, transparent),
+		inset 0 0 0 var(--adam-reward-card-frame-inner-width) var(--adam-reward-card-frame-inner-color);
+}
+
+.adam-reward-card__background {
+	background:
+		radial-gradient(circle at var(--adam-reward-card-gradient-origin), color-mix(in srgb, var(--adam-reward-card-accent) 28%, transparent) 0, transparent 58%),
+		var(--adam-reward-card-background);
+	opacity: var(--adam-reward-card-gradient-opacity);
+}
+
+.adam-reward-card__pattern {
+	background-color: var(--adam-reward-card-pattern-base);
+	transform: rotate(var(--adam-reward-card-pattern-rotation)) scale(1.05);
+	transform-origin: center;
+}
+
+.adam-reward-card__pattern--grid {
+	background-image:
+		linear-gradient(var(--adam-reward-card-pattern-color) calc(var(--adam-reward-card-pattern-density) * 1px), transparent calc(var(--adam-reward-card-pattern-density) * 1px)),
+		linear-gradient(90deg, var(--adam-reward-card-pattern-color) calc(var(--adam-reward-card-pattern-density) * 1px), transparent calc(var(--adam-reward-card-pattern-density) * 1px));
+	background-size: var(--adam-reward-card-pattern-spacing) var(--adam-reward-card-pattern-spacing);
+}
+
+.adam-reward-card__pattern--carbon {
+	background-image:
+		repeating-linear-gradient(
+			45deg,
+			color-mix(in srgb, var(--adam-reward-card-pattern-color) 90%, transparent) 0 calc(var(--adam-reward-card-pattern-density) * 3px),
+			rgba(0, 0, 0, 0.14) calc(var(--adam-reward-card-pattern-density) * 3px) calc(var(--adam-reward-card-pattern-spacing) / 1.8)
+		);
+	background-size: var(--adam-reward-card-pattern-size) var(--adam-reward-card-pattern-size);
+}
+
+.adam-reward-card__pattern--diagonal {
+	background-image:
+		repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--adam-reward-card-pattern-color) 80%, transparent) 0 calc(var(--adam-reward-card-pattern-density) * 4px),
+			transparent calc(var(--adam-reward-card-pattern-density) * 4px) var(--adam-reward-card-pattern-spacing)
+		);
+	background-size: var(--adam-reward-card-pattern-size) var(--adam-reward-card-pattern-size);
+}
+
+.adam-reward-card__pattern--dots {
+	background-image: radial-gradient(var(--adam-reward-card-pattern-color) calc(var(--adam-reward-card-pattern-density) * 1px), transparent calc(var(--adam-reward-card-pattern-density) * 1px));
+	background-size: var(--adam-reward-card-pattern-spacing) var(--adam-reward-card-pattern-spacing);
+}
+
+.adam-reward-card__backdrop {
+	background-position: var(--adam-reward-card-background-position);
+	background-size: var(--adam-reward-card-background-size);
+	mix-blend-mode: var(--adam-reward-card-background-blend);
+}
+
+.adam-reward-card__art img {
+	max-width: var(--adam-reward-card-image-size);
+	max-height: 72%;
+}
+
+.adam-reward-card__art--layer-underlay {
+	z-index: 0;
+}
+
+.adam-reward-card__art--layer-underlay img {
+	filter: saturate(0.9) brightness(0.92);
+}
+
+.adam-reward-card__body h4 {
+	color: var(--adam-reward-card-title-color);
+	font-size: var(--adam-reward-card-title-size);
+	font-weight: var(--adam-reward-card-title-weight);
+	text-align: var(--adam-reward-card-title-align);
+	text-shadow: 0 0 var(--adam-reward-card-title-shadow) rgba(0, 0, 0, 0.45);
+}
+
+.adam-reward-card__body p {
+	color: var(--adam-reward-card-description-color);
+	font-size: var(--adam-reward-card-description-size);
+	font-weight: var(--adam-reward-card-description-weight);
+	text-align: var(--adam-reward-card-description-align);
+	text-shadow: 0 0 var(--adam-reward-card-description-shadow) rgba(0, 0, 0, 0.4);
+}
+
+.adam-reward-card--frame-double {
+	box-shadow:
+		0 12px 28px rgba(16, 46, 27, 0.07),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) color-mix(in srgb, var(--adam-reward-card-border) 36%, transparent),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) rgba(255, 255, 255, 0.08);
+}
+
+.adam-reward-card--frame-bevel {
+	box-shadow:
+		0 12px 28px rgba(16, 46, 27, 0.07),
+		inset 0 2px 0 rgba(255, 255, 255, 0.28),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 28%, transparent);
+}
+
+.adam-reward-card--frame-tech {
+	box-shadow:
+		0 12px 28px rgba(16, 46, 27, 0.07),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) rgba(255, 255, 255, 0.06),
+		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-accent) 30%, transparent);
+}
+
+.adam-reward-card--corner-cut {
+	clip-path: polygon(
+		var(--adam-reward-card-frame-corner) 0,
+		calc(100% - var(--adam-reward-card-frame-corner)) 0,
+		100% var(--adam-reward-card-frame-corner),
+		100% calc(100% - var(--adam-reward-card-frame-corner)),
+		calc(100% - var(--adam-reward-card-frame-corner)) 100%,
+		var(--adam-reward-card-frame-corner) 100%,
+		0 calc(100% - var(--adam-reward-card-frame-corner)),
+		0 var(--adam-reward-card-frame-corner)
+	);
+}
+
+.adam-reward-card--corner-pill {
+	border-radius: 28px;
+}
+
 .adam-reward-history {
 	display: grid;
 	gap: 12px;

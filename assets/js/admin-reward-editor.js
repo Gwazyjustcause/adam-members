@@ -11,6 +11,27 @@
 		return Math.min(max, Math.max(min, parsed));
 	}
 
+	function isDigitalReward() {
+		var category = ($('[data-adam-reward-category]').val() || '').toLowerCase();
+		var type = $('[data-adam-reward-type]').val() || '';
+
+		return type === 'digital_cosmetic' || category.indexOf('cart') !== -1;
+	}
+
+	function currentSubtype() {
+		return previewStyleValue('card_subtype') || 'background';
+	}
+
+	function previewStyleValue(key) {
+		var $field = $('[data-adam-style="' + key + '"]:checked, [data-adam-style="' + key + '"]');
+
+		if (!$field.length) {
+			return '';
+		}
+
+		return $field.first().val();
+	}
+
 	function initColorPicker(context) {
 		$(context).find('.adam-color-picker').each(function () {
 			var $input = $(this);
@@ -41,41 +62,50 @@
 	var $shapeList = $('[data-adam-shapes-list]');
 	var shapeCount = $shapeList.find('[data-adam-shape-row]').length;
 
-	function previewStyleValue(key) {
-		var $field = $('[data-adam-style="' + key + '"]:checked, [data-adam-style="' + key + '"]');
-
-		if (!$field.length) {
-			return '';
-		}
-
-		return $field.first().val();
-	}
-
 	function backgroundValue() {
 		var mode = previewStyleValue('background_mode');
 		var primary = previewStyleValue('background_color') || '#143826';
 		var secondary = previewStyleValue('background_color_secondary') || primary;
+		var tertiary = previewStyleValue('background_color_tertiary') || secondary;
 		var angle = clamp(previewStyleValue('gradient_angle'), 0, 360);
+		var stopSecondary = clamp(previewStyleValue('gradient_stop_secondary'), 0, 100);
+		var stopTertiary = clamp(previewStyleValue('gradient_stop_tertiary'), 0, 100);
 
 		if (mode === 'solid') {
 			return primary;
 		}
 
-		return 'linear-gradient(' + angle + 'deg, ' + primary + ', ' + secondary + ')';
+		return 'linear-gradient(' + angle + 'deg, ' + primary + ' 0%, ' + secondary + ' ' + stopSecondary + '%, ' + tertiary + ' ' + stopTertiary + '%)';
 	}
 
 	function syncValueLabels() {
 		$('[data-adam-value-for]').each(function () {
 			var key = $(this).data('adamValueFor');
 			var value = previewStyleValue(key);
-			var suffix = 'pattern_opacity' === key || 'card_image_opacity' === key || 'background_image_opacity' === key ? '%' : '';
+			var suffix = '';
 
-			if ('gradient_angle' === key) {
+			if (key.indexOf('opacity') !== -1) {
+				suffix = '%';
+			}
+
+			if (key.indexOf('angle') !== -1 || key.indexOf('rotation') !== -1) {
 				suffix = 'deg';
 			}
 
-			if ('border_width' === key || 'border_radius' === key) {
-				suffix = 'px';
+			if (
+				key.indexOf('width') !== -1 ||
+				key.indexOf('radius') !== -1 ||
+				key.indexOf('size') !== -1 ||
+				key.indexOf('spacing') !== -1 ||
+				key.indexOf('shadow') !== -1 ||
+				key.indexOf('glow') !== -1 ||
+				key.indexOf('accent') !== -1
+			) {
+				suffix = suffix || 'px';
+			}
+
+			if (key === 'gradient_stop_secondary' || key === 'gradient_stop_tertiary') {
+				suffix = '%';
 			}
 
 			$(this).text(value + suffix);
@@ -148,6 +178,16 @@
 		reader.readAsDataURL(input.files[0]);
 	}
 
+	function toggleDesignerSections() {
+		var digital = isDigitalReward();
+		var subtype = currentSubtype();
+
+		$('[data-adam-digital-workspace], [data-adam-card-subtype-field]').toggleClass('is-hidden', !digital);
+		$('[data-adam-non-digital-notice]').toggleClass('is-hidden', digital);
+		$('[data-adam-background-controls], [data-adam-image-controls]').toggleClass('is-hidden', !digital || subtype !== 'background');
+		$('[data-adam-frame-controls]').toggleClass('is-hidden', !digital || subtype !== 'frame');
+	}
+
 	function updatePreview() {
 		var rarity = $('[data-adam-preview-rarity]').val() || 'common';
 		var points = $('[data-adam-preview-points]').val() || '0';
@@ -158,8 +198,11 @@
 		var badgeStyle = previewStyleValue('badge_style') || 'soft';
 		var effect = previewStyleValue('rarity_effect') || 'auto';
 		var imagePosition = previewStyleValue('card_image_position') || 'top-right';
+		var imageLayer = previewStyleValue('card_image_layer') || 'overlay';
 		var imageUrl = $('[data-adam-preview-image]').val() || '';
 		var backgroundImageUrl = previewStyleValue('background_image_url') || '';
+		var frameStyle = previewStyleValue('frame_style') || 'solid';
+		var cornerStyle = previewStyleValue('frame_corner_style') || 'rounded';
 
 		$preview
 			.css('--adam-reward-card-background', backgroundValue())
@@ -167,19 +210,49 @@
 			.css('--adam-reward-card-muted', previewStyleValue('muted_text_color') || 'rgba(226,232,240,0.78)')
 			.css('--adam-reward-card-accent', previewStyleValue('accent_color') || '#86efac')
 			.css('--adam-reward-card-border', previewStyleValue('border_color') || '#9ca3af')
-			.css('--adam-reward-card-border-width', clamp(previewStyleValue('border_width'), 1, 8) + 'px')
+			.css('--adam-reward-card-border-width', clamp(previewStyleValue('border_width'), 1, 16) + 'px')
 			.css('--adam-reward-card-radius', clamp(previewStyleValue('border_radius'), 8, 36) + 'px')
+			.css('--adam-reward-card-gradient-origin', (previewStyleValue('gradient_origin') || 'center').replace(/-/g, ' '))
+			.css('--adam-reward-card-gradient-opacity', clamp(previewStyleValue('gradient_opacity'), 0, 100) / 100)
 			.css('--adam-reward-card-pattern-opacity', clamp(previewStyleValue('pattern_opacity'), 0, 100) / 100)
+			.css('--adam-reward-card-pattern-color', previewStyleValue('pattern_color') || '#86efac')
+			.css('--adam-reward-card-pattern-base', previewStyleValue('pattern_background_color') || '#143826')
+			.css('--adam-reward-card-pattern-size', clamp(previewStyleValue('pattern_scale'), 6, 120) + 'px')
+			.css('--adam-reward-card-pattern-spacing', clamp(previewStyleValue('pattern_spacing'), 6, 120) + 'px')
+			.css('--adam-reward-card-pattern-density', clamp(previewStyleValue('pattern_density'), 1, 12))
+			.css('--adam-reward-card-pattern-rotation', clamp(previewStyleValue('pattern_rotation'), 0, 360) + 'deg')
 			.css('--adam-reward-card-image-opacity', clamp(previewStyleValue('card_image_opacity'), 0, 100) / 100)
-			.css('--adam-reward-card-background-opacity', clamp(previewStyleValue('background_image_opacity'), 0, 100) / 100);
+			.css('--adam-reward-card-image-size', clamp(previewStyleValue('card_image_size'), 10, 80) + '%')
+			.css('--adam-reward-card-background-opacity', clamp(previewStyleValue('background_image_opacity'), 0, 100) / 100)
+			.css('--adam-reward-card-background-size', clamp(previewStyleValue('background_image_size'), 20, 200) + '%')
+			.css('--adam-reward-card-background-position', (previewStyleValue('background_image_position') || 'center').replace(/-/g, ' '))
+			.css('--adam-reward-card-background-blend', previewStyleValue('background_image_blend_mode') || 'screen')
+			.css('--adam-reward-card-frame-opacity', clamp(previewStyleValue('frame_opacity'), 0, 100) / 100)
+			.css('--adam-reward-card-frame-glow', clamp(previewStyleValue('frame_glow'), 0, 100) / 2 + 'px')
+			.css('--adam-reward-card-frame-shadow', clamp(previewStyleValue('frame_shadow'), 0, 100) / 2 + 'px')
+			.css('--adam-reward-card-frame-inner-width', clamp(previewStyleValue('frame_inner_width'), 0, 10) + 'px')
+			.css('--adam-reward-card-frame-inner-color', previewStyleValue('frame_inner_color') || '#86efac')
+			.css('--adam-reward-card-frame-corner', clamp(previewStyleValue('frame_corner_accent'), 0, 40) + 'px')
+			.css('--adam-reward-card-title-color', previewStyleValue('title_color') || '#f8fafc')
+			.css('--adam-reward-card-title-size', clamp(previewStyleValue('title_size'), 20, 76) + 'px')
+			.css('--adam-reward-card-title-weight', clamp(previewStyleValue('title_weight'), 400, 900))
+			.css('--adam-reward-card-title-align', previewStyleValue('title_align') || 'left')
+			.css('--adam-reward-card-title-shadow', clamp(previewStyleValue('title_shadow'), 0, 40) / 3 + 'px')
+			.css('--adam-reward-card-description-color', previewStyleValue('description_color') || 'rgba(226,232,240,0.78)')
+			.css('--adam-reward-card-description-size', clamp(previewStyleValue('description_size'), 12, 32) + 'px')
+			.css('--adam-reward-card-description-weight', clamp(previewStyleValue('description_weight'), 300, 900))
+			.css('--adam-reward-card-description-align', previewStyleValue('description_align') || 'left')
+			.css('--adam-reward-card-description-shadow', clamp(previewStyleValue('description_shadow'), 0, 32) / 3 + 'px');
 
 		$preview
 			.removeClass(function (index, className) {
-				return (className.match(/adam-reward-card--(common|uncommon|rare|epic|legendary|limited_edition|badge-[^\s]+|effect-[^\s]+)/g) || []).join(' ');
+				return (className.match(/adam-reward-card--(common|uncommon|rare|epic|legendary|limited_edition|badge-[^\s]+|effect-[^\s]+|frame-[^\s]+|corner-[^\s]+)/g) || []).join(' ');
 			})
 			.addClass('adam-reward-card--' + rarity)
 			.addClass('adam-reward-card--badge-' + badgeStyle)
-			.addClass('adam-reward-card--effect-' + ('auto' === effect ? rarity : effect));
+			.addClass('adam-reward-card--effect-' + (effect === 'auto' ? rarity : effect))
+			.addClass('adam-reward-card--frame-' + frameStyle)
+			.addClass('adam-reward-card--corner-' + cornerStyle);
 
 		$('[data-adam-reward-preview-name]').text(name);
 		$('[data-adam-reward-preview-description]').text(description);
@@ -194,7 +267,7 @@
 
 		var $artWrap = $('[data-adam-reward-preview-art-wrap]');
 		$artWrap
-			.attr('class', 'adam-reward-card__art adam-reward-card__art--' + imagePosition)
+			.attr('class', 'adam-reward-card__art adam-reward-card__art--' + imagePosition + ' adam-reward-card__art--layer-' + imageLayer)
 			.toggle(!!imageUrl || !!$('[data-adam-reward-preview-art]').attr('src'));
 
 		if (imageUrl) {
@@ -209,6 +282,7 @@
 		}
 
 		syncValueLabels();
+		toggleDesignerSections();
 		renderShapePreviewList();
 	}
 
@@ -241,7 +315,7 @@
 		);
 	}
 
-	$editor.on('input change', '[data-adam-style], [data-adam-preview-name], [data-adam-preview-description], [data-adam-preview-points], [data-adam-preview-category]', updatePreview);
+	$editor.on('input change', '[data-adam-style], [data-adam-preview-name], [data-adam-preview-description], [data-adam-preview-points], [data-adam-preview-category], [data-adam-reward-type], [data-adam-reward-category]', updatePreview);
 	$editor.on('change', '[data-adam-preview-image-upload]', function () {
 		setPreviewImageFromFile(this);
 		updatePreview();
@@ -252,7 +326,7 @@
 		var targetSelector = $(this).data('adamMediaTarget');
 		var $target = $(targetSelector);
 
-		if (!$target.length) {
+		if (!$target.length || typeof wp === 'undefined' || !wp.media) {
 			return;
 		}
 

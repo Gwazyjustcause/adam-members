@@ -723,11 +723,19 @@ final class RewardService {
 	 */
 	public function reward_visual_style( Reward $reward ): array {
 		$stored = $this->sanitize_visual_style( $reward->visual_style() );
+		$subtype = (string) ( $stored['card_subtype'] ?? '' );
+
+		if ( '' === $subtype ) {
+			$value   = strtolower( $reward->reward_value() );
+			$name    = strtolower( $reward->name() );
+			$subtype = str_contains( $value, 'frame' ) || str_contains( $name, 'frame' ) || str_contains( $name, 'moldura' ) ? 'frame' : 'background';
+		}
 
 		return array_merge(
 			$this->default_reward_visual_style( $reward->rarity(), $reward->category() ),
 			$stored,
 			array(
+				'card_subtype' => $subtype,
 				'shapes' => $this->sanitize_visual_shapes( $stored['shapes'] ?? array() ),
 			)
 		);
@@ -805,19 +813,55 @@ final class RewardService {
 		return array_merge(
 			$palette,
 			array(
-				'background_mode'          => 'gradient',
-				'gradient_angle'           => 135,
-				'border_width'             => Reward::RARITY_LEGENDARY === $rarity ? 3 : 2,
-				'border_radius'            => 18,
-				'background_image_url'     => '',
-				'background_image_opacity' => 18,
-				'pattern'                  => $pattern,
-				'pattern_opacity'          => Reward::RARITY_COMMON === $rarity ? 10 : 18,
-				'card_image_opacity'       => 22,
-				'card_image_position'      => 'top-right',
-				'badge_style'              => 'soft',
-				'rarity_effect'            => 'auto',
-				'shapes'                   => $this->default_visual_shapes( $rarity ),
+				'card_subtype'                => 'background',
+				'background_mode'             => 'gradient',
+				'background_color_tertiary'   => $palette['background_color'],
+				'gradient_angle'              => 135,
+				'gradient_origin'             => 'center',
+				'gradient_midpoint'           => 52,
+				'gradient_stop_secondary'     => 52,
+				'gradient_stop_tertiary'      => 100,
+				'gradient_opacity'            => 100,
+				'border_width'                => Reward::RARITY_LEGENDARY === $rarity ? 3 : 2,
+				'border_radius'               => 18,
+				'frame_style'                 => 'solid',
+				'frame_opacity'               => 100,
+				'frame_glow'                  => Reward::RARITY_COMMON === $rarity ? 14 : 28,
+				'frame_shadow'                => 26,
+				'frame_inner_width'           => 1,
+				'frame_inner_color'           => $palette['accent_color'],
+				'frame_corner_style'          => 'rounded',
+				'frame_corner_accent'         => 0,
+				'background_image_url'        => '',
+				'background_image_opacity'    => 18,
+				'background_image_position'   => 'center',
+				'background_image_size'       => 100,
+				'background_image_blend_mode' => 'screen',
+				'pattern'                     => $pattern,
+				'pattern_color'               => $palette['accent_color'],
+				'pattern_background_color'    => $palette['background_color'],
+				'pattern_opacity'             => Reward::RARITY_COMMON === $rarity ? 10 : 18,
+				'pattern_scale'               => 24,
+				'pattern_density'             => 2,
+				'pattern_rotation'            => 'diagonal' === $pattern ? 135 : 45,
+				'pattern_spacing'             => 24,
+				'card_image_opacity'          => 22,
+				'card_image_position'         => 'top-right',
+				'card_image_size'             => 36,
+				'card_image_layer'            => 'overlay',
+				'badge_style'                 => 'soft',
+				'rarity_effect'               => 'auto',
+				'title_color'                 => $palette['text_color'],
+				'title_size'                  => 52,
+				'title_weight'                => 900,
+				'title_align'                 => 'left',
+				'title_shadow'                => 18,
+				'description_color'           => $palette['muted_text_color'],
+				'description_size'            => 16,
+				'description_weight'          => 500,
+				'description_align'           => 'left',
+				'description_shadow'          => 0,
+				'shapes'                      => $this->default_visual_shapes( $rarity ),
 			)
 		);
 	}
@@ -833,14 +877,20 @@ final class RewardService {
 		$badge_style      = sanitize_html_class( (string) $style['badge_style'] );
 		$effect           = sanitize_html_class( (string) $style['rarity_effect'] );
 		$image_position   = sanitize_html_class( (string) $style['card_image_position'] );
+		$frame_style      = sanitize_html_class( (string) $style['frame_style'] );
+		$corner_style     = sanitize_html_class( (string) $style['frame_corner_style'] );
+		$image_layer      = sanitize_html_class( (string) $style['card_image_layer'] );
 
 		return array(
-			'style'               => $style,
-			'inline_style'        => $this->reward_card_inline_style( $style, $background_value ),
-			'pattern_class'       => 'adam-reward-card__pattern--' . sanitize_html_class( (string) $style['pattern'] ),
-			'badge_style_class'   => 'adam-reward-card--badge-' . $badge_style,
-			'effect_class'        => 'adam-reward-card--effect-' . ( 'auto' === $effect ? sanitize_html_class( $reward->rarity() ) : $effect ),
+			'style'                => $style,
+			'inline_style'         => $this->reward_card_inline_style( $style, $background_value ),
+			'pattern_class'        => 'adam-reward-card__pattern--' . sanitize_html_class( (string) $style['pattern'] ),
+			'badge_style_class'    => 'adam-reward-card--badge-' . $badge_style,
+			'effect_class'         => 'adam-reward-card--effect-' . ( 'auto' === $effect ? sanitize_html_class( $reward->rarity() ) : $effect ),
+			'frame_style_class'    => 'adam-reward-card--frame-' . $frame_style,
+			'corner_style_class'   => 'adam-reward-card--corner-' . $corner_style,
 			'image_position_class' => 'adam-reward-card__art--' . $image_position,
+			'image_layer_class'    => 'adam-reward-card__art--layer-' . $image_layer,
 		);
 	}
 
@@ -907,14 +957,31 @@ final class RewardService {
 			$style = array();
 		}
 
-		$background_mode = isset( $style['background_mode'] ) ? sanitize_key( (string) $style['background_mode'] ) : 'gradient';
-		$pattern         = isset( $style['pattern'] ) ? sanitize_key( (string) $style['pattern'] ) : 'grid';
-		$badge_style     = isset( $style['badge_style'] ) ? sanitize_key( (string) $style['badge_style'] ) : 'soft';
-		$rarity_effect   = isset( $style['rarity_effect'] ) ? sanitize_key( (string) $style['rarity_effect'] ) : 'auto';
-		$image_position  = isset( $style['card_image_position'] ) ? sanitize_key( (string) $style['card_image_position'] ) : 'top-right';
+		$card_subtype           = isset( $style['card_subtype'] ) ? sanitize_key( (string) $style['card_subtype'] ) : 'background';
+		$background_mode        = isset( $style['background_mode'] ) ? sanitize_key( (string) $style['background_mode'] ) : 'gradient';
+		$gradient_origin        = isset( $style['gradient_origin'] ) ? sanitize_key( (string) $style['gradient_origin'] ) : 'center';
+		$pattern                = isset( $style['pattern'] ) ? sanitize_key( (string) $style['pattern'] ) : 'grid';
+		$badge_style            = isset( $style['badge_style'] ) ? sanitize_key( (string) $style['badge_style'] ) : 'soft';
+		$rarity_effect          = isset( $style['rarity_effect'] ) ? sanitize_key( (string) $style['rarity_effect'] ) : 'auto';
+		$image_position         = isset( $style['card_image_position'] ) ? sanitize_key( (string) $style['card_image_position'] ) : 'top-right';
+		$background_image_pos   = isset( $style['background_image_position'] ) ? sanitize_key( (string) $style['background_image_position'] ) : 'center';
+		$background_image_blend = isset( $style['background_image_blend_mode'] ) ? sanitize_key( (string) $style['background_image_blend_mode'] ) : 'screen';
+		$card_image_layer       = isset( $style['card_image_layer'] ) ? sanitize_key( (string) $style['card_image_layer'] ) : 'overlay';
+		$frame_style            = isset( $style['frame_style'] ) ? sanitize_key( (string) $style['frame_style'] ) : 'solid';
+		$frame_corner_style     = isset( $style['frame_corner_style'] ) ? sanitize_key( (string) $style['frame_corner_style'] ) : 'rounded';
+		$title_align            = isset( $style['title_align'] ) ? sanitize_key( (string) $style['title_align'] ) : 'left';
+		$description_align      = isset( $style['description_align'] ) ? sanitize_key( (string) $style['description_align'] ) : 'left';
+
+		if ( ! in_array( $card_subtype, array( 'background', 'frame' ), true ) ) {
+			$card_subtype = 'background';
+		}
 
 		if ( ! in_array( $background_mode, array( 'solid', 'gradient', 'image' ), true ) ) {
 			$background_mode = 'gradient';
+		}
+
+		if ( ! in_array( $gradient_origin, array( 'top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right' ), true ) ) {
+			$gradient_origin = 'center';
 		}
 
 		if ( ! in_array( $pattern, array( 'none', 'grid', 'carbon', 'diagonal', 'dots' ), true ) ) {
@@ -933,26 +1000,90 @@ final class RewardService {
 			$image_position = 'top-right';
 		}
 
+		if ( ! in_array( $background_image_pos, array( 'top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right' ), true ) ) {
+			$background_image_pos = 'center';
+		}
+
+		if ( ! in_array( $background_image_blend, array( 'normal', 'screen', 'overlay', 'soft-light', 'multiply' ), true ) ) {
+			$background_image_blend = 'screen';
+		}
+
+		if ( ! in_array( $card_image_layer, array( 'underlay', 'overlay' ), true ) ) {
+			$card_image_layer = 'overlay';
+		}
+
+		if ( ! in_array( $frame_style, array( 'solid', 'double', 'bevel', 'tech' ), true ) ) {
+			$frame_style = 'solid';
+		}
+
+		if ( ! in_array( $frame_corner_style, array( 'rounded', 'cut', 'pill' ), true ) ) {
+			$frame_corner_style = 'rounded';
+		}
+
+		if ( ! in_array( $title_align, array( 'left', 'center', 'right' ), true ) ) {
+			$title_align = 'left';
+		}
+
+		if ( ! in_array( $description_align, array( 'left', 'center', 'right' ), true ) ) {
+			$description_align = 'left';
+		}
+
 		return array(
-			'background_mode'          => $background_mode,
-			'background_color'         => $this->sanitize_color_value( $style['background_color'] ?? '#143826' ),
-			'background_color_secondary' => $this->sanitize_color_value( $style['background_color_secondary'] ?? '#215b39' ),
-			'gradient_angle'           => max( 0, min( 360, (int) ( $style['gradient_angle'] ?? 135 ) ) ),
-			'text_color'               => $this->sanitize_color_value( $style['text_color'] ?? '#f8fafc' ),
-			'muted_text_color'         => $this->sanitize_color_value( $style['muted_text_color'] ?? 'rgba(226, 232, 240, 0.78)' ),
-			'accent_color'             => $this->sanitize_color_value( $style['accent_color'] ?? '#86efac' ),
-			'border_color'             => $this->sanitize_color_value( $style['border_color'] ?? '#9ca3af' ),
-			'border_width'             => max( 1, min( 8, (int) ( $style['border_width'] ?? 2 ) ) ),
-			'border_radius'            => max( 8, min( 36, (int) ( $style['border_radius'] ?? 18 ) ) ),
-			'background_image_url'     => esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ),
-			'background_image_opacity' => max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ),
-			'pattern'                  => $pattern,
-			'pattern_opacity'          => max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 18 ) ) ),
-			'card_image_opacity'       => max( 0, min( 100, (int) ( $style['card_image_opacity'] ?? 22 ) ) ),
-			'card_image_position'      => $image_position,
-			'badge_style'              => $badge_style,
-			'rarity_effect'            => $rarity_effect,
-			'shapes'                   => $this->sanitize_visual_shapes( $style['shapes'] ?? array() ),
+			'card_subtype'                => $card_subtype,
+			'background_mode'             => $background_mode,
+			'background_color'            => $this->sanitize_color_value( $style['background_color'] ?? '#143826' ),
+			'background_color_secondary'  => $this->sanitize_color_value( $style['background_color_secondary'] ?? '#215b39' ),
+			'background_color_tertiary'   => $this->sanitize_color_value( $style['background_color_tertiary'] ?? '#143826' ),
+			'gradient_angle'              => max( 0, min( 360, (int) ( $style['gradient_angle'] ?? 135 ) ) ),
+			'gradient_origin'             => $gradient_origin,
+			'gradient_midpoint'           => max( 0, min( 100, (int) ( $style['gradient_midpoint'] ?? 52 ) ) ),
+			'gradient_stop_secondary'     => max( 0, min( 100, (int) ( $style['gradient_stop_secondary'] ?? 52 ) ) ),
+			'gradient_stop_tertiary'      => max( 0, min( 100, (int) ( $style['gradient_stop_tertiary'] ?? 100 ) ) ),
+			'gradient_opacity'            => max( 0, min( 100, (int) ( $style['gradient_opacity'] ?? 100 ) ) ),
+			'text_color'                  => $this->sanitize_color_value( $style['text_color'] ?? '#f8fafc' ),
+			'muted_text_color'            => $this->sanitize_color_value( $style['muted_text_color'] ?? 'rgba(226, 232, 240, 0.78)' ),
+			'accent_color'                => $this->sanitize_color_value( $style['accent_color'] ?? '#86efac' ),
+			'border_color'                => $this->sanitize_color_value( $style['border_color'] ?? '#9ca3af' ),
+			'border_width'                => max( 1, min( 16, (int) ( $style['border_width'] ?? 2 ) ) ),
+			'border_radius'               => max( 8, min( 36, (int) ( $style['border_radius'] ?? 18 ) ) ),
+			'frame_style'                 => $frame_style,
+			'frame_opacity'               => max( 0, min( 100, (int) ( $style['frame_opacity'] ?? 100 ) ) ),
+			'frame_glow'                  => max( 0, min( 100, (int) ( $style['frame_glow'] ?? 24 ) ) ),
+			'frame_shadow'                => max( 0, min( 100, (int) ( $style['frame_shadow'] ?? 26 ) ) ),
+			'frame_inner_width'           => max( 0, min( 10, (int) ( $style['frame_inner_width'] ?? 1 ) ) ),
+			'frame_inner_color'           => $this->sanitize_color_value( $style['frame_inner_color'] ?? '#86efac' ),
+			'frame_corner_style'          => $frame_corner_style,
+			'frame_corner_accent'         => max( 0, min( 40, (int) ( $style['frame_corner_accent'] ?? 0 ) ) ),
+			'background_image_url'        => esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ),
+			'background_image_opacity'    => max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ),
+			'background_image_position'   => $background_image_pos,
+			'background_image_size'       => max( 20, min( 200, (int) ( $style['background_image_size'] ?? 100 ) ) ),
+			'background_image_blend_mode' => $background_image_blend,
+			'pattern'                     => $pattern,
+			'pattern_color'               => $this->sanitize_color_value( $style['pattern_color'] ?? '#86efac' ),
+			'pattern_background_color'    => $this->sanitize_color_value( $style['pattern_background_color'] ?? '#143826' ),
+			'pattern_opacity'             => max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 18 ) ) ),
+			'pattern_scale'               => max( 6, min( 120, (int) ( $style['pattern_scale'] ?? 24 ) ) ),
+			'pattern_density'             => max( 1, min( 12, (int) ( $style['pattern_density'] ?? 2 ) ) ),
+			'pattern_rotation'            => max( 0, min( 360, (int) ( $style['pattern_rotation'] ?? 45 ) ) ),
+			'pattern_spacing'             => max( 6, min( 120, (int) ( $style['pattern_spacing'] ?? 24 ) ) ),
+			'card_image_opacity'          => max( 0, min( 100, (int) ( $style['card_image_opacity'] ?? 22 ) ) ),
+			'card_image_position'         => $image_position,
+			'card_image_size'             => max( 10, min( 80, (int) ( $style['card_image_size'] ?? 36 ) ) ),
+			'card_image_layer'            => $card_image_layer,
+			'badge_style'                 => $badge_style,
+			'rarity_effect'               => $rarity_effect,
+			'title_color'                 => $this->sanitize_color_value( $style['title_color'] ?? '#f8fafc' ),
+			'title_size'                  => max( 20, min( 76, (int) ( $style['title_size'] ?? 52 ) ) ),
+			'title_weight'                => max( 400, min( 900, (int) ( $style['title_weight'] ?? 900 ) ) ),
+			'title_align'                 => $title_align,
+			'title_shadow'                => max( 0, min( 40, (int) ( $style['title_shadow'] ?? 18 ) ) ),
+			'description_color'           => $this->sanitize_color_value( $style['description_color'] ?? 'rgba(226, 232, 240, 0.78)' ),
+			'description_size'            => max( 12, min( 32, (int) ( $style['description_size'] ?? 16 ) ) ),
+			'description_weight'          => max( 300, min( 900, (int) ( $style['description_weight'] ?? 500 ) ) ),
+			'description_align'           => $description_align,
+			'description_shadow'          => max( 0, min( 32, (int) ( $style['description_shadow'] ?? 0 ) ) ),
+			'shapes'                      => $this->sanitize_visual_shapes( $style['shapes'] ?? array() ),
 		);
 	}
 
@@ -1025,20 +1156,19 @@ final class RewardService {
 	 * Build the CSS background value for a reward card.
 	 */
 	private function reward_background_value( array $style ): string {
-		$primary   = (string) $style['background_color'];
-		$secondary = (string) $style['background_color_secondary'];
-		$angle     = (int) $style['gradient_angle'];
-		$mode      = (string) $style['background_mode'];
+		$primary     = (string) $style['background_color'];
+		$secondary   = (string) $style['background_color_secondary'];
+		$tertiary    = (string) $style['background_color_tertiary'];
+		$angle       = (int) $style['gradient_angle'];
+		$mode        = (string) $style['background_mode'];
+		$midpoint    = (int) $style['gradient_stop_secondary'];
+		$final_stop  = (int) $style['gradient_stop_tertiary'];
 
 		if ( 'solid' === $mode ) {
 			return $primary;
 		}
 
-		if ( 'image' === $mode && '' !== (string) $style['background_image_url'] ) {
-			return 'linear-gradient(' . $angle . 'deg, ' . $primary . ', ' . $secondary . ')';
-		}
-
-		return 'linear-gradient(' . $angle . 'deg, ' . $primary . ', ' . $secondary . ')';
+		return 'linear-gradient(' . $angle . 'deg, ' . $primary . ' 0%, ' . $secondary . ' ' . $midpoint . '%, ' . $tertiary . ' ' . $final_stop . '%)';
 	}
 
 	/**
@@ -1053,9 +1183,37 @@ final class RewardService {
 			'--adam-reward-card-border'              => (string) $style['border_color'],
 			'--adam-reward-card-border-width'        => (string) (int) $style['border_width'] . 'px',
 			'--adam-reward-card-radius'              => (string) (int) $style['border_radius'] . 'px',
+			'--adam-reward-card-gradient-origin'     => str_replace( '-', ' ', (string) $style['gradient_origin'] ),
+			'--adam-reward-card-gradient-opacity'    => (string) ( (int) $style['gradient_opacity'] / 100 ),
 			'--adam-reward-card-pattern-opacity'     => (string) ( (int) $style['pattern_opacity'] / 100 ),
+			'--adam-reward-card-pattern-color'       => (string) $style['pattern_color'],
+			'--adam-reward-card-pattern-base'        => (string) $style['pattern_background_color'],
+			'--adam-reward-card-pattern-size'        => (string) (int) $style['pattern_scale'] . 'px',
+			'--adam-reward-card-pattern-spacing'     => (string) (int) $style['pattern_spacing'] . 'px',
+			'--adam-reward-card-pattern-density'     => (string) (int) $style['pattern_density'],
+			'--adam-reward-card-pattern-rotation'    => (string) (int) $style['pattern_rotation'] . 'deg',
 			'--adam-reward-card-image-opacity'       => (string) ( (int) $style['card_image_opacity'] / 100 ),
+			'--adam-reward-card-image-size'          => (string) (int) $style['card_image_size'] . '%',
 			'--adam-reward-card-background-opacity'  => (string) ( (int) $style['background_image_opacity'] / 100 ),
+			'--adam-reward-card-background-size'     => (string) (int) $style['background_image_size'] . '%',
+			'--adam-reward-card-background-position' => str_replace( '-', ' ', (string) $style['background_image_position'] ),
+			'--adam-reward-card-background-blend'    => (string) $style['background_image_blend_mode'],
+			'--adam-reward-card-frame-opacity'       => (string) ( (int) $style['frame_opacity'] / 100 ),
+			'--adam-reward-card-frame-glow'          => (string) ( (int) $style['frame_glow'] / 2 ) . 'px',
+			'--adam-reward-card-frame-shadow'        => (string) ( (int) $style['frame_shadow'] / 2 ) . 'px',
+			'--adam-reward-card-frame-inner-width'   => (string) (int) $style['frame_inner_width'] . 'px',
+			'--adam-reward-card-frame-inner-color'   => (string) $style['frame_inner_color'],
+			'--adam-reward-card-frame-corner'        => (string) (int) $style['frame_corner_accent'] . 'px',
+			'--adam-reward-card-title-color'         => (string) $style['title_color'],
+			'--adam-reward-card-title-size'          => (string) (int) $style['title_size'] . 'px',
+			'--adam-reward-card-title-weight'        => (string) (int) $style['title_weight'],
+			'--adam-reward-card-title-align'         => (string) $style['title_align'],
+			'--adam-reward-card-title-shadow'        => (string) ( (int) $style['title_shadow'] / 3 ) . 'px',
+			'--adam-reward-card-description-color'   => (string) $style['description_color'],
+			'--adam-reward-card-description-size'    => (string) (int) $style['description_size'] . 'px',
+			'--adam-reward-card-description-weight'  => (string) (int) $style['description_weight'],
+			'--adam-reward-card-description-align'   => (string) $style['description_align'],
+			'--adam-reward-card-description-shadow'  => (string) ( (int) $style['description_shadow'] / 3 ) . 'px',
 		);
 
 		$declarations = array();

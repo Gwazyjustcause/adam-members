@@ -1034,14 +1034,14 @@ final class MemberArea {
 		$presentation     = $this->rewards->reward_card_presentation( $reward );
 		$style            = (array) ( $presentation['style'] ?? array() );
 		?>
-		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?> <?php echo esc_attr( (string) ( $presentation['badge_style_class'] ?? '' ) ); ?> <?php echo esc_attr( (string) ( $presentation['effect_class'] ?? '' ) ); ?>" style="<?php echo esc_attr( (string) ( $presentation['inline_style'] ?? '' ) ); ?>">
+		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?> <?php echo esc_attr( (string) ( $presentation['badge_style_class'] ?? '' ) ); ?> <?php echo esc_attr( (string) ( $presentation['effect_class'] ?? '' ) ); ?> <?php echo esc_attr( (string) ( $presentation['frame_style_class'] ?? '' ) ); ?> <?php echo esc_attr( (string) ( $presentation['corner_style_class'] ?? '' ) ); ?>" style="<?php echo esc_attr( (string) ( $presentation['inline_style'] ?? '' ) ); ?>">
 			<div class="adam-reward-card__background"></div>
 			<div class="adam-reward-card__pattern <?php echo esc_attr( (string) ( $presentation['pattern_class'] ?? 'adam-reward-card__pattern--grid' ) ); ?>"></div>
 			<?php if ( '' !== (string) ( $style['background_image_url'] ?? '' ) ) : ?>
 				<div class="adam-reward-card__backdrop" style="background-image:url('<?php echo esc_url( (string) $style['background_image_url'] ); ?>');"></div>
 			<?php endif; ?>
 			<?php if ( '' !== $reward->image_url() ) : ?>
-				<div class="adam-reward-card__art <?php echo esc_attr( (string) ( $presentation['image_position_class'] ?? 'adam-reward-card__art--top-right' ) ); ?>">
+				<div class="adam-reward-card__art <?php echo esc_attr( (string) ( $presentation['image_position_class'] ?? 'adam-reward-card__art--top-right' ) ); ?> <?php echo esc_attr( (string) ( $presentation['image_layer_class'] ?? 'adam-reward-card__art--layer-overlay' ) ); ?>">
 					<img src="<?php echo esc_url( $reward->image_url() ); ?>" alt="">
 				</div>
 			<?php endif; ?>
