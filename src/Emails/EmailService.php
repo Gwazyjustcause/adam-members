@@ -61,6 +61,11 @@ final class EmailService {
 	 */
 	public function admin_templates(): array {
 		return array(
+			'registration_received' => array(
+				'label'        => __( 'Inscrição recebida', 'adam-membership' ),
+				'description'  => __( 'Enviado logo após a submissão da inscrição para o novo sócio definir o utilizador e a palavra-passe.', 'adam-membership' ),
+				'placeholders' => array( 'member_name', 'member_email', 'account_setup_link' ),
+			),
 			'member_approved' => array(
 				'label'        => __( 'Sócio aprovado', 'adam-membership' ),
 				'description'  => __( 'Enviado quando a Direção aprova uma nova inscrição.', 'adam-membership' ),
@@ -159,6 +164,24 @@ final class EmailService {
 			array(
 				'member_area_link' => $this->settings->member_area_url(),
 				'login_link'       => $this->settings->member_area_url(),
+			),
+			array( 'member_id' => $member->user_id() )
+		);
+	}
+
+	/**
+	 * Send account setup email after registration submission.
+	 *
+	 * @param Member $member Member.
+	 * @param string $setup_link Secure setup link.
+	 */
+	public function send_registration_received_email( Member $member, string $setup_link ): bool {
+		return $this->send_member_template_email(
+			'registration_received',
+			$member,
+			array(
+				'member_email'       => $member->email(),
+				'account_setup_link' => $setup_link,
 			),
 			array( 'member_id' => $member->user_id() )
 		);
@@ -522,6 +545,7 @@ final class EmailService {
 	private function member_template_context( Member $member ): array {
 		return array(
 			'member_name'      => $member->full_name(),
+			'member_email'     => $member->email(),
 			'member_number'    => $this->member_number( $member ),
 			'expiry_date'      => $this->format_date( $member->field( 'validade_quota' ) ),
 			'quota_value'      => $this->quota_value( $member ),
@@ -533,6 +557,7 @@ final class EmailService {
 			'new_email'        => '',
 			'confirmation_link' => '',
 			'reset_link'       => '',
+			'account_setup_link' => '',
 		);
 	}
 
@@ -544,6 +569,7 @@ final class EmailService {
 	private function sample_template_context(): array {
 		return array(
 			'member_name'       => 'João Exemplo',
+			'member_email'      => 'joao@example.com',
 			'member_number'     => 'ADAM-0001',
 			'expiry_date'       => wp_date( 'd/m/Y', strtotime( '+1 year' ) ),
 			'quota_value'       => '22,00 €',
@@ -555,6 +581,7 @@ final class EmailService {
 			'new_email'         => 'novo.email@example.com',
 			'confirmation_link' => home_url( '/confirmar-email/' ),
 			'reset_link'        => home_url( '/redefinir-password/' ),
+			'account_setup_link' => $this->settings->account_setup_page_url(),
 		);
 	}
 

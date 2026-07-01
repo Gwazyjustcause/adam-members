@@ -16,6 +16,7 @@ final class SettingsRepository {
 	private const OPTION_LAST_MEMBER_NUMBER        = 'adam_membership_last_member_number';
 	private const OPTION_REGISTRATION_PAGE_URL     = 'adam_membership_registration_page_url';
 	private const OPTION_RENEWAL_PAGE_URL          = 'adam_membership_renewal_page_url';
+	private const OPTION_ACCOUNT_SETUP_PAGE_URL    = 'adam_membership_account_setup_page_url';
 	private const OPTION_EMAIL_FROM_NAME           = 'adam_membership_email_from_name';
 	private const OPTION_EMAIL_FROM_ADDRESS        = 'adam_membership_email_from_address';
 	private const OPTION_ASSOCIATION_NAME          = 'adam_membership_association_name';
@@ -90,12 +91,30 @@ final class SettingsRepository {
 	}
 
 	/**
+	 * Get the account setup page URL.
+	 */
+	public function account_setup_page_url(): string {
+		$url = (string) get_option( self::OPTION_ACCOUNT_SETUP_PAGE_URL, '' );
+
+		return '' !== $url ? $url : home_url( '/definir-user/' );
+	}
+
+	/**
 	 * Save the renewal page URL.
 	 *
 	 * @param string $url Renewal page URL.
 	 */
 	public function save_renewal_page_url( string $url ): void {
 		update_option( self::OPTION_RENEWAL_PAGE_URL, esc_url_raw( $url ), false );
+	}
+
+	/**
+	 * Save the account setup page URL.
+	 *
+	 * @param string $url Account setup page URL.
+	 */
+	public function save_account_setup_page_url( string $url ): void {
+		update_option( self::OPTION_ACCOUNT_SETUP_PAGE_URL, esc_url_raw( $url ), false );
 	}
 
 	/**
@@ -526,6 +545,11 @@ final class SettingsRepository {
 	 */
 	private function default_email_template_settings(): array {
 		return array(
+			'registration_received' => array(
+				'enabled' => true,
+				'subject' => "Complete o acesso \u{00E0} sua conta ADAM",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos a sua inscri\u{00E7}\u{00E3}o na ADAM e o processo encontra-se agora pendente de valida\u{00E7}\u{00E3}o.</p><p>Para concluir a cria\u{00E7}\u{00E3}o da sua conta, escolha o seu nome de utilizador e a sua palavra-passe atrav\u{00E9}s do link seguro abaixo:</p><p><a href=\"{{account_setup_link}}\">Definir utilizador e palavra-passe</a></p><p>Este link \u{00E9} pessoal, tem validade limitada e deixa de funcionar ap\u{00F3}s a primeira utiliza\u{00E7}\u{00E3}o.</p><p><strong>Email associado:</strong> {{member_email}}</p>",
+			),
 			'member_approved' => array(
 				'enabled' => true,
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM foi aprovada",

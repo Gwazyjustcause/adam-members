@@ -81,6 +81,7 @@ final class MemberArea {
 	 * @var RewardService
 	 */
 	private RewardService $rewards;
+	private AccountSetup $account_setup;
 	private RecognitionService $recognition;
 
 	/**
@@ -94,9 +95,10 @@ final class MemberArea {
 	 * @param DocumentService     $documents     Document service.
 	 * @param PointsService       $points        Points service.
 	 * @param RewardService       $rewards       Reward service.
+	 * @param AccountSetup        $account_setup Account setup service.
 	 * @param RecognitionService  $recognition   Recognition service.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, RecognitionService $recognition ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -105,6 +107,7 @@ final class MemberArea {
 		$this->documents     = $documents;
 		$this->points        = $points;
 		$this->rewards       = $rewards;
+		$this->account_setup = $account_setup;
 		$this->recognition   = $recognition;
 	}
 
@@ -318,6 +321,8 @@ final class MemberArea {
 			if ( $user instanceof \WP_User ) {
 				$login = $user->user_login;
 			}
+		} else {
+			$login = $this->account_setup->resolve_login_identifier( $login );
 		}
 
 		$result = wp_signon(

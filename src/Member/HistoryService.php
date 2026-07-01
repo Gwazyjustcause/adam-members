@@ -106,6 +106,39 @@ final class HistoryService {
 	}
 
 	/**
+	 * Log an account setup link dispatch.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function account_setup_link_sent( Member $member ): void {
+		$this->system_event(
+			'account_setup_link_sent',
+			__( 'Link de definição de acesso enviado', 'adam-membership' ),
+			$member,
+			__( 'O sistema enviou o link seguro para definir utilizador e palavra-passe.', 'adam-membership' ),
+			array()
+		);
+	}
+
+	/**
+	 * Log a completed initial account setup.
+	 *
+	 * @param Member $member   Member.
+	 * @param string $username Chosen username.
+	 */
+	public function account_setup_completed( Member $member, string $username ): void {
+		$this->member_event(
+			'account_setup_completed',
+			__( 'Acesso inicial configurado', 'adam-membership' ),
+			$member,
+			__( 'O sócio definiu o utilizador e a palavra-passe iniciais da conta.', 'adam-membership' ),
+			array(
+				'username' => sanitize_user( $username, true ),
+			)
+		);
+	}
+
+	/**
 	 * Log a password reset request.
 	 *
 	 * @param Member $member Member.

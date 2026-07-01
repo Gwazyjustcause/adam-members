@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace AdamMembership\Form;
 
+use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\Member;
 use WP_Error;
@@ -20,10 +22,14 @@ use WP_Error;
 final class RegistrationService {
 	private Logger $logger;
 	private HistoryService $history;
+	private EmailService $email;
+	private AccountSetup $account_setup;
 
-	public function __construct( Logger $logger, HistoryService $history ) {
-		$this->logger  = $logger;
-		$this->history = $history;
+	public function __construct( Logger $logger, HistoryService $history, EmailService $email, AccountSetup $account_setup ) {
+		$this->logger        = $logger;
+		$this->history       = $history;
+		$this->email         = $email;
+		$this->account_setup = $account_setup;
 	}
 
 	/**
@@ -54,10 +60,25 @@ final class RegistrationService {
 			return $user_id;
 		}
 
-		wp_new_user_notification( (int) $user_id, null, 'user' );
-
 		$member = new Member( (int) $user_id );
 		$member->initialize( $this->build_member_data( $payload ) );
+		$user = get_user_by( 'ID', (int) $user_id );
+
+		if ( $user instanceof \WP_User ) {
+			$setup_link = $this->account_setup->issue_setup_link( $user );
+
+			if ( $this->email->send_registration_received_email( $member, $setup_link ) ) {
+				$this->history->account_setup_link_sent( $member );
+			} else {
+				$this->logger->error(
+					'Falha ao enviar o email de definição de acesso após a inscrição.',
+					array(
+						'user_id' => $user_id,
+						'email'   => wp_hash( (string) $user->user_email ),
+					)
+				);
+			}
+		}
 
 		$this->logger->info(
 			'Inscrição nativa submetida.',

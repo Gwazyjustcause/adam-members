@@ -32,6 +32,7 @@ use AdamMembership\Event\EventFrontend;
 use AdamMembership\Event\EventRepository;
 use AdamMembership\Event\EventService;
 use AdamMembership\Member\Account;
+use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\CardService;
 use AdamMembership\Member\CardCosmeticsService;
@@ -123,8 +124,9 @@ final class Plugin {
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics );
 		$config             = new RegistrationFormConfig();
-		$registration_service = new RegistrationService( $logger, $history );
-		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $recognition );
+		$account_setup      = new AccountSetup( $settings, $members, $history );
+		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup );
+		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition );
 		$membership_forms   = new MembershipForms( $settings, $members, $registration_service, $renewals );
 		$account            = new Account( $email, $members, $history );
 		$password_recovery  = new PasswordRecovery( $email, $members, $history );
@@ -178,6 +180,7 @@ final class Plugin {
 
 		$member_area->register();
 		$membership_forms->register();
+		$account_setup->register();
 		$password_recovery->register();
 		$password_reset->register();
 		$account->register();

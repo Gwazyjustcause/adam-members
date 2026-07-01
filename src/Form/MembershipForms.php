@@ -1214,7 +1214,7 @@ final class MembershipForms {
 				'success',
 				'renewal' === $form
 					? __( "O pedido de renova\u{00E7}\u{00E3}o foi submetido com sucesso e est\u{00E1} agora em an\u{00E1}lise.", 'adam-membership' )
-					: __( "A inscri\u{00E7}\u{00E3}o foi submetida com sucesso. A conta ficou pendente de aprova\u{00E7}\u{00E3}o pela ADAM.", 'adam-membership' )
+					: __( "A inscrição foi submetida com sucesso. Enviámos um email com o link seguro para definir o utilizador e a palavra-passe da conta.", 'adam-membership' )
 			);
 		}
 
