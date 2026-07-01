@@ -106,6 +106,32 @@ final class Member {
 	);
 
 	/**
+	 * Core member fields that should always use direct user meta storage.
+	 *
+	 * These values are the plugin's source of truth and should not depend on
+	 * optional ACF field registration or cached field references.
+	 *
+	 * @var array<int, string>
+	 */
+	private const DIRECT_META_FIELDS = array(
+		'estado',
+		'numero_socio',
+		'data_adesao',
+		'validade_quota',
+		'adam_founder_status',
+		'adam_founder_number',
+		'adam_loyalty_unlocked',
+		'adam_active_title_reward',
+		'adam_active_card_theme',
+		'adam_active_card_frame',
+		'adam_membership_origin',
+		'adam_membership_fee',
+		'adam_external_association_name',
+		'adam_external_member_number',
+		'adam_external_association_proof',
+	);
+
+	/**
 	 * WordPress user ID.
 	 *
 	 * @var int
@@ -511,6 +537,10 @@ final class Member {
 			return $this->date_field( $field_name );
 		}
 
+		if ( in_array( $field_name, self::DIRECT_META_FIELDS, true ) || str_starts_with( $field_name, 'adam_custom_' ) ) {
+			return get_user_meta( $this->user_id, $field_name, true );
+		}
+
 		if ( function_exists( 'get_field' ) ) {
 			$value = get_field( $field_name, 'user_' . $this->user_id );
 
@@ -528,6 +558,10 @@ final class Member {
 	 * @param string $field_name Member date field name.
 	 */
 	private function date_field( string $field_name ): string {
+		if ( in_array( $field_name, self::DIRECT_META_FIELDS, true ) ) {
+			return $this->normalize_date_value( get_user_meta( $this->user_id, $field_name, true ) );
+		}
+
 		$value = null;
 
 		if ( function_exists( 'get_field' ) ) {
@@ -588,6 +622,12 @@ final class Member {
 	 * @param mixed  $value      Member field value.
 	 */
 	private function update_field( string $field_name, mixed $value ): void {
+		if ( in_array( $field_name, self::DIRECT_META_FIELDS, true ) || str_starts_with( $field_name, 'adam_custom_' ) ) {
+			update_user_meta( $this->user_id, $field_name, $value );
+			clean_user_cache( $this->user_id );
+			return;
+		}
+
 		if ( function_exists( 'update_field' ) ) {
 			update_field( $field_name, $value, 'user_' . $this->user_id );
 			return;
