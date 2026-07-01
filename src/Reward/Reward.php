@@ -76,6 +76,17 @@ final class Reward {
 		return esc_url_raw( (string) ( $this->data['image_url'] ?? '' ) );
 	}
 
+	/**
+	 * Get custom visual style data for the reward card.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function visual_style(): array {
+		$style = $this->data['visual_style'] ?? array();
+
+		return is_array( $style ) ? $style : array();
+	}
+
 	public function availability_label(): string {
 		return sanitize_text_field( (string) ( $this->data['availability_label'] ?? __( 'Disponível', 'adam-membership' ) ) );
 	}

@@ -1031,8 +1031,28 @@ final class MemberArea {
 		$is_loyalty       = $this->rewards->is_loyalty_reward( $reward );
 		$progress_label   = $this->reward_progress_label( $member, $reward, $owned, $pending, $can_redeem, $shortfall, $loyalty_progress );
 		$cost_label       = $this->reward_cost_label( $reward );
+		$presentation     = $this->rewards->reward_card_presentation( $reward );
+		$style            = (array) ( $presentation['style'] ?? array() );
 		?>
-		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?>">
+		<article class="adam-reward-card adam-reward-card--<?php echo esc_attr( $reward->rarity() ); ?> <?php echo esc_attr( (string) ( $presentation['badge_style_class'] ?? '' ) ); ?> <?php echo esc_attr( (string) ( $presentation['effect_class'] ?? '' ) ); ?>" style="<?php echo esc_attr( (string) ( $presentation['inline_style'] ?? '' ) ); ?>">
+			<div class="adam-reward-card__background"></div>
+			<div class="adam-reward-card__pattern <?php echo esc_attr( (string) ( $presentation['pattern_class'] ?? 'adam-reward-card__pattern--grid' ) ); ?>"></div>
+			<?php if ( '' !== (string) ( $style['background_image_url'] ?? '' ) ) : ?>
+				<div class="adam-reward-card__backdrop" style="background-image:url('<?php echo esc_url( (string) $style['background_image_url'] ); ?>');"></div>
+			<?php endif; ?>
+			<?php if ( '' !== $reward->image_url() ) : ?>
+				<div class="adam-reward-card__art <?php echo esc_attr( (string) ( $presentation['image_position_class'] ?? 'adam-reward-card__art--top-right' ) ); ?>">
+					<img src="<?php echo esc_url( $reward->image_url() ); ?>" alt="">
+				</div>
+			<?php endif; ?>
+			<?php if ( ! empty( $style['shapes'] ) && is_array( $style['shapes'] ) ) : ?>
+				<div class="adam-reward-card__shapes">
+					<?php foreach ( $style['shapes'] as $shape ) : ?>
+						<?php $this->render_reward_shape_preview( (array) $shape ); ?>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+			<div class="adam-reward-card__content">
 			<div class="adam-reward-card__meta">
 				<span class="adam-badge adam-reward-rarity adam-reward-rarity--<?php echo esc_attr( $reward->rarity() ); ?>"><?php echo esc_html( $this->reward_rarity_label( $reward ) ); ?></span>
 				<span class="adam-announcement-category"><?php echo esc_html( $reward->category() ); ?></span>
@@ -1093,7 +1113,37 @@ final class MemberArea {
 					<button type="button" class="adam-card-link" disabled><?php esc_html_e( 'Pontos insuficientes', 'adam-membership' ); ?></button>
 				<?php endif; ?>
 			</div>
+			</div>
 		</article>
+		<?php
+	}
+
+	/**
+	 * Render one decorative reward card shape.
+	 *
+	 * @param array<string, mixed> $shape Shape payload.
+	 */
+	private function render_reward_shape_preview( array $shape ): void {
+		$type     = sanitize_html_class( (string) ( $shape['type'] ?? 'circle' ) );
+		$x        = max( 0, min( 100, (int) ( $shape['x'] ?? 72 ) ) );
+		$y        = max( 0, min( 100, (int) ( $shape['y'] ?? 20 ) ) );
+		$width    = max( 2, min( 90, (int) ( $shape['width'] ?? 18 ) ) );
+		$height   = max( 2, min( 90, (int) ( $shape['height'] ?? 18 ) ) );
+		$rotation = max( 0, min( 360, (int) ( $shape['rotation'] ?? 0 ) ) );
+		$opacity  = max( 0, min( 100, (int) ( $shape['opacity'] ?? 28 ) ) ) / 100;
+		$color    = sanitize_text_field( (string) ( $shape['color'] ?? '#ffffff' ) );
+		$style    = sprintf(
+			'left:%1$s%%;top:%2$s%%;width:%3$s%%;height:%4$s%%;transform:rotate(%5$sdeg);opacity:%6$s;background:%7$s;',
+			(string) $x,
+			(string) $y,
+			(string) $width,
+			(string) $height,
+			(string) $rotation,
+			(string) $opacity,
+			$color
+		);
+		?>
+		<span class="adam-reward-card__shape adam-reward-card__shape--<?php echo esc_attr( $type ); ?>" style="<?php echo esc_attr( $style ); ?>"></span>
 		<?php
 	}
 

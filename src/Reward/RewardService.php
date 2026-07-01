@@ -717,6 +717,134 @@ final class RewardService {
 	}
 
 	/**
+	 * Get the resolved visual style for a reward card.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function reward_visual_style( Reward $reward ): array {
+		$stored = $this->sanitize_visual_style( $reward->visual_style() );
+
+		return array_merge(
+			$this->default_reward_visual_style( $reward->rarity(), $reward->category() ),
+			$stored,
+			array(
+				'shapes' => $this->sanitize_visual_shapes( $stored['shapes'] ?? array() ),
+			)
+		);
+	}
+
+	/**
+	 * Get default editor values for a reward card style.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function default_reward_visual_style( string $rarity = Reward::RARITY_COMMON, string $category = '' ): array {
+		$rarity = sanitize_key( $rarity );
+
+		$palette = match ( $rarity ) {
+			Reward::RARITY_UNCOMMON => array(
+				'background_color'           => '#0d1f16',
+				'background_color_secondary' => '#1c5a33',
+				'accent_color'               => '#6ee7b7',
+				'border_color'               => '#4ade80',
+				'text_color'                 => '#f4fff7',
+				'muted_text_color'           => 'rgba(236, 253, 245, 0.78)',
+			),
+			Reward::RARITY_RARE => array(
+				'background_color'           => '#10233d',
+				'background_color_secondary' => '#1d4f91',
+				'accent_color'               => '#93c5fd',
+				'border_color'               => '#60a5fa',
+				'text_color'                 => '#f2f8ff',
+				'muted_text_color'           => 'rgba(219, 234, 254, 0.78)',
+			),
+			Reward::RARITY_EPIC => array(
+				'background_color'           => '#261141',
+				'background_color_secondary' => '#6d28d9',
+				'accent_color'               => '#d8b4fe',
+				'border_color'               => '#c084fc',
+				'text_color'                 => '#faf5ff',
+				'muted_text_color'           => 'rgba(243, 232, 255, 0.78)',
+			),
+			Reward::RARITY_LEGENDARY => array(
+				'background_color'           => '#4c2b06',
+				'background_color_secondary' => '#c27a10',
+				'accent_color'               => '#fde68a',
+				'border_color'               => '#fbbf24',
+				'text_color'                 => '#fff9eb',
+				'muted_text_color'           => 'rgba(254, 240, 138, 0.82)',
+			),
+			Reward::RARITY_LIMITED_EDITION => array(
+				'background_color'           => '#40111a',
+				'background_color_secondary' => '#b91c1c',
+				'accent_color'               => '#fca5a5',
+				'border_color'               => '#ef4444',
+				'text_color'                 => '#fff5f5',
+				'muted_text_color'           => 'rgba(254, 226, 226, 0.82)',
+			),
+			default => array(
+				'background_color'           => '#143826',
+				'background_color_secondary' => '#215b39',
+				'accent_color'               => '#86efac',
+				'border_color'               => '#9ca3af',
+				'text_color'                 => '#f8fafc',
+				'muted_text_color'           => 'rgba(226, 232, 240, 0.78)',
+			),
+		};
+
+		$pattern = 'grid';
+
+		if ( str_contains( strtolower( $category ), 'cartao' ) ) {
+			$pattern = Reward::RARITY_COMMON === $rarity ? 'diagonal' : 'carbon';
+		}
+
+		if ( str_contains( strtolower( $category ), 'titulos' ) ) {
+			$pattern = 'dots';
+		}
+
+		return array_merge(
+			$palette,
+			array(
+				'background_mode'          => 'gradient',
+				'gradient_angle'           => 135,
+				'border_width'             => Reward::RARITY_LEGENDARY === $rarity ? 3 : 2,
+				'border_radius'            => 18,
+				'background_image_url'     => '',
+				'background_image_opacity' => 18,
+				'pattern'                  => $pattern,
+				'pattern_opacity'          => Reward::RARITY_COMMON === $rarity ? 10 : 18,
+				'card_image_opacity'       => 22,
+				'card_image_position'      => 'top-right',
+				'badge_style'              => 'soft',
+				'rarity_effect'            => 'auto',
+				'shapes'                   => $this->default_visual_shapes( $rarity ),
+			)
+		);
+	}
+
+	/**
+	 * Build a reward card presentation payload for renderers.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function reward_card_presentation( Reward $reward ): array {
+		$style            = $this->reward_visual_style( $reward );
+		$background_value = $this->reward_background_value( $style );
+		$badge_style      = sanitize_html_class( (string) $style['badge_style'] );
+		$effect           = sanitize_html_class( (string) $style['rarity_effect'] );
+		$image_position   = sanitize_html_class( (string) $style['card_image_position'] );
+
+		return array(
+			'style'               => $style,
+			'inline_style'        => $this->reward_card_inline_style( $style, $background_value ),
+			'pattern_class'       => 'adam-reward-card__pattern--' . sanitize_html_class( (string) $style['pattern'] ),
+			'badge_style_class'   => 'adam-reward-card--badge-' . $badge_style,
+			'effect_class'        => 'adam-reward-card--effect-' . ( 'auto' === $effect ? sanitize_html_class( $reward->rarity() ) : $effect ),
+			'image_position_class' => 'adam-reward-card__art--' . $image_position,
+		);
+	}
+
+	/**
 	 * @return array<string, string>
 	 */
 	public function redemption_status_labels(): array {
@@ -759,7 +887,205 @@ final class RewardService {
 			'approval_required'   => ! empty( $data['approval_required'] ),
 			'mystery_reveal_text' => isset( $data['mystery_reveal_text'] ) ? sanitize_textarea_field( (string) $data['mystery_reveal_text'] ) : '',
 			'reward_value'        => isset( $data['reward_value'] ) ? sanitize_text_field( (string) $data['reward_value'] ) : '',
+			'visual_style'        => $this->sanitize_visual_style( $data['visual_style'] ?? array() ),
 		);
+	}
+
+	/**
+	 * Sanitize reward visual style payloads.
+	 *
+	 * @param mixed $style Raw style data.
+	 * @return array<string, mixed>
+	 */
+	private function sanitize_visual_style( mixed $style ): array {
+		if ( is_string( $style ) ) {
+			$decoded = json_decode( $style, true );
+			$style   = is_array( $decoded ) ? $decoded : array();
+		}
+
+		if ( ! is_array( $style ) ) {
+			$style = array();
+		}
+
+		$background_mode = isset( $style['background_mode'] ) ? sanitize_key( (string) $style['background_mode'] ) : 'gradient';
+		$pattern         = isset( $style['pattern'] ) ? sanitize_key( (string) $style['pattern'] ) : 'grid';
+		$badge_style     = isset( $style['badge_style'] ) ? sanitize_key( (string) $style['badge_style'] ) : 'soft';
+		$rarity_effect   = isset( $style['rarity_effect'] ) ? sanitize_key( (string) $style['rarity_effect'] ) : 'auto';
+		$image_position  = isset( $style['card_image_position'] ) ? sanitize_key( (string) $style['card_image_position'] ) : 'top-right';
+
+		if ( ! in_array( $background_mode, array( 'solid', 'gradient', 'image' ), true ) ) {
+			$background_mode = 'gradient';
+		}
+
+		if ( ! in_array( $pattern, array( 'none', 'grid', 'carbon', 'diagonal', 'dots' ), true ) ) {
+			$pattern = 'grid';
+		}
+
+		if ( ! in_array( $badge_style, array( 'soft', 'outline', 'glow', 'solid' ), true ) ) {
+			$badge_style = 'soft';
+		}
+
+		if ( ! in_array( $rarity_effect, array( 'auto', 'subtle', 'metallic', 'glow', 'none' ), true ) ) {
+			$rarity_effect = 'auto';
+		}
+
+		if ( ! in_array( $image_position, array( 'top-left', 'top-right', 'center', 'bottom-right', 'bottom-left' ), true ) ) {
+			$image_position = 'top-right';
+		}
+
+		return array(
+			'background_mode'          => $background_mode,
+			'background_color'         => $this->sanitize_color_value( $style['background_color'] ?? '#143826' ),
+			'background_color_secondary' => $this->sanitize_color_value( $style['background_color_secondary'] ?? '#215b39' ),
+			'gradient_angle'           => max( 0, min( 360, (int) ( $style['gradient_angle'] ?? 135 ) ) ),
+			'text_color'               => $this->sanitize_color_value( $style['text_color'] ?? '#f8fafc' ),
+			'muted_text_color'         => $this->sanitize_color_value( $style['muted_text_color'] ?? 'rgba(226, 232, 240, 0.78)' ),
+			'accent_color'             => $this->sanitize_color_value( $style['accent_color'] ?? '#86efac' ),
+			'border_color'             => $this->sanitize_color_value( $style['border_color'] ?? '#9ca3af' ),
+			'border_width'             => max( 1, min( 8, (int) ( $style['border_width'] ?? 2 ) ) ),
+			'border_radius'            => max( 8, min( 36, (int) ( $style['border_radius'] ?? 18 ) ) ),
+			'background_image_url'     => esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ),
+			'background_image_opacity' => max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ),
+			'pattern'                  => $pattern,
+			'pattern_opacity'          => max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 18 ) ) ),
+			'card_image_opacity'       => max( 0, min( 100, (int) ( $style['card_image_opacity'] ?? 22 ) ) ),
+			'card_image_position'      => $image_position,
+			'badge_style'              => $badge_style,
+			'rarity_effect'            => $rarity_effect,
+			'shapes'                   => $this->sanitize_visual_shapes( $style['shapes'] ?? array() ),
+		);
+	}
+
+	/**
+	 * Sanitize simple shape definitions used by the reward editor.
+	 *
+	 * @param mixed $shapes Raw shape data.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function sanitize_visual_shapes( mixed $shapes ): array {
+		if ( is_string( $shapes ) ) {
+			$decoded = json_decode( $shapes, true );
+			$shapes  = is_array( $decoded ) ? $decoded : array();
+		}
+
+		if ( ! is_array( $shapes ) ) {
+			return array();
+		}
+
+		$clean = array();
+
+		foreach ( $shapes as $shape ) {
+			if ( ! is_array( $shape ) ) {
+				continue;
+			}
+
+			$type = isset( $shape['type'] ) ? sanitize_key( (string) $shape['type'] ) : 'circle';
+
+			if ( ! in_array( $type, array( 'circle', 'square', 'line' ), true ) ) {
+				continue;
+			}
+
+			$clean[] = array(
+				'type'     => $type,
+				'x'        => max( 0, min( 100, (int) ( $shape['x'] ?? 72 ) ) ),
+				'y'        => max( 0, min( 100, (int) ( $shape['y'] ?? 20 ) ) ),
+				'width'    => max( 4, min( 90, (int) ( $shape['width'] ?? 18 ) ) ),
+				'height'   => max( 2, min( 90, (int) ( $shape['height'] ?? 18 ) ) ),
+				'rotation' => max( 0, min( 360, (int) ( $shape['rotation'] ?? 0 ) ) ),
+				'opacity'  => max( 0, min( 100, (int) ( $shape['opacity'] ?? 28 ) ) ),
+				'color'    => $this->sanitize_color_value( $shape['color'] ?? '#ffffff' ),
+			);
+		}
+
+		return array_slice( $clean, 0, 12 );
+	}
+
+	/**
+	 * Get starter shapes based on rarity.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function default_visual_shapes( string $rarity ): array {
+		return match ( $rarity ) {
+			Reward::RARITY_EPIC => array(
+				array( 'type' => 'circle', 'x' => 84, 'y' => 16, 'width' => 14, 'height' => 14, 'rotation' => 0, 'opacity' => 24, 'color' => '#ffffff' ),
+				array( 'type' => 'line', 'x' => 58, 'y' => 78, 'width' => 28, 'height' => 2, 'rotation' => 0, 'opacity' => 38, 'color' => '#d8b4fe' ),
+			),
+			Reward::RARITY_LEGENDARY => array(
+				array( 'type' => 'circle', 'x' => 84, 'y' => 14, 'width' => 16, 'height' => 16, 'rotation' => 0, 'opacity' => 28, 'color' => '#fff4b8' ),
+				array( 'type' => 'line', 'x' => 8, 'y' => 22, 'width' => 22, 'height' => 2, 'rotation' => 24, 'opacity' => 54, 'color' => '#fde68a' ),
+			),
+			default => array(
+				array( 'type' => 'line', 'x' => 72, 'y' => 18, 'width' => 20, 'height' => 2, 'rotation' => 0, 'opacity' => 36, 'color' => '#ffffff' ),
+			),
+		};
+	}
+
+	/**
+	 * Build the CSS background value for a reward card.
+	 */
+	private function reward_background_value( array $style ): string {
+		$primary   = (string) $style['background_color'];
+		$secondary = (string) $style['background_color_secondary'];
+		$angle     = (int) $style['gradient_angle'];
+		$mode      = (string) $style['background_mode'];
+
+		if ( 'solid' === $mode ) {
+			return $primary;
+		}
+
+		if ( 'image' === $mode && '' !== (string) $style['background_image_url'] ) {
+			return 'linear-gradient(' . $angle . 'deg, ' . $primary . ', ' . $secondary . ')';
+		}
+
+		return 'linear-gradient(' . $angle . 'deg, ' . $primary . ', ' . $secondary . ')';
+	}
+
+	/**
+	 * Build an inline style string for reward card renderers.
+	 */
+	private function reward_card_inline_style( array $style, string $background_value ): string {
+		$vars = array(
+			'--adam-reward-card-background'          => $background_value,
+			'--adam-reward-card-text'                => (string) $style['text_color'],
+			'--adam-reward-card-muted'               => (string) $style['muted_text_color'],
+			'--adam-reward-card-accent'              => (string) $style['accent_color'],
+			'--adam-reward-card-border'              => (string) $style['border_color'],
+			'--adam-reward-card-border-width'        => (string) (int) $style['border_width'] . 'px',
+			'--adam-reward-card-radius'              => (string) (int) $style['border_radius'] . 'px',
+			'--adam-reward-card-pattern-opacity'     => (string) ( (int) $style['pattern_opacity'] / 100 ),
+			'--adam-reward-card-image-opacity'       => (string) ( (int) $style['card_image_opacity'] / 100 ),
+			'--adam-reward-card-background-opacity'  => (string) ( (int) $style['background_image_opacity'] / 100 ),
+		);
+
+		$declarations = array();
+
+		foreach ( $vars as $property => $value ) {
+			$declarations[] = $property . ':' . $value;
+		}
+
+		return implode( ';', $declarations ) . ';';
+	}
+
+	/**
+	 * Sanitize CSS color values used in reward editor settings.
+	 */
+	private function sanitize_color_value( mixed $value ): string {
+		$value = trim( (string) $value );
+
+		if ( '' === $value ) {
+			return '#ffffff';
+		}
+
+		if ( preg_match( '/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $value ) ) {
+			return $value;
+		}
+
+		if ( preg_match( '/^rgba?\([\d\s.,%]+\)$/', $value ) ) {
+			return $value;
+		}
+
+		return '#ffffff';
 	}
 
 	/**

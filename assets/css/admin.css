@@ -1003,3 +1003,467 @@
 		height: 150px;
 	}
 }
+
+.adam-admin-titlebar--split {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.adam-admin-titlebar--split p {
+	margin: 8px 0 0;
+	color: var(--adam-admin-muted);
+	max-width: 720px;
+}
+
+.adam-reward-editor-panel {
+	padding: 22px;
+}
+
+.adam-reward-editor,
+.adam-reward-editor__workspace,
+.adam-reward-editor__field-grid,
+.adam-reward-editor__shape-grid {
+	display: grid;
+	gap: 18px;
+}
+
+.adam-reward-editor__workspace {
+	grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(260px, 320px);
+	align-items: start;
+	margin-top: 18px;
+}
+
+.adam-reward-editor__section {
+	padding: 18px;
+	border: 1px solid #e5edf0;
+	border-radius: 16px;
+	background: linear-gradient(180deg, #ffffff, #f8fbf9);
+	box-shadow: 0 16px 32px rgba(16, 46, 27, 0.05);
+}
+
+.adam-reward-editor__section h2 {
+	margin: 0 0 8px;
+	font-size: 16px;
+}
+
+.adam-reward-editor__section p {
+	margin: 0;
+	color: var(--adam-admin-muted);
+}
+
+.adam-reward-editor__field-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adam-reward-editor__field-grid--compact {
+	grid-template-columns: 1fr;
+}
+
+.adam-reward-editor__field-grid label,
+.adam-reward-editor__shape-grid label,
+.adam-reward-editor__media-field,
+.adam-reward-editor__radio-option {
+	display: grid;
+	gap: 8px;
+}
+
+.adam-reward-editor__field-grid label > span,
+.adam-reward-editor__shape-grid label > span,
+.adam-reward-editor__media-field > span {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-reward-editor__media-field {
+	grid-template-columns: 1fr auto;
+	align-items: end;
+}
+
+.adam-reward-editor__media-field > span {
+	grid-column: 1 / -1;
+}
+
+.adam-reward-editor__field-grid input,
+.adam-reward-editor__field-grid select,
+.adam-reward-editor__field-grid textarea,
+.adam-reward-editor__shape-grid input,
+.adam-reward-editor__shape-grid select,
+.adam-reward-editor__media-field input {
+	width: 100%;
+}
+
+.adam-reward-editor__radio-group,
+.adam-reward-editor__shape-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adam-reward-editor__radio-option {
+	min-width: 104px;
+	padding: 10px 12px;
+	border: 1px solid #d9e8dc;
+	border-radius: 12px;
+	background: #ffffff;
+}
+
+.adam-reward-editor__radio-option input {
+	margin: 0;
+}
+
+.adam-reward-editor__shape-row {
+	padding: 14px;
+	border: 1px solid #e5edf0;
+	border-radius: 14px;
+	background: #ffffff;
+}
+
+.adam-reward-editor__shape-row-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.adam-reward-editor__shape-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adam-reward-editor__preview-stage {
+	display: grid;
+	place-items: center;
+	min-height: 480px;
+	padding: 16px;
+	border: 1px dashed #dce7dd;
+	border-radius: 18px;
+	background:
+		radial-gradient(circle at top, rgba(47, 107, 59, 0.08), transparent 36%),
+		linear-gradient(180deg, #fbfdfb, #f2f7f3);
+}
+
+.adam-reward-editor__actions {
+	margin-top: 20px;
+}
+
+.adam-reward-card--editor-preview {
+	--adam-reward-card-background: linear-gradient(135deg, #143826, #215b39);
+	--adam-reward-card-text: #f8fafc;
+	--adam-reward-card-muted: rgba(226, 232, 240, 0.78);
+	--adam-reward-card-accent: #86efac;
+	--adam-reward-card-border: #9ca3af;
+	--adam-reward-card-border-width: 2px;
+	--adam-reward-card-radius: 18px;
+	--adam-reward-card-pattern-opacity: 0.18;
+	--adam-reward-card-image-opacity: 0.22;
+	--adam-reward-card-background-opacity: 0.18;
+	position: relative;
+	display: grid;
+	gap: 14px;
+	width: min(100%, 640px);
+	min-height: 320px;
+	padding: 22px;
+	border: var(--adam-reward-card-border-width) solid var(--adam-reward-card-border);
+	border-radius: var(--adam-reward-card-radius);
+	background: var(--adam-reward-card-background);
+	box-shadow: 0 24px 46px rgba(16, 46, 27, 0.18);
+	color: var(--adam-reward-card-text);
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.adam-reward-card__background,
+.adam-reward-card__pattern,
+.adam-reward-card__backdrop,
+.adam-reward-card__art,
+.adam-reward-card__shapes {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.adam-reward-card__pattern {
+	opacity: var(--adam-reward-card-pattern-opacity);
+}
+
+.adam-reward-card__pattern--grid {
+	background:
+		linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+	background-size: 24px 24px;
+}
+
+.adam-reward-card__pattern--carbon {
+	background:
+		repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 6px, rgba(0, 0, 0, 0.08) 6px 12px);
+}
+
+.adam-reward-card__pattern--diagonal {
+	background:
+		repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0 12px, transparent 12px 26px);
+}
+
+.adam-reward-card__pattern--dots {
+	background-image: radial-gradient(rgba(255, 255, 255, 0.24) 1.4px, transparent 1.4px);
+	background-size: 24px 24px;
+}
+
+.adam-reward-card__backdrop {
+	opacity: var(--adam-reward-card-background-opacity);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
+	mix-blend-mode: screen;
+}
+
+.adam-reward-card__art {
+	display: grid;
+	justify-items: end;
+	align-items: start;
+	padding: 18px;
+	opacity: var(--adam-reward-card-image-opacity);
+}
+
+.adam-reward-card__art img {
+	max-width: 140px;
+	max-height: 140px;
+	object-fit: contain;
+	filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
+}
+
+.adam-reward-card__art--top-left {
+	justify-items: start;
+	align-items: start;
+}
+
+.adam-reward-card__art--top-right {
+	justify-items: end;
+	align-items: start;
+}
+
+.adam-reward-card__art--center {
+	justify-items: center;
+	align-items: center;
+}
+
+.adam-reward-card__art--bottom-right {
+	justify-items: end;
+	align-items: end;
+}
+
+.adam-reward-card__art--bottom-left {
+	justify-items: start;
+	align-items: end;
+}
+
+.adam-reward-card__shape {
+	position: absolute;
+	display: block;
+}
+
+.adam-reward-card__shape--circle {
+	border-radius: 999px;
+}
+
+.adam-reward-card__shape--square {
+	border-radius: 6px;
+}
+
+.adam-reward-card__shape--line {
+	border-radius: 999px;
+}
+
+.adam-reward-card__content {
+	position: relative;
+	z-index: 2;
+	display: grid;
+	gap: 14px;
+}
+
+.adam-reward-card__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adam-reward-card__body h4,
+.adam-reward-card__body p,
+.adam-reward-card__stats strong,
+.adam-reward-card__stats span {
+	margin: 0;
+	color: inherit;
+}
+
+.adam-reward-card__body h4 {
+	font-size: clamp(2rem, 4vw, 3.2rem);
+	font-weight: 900;
+	line-height: 0.95;
+	text-transform: uppercase;
+}
+
+.adam-reward-card__body p {
+	max-width: 420px;
+	color: var(--adam-reward-card-muted);
+	font-size: 1rem;
+	line-height: 1.55;
+}
+
+.adam-reward-card__stats {
+	display: flex;
+}
+
+.adam-reward-card__stats div {
+	display: grid;
+	gap: 4px;
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.adam-reward-card__stats span {
+	color: var(--adam-reward-card-muted);
+	font-size: 0.76rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-reward-card__stats strong {
+	font-size: 1.45rem;
+	font-weight: 900;
+}
+
+.adam-reward-rarity {
+	border-radius: 999px;
+	font-weight: 800;
+}
+
+.adam-reward-rarity--common {
+	background: rgba(226, 232, 240, 0.18);
+	color: #f8fafc;
+}
+
+.adam-reward-rarity--uncommon {
+	background: rgba(134, 239, 172, 0.18);
+	color: #dcfce7;
+}
+
+.adam-reward-rarity--rare {
+	background: rgba(147, 197, 253, 0.18);
+	color: #dbeafe;
+}
+
+.adam-reward-rarity--epic {
+	background: rgba(196, 181, 253, 0.18);
+	color: #ede9fe;
+}
+
+.adam-reward-rarity--legendary {
+	background: rgba(253, 224, 71, 0.2);
+	color: #fef3c7;
+}
+
+.adam-reward-rarity--limited_edition {
+	background: rgba(252, 165, 165, 0.18);
+	color: #fee2e2;
+}
+
+.adam-announcement-category {
+	display: inline-flex;
+	align-items: center;
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.1);
+	color: var(--adam-reward-card-text);
+	font-size: 0.84rem;
+	font-weight: 700;
+}
+
+.adam-reward-card--badge-outline .adam-reward-rarity,
+.adam-reward-card--badge-outline .adam-announcement-category {
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.adam-reward-card--badge-solid .adam-reward-rarity,
+.adam-reward-card--badge-solid .adam-announcement-category {
+	background: var(--adam-reward-card-accent);
+	color: #0f2618;
+}
+
+.adam-reward-card--badge-glow .adam-reward-rarity,
+.adam-reward-card--badge-glow .adam-announcement-category {
+	box-shadow: 0 0 18px rgba(255, 255, 255, 0.16);
+}
+
+.adam-reward-card--effect-common,
+.adam-reward-card--effect-subtle {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16);
+}
+
+.adam-reward-card--effect-uncommon,
+.adam-reward-card--effect-glow {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 30px rgba(74, 222, 128, 0.14);
+}
+
+.adam-reward-card--effect-rare {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 32px rgba(96, 165, 250, 0.16);
+}
+
+.adam-reward-card--effect-epic {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 34px rgba(168, 85, 247, 0.18);
+}
+
+.adam-reward-card--effect-legendary,
+.adam-reward-card--effect-metallic {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 36px rgba(250, 204, 21, 0.18);
+}
+
+.adam-reward-card--effect-limited_edition {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 34px rgba(248, 113, 113, 0.18);
+}
+
+.adam-reward-card--effect-none {
+	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.12);
+}
+
+@media (max-width: 1200px) {
+	.adam-reward-editor__workspace {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 782px) {
+	.adam-admin-titlebar--split,
+	.adam-reward-editor__radio-group,
+	.adam-reward-editor__shape-toolbar {
+		flex-direction: column;
+	}
+
+	.adam-reward-editor__field-grid,
+	.adam-reward-editor__shape-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.adam-reward-editor__media-field {
+		grid-template-columns: 1fr;
+	}
+
+	.adam-reward-editor__preview-stage {
+		min-height: 360px;
+		padding: 12px;
+	}
+
+	.adam-reward-card--editor-preview {
+		min-height: 280px;
+		padding: 18px;
+	}
+
+	.adam-reward-card__body h4 {
+		font-size: 2rem;
+	}
+}
