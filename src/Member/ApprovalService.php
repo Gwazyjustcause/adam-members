@@ -91,6 +91,15 @@ final class ApprovalService {
 			);
 		}
 
+		$missing_documents = $this->missing_registration_documents( $member );
+
+		if ( array() !== $missing_documents ) {
+			return new WP_Error(
+				'adam_membership_missing_documents',
+				implode( ' ', $missing_documents )
+			);
+		}
+
 		/*
 		 * Approve member.
 		 */
@@ -203,6 +212,39 @@ final class ApprovalService {
 		);
 
 		return true;
+	}
+
+	/**
+	 * Get missing required registration documents for a member awaiting approval.
+	 *
+	 * @param Member $member Member.
+	 * @return array<int, string>
+	 */
+	public function missing_registration_documents( Member $member ): array {
+		$warnings          = array();
+		$association_mode  = 'external_association' === (string) $member->field( 'adam_membership_origin' ) ? 'external_association' : 'adam_primary';
+		$fields            = $this->registration_document_fields();
+
+		foreach ( $fields as $field ) {
+			if ( empty( $field['required'] ) || ! $this->document_condition_required( (string) $field['conditional'], $association_mode ) ) {
+				continue;
+			}
+
+			$value = $member->field( (string) $field['meta_key'] );
+			$url   = $this->media_reference_url( $value );
+
+			if ( '' !== $url ) {
+				continue;
+			}
+
+			$warnings[] = sprintf(
+				/* translators: %s: document label */
+				__( '%s: em falta.', 'adam-membership' ),
+				(string) $field['label']
+			);
+		}
+
+		return $warnings;
 	}
 
 	/**
@@ -359,5 +401,83 @@ final class ApprovalService {
 				'new_status' => $new_status,
 			)
 		);
+	}
+
+	/**
+	 * Get registration upload field definitions.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function registration_document_fields(): array {
+		$settings = $this->settings->membership_form_settings();
+		$fields   = isset( $settings['registration_fields'] ) && is_array( $settings['registration_fields'] ) ? $settings['registration_fields'] : array();
+		$rows     = array();
+
+		foreach ( $fields as $field_key => $config ) {
+			if ( ! is_string( $field_key ) || ! is_array( $config ) || empty( $config['enabled'] ) || 'file' !== (string) ( $config['type'] ?? '' ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'label'      => is_string( $config['label'] ?? null ) ? (string) $config['label'] : $field_key,
+				'required'   => ! empty( $config['required'] ),
+				'conditional'=> is_string( $config['conditional'] ?? null ) ? (string) $config['conditional'] : 'always',
+				'meta_key'   => ! empty( $config['locked'] ) ? $this->document_meta_key( $field_key ) : 'adam_custom_' . sanitize_key( $field_key ),
+				'order'      => absint( $config['order'] ?? 999 ),
+			);
+		}
+
+		usort(
+			$rows,
+			static function ( array $left, array $right ): int {
+				return (int) ( $left['order'] ?? 999 ) <=> (int) ( $right['order'] ?? 999 );
+			}
+		);
+
+		return $rows;
+	}
+
+	/**
+	 * Check whether a conditional document is required for the member flow.
+	 *
+	 * @param string $condition Condition key.
+	 * @param string $association_mode Association mode.
+	 */
+	private function document_condition_required( string $condition, string $association_mode ): bool {
+		return match ( $condition ) {
+			'registration_external' => 'external_association' === $association_mode,
+			default                 => true,
+		};
+	}
+
+	/**
+	 * Resolve the stored member meta key for a configured document field.
+	 *
+	 * @param string $field_key Form field key.
+	 */
+	private function document_meta_key( string $field_key ): string {
+		return match ( $field_key ) {
+			'external_association_proof' => 'adam_external_association_proof',
+			default                      => $field_key,
+		};
+	}
+
+	/**
+	 * Resolve a media reference to a URL.
+	 *
+	 * @param mixed $value Stored media reference.
+	 */
+	private function media_reference_url( mixed $value ): string {
+		if ( is_numeric( $value ) ) {
+			$url = wp_get_attachment_url( absint( $value ) );
+
+			return false !== $url ? $url : '';
+		}
+
+		if ( is_string( $value ) && '' !== trim( $value ) && wp_http_validate_url( trim( $value ) ) ) {
+			return trim( $value );
+		}
+
+		return '';
 	}
 }

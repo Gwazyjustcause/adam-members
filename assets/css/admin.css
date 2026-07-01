@@ -275,6 +275,21 @@
 	margin: 0;
 }
 
+.adam-admin-inline-form input[type="file"] {
+	max-width: 220px;
+	font-size: 12px;
+}
+
+.adam-admin-documents-row > td {
+	padding: 16px !important;
+	background: #f8fafc;
+}
+
+.adam-admin-documents-row .adam-admin-panel {
+	margin: 0;
+	box-shadow: none;
+}
+
 .adam-admin-rejection-inline {
 	align-items: center;
 	gap: 6px;

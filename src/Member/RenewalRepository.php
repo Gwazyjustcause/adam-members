@@ -97,6 +97,21 @@ final class RenewalRepository {
 	}
 
 	/**
+	 * Get all requests for a user.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array<int, RenewalRequest>
+	 */
+	public function for_user( int $user_id ): array {
+		return array_values(
+			array_filter(
+				$this->admin_requests(),
+				static fn ( RenewalRequest $request ): bool => $request->user_id() === $user_id
+			)
+		);
+	}
+
+	/**
 	 * Get pending requests for a user.
 	 *
 	 * @param int $user_id User ID.

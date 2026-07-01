@@ -48,6 +48,10 @@ final class AdminController {
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
 	private const ACTION_SAVE_MEMBER  = 'save_member';
 	private const ACTION_REGENERATE_CARD_TOKEN = 'regenerate_card_token';
+	private const ACTION_REPLACE_DOCUMENT = 'replace_document';
+	private const ACTION_REMOVE_DOCUMENT = 'remove_document';
+	private const ACTION_REPLACE_RENEWAL_DOCUMENT = 'replace_renewal_document';
+	private const ACTION_REMOVE_RENEWAL_DOCUMENT  = 'remove_renewal_document';
 	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
@@ -1107,9 +1111,11 @@ final class AdminController {
 		check_admin_referer( 'adam_membership_renewal_action_' . $request_id );
 
 		$result = match ( $action ) {
-			self::ACTION_APPROVE_RENEWAL => $this->renewal_service->approve( $request_id ),
-			self::ACTION_REJECT_RENEWAL  => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
-			default                      => new WP_Error( 'adam_membership_invalid_renewal_action', __( 'Ação de renovação inválida.', 'adam-membership' ) ),
+			self::ACTION_APPROVE_RENEWAL          => $this->renewal_service->approve( $request_id ),
+			self::ACTION_REJECT_RENEWAL           => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
+			self::ACTION_REPLACE_RENEWAL_DOCUMENT => $this->replace_renewal_document( $request_id ),
+			self::ACTION_REMOVE_RENEWAL_DOCUMENT  => $this->remove_renewal_document( $request_id ),
+			default                               => new WP_Error( 'adam_membership_invalid_renewal_action', __( 'Ação de renovação inválida.', 'adam-membership' ) ),
 		};
 
 		if ( $result instanceof WP_Error ) {
@@ -1514,6 +1520,8 @@ final class AdminController {
 	private function render_renewal_detail( RenewalRequest $request ): void {
 		$member  = $this->members->find( $request->user_id() );
 		$changes = null !== $member ? $this->renewal_service->changed_fields( $request, $member ) : array();
+		$document_rows = $this->renewal_document_rows( $request );
+		$document_warnings = $this->missing_renewal_document_warnings( $request );
 		?>
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Pedido de Renovação', 'adam-membership' ); ?></h2>
@@ -1530,6 +1538,9 @@ final class AdminController {
 				<?php endif; ?>
 			</div>
 		</div>
+
+		<?php $this->render_document_warning_panel( $document_warnings, __( 'Documentos obrigatórios em falta nesta renovação.', 'adam-membership' ) ); ?>
+		<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, null, $request, true ); ?>
 
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Submitted changes', 'adam-membership' ); ?></h2>
@@ -2146,6 +2157,14 @@ final class AdminController {
 							<?php endif; ?>
 						</td>
 					</tr>
+					<?php if ( $show_actions ) : ?>
+						<tr class="adam-admin-documents-row">
+							<td colspan="9">
+								<?php $this->render_document_warning_panel( $this->approval_service->missing_registration_documents( $member ), __( 'Documentos obrigatórios em falta antes da aprovação.', 'adam-membership' ) ); ?>
+								<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $this->member_document_rows( $member, false ) ); ?>
+							</td>
+						</tr>
+					<?php endif; ?>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
@@ -2158,6 +2177,9 @@ final class AdminController {
 	 * @param Member $member Member.
 	 */
 	private function render_member_detail( Member $member ): void {
+		$member_requests    = $this->renewal_repository->for_user( $member->user_id() );
+		$document_rows      = $this->member_document_rows( $member, true );
+		$document_warnings  = $this->approval_service->missing_registration_documents( $member );
 		?>
 		<div class="adam-admin-member-layout">
 			<div class="adam-admin-panel">
@@ -2190,6 +2212,12 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'Nota privada de rejeição', 'adam-membership' ), (string) $member->field( 'nota_rejeicao_admin' ) ); ?>
 				</div>
 			</div>
+
+			<?php $this->render_document_warning_panel( $document_warnings, __( 'Existem documentos obrigatórios em falta para aprovar este sócio.', 'adam-membership' ) ); ?>
+			<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, $member, null, true ); ?>
+			<?php foreach ( $member_requests as $request ) : ?>
+				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
+			<?php endforeach; ?>
 
 			<?php $this->render_member_edit_form( $member ); ?>
 
@@ -2393,6 +2421,8 @@ final class AdminController {
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
 			self::ACTION_SAVE_MEMBER  => $this->save_member_fields( $user_id ),
 			self::ACTION_REGENERATE_CARD_TOKEN => $this->regenerate_card_token( $user_id ),
+			self::ACTION_REPLACE_DOCUMENT => $this->replace_member_document( $user_id ),
+			self::ACTION_REMOVE_DOCUMENT => $this->remove_member_document( $user_id ),
 			default                   => new WP_Error( 'adam_membership_invalid_action', __( 'Invalid member action.', 'adam-membership' ) ),
 		};
 
@@ -2566,6 +2596,224 @@ final class AdminController {
 		);
 
 		return true;
+	}
+
+	/**
+	 * Replace one member document from the admin profile.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	private function replace_member_document( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+		}
+
+		$document_field = isset( $_POST['document_field'] ) ? sanitize_key( wp_unslash( $_POST['document_field'] ) ) : '';
+
+		if ( ! $this->is_allowed_member_document_field( $document_field ) ) {
+			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
+		}
+
+		if ( ! isset( $_FILES['member_document_file'] ) || ! is_array( $_FILES['member_document_file'] ) || UPLOAD_ERR_NO_FILE === (int) ( $_FILES['member_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
+			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para substituir o documento.', 'adam-membership' ) );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$attachment_id = media_handle_upload(
+			'member_document_file',
+			0,
+			array(),
+			array(
+				'test_form' => false,
+				'mimes'     => array(
+					'jpg|jpeg|jpe' => 'image/jpeg',
+					'png'          => 'image/png',
+					'webp'         => 'image/webp',
+					'pdf'          => 'application/pdf',
+				),
+			)
+		);
+
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		$member->save( array( $document_field => $attachment_id ) );
+
+		return true;
+	}
+
+	/**
+	 * Remove one member document from the admin profile.
+	 *
+	 * @param int $user_id User ID.
+	 * @return true|WP_Error
+	 */
+	private function remove_member_document( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+
+		if ( null === $member ) {
+			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+		}
+
+		$document_field = isset( $_POST['document_field'] ) ? sanitize_key( wp_unslash( $_POST['document_field'] ) ) : '';
+
+		if ( ! $this->is_allowed_member_document_field( $document_field ) ) {
+			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
+		}
+
+		$member->save( array( $document_field => '' ) );
+
+		return true;
+	}
+
+	/**
+	 * Replace one renewal document from admin review screens.
+	 *
+	 * @param int $request_id Renewal request ID.
+	 * @return true|WP_Error
+	 */
+	private function replace_renewal_document( int $request_id ): true|WP_Error {
+		$request = $this->renewal_repository->find( $request_id );
+
+		if ( null === $request ) {
+			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+		}
+
+		$document_field = isset( $_POST['document_field'] ) ? sanitize_key( wp_unslash( $_POST['document_field'] ) ) : '';
+
+		if ( ! $this->is_allowed_renewal_document_field( $document_field ) ) {
+			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
+		}
+
+		if ( ! isset( $_FILES['member_document_file'] ) || ! is_array( $_FILES['member_document_file'] ) || UPLOAD_ERR_NO_FILE === (int) ( $_FILES['member_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
+			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para substituir o documento.', 'adam-membership' ) );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$attachment_id = media_handle_upload(
+			'member_document_file',
+			0,
+			array(),
+			array(
+				'test_form' => false,
+				'mimes'     => array(
+					'jpg|jpeg|jpe' => 'image/jpeg',
+					'png'          => 'image/png',
+					'webp'         => 'image/webp',
+					'pdf'          => 'application/pdf',
+				),
+			)
+		);
+
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		if ( 'payment_receipt' === $document_field ) {
+			$this->renewal_repository->update(
+				$request,
+				array(
+					'proof_of_payment' => $attachment_id,
+				)
+			);
+
+			return true;
+		}
+
+		$submitted_data                    = $request->submitted_data();
+		$submitted_data[ $document_field ] = $attachment_id;
+
+		$this->renewal_repository->update(
+			$request,
+			array(
+				'submitted_data' => $submitted_data,
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Remove one renewal document from admin review screens.
+	 *
+	 * @param int $request_id Renewal request ID.
+	 * @return true|WP_Error
+	 */
+	private function remove_renewal_document( int $request_id ): true|WP_Error {
+		$request = $this->renewal_repository->find( $request_id );
+
+		if ( null === $request ) {
+			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+		}
+
+		$document_field = isset( $_POST['document_field'] ) ? sanitize_key( wp_unslash( $_POST['document_field'] ) ) : '';
+
+		if ( ! $this->is_allowed_renewal_document_field( $document_field ) ) {
+			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
+		}
+
+		if ( 'payment_receipt' === $document_field ) {
+			$this->renewal_repository->update(
+				$request,
+				array(
+					'proof_of_payment' => '',
+				)
+			);
+
+			return true;
+		}
+
+		$submitted_data = $request->submitted_data();
+		unset( $submitted_data[ $document_field ] );
+
+		$this->renewal_repository->update(
+			$request,
+			array(
+				'submitted_data' => $submitted_data,
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Determine whether a document meta key is admin-manageable.
+	 *
+	 * @param string $meta_key Meta key.
+	 */
+	private function is_allowed_member_document_field( string $meta_key ): bool {
+		foreach ( array_merge( $this->document_field_definitions( 'registration' ), $this->document_field_definitions( 'renewal' ) ) as $definition ) {
+			if ( $meta_key === (string) $definition['meta_key'] ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Determine whether a renewal document key is admin-manageable.
+	 *
+	 * @param string $meta_key Meta key.
+	 */
+	private function is_allowed_renewal_document_field( string $meta_key ): bool {
+		foreach ( $this->document_field_definitions( 'renewal' ) as $definition ) {
+			if ( $meta_key === (string) $definition['meta_key'] || $meta_key === (string) $definition['field_key'] ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -3019,6 +3267,376 @@ final class AdminController {
 			esc_html( $label ),
 			esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ?: '—' )
 		);
+	}
+
+	/**
+	 * Build current-member document rows from stored member meta.
+	 *
+	 * @param Member $member Member.
+	 * @param bool   $include_management Whether to include replace/remove controls.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function member_document_rows( Member $member, bool $include_management ): array {
+		$rows = array();
+
+		foreach ( $this->document_field_definitions( 'registration' ) as $definition ) {
+			$meta_key = (string) $definition['meta_key'];
+			$value    = $member->field( $meta_key );
+			$url      = $this->media_reference_url( $value );
+
+			$rows[] = array(
+				'field_key'    => (string) $definition['field_key'],
+				'meta_key'     => $meta_key,
+				'label'        => (string) $definition['label'],
+				'workflow'     => __( 'Inscrição', 'adam-membership' ),
+				'status'       => '' !== $url ? __( 'Submetido', 'adam-membership' ) : __( 'Em falta', 'adam-membership' ),
+				'missing'      => '' === $url,
+				'url'          => $url,
+				'preview_html' => $this->document_preview_html( $member->full_name(), $value, $meta_key ),
+				'uploaded_at'  => $this->media_reference_datetime( $value ),
+				'manage'       => $include_management,
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Build renewal-submission document rows.
+	 *
+	 * @param RenewalRequest $request Renewal request.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function renewal_document_rows( RenewalRequest $request ): array {
+		$rows          = array();
+		$submitted     = $request->submitted_data();
+		$proof_value   = $request->proof_of_payment();
+
+		foreach ( $this->document_field_definitions( 'renewal' ) as $definition ) {
+			$field_key = (string) $definition['field_key'];
+			$value     = 'payment_receipt' === $field_key ? $proof_value : ( $submitted[ (string) $definition['meta_key'] ] ?? '' );
+			$url       = $this->media_reference_url( $value );
+
+			$rows[] = array(
+				'field_key'    => $field_key,
+				'meta_key'     => (string) $definition['meta_key'],
+				'label'        => (string) $definition['label'],
+				'workflow'     => sprintf(
+					/* translators: %s: renewal status label */
+					__( 'Renovação (%s)', 'adam-membership' ),
+					$this->renewal_status_label( $request->status() )
+				),
+				'status'       => '' !== $url ? __( 'Submetido', 'adam-membership' ) : __( 'Em falta', 'adam-membership' ),
+				'missing'      => '' === $url,
+				'url'          => $url,
+				'preview_html' => $this->document_preview_html( (string) $definition['label'], $value, (string) $definition['meta_key'] ),
+				'uploaded_at'  => $this->media_reference_datetime( $value, $request->submitted_at() ),
+				'manage'       => true,
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Get file upload field definitions for a workflow.
+	 *
+	 * @param string $form Workflow key.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function document_field_definitions( string $form ): array {
+		$settings = $this->settings->membership_form_settings();
+		$key      = 'renewal' === $form ? 'renewal_fields' : 'registration_fields';
+		$fields   = isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ? $settings[ $key ] : array();
+		$rows     = array();
+
+		foreach ( $fields as $field_key => $config ) {
+			if ( ! is_string( $field_key ) || ! is_array( $config ) || empty( $config['enabled'] ) || 'file' !== (string) ( $config['type'] ?? '' ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'field_key'    => $field_key,
+				'label'        => is_string( $config['label'] ?? null ) ? (string) $config['label'] : $field_key,
+				'required'     => ! empty( $config['required'] ),
+				'conditional'  => is_string( $config['conditional'] ?? null ) ? (string) $config['conditional'] : 'always',
+				'meta_key'     => ! empty( $config['locked'] ) ? $this->document_meta_key( $field_key ) : 'adam_custom_' . sanitize_key( $field_key ),
+				'order'        => absint( $config['order'] ?? 999 ),
+			);
+		}
+
+		usort(
+			$rows,
+			static function ( array $left, array $right ): int {
+				return (int) ( $left['order'] ?? 999 ) <=> (int) ( $right['order'] ?? 999 );
+			}
+		);
+
+		return $rows;
+	}
+
+	/**
+	 * Render a documents panel.
+	 *
+	 * @param string      $title  Panel title.
+	 * @param array<int, array<string, mixed>> $rows Document rows.
+	 * @param Member|null         $member Member when management actions are available.
+	 * @param RenewalRequest|null $request Renewal request when request-level actions are available.
+	 * @param bool                $show_management Whether replace/remove controls should render.
+	 */
+	private function render_documents_panel( string $title, array $rows, ?Member $member = null, ?RenewalRequest $request = null, bool $show_management = false ): void {
+		?>
+		<div class="adam-admin-panel">
+			<h2><?php echo esc_html( $title ); ?></h2>
+			<?php if ( array() === $rows ) : ?>
+				<?php $this->render_empty_state( __( 'Não existem documentos submetidos para mostrar.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<table class="widefat striped adam-admin-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Documento', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Pré-visualização', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Fluxo', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Data de envio', 'adam-membership' ); ?></th>
+							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $rows as $row ) : ?>
+							<tr>
+								<td><strong><?php echo esc_html( (string) $row['label'] ); ?></strong></td>
+								<td>
+									<span class="adam-admin-badge <?php echo ! empty( $row['missing'] ) ? 'quota-expired' : 'quota-active'; ?>">
+										<?php echo esc_html( (string) $row['status'] ); ?>
+									</span>
+								</td>
+								<td><?php echo wp_kses_post( (string) $row['preview_html'] ); ?></td>
+								<td><?php echo esc_html( (string) $row['workflow'] ); ?></td>
+								<td><?php echo esc_html( (string) ( $row['uploaded_at'] ?: '—' ) ); ?></td>
+								<td class="adam-admin-row-actions">
+									<?php if ( '' !== (string) $row['url'] ) : ?>
+										<a class="button button-small" href="<?php echo esc_url( (string) $row['url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir', 'adam-membership' ); ?></a>
+										<a class="button button-small" href="<?php echo esc_url( (string) $row['url'] ); ?>" download><?php esc_html_e( 'Descarregar', 'adam-membership' ); ?></a>
+									<?php endif; ?>
+									<?php if ( $show_management && $member instanceof Member ) : ?>
+										<?php $this->render_document_management_controls( $member, (string) $row['meta_key'] ); ?>
+									<?php elseif ( $show_management && $request instanceof RenewalRequest ) : ?>
+										<?php $this->render_renewal_document_management_controls( $request, (string) $row['meta_key'] ); ?>
+									<?php endif; ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render approval-warning panel for missing documents.
+	 *
+	 * @param array<int, string> $warnings Warning messages.
+	 * @param string             $intro Intro text.
+	 */
+	private function render_document_warning_panel( array $warnings, string $intro ): void {
+		if ( array() === $warnings ) {
+			return;
+		}
+		?>
+		<div class="adam-admin-notice error">
+			<p><strong><?php echo esc_html( $intro ); ?></strong></p>
+			<ul>
+				<?php foreach ( $warnings as $warning ) : ?>
+					<li><?php echo esc_html( $warning ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render replace/remove controls for a member document.
+	 *
+	 * @param Member $member Member.
+	 * @param string $meta_key Meta key.
+	 */
+	private function render_document_management_controls( Member $member, string $meta_key ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-inline-form">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REPLACE_DOCUMENT ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<input type="file" name="member_document_file" accept=".pdf,image/*">
+			<button type="submit" class="button button-small"><?php esc_html_e( 'Substituir', 'adam-membership' ); ?></button>
+		</form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+			<input type="hidden" name="action" value="adam_membership_member_action">
+			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_DOCUMENT ); ?>">
+			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render replace/remove controls for a renewal document.
+	 *
+	 * @param RenewalRequest $request Renewal request.
+	 * @param string         $meta_key Meta key.
+	 */
+	private function render_renewal_document_management_controls( RenewalRequest $request, string $meta_key ): void {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-inline-form">
+			<input type="hidden" name="action" value="adam_membership_renewal_action">
+			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REPLACE_RENEWAL_DOCUMENT ); ?>">
+			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
+			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
+			<input type="file" name="member_document_file" accept=".pdf,image/*">
+			<button type="submit" class="button button-small"><?php esc_html_e( 'Substituir', 'adam-membership' ); ?></button>
+		</form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+			<input type="hidden" name="action" value="adam_membership_renewal_action">
+			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REMOVE_RENEWAL_DOCUMENT ); ?>">
+			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
+			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
+			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>">
+			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
+			<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Build missing-document warnings for a renewal request.
+	 *
+	 * @param RenewalRequest $request Renewal request.
+	 * @return array<int, string>
+	 */
+	private function missing_renewal_document_warnings( RenewalRequest $request ): array {
+		$warnings      = array();
+		$submitted     = $request->submitted_data();
+		$renewal_mode  = isset( $submitted['adam_membership_origin'] ) && 'external_association' === (string) $submitted['adam_membership_origin'] ? 'external_association' : 'adam_primary';
+
+		foreach ( $this->document_field_definitions( 'renewal' ) as $definition ) {
+			if ( ! $this->document_condition_required( (string) $definition['conditional'], $renewal_mode, true ) || empty( $definition['required'] ) ) {
+				continue;
+			}
+
+			$field_key = (string) $definition['field_key'];
+			$value     = 'payment_receipt' === $field_key ? $request->proof_of_payment() : ( $submitted[ (string) $definition['meta_key'] ] ?? '' );
+
+			if ( '' === $this->media_reference_url( $value ) ) {
+				$warnings[] = sprintf(
+					/* translators: %s: document label */
+					__( '%s: em falta', 'adam-membership' ),
+					(string) $definition['label']
+				);
+			}
+		}
+
+		return $warnings;
+	}
+
+	/**
+	 * Resolve whether a conditional file field is required for the current flow.
+	 *
+	 * @param string $condition Condition key.
+	 * @param string $association_mode Membership mode.
+	 * @param bool   $profile_changed Renewal profile-change toggle.
+	 */
+	private function document_condition_required( string $condition, string $association_mode, bool $profile_changed ): bool {
+		return match ( $condition ) {
+			'registration_external', 'renewal_external' => 'external_association' === $association_mode,
+			'renewal_profile'                            => $profile_changed,
+			default                                      => true,
+		};
+	}
+
+	/**
+	 * Resolve the stored document key for one configured form field.
+	 *
+	 * @param string $field_key Form field key.
+	 */
+	private function document_meta_key( string $field_key ): string {
+		return match ( $field_key ) {
+			'external_association_proof' => 'adam_external_association_proof',
+			default                      => $field_key,
+		};
+	}
+
+	/**
+	 * Resolve a media reference to a public URL.
+	 *
+	 * @param mixed $value Media reference.
+	 */
+	private function media_reference_url( mixed $value ): string {
+		if ( is_numeric( $value ) ) {
+			$url = wp_get_attachment_url( absint( $value ) );
+
+			return false !== $url ? $url : '';
+		}
+
+		if ( is_string( $value ) && '' !== trim( $value ) && wp_http_validate_url( trim( $value ) ) ) {
+			return trim( $value );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Resolve display datetime for a media reference.
+	 *
+	 * @param mixed       $value Media reference.
+	 * @param string|null $fallback Fallback datetime.
+	 */
+	private function media_reference_datetime( mixed $value, ?string $fallback = null ): string {
+		if ( is_numeric( $value ) ) {
+			$post = get_post( absint( $value ) );
+
+			if ( $post instanceof \WP_Post ) {
+				return $this->format_datetime( (string) $post->post_date );
+			}
+		}
+
+		return is_string( $fallback ) ? $this->format_datetime( $fallback ) : '';
+	}
+
+	/**
+	 * Render a compact preview cell for one uploaded document.
+	 *
+	 * @param string $fallback_alt Fallback alt text.
+	 * @param mixed  $value Media reference.
+	 * @param string $meta_key Meta key.
+	 */
+	private function document_preview_html( string $fallback_alt, mixed $value, string $meta_key ): string {
+		$url = $this->media_reference_url( $value );
+
+		if ( '' === $url ) {
+			return '<span class="adam-admin-empty">' . esc_html__( 'Sem ficheiro', 'adam-membership' ) . '</span>';
+		}
+
+		if ( is_numeric( $value ) && wp_attachment_is_image( absint( $value ) ) ) {
+			$image = wp_get_attachment_image( absint( $value ), array( 88, 88 ), false, array( 'class' => 'adam-admin-avatar', 'alt' => $fallback_alt ) );
+
+			if ( is_string( $image ) && '' !== $image ) {
+				return $image;
+			}
+		}
+
+		$extension = strtoupper( (string) pathinfo( $url, PATHINFO_EXTENSION ) );
+		$label     = '' !== $extension ? $extension : strtoupper( sanitize_text_field( $meta_key ) );
+
+		return '<span class="adam-admin-avatar-placeholder">' . esc_html( substr( $label, 0, 4 ) ) . '</span>';
 	}
 
 	/**
@@ -3618,6 +4236,8 @@ final class AdminController {
 			self::ACTION_RESEND_EMAIL => __( 'Email de aprovação reenviado com sucesso.', 'adam-membership' ),
 			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
 			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
+			self::ACTION_REPLACE_DOCUMENT => __( 'Documento substituído com sucesso.', 'adam-membership' ),
+			self::ACTION_REMOVE_DOCUMENT  => __( 'Documento removido com sucesso.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};
 	}
