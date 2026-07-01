@@ -2486,12 +2486,21 @@ final class AdminController {
 			);
 		}
 
-		$member_number = $this->posted_member_number();
+		$current_member_number = trim( (string) $member->field( 'numero_socio' ) );
+		$member_number         = $this->posted_member_number();
 
-		if ( '' !== $member_number && $this->members->member_number_exists( $member_number, $user_id ) ) {
+		if ( $this->member_numbers_match( $member_number, $current_member_number ) ) {
+			$member_number = $current_member_number;
+		}
+
+		if ( '' !== $member_number && $member_number !== $current_member_number && $this->members->member_number_exists( $member_number, $user_id ) ) {
 			return new WP_Error(
 				'adam_membership_duplicate_member_number',
-				__( 'This member number is already assigned to another member.', 'adam-membership' )
+				sprintf(
+					/* translators: %s: member number */
+					__( 'O número de sócio %s já está atribuído a outro sócio.', 'adam-membership' ),
+					$member_number
+				)
 			);
 		}
 
@@ -2939,10 +2948,35 @@ final class AdminController {
 		$member_number = trim( $member_number );
 
 		if ( '' !== $member_number && preg_match( '/^\d+$/', $member_number ) ) {
+			if ( absint( $member_number ) <= 0 ) {
+				return '';
+			}
+
 			return $this->settings->format_member_number( absint( $member_number ) );
 		}
 
 		return $member_number;
+	}
+
+	/**
+	 * Determine whether two member-number inputs refer to the same effective number.
+	 *
+	 * @param string $left  First value.
+	 * @param string $right Second value.
+	 */
+	private function member_numbers_match( string $left, string $right ): bool {
+		$left  = trim( $left );
+		$right = trim( $right );
+
+		if ( '' === $left || '' === $right ) {
+			return $left === $right;
+		}
+
+		if ( strtolower( $left ) === strtolower( $right ) ) {
+			return true;
+		}
+
+		return Member::member_number_numeric_value( $left ) === Member::member_number_numeric_value( $right );
 	}
 
 	/**
