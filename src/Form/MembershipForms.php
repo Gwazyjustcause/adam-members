@@ -133,33 +133,23 @@ final class MembershipForms {
 				</div>
 
 				<div class="adam-form-grid">
-					<?php $this->render_text_field( 'registration', 'full_name', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'email', $values, 'email' ); ?>
-					<?php $this->render_text_field( 'registration', 'citizen_card', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'nif', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'birth_date', $values, 'date' ); ?>
-					<?php $this->render_text_field( 'registration', 'phone', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'address_line_1', $values, 'text', 'adam-field--full' ); ?>
-					<?php $this->render_text_field( 'registration', 'address_line_2', $values, 'text', 'adam-field--full' ); ?>
-					<?php $this->render_text_field( 'registration', 'city', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'municipality', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'postcode', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'country', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'team', $values, 'text' ); ?>
-					<?php $this->render_upload_field( 'registration', 'profile_photo', 'image/*', 'adam-field--full' ); ?>
+					<?php foreach ( $this->ordered_render_fields( 'registration', 'always' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'registration', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="registration-external" <?php echo 'external_association' === (string) ( $values['membership_mode'] ?? '' ) ? '' : 'hidden'; ?>>
-					<?php $this->render_text_field( 'registration', 'external_association_name', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'registration', 'external_member_number', $values, 'text' ); ?>
-					<?php $this->render_upload_field( 'registration', 'external_association_proof', '.pdf,image/*', 'adam-field--full' ); ?>
+					<?php foreach ( $this->ordered_render_fields( 'registration', 'registration_external' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'registration', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<?php $this->render_payment_panel( 'registration', $values ); ?>
 
 				<div class="adam-form-grid">
-					<?php $this->render_upload_field( 'registration', 'payment_receipt', '.pdf,image/*', 'adam-field--full' ); ?>
-					<?php $this->render_privacy_field( 'registration', $values ); ?>
+					<?php foreach ( $this->ordered_post_payment_fields( 'registration' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'registration', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<div class="adam-form-actions">
@@ -258,27 +248,30 @@ final class MembershipForms {
 					</div>
 				</div>
 
+				<div class="adam-form-grid">
+					<?php foreach ( $this->ordered_render_fields( 'renewal', 'always' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'renewal', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
+				</div>
+
 				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="renewal-profile" <?php echo '1' === (string) ( $values['profile_changed'] ?? '0' ) ? '' : 'hidden'; ?>>
-					<?php $this->render_text_field( 'renewal', 'phone', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'address_line_1', $values, 'text', 'adam-field--full' ); ?>
-					<?php $this->render_text_field( 'renewal', 'address_line_2', $values, 'text', 'adam-field--full' ); ?>
-					<?php $this->render_text_field( 'renewal', 'city', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'municipality', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'postcode', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'country', $values, 'text' ); ?>
+					<?php foreach ( $this->ordered_render_fields( 'renewal', 'renewal_profile' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'renewal', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<div class="adam-form-grid adam-conditional-group" data-adam-conditional="renewal-external" <?php echo 'external_association' === (string) ( $values['renewal_mode'] ?? '' ) ? '' : 'hidden'; ?>>
-					<?php $this->render_text_field( 'renewal', 'external_association_name', $values, 'text' ); ?>
-					<?php $this->render_text_field( 'renewal', 'external_member_number', $values, 'text' ); ?>
-					<?php $this->render_upload_field( 'renewal', 'external_association_proof', '.pdf,image/*', 'adam-field--full' ); ?>
+					<?php foreach ( $this->ordered_render_fields( 'renewal', 'renewal_external' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'renewal', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<?php $this->render_payment_panel( 'renewal', $values ); ?>
 
 				<div class="adam-form-grid">
-					<?php $this->render_upload_field( 'renewal', 'payment_receipt', '.pdf,image/*', 'adam-field--full' ); ?>
-					<?php $this->render_privacy_field( 'renewal', $values ); ?>
+					<?php foreach ( $this->ordered_post_payment_fields( 'renewal' ) as $field_key => $config ) : ?>
+						<?php $this->render_configured_field( 'renewal', $field_key, $config, $values ); ?>
+					<?php endforeach; ?>
 				</div>
 
 				<div class="adam-form-actions">
@@ -331,9 +324,12 @@ final class MembershipForms {
 			$this->validate_text_field( 'registration', 'external_member_number', $values, $errors, true );
 		}
 
+		$this->validate_custom_fields( 'registration', $values, $errors, $mode, false );
+
 		$profile_photo = $this->process_upload( 'registration', 'profile_photo', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) );
 		$receipt       = $this->process_upload( 'registration', 'payment_receipt', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
 		$association_proof = 'external_association' === $mode ? $this->process_upload( 'registration', 'external_association_proof', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
+		$custom_payload = $this->custom_submission_payload( 'registration', $values, $errors, $mode, false );
 
 		if ( array() !== $errors ) {
 			return array(
@@ -361,10 +357,10 @@ final class MembershipForms {
 				'membership_fee'             => 'external_association' === $mode ? (string) $settings['fees']['secondary'] : (string) $settings['fees']['primary'],
 				'external_association_name'  => (string) ( $values['external_association_name'] ?? '' ),
 				'external_member_number'     => (string) ( $values['external_member_number'] ?? '' ),
-				'external_ana_number'        => (string) ( $values['external_ana_number'] ?? '' ),
 				'external_association_proof' => $association_proof,
 				'profile_photo'              => $profile_photo,
 				'payment_receipt'            => $receipt,
+				'custom_fields'              => $custom_payload,
 			)
 		);
 
@@ -418,9 +414,11 @@ final class MembershipForms {
 		}
 
 		$this->validate_privacy( 'renewal', $values, $errors );
+		$this->validate_custom_fields( 'renewal', $values, $errors, $renewal_mode, $profile_changed );
 
 		$receipt           = $this->process_upload( 'renewal', 'payment_receipt', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
 		$association_proof = 'external_association' === $renewal_mode ? $this->process_upload( 'renewal', 'external_association_proof', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
+		$custom_payload    = $this->custom_submission_payload( 'renewal', $values, $errors, $renewal_mode, $profile_changed );
 
 		if ( array() !== $errors ) {
 			return array(
@@ -434,7 +432,6 @@ final class MembershipForms {
 			'adam_membership_fee'            => 'external_association' === $renewal_mode ? (string) $settings['fees']['secondary'] : (string) $settings['fees']['primary'],
 			'adam_external_association_name' => 'external_association' === $renewal_mode ? (string) ( $values['external_association_name'] ?? '' ) : '',
 			'adam_external_member_number'    => 'external_association' === $renewal_mode ? (string) ( $values['external_member_number'] ?? '' ) : '',
-			'adam_external_ana_number'       => 'external_association' === $renewal_mode ? (string) ( $values['external_ana_number'] ?? '' ) : '',
 			'adam_external_association_proof' => 'external_association' === $renewal_mode ? $association_proof : '',
 		);
 
@@ -447,6 +444,8 @@ final class MembershipForms {
 			$submitted_data['codigo_postal'] = (string) ( $values['postcode'] ?? '' );
 			$submitted_data['pais']          = (string) ( $values['country'] ?? '' );
 		}
+
+		$submitted_data = array_merge( $submitted_data, $custom_payload );
 
 		$result = $this->renewals->submit( $member, $submitted_data, $receipt, 0 );
 
@@ -792,7 +791,7 @@ final class MembershipForms {
 	 * @return array<string, string>
 	 */
 	private function default_renewal_values( Member $member ): array {
-		return array(
+		$values = array(
 			'phone'                     => (string) $member->field( 'telefone' ),
 			'address_line_1'            => (string) $member->field( 'morada' ),
 			'address_line_2'            => (string) $member->field( 'morada_linha_2' ),
@@ -802,10 +801,15 @@ final class MembershipForms {
 			'country'                   => (string) $member->field( 'pais' ),
 			'external_association_name' => (string) $member->field( 'adam_external_association_name' ),
 			'external_member_number'    => (string) $member->field( 'adam_external_member_number' ),
-			'external_ana_number'       => (string) $member->field( 'adam_external_ana_number' ),
 			'renewal_mode'              => $this->member_uses_external_association( $member ) ? 'external_association' : 'adam_primary',
 			'profile_changed'           => '0',
 		);
+
+		foreach ( array_keys( $this->custom_field_configs( 'renewal' ) ) as $field_key ) {
+			$values[ $field_key ] = (string) $member->field( $this->custom_member_meta_key( $field_key ) );
+		}
+
+		return $values;
 	}
 
 	/**
@@ -831,7 +835,7 @@ final class MembershipForms {
 	 *
 	 * @param string $form Form type.
 	 * @param string $field Field key.
-	 * @return array{label:string,help:string,enabled:bool,required:bool}
+	 * @return array<string, mixed>
 	 */
 	private function field_config( string $form, string $field ): array {
 		$key      = 'renewal' === $form ? 'renewal_fields' : 'registration_fields';
@@ -843,7 +847,332 @@ final class MembershipForms {
 			'help'     => is_string( $config['help'] ?? null ) ? $config['help'] : '',
 			'enabled'  => ! empty( $config['enabled'] ),
 			'required' => ! empty( $config['required'] ),
+			'type'     => is_string( $config['type'] ?? null ) ? $config['type'] : 'text',
+			'options'  => is_string( $config['options'] ?? null ) ? $config['options'] : '',
+			'conditional' => is_string( $config['conditional'] ?? null ) ? $config['conditional'] : 'always',
+			'order'    => absint( $config['order'] ?? 999 ),
+			'locked'   => ! empty( $config['locked'] ),
 		);
+	}
+
+	/**
+	 * Get ordered renderable fields for a condition bucket.
+	 *
+	 * @param string $form      Form key.
+	 * @param string $condition Condition key.
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function ordered_render_fields( string $form, string $condition ): array {
+		$key      = 'renewal' === $form ? 'renewal_fields' : 'registration_fields';
+		$settings = (array) $this->settings()[ $key ];
+		$fields   = array();
+
+		foreach ( $settings as $field_key => $config ) {
+			if ( ! is_string( $field_key ) || ! is_array( $config ) ) {
+				continue;
+			}
+
+			if ( in_array( $field_key, array( 'payment_receipt', 'privacy_acceptance' ), true ) ) {
+				continue;
+			}
+
+			if ( $condition !== (string) ( $config['conditional'] ?? 'always' ) ) {
+				continue;
+			}
+
+			$fields[ $field_key ] = $this->field_config( $form, $field_key );
+		}
+
+		uasort( $fields, static fn ( array $left, array $right ): int => (int) $left['order'] <=> (int) $right['order'] );
+
+		return $fields;
+	}
+
+	/**
+	 * Get ordered post-payment fields.
+	 *
+	 * @param string $form Form key.
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function ordered_post_payment_fields( string $form ): array {
+		$fields = array(
+			'payment_receipt'    => $this->field_config( $form, 'payment_receipt' ),
+			'privacy_acceptance' => $this->field_config( $form, 'privacy_acceptance' ),
+		);
+
+		uasort( $fields, static fn ( array $left, array $right ): int => (int) $left['order'] <=> (int) $right['order'] );
+
+		return $fields;
+	}
+
+	/**
+	 * Render one configured field.
+	 *
+	 * @param string               $form   Form key.
+	 * @param string               $field  Field key.
+	 * @param array<string, mixed> $config Field config.
+	 * @param array<string, mixed> $values Form values.
+	 */
+	private function render_configured_field( string $form, string $field, array $config, array $values ): void {
+		if ( ! $config['enabled'] ) {
+			return;
+		}
+
+		if ( 'privacy_acceptance' === $field ) {
+			$this->render_privacy_field( $form, $values );
+			return;
+		}
+
+		$type        = (string) ( $config['type'] ?? 'text' );
+		$field_class = $this->field_layout_class( $type );
+		$label       = (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' );
+		$value       = (string) ( $values[ $field ] ?? '' );
+
+		if ( 'file' === $type ) {
+			$this->render_upload_field( $form, $field, $this->field_accept_attribute( $field ), $field_class );
+			return;
+		}
+
+		if ( 'checkbox' === $type ) {
+			?>
+			<div class="adam-form-field <?php echo esc_attr( trim( 'adam-checkbox-field ' . $field_class ) ); ?>">
+				<label class="adam-checkbox-control">
+					<input type="checkbox" name="<?php echo esc_attr( $field ); ?>" value="1" <?php checked( '1', $value ); ?>>
+					<span class="adam-checkbox-label"><?php echo esc_html( $label ); ?></span>
+				</label>
+				<?php if ( '' !== (string) $config['help'] ) : ?>
+					<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+				<?php endif; ?>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( 'textarea' === $type ) {
+			?>
+			<label class="adam-form-field <?php echo esc_attr( $field_class ); ?>">
+				<span><?php echo esc_html( $label ); ?></span>
+				<textarea name="<?php echo esc_attr( $field ); ?>" rows="4"><?php echo esc_textarea( $value ); ?></textarea>
+				<?php if ( '' !== (string) $config['help'] ) : ?>
+					<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+				<?php endif; ?>
+			</label>
+			<?php
+			return;
+		}
+
+		if ( in_array( $type, array( 'select', 'radio' ), true ) ) {
+			$options = $this->parse_field_options( (string) $config['options'] );
+			?>
+			<label class="adam-form-field <?php echo esc_attr( $field_class ); ?>">
+				<span><?php echo esc_html( $label ); ?></span>
+				<?php if ( 'select' === $type ) : ?>
+					<select name="<?php echo esc_attr( $field ); ?>">
+						<option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
+						<?php foreach ( $options as $option_value => $option_label ) : ?>
+							<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				<?php else : ?>
+					<div class="adam-inline-choice">
+						<?php foreach ( $options as $option_value => $option_label ) : ?>
+							<label><input type="radio" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $option_value ); ?>" <?php checked( $value, $option_value ); ?>> <?php echo esc_html( $option_label ); ?></label>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+				<?php if ( '' !== (string) $config['help'] ) : ?>
+					<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+				<?php endif; ?>
+			</label>
+			<?php
+			return;
+		}
+
+		$input_type = match ( $type ) {
+			'email' => 'email',
+			'phone' => 'tel',
+			'number' => 'number',
+			'date' => 'date',
+			default => 'text',
+		};
+
+		$this->render_text_field( $form, $field, $values, $input_type, $field_class );
+	}
+
+	/**
+	 * Parse configured select/radio options.
+	 *
+	 * @param string $options Raw options.
+	 * @return array<string, string>
+	 */
+	private function parse_field_options( string $options ): array {
+		$lines  = preg_split( '/\r\n|\r|\n/', $options ) ?: array();
+		$parsed = array();
+
+		foreach ( $lines as $line ) {
+			$line = trim( (string) $line );
+
+			if ( '' === $line ) {
+				continue;
+			}
+
+			if ( str_contains( $line, '|' ) ) {
+				$parts = array_map( 'trim', explode( '|', $line, 2 ) );
+				$value = sanitize_text_field( (string) $parts[0] );
+				$label = sanitize_text_field( (string) $parts[1] );
+			} else {
+				$value = sanitize_text_field( $line );
+				$label = $value;
+			}
+
+			if ( '' !== $value ) {
+				$parsed[ $value ] = '' !== $label ? $label : $value;
+			}
+		}
+
+		return $parsed;
+	}
+
+	/**
+	 * Get the layout class for a field type.
+	 *
+	 * @param string $type Field type.
+	 */
+	private function field_layout_class( string $type ): string {
+		return in_array( $type, array( 'file', 'textarea', 'checkbox' ), true ) ? 'adam-field--full' : '';
+	}
+
+	/**
+	 * Get the accept attribute for a file field.
+	 *
+	 * @param string $field Field key.
+	 */
+	private function field_accept_attribute( string $field ): string {
+		return 'profile_photo' === $field ? 'image/*' : '.pdf,image/*';
+	}
+
+	/**
+	 * Get custom field configs for a form.
+	 *
+	 * @param string $form Form key.
+	 * @return array<string, array<string, mixed>>
+	 */
+	private function custom_field_configs( string $form ): array {
+		$key      = 'renewal' === $form ? 'renewal_fields' : 'registration_fields';
+		$settings = (array) $this->settings()[ $key ];
+		$custom   = array();
+
+		foreach ( $settings as $field_key => $config ) {
+			if ( ! is_string( $field_key ) || ! is_array( $config ) ) {
+				continue;
+			}
+
+			if ( ! empty( $config['locked'] ) ) {
+				continue;
+			}
+
+			$custom[ $field_key ] = $this->field_config( $form, $field_key );
+		}
+
+		return $custom;
+	}
+
+	/**
+	 * Validate custom fields that are active for the current path.
+	 *
+	 * @param string               $form            Form key.
+	 * @param array<string, mixed> $values          Posted values.
+	 * @param array<int, string>   $errors          Error list.
+	 * @param string               $associationMode Membership mode.
+	 * @param bool                 $profileChanged  Profile update toggle.
+	 */
+	private function validate_custom_fields( string $form, array $values, array &$errors, string $associationMode, bool $profileChanged ): void {
+		foreach ( $this->custom_field_configs( $form ) as $field_key => $config ) {
+			if ( ! $this->is_field_condition_active( (string) $config['conditional'], $associationMode, $profileChanged ) || ! $config['enabled'] ) {
+				continue;
+			}
+
+			$type  = (string) $config['type'];
+			$value = (string) ( $values[ $field_key ] ?? '' );
+
+			if ( 'file' === $type ) {
+				continue;
+			}
+
+			if ( ! empty( $config['required'] ) && '' === trim( $value ) && ! ( 'checkbox' === $type && '1' === $value ) ) {
+				$errors[] = sprintf( __( 'O campo "%s" é obrigatório.', 'adam-membership' ), (string) $config['label'] );
+				continue;
+			}
+
+			if ( 'email' === $type && '' !== $value && ! is_email( $value ) ) {
+				$errors[] = __( 'Introduza um endereço de email válido.', 'adam-membership' );
+			}
+
+			if ( 'date' === $type && '' !== $value && ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) || false === strtotime( $value ) ) ) {
+				$errors[] = sprintf( __( 'O campo "%s" tem um formato de data inválido.', 'adam-membership' ), (string) $config['label'] );
+			}
+		}
+	}
+
+	/**
+	 * Build the submitted custom payload for the current path.
+	 *
+	 * @param string               $form            Form key.
+	 * @param array<string, mixed> $values          Posted values.
+	 * @param array<int, string>   $errors          Error list.
+	 * @param string               $associationMode Membership mode.
+	 * @param bool                 $profileChanged  Profile update toggle.
+	 * @return array<string, mixed>
+	 */
+	private function custom_submission_payload( string $form, array $values, array &$errors, string $associationMode, bool $profileChanged ): array {
+		$payload = array();
+
+		foreach ( $this->custom_field_configs( $form ) as $field_key => $config ) {
+			if ( ! $this->is_field_condition_active( (string) $config['conditional'], $associationMode, $profileChanged ) || ! $config['enabled'] ) {
+				continue;
+			}
+
+			if ( 'file' === (string) $config['type'] ) {
+				$payload[ $this->custom_member_meta_key( $field_key ) ] = $this->process_upload(
+					$form,
+					$field_key,
+					$errors,
+					array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ),
+					! empty( $config['required'] )
+				);
+				continue;
+			}
+
+			$payload[ $this->custom_member_meta_key( $field_key ) ] = 'checkbox' === (string) $config['type']
+				? ( '1' === (string) ( $values[ $field_key ] ?? '' ) ? '1' : '' )
+				: (string) ( $values[ $field_key ] ?? '' );
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Check whether a conditional field should be active for the current path.
+	 *
+	 * @param string $condition       Condition key.
+	 * @param string $associationMode Membership mode.
+	 * @param bool   $profileChanged  Profile update toggle.
+	 */
+	private function is_field_condition_active( string $condition, string $associationMode, bool $profileChanged ): bool {
+		return match ( $condition ) {
+			'registration_external', 'renewal_external' => 'external_association' === $associationMode,
+			'renewal_profile'                            => $profileChanged,
+			default                                      => true,
+		};
+	}
+
+	/**
+	 * Build the member meta key for a custom field.
+	 *
+	 * @param string $field_key Field key.
+	 */
+	private function custom_member_meta_key( string $field_key ): string {
+		return 'adam_custom_' . sanitize_key( $field_key );
 	}
 
 	/**

@@ -422,6 +422,23 @@
 	color: var(--adam-admin-muted);
 }
 
+.adam-form-builder .adam-admin-table input[type="text"],
+.adam-form-builder .adam-admin-table input[type="number"],
+.adam-form-builder .adam-admin-table select,
+.adam-form-builder .adam-admin-table textarea {
+	width: 100%;
+	max-width: 100%;
+}
+
+.adam-form-builder .adam-admin-table textarea {
+	min-height: 84px;
+	resize: vertical;
+}
+
+.adam-form-builder .adam-admin-row-actions {
+	align-items: flex-start;
+}
+
 .adam-admin-member-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 320px;

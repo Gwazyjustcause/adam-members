@@ -87,7 +87,6 @@ final class Member {
 		'adam_membership_fee' => '',
 		'adam_external_association_name' => '',
 		'adam_external_member_number' => '',
-		'adam_external_ana_number' => '',
 		'adam_external_association_proof' => '',
 		'profile_photo'   => '',
 		'payment_receipt' => '',
@@ -232,7 +231,7 @@ final class Member {
 	 */
 	public function save( array $data ): void {
 		foreach ( $data as $field_name => $value ) {
-			if ( ! array_key_exists( $field_name, self::DEFAULT_DATA ) ) {
+			if ( ! array_key_exists( $field_name, self::DEFAULT_DATA ) && ! str_starts_with( (string) $field_name, 'adam_custom_' ) ) {
 				continue;
 			}
 

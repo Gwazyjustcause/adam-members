@@ -128,10 +128,33 @@ final class RegistrationService {
 			'adam_membership_fee'            => sanitize_text_field( (string) ( $payload['membership_fee'] ?? '' ) ),
 			'adam_external_association_name' => sanitize_text_field( (string) ( $payload['external_association_name'] ?? '' ) ),
 			'adam_external_member_number'    => sanitize_text_field( (string) ( $payload['external_member_number'] ?? '' ) ),
-			'adam_external_ana_number'       => sanitize_text_field( (string) ( $payload['external_ana_number'] ?? '' ) ),
 			'adam_external_association_proof' => $payload['external_association_proof'] ?? '',
 			'profile_photo'                  => $payload['profile_photo'] ?? '',
 			'payment_receipt'                => $payload['payment_receipt'] ?? '',
-		);
+		) + $this->custom_field_payload( $payload );
+	}
+
+	/**
+	 * Build custom field member meta payload.
+	 *
+	 * @param array<string, mixed> $payload Registration payload.
+	 * @return array<string, mixed>
+	 */
+	private function custom_field_payload( array $payload ): array {
+		$custom = array();
+		$fields = isset( $payload['custom_fields'] ) && is_array( $payload['custom_fields'] ) ? $payload['custom_fields'] : array();
+
+		foreach ( $fields as $field_key => $value ) {
+			$raw_key = sanitize_key( (string) $field_key );
+			$key     = str_starts_with( $raw_key, 'adam_custom_' ) ? $raw_key : sanitize_key( 'adam_custom_' . $raw_key );
+
+			if ( '' === $key ) {
+				continue;
+			}
+
+			$custom[ $key ] = is_scalar( $value ) ? sanitize_text_field( (string) $value ) : $value;
+		}
+
+		return $custom;
 	}
 }

@@ -837,14 +837,17 @@ final class AdminController {
 				</table>
 
 				<h3><?php esc_html_e( 'Campos da inscrição', 'adam-membership' ); ?></h3>
+				<p class="adam-admin-panel-copy"><?php esc_html_e( 'Crie campos personalizados, reorganize a ordem e ajuste as condições de visibilidade sem alterar código.', 'adam-membership' ); ?></p>
 				<?php $this->render_membership_form_fields_table( 'registration_fields', (array) $settings['registration_fields'] ); ?>
 
 				<h3><?php esc_html_e( 'Campos da renovação', 'adam-membership' ); ?></h3>
+				<p class="adam-admin-panel-copy"><?php esc_html_e( 'Os campos podem surgir sempre, apenas quando o sócio altera dados ou apenas quando renova através de outra associação.', 'adam-membership' ); ?></p>
 				<?php $this->render_membership_form_fields_table( 'renewal_fields', (array) $settings['renewal_fields'] ); ?>
 
 				<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar formulários', 'adam-membership' ); ?></button></p>
 			</form>
 		</div>
+		<?php $this->render_membership_form_builder_script(); ?>
 		<?php
 		$this->render_footer();
 	}
@@ -997,31 +1000,75 @@ final class AdminController {
 	 * @param array<string, mixed> $fields Fields.
 	 */
 	private function render_membership_form_fields_table( string $group, array $fields ): void {
+		$condition_options = $this->membership_form_condition_options( $group );
+		$type_options      = $this->membership_form_type_options();
+		$row_index         = 0;
 		?>
-		<table class="widefat striped">
-			<thead>
-				<tr>
-					<th><?php esc_html_e( 'Campo', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Ativo', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Obrigatório', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Condicional', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Rótulo', 'adam-membership' ); ?></th>
-					<th><?php esc_html_e( 'Texto de ajuda', 'adam-membership' ); ?></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ( $fields as $field_key => $config ) : ?>
+		<div class="adam-form-builder" data-adam-form-builder="<?php echo esc_attr( $group ); ?>" data-condition-options="<?php echo esc_attr( wp_json_encode( $condition_options ) ?: '[]' ); ?>" data-type-options="<?php echo esc_attr( wp_json_encode( $type_options ) ?: '[]' ); ?>">
+			<p><button type="button" class="button button-secondary" data-adam-add-field><?php esc_html_e( 'Adicionar novo campo', 'adam-membership' ); ?></button></p>
+			<table class="widefat striped adam-admin-table">
+				<thead>
 					<tr>
-						<td><code><?php echo esc_html( (string) $field_key ); ?></code></td>
-						<td><label><input type="checkbox" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>></label></td>
-						<td><label><input type="checkbox" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][required]" value="1" <?php checked( ! empty( $config['required'] ) ); ?>></label></td>
-						<td><?php echo esc_html( $this->membership_form_field_condition_label( $group, (string) $field_key ) ); ?></td>
-						<td><input type="text" class="regular-text" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][label]" value="<?php echo esc_attr( (string) ( $config['label'] ?? '' ) ); ?>"></td>
-						<td><input type="text" class="regular-text" name="membership_forms[<?php echo esc_attr( $group ); ?>][<?php echo esc_attr( (string) $field_key ); ?>][help]" value="<?php echo esc_attr( (string) ( $config['help'] ?? '' ) ); ?>"></td>
+						<th><?php esc_html_e( 'Ordem', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Campo', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Ativo', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Obrigatório', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Condicional', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Rótulo', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Texto de ajuda', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Opções', 'adam-membership' ); ?></th>
+						<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 					</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
+				</thead>
+				<tbody data-adam-form-builder-body>
+					<?php foreach ( $fields as $field_key => $config ) : ?>
+						<?php $row_name = 'membership_forms[' . $group . '][row_' . $row_index . ']'; ?>
+						<tr data-adam-form-row="<?php echo esc_attr( (string) $field_key ); ?>" data-system-field="<?php echo ! empty( $config['locked'] ) ? '1' : '0'; ?>">
+							<td><input type="number" min="1" class="small-text" data-adam-order-input name="<?php echo esc_attr( $row_name ); ?>[order]" value="<?php echo esc_attr( (string) ( $config['order'] ?? ( $row_index + 1 ) ) ); ?>"></td>
+							<td>
+								<input type="text" class="regular-text" name="<?php echo esc_attr( $row_name ); ?>[field_key]" value="<?php echo esc_attr( (string) $field_key ); ?>" <?php echo ! empty( $config['locked'] ) ? 'readonly' : ''; ?>>
+								<?php if ( ! empty( $config['locked'] ) ) : ?>
+									<small><?php esc_html_e( 'Campo protegido do sistema', 'adam-membership' ); ?></small>
+								<?php endif; ?>
+							</td>
+							<td>
+								<select name="<?php echo esc_attr( $row_name ); ?>[type]" <?php echo ! empty( $config['locked'] ) ? 'disabled' : ''; ?>>
+									<?php foreach ( $type_options as $type_key => $type_label ) : ?>
+										<option value="<?php echo esc_attr( $type_key ); ?>" <?php selected( (string) ( $config['type'] ?? 'text' ), $type_key ); ?>><?php echo esc_html( $type_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<?php if ( ! empty( $config['locked'] ) ) : ?>
+									<input type="hidden" name="<?php echo esc_attr( $row_name ); ?>[type]" value="<?php echo esc_attr( (string) ( $config['type'] ?? 'text' ) ); ?>">
+								<?php endif; ?>
+							</td>
+							<td><label><input type="hidden" name="<?php echo esc_attr( $row_name ); ?>[enabled]" value="0"><input type="checkbox" name="<?php echo esc_attr( $row_name ); ?>[enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>></label></td>
+							<td><label><input type="hidden" name="<?php echo esc_attr( $row_name ); ?>[required]" value="0"><input type="checkbox" name="<?php echo esc_attr( $row_name ); ?>[required]" value="1" <?php checked( ! empty( $config['required'] ) ); ?>></label></td>
+							<td>
+								<select name="<?php echo esc_attr( $row_name ); ?>[conditional]">
+									<?php foreach ( $condition_options as $condition_key => $condition_label ) : ?>
+										<option value="<?php echo esc_attr( $condition_key ); ?>" <?php selected( (string) ( $config['conditional'] ?? 'always' ), $condition_key ); ?>><?php echo esc_html( $condition_label ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</td>
+							<td><input type="text" class="regular-text" name="<?php echo esc_attr( $row_name ); ?>[label]" value="<?php echo esc_attr( (string) ( $config['label'] ?? '' ) ); ?>"></td>
+							<td><input type="text" class="regular-text" name="<?php echo esc_attr( $row_name ); ?>[help]" value="<?php echo esc_attr( (string) ( $config['help'] ?? '' ) ); ?>"></td>
+							<td><textarea class="large-text" rows="3" name="<?php echo esc_attr( $row_name ); ?>[options]" placeholder="<?php echo esc_attr__( 'Uma opção por linha ou valor|rótulo', 'adam-membership' ); ?>"><?php echo esc_textarea( (string) ( $config['options'] ?? '' ) ); ?></textarea></td>
+							<td class="adam-admin-row-actions">
+								<button type="button" class="button" data-adam-move-up><?php esc_html_e( 'Subir', 'adam-membership' ); ?></button>
+								<button type="button" class="button" data-adam-move-down><?php esc_html_e( 'Descer', 'adam-membership' ); ?></button>
+								<?php if ( empty( $config['locked'] ) ) : ?>
+									<button type="button" class="button button-link-delete" data-adam-remove-field><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+								<?php else : ?>
+									<span class="adam-admin-badge"><?php esc_html_e( 'Protegido', 'adam-membership' ); ?></span>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<?php ++$row_index; ?>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
 		<?php
 	}
 
@@ -1273,37 +1320,143 @@ final class AdminController {
 	}
 
 	/**
-	 * Get the conditional visibility label for a form field.
+	 * Get the available field types for the builder.
 	 *
-	 * @param string $group     Form group key.
-	 * @param string $field_key Field key.
+	 * @return array<string, string>
 	 */
-	private function membership_form_field_condition_label( string $group, string $field_key ): string {
-		$conditions = array(
-			'registration_fields' => array(
-				'external_association_name'  => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
-				'external_member_number'     => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
-				'external_ana_number'        => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
-				'external_association_proof' => __( 'Mostrar quando o candidato indica outra associação', 'adam-membership' ),
-			),
-			'renewal_fields' => array(
-				'phone'                     => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'address_line_1'            => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'address_line_2'            => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'city'                      => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'municipality'              => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'postcode'                  => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'country'                   => __( 'Mostrar quando o sócio indica alterações de dados', 'adam-membership' ),
-				'external_association_name' => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
-				'external_member_number'    => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
-				'external_ana_number'       => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
-				'external_association_proof' => __( 'Mostrar quando a renovação é feita através de outra associação', 'adam-membership' ),
-			),
+	private function membership_form_type_options(): array {
+		return array(
+			'text'     => __( 'Texto', 'adam-membership' ),
+			'email'    => __( 'Email', 'adam-membership' ),
+			'phone'    => __( 'Telefone', 'adam-membership' ),
+			'number'   => __( 'Número', 'adam-membership' ),
+			'date'     => __( 'Data', 'adam-membership' ),
+			'select'   => __( 'Lista suspensa', 'adam-membership' ),
+			'radio'    => __( 'Botões de escolha', 'adam-membership' ),
+			'checkbox' => __( 'Caixa de verificação', 'adam-membership' ),
+			'file'     => __( 'Upload de ficheiro', 'adam-membership' ),
+			'textarea' => __( 'Área de texto', 'adam-membership' ),
 		);
+	}
 
-		return isset( $conditions[ $group ][ $field_key ] )
-			? (string) $conditions[ $group ][ $field_key ]
-			: __( 'Sempre visível', 'adam-membership' );
+	/**
+	 * Get the available conditional rules for a form group.
+	 *
+	 * @param string $group Form group key.
+	 * @return array<string, string>
+	 */
+	private function membership_form_condition_options( string $group ): array {
+		if ( 'renewal_fields' === $group ) {
+			return array(
+				'always'           => __( 'Sempre visível', 'adam-membership' ),
+				'renewal_profile'  => __( 'Quando o sócio indica alterações de dados', 'adam-membership' ),
+				'renewal_external' => __( 'Quando a renovação é feita através de outra associação', 'adam-membership' ),
+			);
+		}
+
+		return array(
+			'always'                => __( 'Sempre visível', 'adam-membership' ),
+			'registration_external' => __( 'Quando o candidato indica outra associação', 'adam-membership' ),
+		);
+	}
+
+	/**
+	 * Render the admin-side form builder script.
+	 */
+	private function render_membership_form_builder_script(): void {
+		?>
+		<script>
+		( function () {
+			function optionMarkup(options) {
+				return Object.keys(options).map(function (key) {
+					return '<option value="' + key + '">' + options[key] + '</option>';
+				}).join('');
+			}
+
+			function refreshOrder(container) {
+				var rows = container.querySelectorAll('[data-adam-form-row]');
+				rows.forEach(function (row, index) {
+					var input = row.querySelector('[data-adam-order-input]');
+					if (input) {
+						input.value = String(index + 1);
+					}
+				});
+			}
+
+			function buildRow(container, index) {
+				var conditionOptions = JSON.parse(container.dataset.conditionOptions || '{}');
+				var typeOptions = JSON.parse(container.dataset.typeOptions || '{}');
+				var group = container.dataset.adamFormBuilder || '';
+				var uniqueId = 'custom_' + Date.now() + '_' + index;
+				var rowName = 'membership_forms[' + group + '][' + uniqueId + ']';
+
+				return [
+					'<tr data-adam-form-row="' + uniqueId + '" data-system-field="0">',
+						'<td><input type="number" min="1" class="small-text" data-adam-order-input name="' + rowName + '[order]" value="' + ( index + 1 ) + '"></td>',
+						'<td><input type="text" class="regular-text" name="' + rowName + '[field_key]" value="" placeholder="campo_personalizado"></td>',
+						'<td><select name="' + rowName + '[type]">' + optionMarkup(typeOptions) + '</select></td>',
+						'<td><label><input type="hidden" name="' + rowName + '[enabled]" value="0"><input type="checkbox" name="' + rowName + '[enabled]" value="1" checked></label></td>',
+						'<td><label><input type="hidden" name="' + rowName + '[required]" value="0"><input type="checkbox" name="' + rowName + '[required]" value="1"></label></td>',
+						'<td><select name="' + rowName + '[conditional]">' + optionMarkup(conditionOptions) + '</select></td>',
+						'<td><input type="text" class="regular-text" name="' + rowName + '[label]" value="" placeholder="Novo campo"></td>',
+						'<td><input type="text" class="regular-text" name="' + rowName + '[help]" value=""></td>',
+						'<td><textarea class="large-text" rows="3" name="' + rowName + '[options]" placeholder="Uma opção por linha ou valor|rótulo"></textarea></td>',
+						'<td class="adam-admin-row-actions"><button type="button" class="button" data-adam-move-up>Subir</button> <button type="button" class="button" data-adam-move-down>Descer</button> <button type="button" class="button button-link-delete" data-adam-remove-field>Remover</button></td>',
+					'</tr>'
+				].join('');
+			}
+
+			document.querySelectorAll('[data-adam-form-builder]').forEach(function (container) {
+				var body = container.querySelector('[data-adam-form-builder-body]');
+				var addButton = container.querySelector('[data-adam-add-field]');
+
+				if (!body || !addButton) {
+					return;
+				}
+
+				addButton.addEventListener('click', function () {
+					var row = document.createElement('tbody');
+					row.innerHTML = buildRow(container, body.querySelectorAll('[data-adam-form-row]').length);
+					if (row.firstElementChild) {
+						body.appendChild(row.firstElementChild);
+						refreshOrder(container);
+					}
+				});
+
+				container.addEventListener('click', function (event) {
+					var target = event.target;
+					if (!(target instanceof HTMLElement)) {
+						return;
+					}
+
+					var row = target.closest('[data-adam-form-row]');
+					if (!row) {
+						return;
+					}
+
+					if (target.matches('[data-adam-remove-field]')) {
+						row.remove();
+						refreshOrder(container);
+						return;
+					}
+
+					if (target.matches('[data-adam-move-up]') && row.previousElementSibling) {
+						row.parentNode.insertBefore(row, row.previousElementSibling);
+						refreshOrder(container);
+						return;
+					}
+
+					if (target.matches('[data-adam-move-down]') && row.nextElementSibling) {
+						row.parentNode.insertBefore(row.nextElementSibling, row);
+						refreshOrder(container);
+					}
+				});
+
+				refreshOrder(container);
+			});
+		}() );
+		</script>
+		<?php
 	}
 
 	/**

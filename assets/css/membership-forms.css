@@ -49,8 +49,12 @@
 
 .adam-form-field input[type="text"],
 .adam-form-field input[type="email"],
+.adam-form-field input[type="tel"],
+.adam-form-field input[type="number"],
 .adam-form-field input[type="date"],
-.adam-form-field input[type="file"] {
+.adam-form-field input[type="file"],
+.adam-form-field select,
+.adam-form-field textarea {
 	box-sizing: border-box;
 	width: 100%;
 	min-height: 46px;
@@ -70,10 +74,19 @@
 	cursor: pointer;
 }
 
+.adam-form-field textarea {
+	resize: vertical;
+	min-height: 120px;
+}
+
 .adam-form-field input[type="text"]:focus,
 .adam-form-field input[type="email"]:focus,
+.adam-form-field input[type="tel"]:focus,
+.adam-form-field input[type="number"]:focus,
 .adam-form-field input[type="date"]:focus,
-.adam-form-field input[type="file"]:focus {
+.adam-form-field input[type="file"]:focus,
+.adam-form-field select:focus,
+.adam-form-field textarea:focus {
 	outline: none;
 	border-color: var(--adam-green-600, #3f7a47);
 	box-shadow: 0 0 0 4px rgba(63, 122, 71, 0.12);
