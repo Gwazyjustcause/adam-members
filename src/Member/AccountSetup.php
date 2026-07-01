@@ -50,6 +50,15 @@ final class AccountSetup {
 			return;
 		}
 
+		$style_path = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
+
+		wp_enqueue_style(
+			'adam-member-area',
+			ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css',
+			array(),
+			file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION
+		);
+
 		wp_enqueue_script( 'password-strength-meter' );
 		wp_enqueue_script( 'zxcvbn-async' );
 		wp_enqueue_style( 'dashicons' );
@@ -190,10 +199,10 @@ final class AccountSetup {
 					</div>
 
 					<div class="adam-form-field">
-						<label for="adam_setup_password"><?php esc_html_e( 'Palavra-passe', 'adam-membership' ); ?></label>
+						<label for="new_password"><?php esc_html_e( 'Palavra-passe', 'adam-membership' ); ?></label>
 						<input
 							type="password"
-							id="adam_setup_password"
+							id="new_password"
 							name="adam_setup_password"
 							required
 							autocomplete="new-password"
@@ -204,10 +213,10 @@ final class AccountSetup {
 					<?php $this->render_password_strength(); ?>
 
 					<div class="adam-form-field">
-						<label for="adam_setup_password_confirm"><?php esc_html_e( 'Confirmar palavra-passe', 'adam-membership' ); ?></label>
+						<label for="confirm_password"><?php esc_html_e( 'Confirmar palavra-passe', 'adam-membership' ); ?></label>
 						<input
 							type="password"
-							id="adam_setup_password_confirm"
+							id="confirm_password"
 							name="adam_setup_password_confirm"
 							required
 							autocomplete="new-password"
@@ -395,6 +404,15 @@ final class AccountSetup {
 
 		if ( strlen( $password ) < 8 ) {
 			return __( 'A palavra-passe deve ter pelo menos 8 caracteres.', 'adam-membership' );
+		}
+
+		if (
+			! preg_match( '/[a-z]/', $password ) ||
+			! preg_match( '/[A-Z]/', $password ) ||
+			! preg_match( '/[0-9]/', $password ) ||
+			! preg_match( '/[^A-Za-z0-9]/', $password )
+		) {
+			return __( 'A palavra-passe deve incluir letra minúscula, letra maiúscula, número e símbolo.', 'adam-membership' );
 		}
 
 		if ( wp_check_password( $password, $user->user_pass, $user->ID ) ) {
