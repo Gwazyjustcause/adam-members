@@ -2223,8 +2223,7 @@
 	gap: 18px;
 }
 
-.adam-member-area .adam-form-field label,
-.adam-member-area .adam-card label {
+.adam-member-area .adam-form-field > label {
 	display: block;
 	margin-bottom: 8px;
 	font-size: 0.93rem;
@@ -2232,7 +2231,7 @@
 	color: #344256;
 }
 
-.adam-member-area .adam-card input,
+.adam-member-area .adam-card input:not([type="checkbox"]):not([type="radio"]),
 .adam-member-area .adam-card select {
 	width: 100%;
 	max-width: 100%;
@@ -2265,10 +2264,41 @@
 	margin: 0;
 	min-height: 44px;
 	cursor: pointer;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: #344256;
+	line-height: 1.4;
 }
 
-.adam-remember input {
-	width: auto;
+.adam-remember input,
+.adam-member-area .adam-checkbox-control input {
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	min-height: 18px;
+	margin: 0;
+	padding: 0;
+	accent-color: var(--adam-green-700);
+}
+
+.adam-remember span,
+.adam-member-area .adam-checkbox-label {
+	display: block;
+	min-width: 0;
+	margin: 0;
+}
+
+.adam-member-area .adam-checkbox-control {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	align-items: start;
+	column-gap: 12px;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	line-height: 1.5;
+	text-align: left;
+	cursor: pointer;
 }
 
 .adam-primary-action,
