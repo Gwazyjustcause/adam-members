@@ -126,66 +126,62 @@ final class Plugin {
 		$config             = new RegistrationFormConfig();
 		$account_setup      = new AccountSetup( $settings, $members, $history );
 		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup );
-		$member_area        = new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition );
-		$membership_forms   = new MembershipForms( $settings, $members, $registration_service, $renewals );
-		$account            = new Account( $email, $members, $history );
-		$password_recovery  = new PasswordRecovery( $email, $members, $history );
-		$password_reset     = new PasswordReset( $members, $history );
-		$email_change       = new EmailChangeConfirmation( $members, $history );
-		$email_confirmation = new EmailConfirmation( $email_change );
 		$registration       = new UserRegistration( $config, $logger, $registration_service );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
-		$events_frontend    = new EventFrontend( $events, $members, $logger, $settings );
-		$consent            = new ConsentManager( $settings );
-		$admin              = new AdminController(
-			$members,
-			$approval,
-			$settings,
-			$logger,
-			$renewal_repository,
-			$renewals,
-			$maintenance,
-			$cards,
-			$history_repository,
-			$announcements,
-			$documents,
-			$events,
-			$rewards,
-			$recognition,
-			$email
-		);
-		$announcement_admin = new AnnouncementController( $announcements );
-		$document_admin     = new DocumentController( $documents );
-		$event_admin        = new EventController( $events );
-		$points_admin       = new PointsController( $points, $members, $events );
-		$reward_admin       = new RewardController( $rewards, $members );
-		$statistics_admin   = new StatisticsController( $statistics, $events, $points );
-		$rewards->ensure_initial_catalogue();
+
+		// Catalogue synchronization mutates plugin data and can touch translated
+		// labels indirectly, so keep it out of bootstrap and run it after the
+		// request lifecycle is fully initialized.
+		add_action( 'wp_loaded', array( $rewards, 'ensure_initial_catalogue' ), 5 );
 
 		$registration->register();
 		$renewal_submission->register();
-		$admin->register();
-		$announcement_admin->register();
-		$document_admin->register();
-		$event_admin->register();
-		$points_admin->register();
-		$reward_admin->register();
-		$statistics_admin->register();
+		( new EventFrontend( $events, $members, $logger, $settings ) )->register();
 		$maintenance->register();
 		$cards->register();
 		$history->register();
 		$documents->register();
-		$events_frontend->register();
-		$consent->register();
 
-		$member_area->register();
-		$membership_forms->register();
+		if ( is_admin() ) {
+			$admin = new AdminController(
+				$members,
+				$approval,
+				$settings,
+				$logger,
+				$renewal_repository,
+				$renewals,
+				$maintenance,
+				$cards,
+				$history_repository,
+				$announcements,
+				$documents,
+				$events,
+				$rewards,
+				$recognition,
+				$email
+			);
+
+			$admin->register();
+			( new AnnouncementController( $announcements ) )->register();
+			( new DocumentController( $documents ) )->register();
+			( new EventController( $events ) )->register();
+			( new PointsController( $points, $members, $events ) )->register();
+			( new RewardController( $rewards, $members ) )->register();
+			( new StatisticsController( $statistics, $events, $points ) )->register();
+
+			return;
+		}
+
+		( new ConsentManager( $settings ) )->register();
+		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition ) )->register();
+		( new MembershipForms( $settings, $members, $registration_service, $renewals ) )->register();
 		$account_setup->register();
-		$password_recovery->register();
-		$password_reset->register();
-		$account->register();
+		( new PasswordRecovery( $email, $members, $history ) )->register();
+		( new PasswordReset( $members, $history ) )->register();
+		( new Account( $email, $members, $history ) )->register();
+		$email_change = new EmailChangeConfirmation( $members, $history );
 		$email_change->register();
-		$email_confirmation->register();
+		( new EmailConfirmation( $email_change ) )->register();
 	}
 
 	/**
