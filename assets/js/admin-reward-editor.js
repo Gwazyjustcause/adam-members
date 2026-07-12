@@ -34,9 +34,60 @@
 		return subtype === 'frame' ? 'card_style' : subtype;
 	}
 
+	function currentBackgroundMode() {
+		var mode = previewStyleValue( 'background_mode' ) || 'gradient';
+
+		if ( [ 'solid', 'gradient', 'image' ].indexOf( mode ) === -1 ) {
+			return 'gradient';
+		}
+
+		return mode;
+	}
+
 	function setAccordionState( $section, open ) {
 		$section.toggleClass( 'is-open', open );
 		$section.find( '[data-adam-accordion-toggle]' ).attr( 'aria-expanded', open ? 'true' : 'false' );
+	}
+
+	function rememberInitialState( $field ) {
+		if ( $field.is( ':radio, :checkbox' ) ) {
+			$field.data( 'adamInitialChecked', $field.prop( 'checked' ) );
+			return;
+		}
+
+		$field.data( 'adamInitialValue', $field.val() );
+	}
+
+	function restoreInitialState( $field ) {
+		if ( $field.is( ':file' ) ) {
+			$field.val( '' );
+			return;
+		}
+
+		if ( $field.is( ':radio, :checkbox' ) ) {
+			$field.prop( 'checked', !! $field.data( 'adamInitialChecked' ) );
+			return;
+		}
+
+		var value = $field.data( 'adamInitialValue' );
+
+		if ( typeof value === 'undefined' ) {
+			return;
+		}
+
+		$field.val( value );
+
+		if ( $field.hasClass( 'adam-color-picker' ) && $field.wpColorPicker ) {
+			$field.wpColorPicker( 'color', value );
+		}
+	}
+
+	function resetSectionToInitialState( selector ) {
+		$( selector ).find( 'input, select, textarea' ).each(
+			function () {
+				restoreInitialState( $( this ) );
+			}
+		);
 	}
 
 	function initColorPicker( context ) {
@@ -185,6 +236,41 @@
 		return 'adam-digital-card__art adam-digital-card__art--' + imagePosition + ' adam-digital-card__art--layer-' + imageLayer;
 	}
 
+	function previewClasses() {
+		var frameStyle = previewStyleValue( 'frame_style' ) || 'solid';
+		var cornerStyle = previewStyleValue( 'frame_corner_style' ) || 'rounded';
+		var badgeStyle = previewStyleValue( 'badge_style' ) || 'soft';
+		var rarityEffect = previewStyleValue( 'rarity_effect' ) || 'auto';
+		var rewardRarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
+		var classes = [];
+
+		if ( rarityEffect === 'auto' ) {
+			if ( [ 'legendary', 'founder' ].indexOf( rewardRarity ) !== -1 ) {
+				rarityEffect = 'metallic';
+			} else if ( [ 'epic', 'rare', 'limited_edition' ].indexOf( rewardRarity ) !== -1 ) {
+				rarityEffect = 'glow';
+			} else {
+				rarityEffect = 'subtle';
+			}
+		}
+
+		classes.push( 'adam-digital-card--preview-frame-' + frameStyle );
+		classes.push( 'adam-digital-card--preview-corners-' + cornerStyle );
+		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
+		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
+
+		if ( String( currentRewardValue() || '' ).toLowerCase().indexOf( 'card_frame_' ) === 0 ) {
+			classes.push( 'adam-digital-card--has-frame' );
+			classes.push( 'adam-digital-card--frame-rarity-' + rewardRarity );
+		}
+
+		if ( String( currentRewardValue() || '' ).toLowerCase().indexOf( 'card_theme_' ) === 0 ) {
+			classes.push( 'adam-digital-card--theme-rarity-' + rewardRarity );
+		}
+
+		return classes;
+	}
+
 	function colorWithAlpha( color, alpha ) {
 		if ( ! color ) {
 			return '';
@@ -208,7 +294,7 @@
 	}
 
 	function backgroundValue() {
-		var mode = previewStyleValue( 'background_mode' );
+		var mode = currentBackgroundMode();
 		var primary = previewStyleValue( 'background_color' ) || '#143826';
 		var secondary = previewStyleValue( 'background_color_secondary' ) || primary;
 		var tertiary = previewStyleValue( 'background_color_tertiary' ) || secondary;
@@ -243,12 +329,27 @@
 	function toggleDesignerSections() {
 		var digital = isDigitalReward();
 		var subtype = currentSubtype();
+		var mode = currentBackgroundMode();
+		var backgroundVisible = digital && subtype === 'background';
+		var styleVisible = digital && subtype === 'card_style';
 
 		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
 		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
-		$( '[data-adam-background-controls], [data-adam-image-controls]' ).toggleClass( 'is-hidden', ! digital || subtype !== 'background' );
-		$( '[data-adam-style-controls]' ).toggleClass( 'is-hidden', ! digital || subtype !== 'card_style' );
+		$( '[data-adam-background-controls], [data-adam-image-controls]' ).toggleClass( 'is-hidden', ! backgroundVisible );
+		$( '[data-adam-background-controls], [data-adam-image-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! backgroundVisible );
+		$( '[data-adam-style-controls]' ).toggleClass( 'is-hidden', ! styleVisible );
+		$( '[data-adam-style-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! styleVisible );
 		$( '[data-adam-details-controls]' ).toggleClass( 'is-hidden', false );
+
+		$( '[data-adam-background-mode-group]' ).each(
+			function () {
+				var modes = String( $( this ).data( 'adamBackgroundModeGroup' ) || '' ).split( /\s+/ );
+				var visible = ! backgroundVisible ? false : modes.indexOf( mode ) !== -1;
+
+				$( this ).toggleClass( 'is-hidden', ! visible );
+				$( this ).find( 'input, select, textarea, button' ).prop( 'disabled', ! visible );
+			}
+		);
 	}
 
 	var $editor = $( '.adam-reward-editor' );
@@ -261,17 +362,24 @@
 	var $shapeInput = $( '[data-adam-shapes-input]' );
 	var $shapeList = $( '[data-adam-shapes-list]' );
 	var shapeCount = $shapeList.find( '[data-adam-shape-row]' ).length;
+	var lastSubtype = currentSubtype();
 
 	function updatePreview() {
 		var rarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
+		var subtype = currentSubtype();
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
 		var border = previewStyleValue( 'border_color' ) || 'rgba(255,255,255,0.22)';
+		var backgroundMode = currentBackgroundMode();
+		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
+		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
 
 		if ( ! $preview.length ) {
 			return;
 		}
+
+		$preview.attr( 'class', classNames.join( ' ' ).trim() );
 
 		$preview.css(
 			{
@@ -294,7 +402,7 @@
 				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),
 				'--adam-card-title-border': colorWithAlpha( accent, 0.26 ),
 				'--adam-card-title-color': previewStyleValue( 'title_color' ) || '#ffffff',
-				'--adam-card-title-size': Math.max( 14, clamp( previewStyleValue( 'title_size' ), 14, 76 ) ) + 'px',
+				'--adam-card-title-size': Math.max( 14, clamp( previewStyleValue( 'title_size' ), 14, 28 ) ) + 'px',
 				'--adam-card-title-weight': clamp( previewStyleValue( 'title_weight' ), 400, 900 ),
 				'--adam-card-title-align': previewStyleValue( 'title_align' ) || 'left',
 				'--adam-card-title-shadow': clamp( previewStyleValue( 'title_shadow' ), 0, 40 ) + 'px',
@@ -318,14 +426,14 @@
 		$preview.find( '[data-adam-card-pattern]' ).attr( 'class', patternClass() );
 
 		var $artWrap = $preview.find( '[data-adam-card-art-wrap]' );
-		$artWrap.attr( 'class', artClass() ).prop( 'hidden', ! imageUrl && ! $preview.find( '[data-adam-card-art]' ).attr( 'src' ) );
+		$artWrap.attr( 'class', artClass() ).prop( 'hidden', subtype !== 'card_style' || ( ! imageUrl && ! $preview.find( '[data-adam-card-art]' ).attr( 'src' ) ) );
 
-		if ( imageUrl ) {
+		if ( subtype === 'card_style' && imageUrl ) {
 			$preview.find( '[data-adam-card-art]' ).attr( 'src', imageUrl );
 			$artWrap.prop( 'hidden', false );
 		}
 
-		if ( backgroundImageUrl ) {
+		if ( backgroundMode === 'image' && backgroundImageUrl ) {
 			$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', 'url(' + backgroundImageUrl + ')' );
 		} else {
 			$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', '' );
@@ -336,7 +444,7 @@
 		$preview.find( '[data-adam-card-title]' ).attr( 'class', 'adam-digital-card__title adam-digital-card__title--' + rarity );
 
 		var $previewShapes = $preview.find( '[data-adam-card-shapes]' );
-		var shapes = syncShapes();
+		var shapes = subtype === 'card_style' ? syncShapes() : [];
 
 		$previewShapes.empty();
 
@@ -366,6 +474,28 @@
 	}
 
 	$editor.on( 'input change', '[data-adam-style], [data-adam-preview-name], [data-adam-preview-rarity], [data-adam-reward-type], [data-adam-reward-category], input[name="reward_value"]', updatePreview );
+
+	$editor.on(
+		'change',
+		'[data-adam-style="card_subtype"]',
+		function () {
+			var subtype = currentSubtype();
+
+			if ( subtype === lastSubtype ) {
+				updatePreview();
+				return;
+			}
+
+			if ( subtype === 'background' ) {
+				resetSectionToInitialState( '[data-adam-style-controls]' );
+			} else {
+				resetSectionToInitialState( '[data-adam-background-controls], [data-adam-image-controls]' );
+			}
+
+			lastSubtype = subtype;
+			updatePreview();
+		}
+	);
 
 	$editor.on(
 		'click',
@@ -450,5 +580,10 @@
 	$editor.on( 'input change', '[data-shape-prop]', updatePreview );
 
 	initColorPicker( document );
+	$editor.find( '[data-adam-style], [data-adam-preview-image], [data-adam-preview-image-upload]' ).each(
+		function () {
+			rememberInitialState( $( this ) );
+		}
+	);
 	updatePreview();
 }( jQuery ) );
