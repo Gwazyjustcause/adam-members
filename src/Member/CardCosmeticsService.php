@@ -44,6 +44,7 @@ final class CardCosmeticsService {
 		$active_frame  = $this->selected_cosmetic( $member, self::FIELD_ACTIVE_FRAME, self::TYPE_FRAME, $owned );
 		$loyalty_badge = $this->selected_loyalty_badge( $active_title, $active_theme, $active_frame );
 		$classes       = array( 'adam-digital-card' );
+		$custom_style  = $this->merged_custom_style( $active_theme, $active_frame );
 
 		if ( is_array( $active_theme ) && isset( $active_theme['css_class'] ) ) {
 			$classes[] = (string) $active_theme['css_class'];
@@ -65,6 +66,7 @@ final class CardCosmeticsService {
 			'active_title'    => $active_title,
 			'active_theme'    => $active_theme,
 			'active_frame'    => $active_frame,
+			'custom_style'    => $custom_style,
 			'founder_badge'   => $member->is_founder()
 				? ( $member->founder_number() > 0 ? sprintf( __( 'Fundador #%d', 'adam-membership' ), $member->founder_number() ) : __( 'Membro Fundador', 'adam-membership' ) )
 				: '',
@@ -276,6 +278,118 @@ final class CardCosmeticsService {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Merge the reward editor style payloads for the active digital cosmetics.
+	 *
+	 * @param array<string, mixed>|null $active_theme Active theme cosmetic.
+	 * @param array<string, mixed>|null $active_frame Active frame cosmetic.
+	 * @return array<string, mixed>
+	 */
+	private function merged_custom_style( ?array $active_theme, ?array $active_frame ): array {
+		$merged = array();
+
+		foreach ( array( $active_theme, $active_frame ) as $cosmetic ) {
+			if ( ! is_array( $cosmetic ) || empty( $cosmetic['reward_id'] ) ) {
+				continue;
+			}
+
+			$reward = $this->rewards->repository()->find_reward( (int) $cosmetic['reward_id'] );
+
+			if ( ! $reward instanceof Reward ) {
+				continue;
+			}
+
+			$style   = $this->rewards->reward_visual_style( $reward );
+			$subtype = (string) ( $style['card_subtype'] ?? '' );
+			$keys    = 'card_style' === $subtype ? $this->card_style_keys() : $this->background_style_keys();
+
+			foreach ( $keys as $key ) {
+				if ( array_key_exists( $key, $style ) ) {
+					$merged[ $key ] = $style[ $key ];
+				}
+			}
+		}
+
+		return $merged;
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function background_style_keys(): array {
+		return array(
+			'background_mode',
+			'background_color',
+			'background_color_secondary',
+			'background_color_tertiary',
+			'gradient_angle',
+			'gradient_origin',
+			'gradient_midpoint',
+			'gradient_stop_secondary',
+			'gradient_stop_tertiary',
+			'gradient_opacity',
+			'pattern',
+			'pattern_color',
+			'pattern_background_color',
+			'pattern_opacity',
+			'pattern_scale',
+			'pattern_density',
+			'pattern_rotation',
+			'pattern_spacing',
+			'background_image_url',
+			'background_image_opacity',
+			'background_image_position',
+			'background_image_size',
+			'background_image_blend_mode',
+			'card_image_opacity',
+			'card_image_position',
+			'card_image_size',
+			'card_image_layer',
+			'image_url',
+			'shapes',
+			'text_color',
+			'muted_text_color',
+			'accent_color',
+			'title_color',
+			'title_size',
+			'title_weight',
+			'title_align',
+			'title_shadow',
+		);
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function card_style_keys(): array {
+		return array(
+			'border_color',
+			'border_width',
+			'border_radius',
+			'frame_style',
+			'frame_opacity',
+			'frame_glow',
+			'frame_shadow',
+			'frame_inner_width',
+			'frame_inner_color',
+			'frame_corner_style',
+			'frame_corner_accent',
+			'frame_inset',
+			'content_padding',
+			'content_gap',
+			'meta_align',
+			'stats_align',
+			'text_color',
+			'muted_text_color',
+			'accent_color',
+			'title_color',
+			'title_size',
+			'title_weight',
+			'title_align',
+			'title_shadow',
+		);
 	}
 
 	/**

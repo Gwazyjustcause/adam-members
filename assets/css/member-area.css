@@ -311,14 +311,38 @@
 }
 
 .adam-digital-card {
+	--adam-card-radius: 28px;
+	--adam-card-inner-radius: 22px;
+	--adam-card-frame-inset: 24px;
+	--adam-card-content-padding: 36px;
+	--adam-card-content-gap: 20px;
+	--adam-card-corner-size: 78px;
+	--adam-card-pattern-color: rgba(255, 255, 255, 0.18);
+	--adam-card-pattern-base: transparent;
+	--adam-card-pattern-opacity: 0;
+	--adam-card-pattern-size: 24px;
+	--adam-card-pattern-spacing: 24px;
+	--adam-card-pattern-density: 2;
+	--adam-card-pattern-rotation: 45deg;
+	--adam-card-background-opacity: 0;
+	--adam-card-background-size: cover;
+	--adam-card-background-position: center;
+	--adam-card-background-blend: screen;
+	--adam-card-art-opacity: 0;
+	--adam-card-art-size: 36%;
+	--adam-card-title-color: var(--adam-card-ink);
+	--adam-card-title-size: 0.92rem;
+	--adam-card-title-weight: 900;
+	--adam-card-title-align: left;
+	--adam-card-title-shadow: 0px;
 	position: relative;
 	display: grid;
 	grid-template-rows: auto auto auto auto;
-	gap: 20px;
+	gap: var(--adam-card-content-gap);
 	min-height: 360px;
-	padding: 36px 38px 34px;
+	padding: var(--adam-card-content-padding) 38px 34px;
 	border: 0;
-	border-radius: 28px;
+	border-radius: var(--adam-card-radius);
 	background:
 		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
 		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
@@ -331,12 +355,12 @@
 
 .adam-digital-card::before {
 	position: absolute;
-	inset: 24px;
-	border: 1px solid rgba(255, 255, 255, 0.16);
-	border-radius: 22px;
+	inset: var(--adam-card-frame-inset);
+	border: var(--adam-card-frame-inner-width, 1px) solid var(--adam-card-frame-inner-color, rgba(255, 255, 255, 0.16));
+	border-radius: var(--adam-card-inner-radius);
 	content: "";
 	pointer-events: none;
-	z-index: -1;
+	z-index: 0;
 }
 
 .adam-digital-card__shine {
@@ -349,6 +373,141 @@
 	background: rgba(255, 255, 255, 0.10);
 	filter: blur(2px);
 	z-index: -1;
+}
+
+.adam-digital-card__backdrop,
+.adam-digital-card__pattern,
+.adam-digital-card__art,
+.adam-digital-card__shapes {
+	position: absolute;
+	inset: var(--adam-card-frame-inset);
+	border-radius: var(--adam-card-inner-radius);
+	pointer-events: none;
+}
+
+.adam-digital-card__backdrop {
+	z-index: 0;
+	opacity: var(--adam-card-background-opacity);
+	background-position: var(--adam-card-background-position);
+	background-repeat: no-repeat;
+	background-size: var(--adam-card-background-size);
+	mix-blend-mode: var(--adam-card-background-blend);
+}
+
+.adam-digital-card__pattern {
+	z-index: 0;
+	opacity: var(--adam-card-pattern-opacity);
+	background-color: var(--adam-card-pattern-base);
+	transform: rotate(var(--adam-card-pattern-rotation)) scale(1.05);
+	transform-origin: center;
+}
+
+.adam-digital-card__pattern--grid {
+	background-image:
+		linear-gradient(var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px)),
+		linear-gradient(90deg, var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px));
+	background-size: var(--adam-card-pattern-spacing) var(--adam-card-pattern-spacing);
+}
+
+.adam-digital-card__pattern--carbon {
+	background-image:
+		repeating-linear-gradient(
+			45deg,
+			color-mix(in srgb, var(--adam-card-pattern-color) 90%, transparent) 0 calc(var(--adam-card-pattern-density) * 3px),
+			rgba(0, 0, 0, 0.14) calc(var(--adam-card-pattern-density) * 3px) calc(var(--adam-card-pattern-spacing) / 1.8)
+		);
+	background-size: var(--adam-card-pattern-size) var(--adam-card-pattern-size);
+}
+
+.adam-digital-card__pattern--diagonal {
+	background-image:
+		repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--adam-card-pattern-color) 80%, transparent) 0 calc(var(--adam-card-pattern-density) * 4px),
+			transparent calc(var(--adam-card-pattern-density) * 4px) var(--adam-card-pattern-spacing)
+		);
+	background-size: var(--adam-card-pattern-size) var(--adam-card-pattern-size);
+}
+
+.adam-digital-card__pattern--dots {
+	background-image: radial-gradient(var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px));
+	background-size: var(--adam-card-pattern-spacing) var(--adam-card-pattern-spacing);
+}
+
+.adam-digital-card__pattern--none {
+	background-image: none;
+}
+
+.adam-digital-card__art {
+	display: grid;
+	z-index: 1;
+	padding: 18px;
+	opacity: var(--adam-card-art-opacity);
+}
+
+.adam-digital-card__art img {
+	max-width: var(--adam-card-art-size);
+	max-height: 72%;
+	object-fit: contain;
+	filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
+}
+
+.adam-digital-card__art--top-left {
+	justify-items: start;
+	align-items: start;
+}
+
+.adam-digital-card__art--top-right {
+	justify-items: end;
+	align-items: start;
+}
+
+.adam-digital-card__art--center {
+	justify-items: center;
+	align-items: center;
+}
+
+.adam-digital-card__art--bottom-right {
+	justify-items: end;
+	align-items: end;
+}
+
+.adam-digital-card__art--bottom-left {
+	justify-items: start;
+	align-items: end;
+}
+
+.adam-digital-card__art--layer-underlay {
+	z-index: 0;
+}
+
+.adam-digital-card__art--layer-underlay img {
+	filter: saturate(0.9) brightness(0.92);
+}
+
+.adam-digital-card__art--layer-overlay {
+	z-index: 1;
+}
+
+.adam-digital-card__shapes {
+	z-index: 0;
+}
+
+.adam-digital-card__shape {
+	position: absolute;
+	display: block;
+}
+
+.adam-digital-card__shape--circle {
+	border-radius: 999px;
+}
+
+.adam-digital-card__shape--square {
+	border-radius: 6px;
+}
+
+.adam-digital-card__shape--line {
+	border-radius: 999px;
 }
 
 .adam-digital-card__header,
@@ -426,7 +585,7 @@
 .adam-digital-card__body {
 	display: grid;
 	grid-template-columns: 138px minmax(0, 1fr) 168px;
-	gap: 20px;
+	gap: var(--adam-card-content-gap);
 	align-items: center;
 }
 
@@ -567,6 +726,7 @@
 	flex-wrap: wrap;
 	gap: 8px;
 	margin-top: 8px;
+	justify-content: var(--adam-card-meta-align, flex-start);
 }
 
 .adam-digital-card__founder,
@@ -610,15 +770,17 @@
 	background:
 		linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)),
 		var(--adam-card-title-surface);
-	color: var(--adam-card-ink);
-	font-size: 0.92rem;
+	color: var(--adam-card-title-color);
+	font-size: var(--adam-card-title-size);
 	font-style: normal;
-	font-weight: 900;
+	font-weight: var(--adam-card-title-weight);
 	letter-spacing: 0.08em;
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.22),
 		inset 0 -6px 14px rgba(0, 0, 0, 0.18),
 		0 14px 24px rgba(7, 12, 20, 0.22);
+	text-align: var(--adam-card-title-align);
+	text-shadow: 0 0 var(--adam-card-title-shadow) rgba(0, 0, 0, 0.45);
 	text-transform: uppercase;
 }
 
@@ -2113,6 +2275,7 @@
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 12px;
+	justify-content: var(--adam-card-stats-align, stretch);
 }
 
 .adam-digital-card__details div {
@@ -2163,6 +2326,79 @@
 	gap: 22px;
 	padding: 14px 14px 12px;
 	line-height: 1.2;
+}
+
+.adam-digital-card--preview-frame-double::before {
+	box-shadow:
+		0 0 0 calc(var(--adam-card-frame-inner-width, 1px) + 4px) color-mix(in srgb, var(--adam-card-frame-accent) 28%, transparent),
+		inset 0 0 0 var(--adam-card-frame-inner-width, 1px) var(--adam-card-frame-inner-color, rgba(255, 255, 255, 0.2));
+}
+
+.adam-digital-card--preview-frame-bevel::before {
+	box-shadow:
+		inset 0 2px 0 rgba(255, 255, 255, 0.3),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+		var(--adam-card-frame-shadow);
+}
+
+.adam-digital-card--preview-frame-tech::after {
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+		inset 0 0 0 10px color-mix(in srgb, var(--adam-card-frame-accent) 8%, transparent),
+		0 0 18px color-mix(in srgb, var(--adam-card-frame-accent) 24%, transparent);
+}
+
+.adam-digital-card--preview-corners-cut {
+	clip-path: polygon(
+		var(--adam-card-corner-size) 0,
+		calc(100% - var(--adam-card-corner-size)) 0,
+		100% var(--adam-card-corner-size),
+		100% calc(100% - var(--adam-card-corner-size)),
+		calc(100% - var(--adam-card-corner-size)) 100%,
+		var(--adam-card-corner-size) 100%,
+		0 calc(100% - var(--adam-card-corner-size)),
+		0 var(--adam-card-corner-size)
+	);
+}
+
+.adam-digital-card--preview-corners-pill {
+	border-radius: 34px;
+}
+
+.adam-digital-card--preview-badge-outline .adam-digital-card__founder,
+.adam-digital-card--preview-badge-outline .adam-digital-card__loyalty,
+.adam-digital-card--preview-badge-outline .adam-digital-card__identity small {
+	background: transparent;
+	border-color: rgba(255, 255, 255, 0.28);
+}
+
+.adam-digital-card--preview-badge-solid .adam-digital-card__founder,
+.adam-digital-card--preview-badge-solid .adam-digital-card__loyalty,
+.adam-digital-card--preview-badge-solid .adam-digital-card__identity small {
+	background: var(--adam-card-title-surface);
+	border-color: var(--adam-card-title-border);
+}
+
+.adam-digital-card--preview-badge-glow .adam-digital-card__founder,
+.adam-digital-card--preview-badge-glow .adam-digital-card__loyalty,
+.adam-digital-card--preview-badge-glow .adam-digital-card__identity small {
+	box-shadow: 0 0 18px color-mix(in srgb, var(--adam-card-title-border) 35%, transparent);
+}
+
+.adam-digital-card--preview-effect-subtle::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 16px rgba(255, 255, 255, 0.08);
+}
+
+.adam-digital-card--preview-effect-glow::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 28px color-mix(in srgb, var(--adam-card-frame-accent) 22%, transparent);
+}
+
+.adam-digital-card--preview-effect-metallic::after {
+	box-shadow: var(--adam-card-frame-shadow), 0 0 34px rgba(250, 204, 21, 0.16);
+}
+
+.adam-digital-card--preview-effect-none::after {
+	box-shadow: var(--adam-card-frame-shadow);
 }
 
 .adam-digital-card__footer a {

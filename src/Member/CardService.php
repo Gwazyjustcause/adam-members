@@ -11,6 +11,8 @@ namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Reward\Reward;
+use AdamMembership\Reward\RewardService;
 use WP_Error;
 use WP_User_Query;
 
@@ -24,15 +26,17 @@ final class CardService {
 	private SettingsRepository $settings;
 	private Logger $logger;
 	private CardCosmeticsService $cosmetics;
+	private RewardService $rewards;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics ) {
+	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics, RewardService $rewards ) {
 		$this->members   = $members;
 		$this->settings  = $settings;
 		$this->logger    = $logger;
 		$this->cosmetics = $cosmetics;
+		$this->rewards   = $rewards;
 	}
 
 	/**
@@ -158,6 +162,184 @@ final class CardService {
 	}
 
 	/**
+	 * Build the normalized card data payload for a member.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function card_data( Member $member ): array {
+		$member_number = (string) $member->field( 'numero_socio' );
+
+		return array(
+			'association_name' => $this->association_name(),
+			'association_logo' => $this->association_logo_url(),
+			'status'           => $member->effective_status(),
+			'member_name'      => $member->full_name(),
+			'member_number'    => $member_number,
+			'member_number_ui' => '' !== $member_number ? $member_number : __( 'Numero por atribuir', 'adam-membership' ),
+			'joined_date'      => $this->format_date( $member->field( 'data_adesao' ) ),
+			'expiry_date'      => $this->format_date( $member->field( 'validade_quota' ) ),
+			'photo_url'        => $member->media_url( 'profile_photo' ),
+			'initials'         => $this->member_initials( $member->full_name() ),
+			'validation_url'   => $this->validation_url( $member ),
+			'qr_image_url'     => $this->qr_image_url( $member ),
+		);
+	}
+
+	/**
+	 * Build sample card data for the reward editor preview.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function preview_card_data(): array {
+		return array(
+			'association_name' => $this->association_name(),
+			'association_logo' => $this->association_logo_url(),
+			'status'           => Member::STATUS_ACTIVE,
+			'member_name'      => __( 'NOME DO SOCIO', 'adam-membership' ),
+			'member_number'    => 'ADAM-0001',
+			'member_number_ui' => 'ADAM-0001',
+			'joined_date'      => '28/06/2026',
+			'expiry_date'      => '04/04/2027',
+			'photo_url'        => '',
+			'initials'         => 'NS',
+			'validation_url'   => '',
+			'qr_image_url'     => $this->preview_qr_data_uri(),
+		);
+	}
+
+	/**
+	 * Build preview card presentation for a reward being edited.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function reward_preview_presentation( Reward $reward, array $style_override = array() ): array {
+		$resolved_style = array_merge(
+			$this->rewards->reward_visual_style( $reward ),
+			$style_override
+		);
+
+		$presentation = array(
+			'classes'       => array( 'adam-digital-card' ),
+			'custom_style'  => $resolved_style,
+			'founder_badge' => '',
+			'loyalty_badge' => '',
+			'active_title'  => array(
+				'name'   => __( 'SOBREVIVENTE', 'adam-membership' ),
+				'rarity' => Reward::RARITY_COMMON,
+			),
+		);
+
+		$reward_value = sanitize_key( $reward->reward_value() );
+
+		if ( str_starts_with( $reward_value, 'card_theme_' ) ) {
+			$presentation['classes'][] = 'adam-digital-card--theme-rarity-' . sanitize_html_class( $reward->rarity() );
+		}
+
+		if ( str_starts_with( $reward_value, 'card_frame_' ) ) {
+			$presentation['classes'][] = 'adam-digital-card--has-frame';
+			$presentation['classes'][] = 'adam-digital-card--frame-rarity-' . sanitize_html_class( $reward->rarity() );
+		}
+
+		return $presentation;
+	}
+
+	/**
+	 * Render the shared digital card component.
+	 *
+	 * @param array<string, mixed> $card_data Card data payload.
+	 * @param array<string, mixed> $presentation Card presentation payload.
+	 */
+	public function render_card( array $card_data, array $presentation = array() ): string {
+		$resolved = $this->resolve_card_presentation( $presentation );
+
+		ob_start();
+		?>
+		<article class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+			<div class="adam-digital-card__shine" aria-hidden="true"></div>
+			<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_url( $resolved['background_image_url'] ) . ');"' : ''; ?> data-adam-card-backdrop></div>
+			<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
+			<div class="adam-digital-card__art adam-digital-card__art--<?php echo esc_attr( $resolved['image_position'] ); ?> adam-digital-card__art--layer-<?php echo esc_attr( $resolved['image_layer'] ); ?>"<?php echo '' === $resolved['art_image_url'] ? ' hidden' : ''; ?> data-adam-card-art-wrap>
+				<img src="<?php echo esc_url( $resolved['art_image_url'] ); ?>" alt="" data-adam-card-art>
+			</div>
+			<div class="adam-digital-card__shapes" data-adam-card-shapes>
+				<?php foreach ( $resolved['shapes'] as $shape ) : ?>
+					<?php $this->render_shape( (array) $shape ); ?>
+				<?php endforeach; ?>
+			</div>
+
+			<header class="adam-digital-card__header">
+				<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
+				<div>
+					<span><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
+					<div class="adam-digital-card__badges">
+						<?php if ( '' !== (string) ( $presentation['founder_badge'] ?? '' ) ) : ?>
+							<small class="adam-digital-card__founder"><?php echo esc_html( (string) $presentation['founder_badge'] ); ?></small>
+						<?php endif; ?>
+						<?php if ( '' !== (string) ( $presentation['loyalty_badge'] ?? '' ) ) : ?>
+							<small class="adam-digital-card__loyalty"><?php echo esc_html( (string) $presentation['loyalty_badge'] ); ?></small>
+						<?php endif; ?>
+					</div>
+				</div>
+				<?php echo wp_kses_post( $this->status_badge_markup( (string) $card_data['status'] ) ); ?>
+			</header>
+
+			<div class="adam-digital-card__body">
+				<div class="adam-digital-card__photo">
+					<?php if ( '' !== (string) $card_data['photo_url'] ) : ?>
+						<img src="<?php echo esc_url( (string) $card_data['photo_url'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
+					<?php else : ?>
+						<span><?php echo esc_html( (string) $card_data['initials'] ); ?></span>
+					<?php endif; ?>
+				</div>
+
+				<div class="adam-digital-card__identity">
+					<span><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></span>
+					<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
+						<div class="adam-digital-card__rank">
+							<small><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></small>
+							<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) ( $presentation['active_title']['rarity'] ?? 'common' ) ) ); ?>" data-adam-card-title>
+								<span class="adam-digital-card__title-mark" aria-hidden="true"></span>
+								<span data-adam-card-title-text><?php echo esc_html( (string) $presentation['active_title']['name'] ); ?></span>
+							</em>
+						</div>
+					<?php endif; ?>
+					<strong><?php echo esc_html( (string) $card_data['member_name'] ); ?></strong>
+					<small><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></small>
+				</div>
+
+				<div class="adam-digital-card__qr">
+					<img src="<?php echo esc_url( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+					<span><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></span>
+				</div>
+			</div>
+
+			<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
+				<div>
+					<span><?php esc_html_e( 'N.º de socio', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></strong>
+				</div>
+				<div>
+					<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+				</div>
+				<div>
+					<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
+					<strong><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+				</div>
+			</div>
+
+			<footer class="adam-digital-card__footer">
+				<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
+				<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+			</footer>
+		</article>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	/**
 	 * Get unlocked member cosmetic options.
 	 *
 	 * @return array<string, array<int, array<string, mixed>>>
@@ -174,6 +356,249 @@ final class CardService {
 	 */
 	public function save_member_cosmetic_selection( Member $member, array $raw_data ): true|WP_Error {
 		return $this->cosmetics->save_member_selection( $member, $raw_data );
+	}
+
+	/**
+	 * Build the presentation metadata used by the shared renderer.
+	 *
+	 * @param array<string, mixed> $presentation Raw presentation payload.
+	 * @return array<string, mixed>
+	 */
+	private function resolve_card_presentation( array $presentation ): array {
+		$style            = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
+		$classes          = array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) );
+		$pattern          = sanitize_html_class( (string) ( $style['pattern'] ?? 'grid' ) );
+		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
+		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
+		$frame_style      = sanitize_html_class( (string) ( $style['frame_style'] ?? 'solid' ) );
+		$corner_style     = sanitize_html_class( (string) ( $style['frame_corner_style'] ?? 'rounded' ) );
+		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
+		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
+		$art_image_url    = esc_url_raw( (string) ( $style['image_url'] ?? '' ) );
+		$background_image = esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) );
+
+		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
+		$classes[] = 'adam-digital-card--preview-frame-' . $frame_style;
+		$classes[] = 'adam-digital-card--preview-corners-' . $corner_style;
+		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
+		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
+
+		return array(
+			'class_name'          => implode( ' ', array_values( array_unique( array_filter( $classes ) ) ) ),
+			'inline_style'        => $this->preview_inline_style( $style ),
+			'pattern'             => '' !== $pattern ? $pattern : 'grid',
+			'image_position'      => '' !== $image_position ? $image_position : 'top-right',
+			'image_layer'         => '' !== $image_layer ? $image_layer : 'overlay',
+			'art_image_url'       => $art_image_url,
+			'background_image_url'=> $background_image,
+			'shapes'              => is_array( $style['shapes'] ?? null ) ? $style['shapes'] : array(),
+		);
+	}
+
+	/**
+	 * @param array<string, mixed> $style Style payload.
+	 */
+	private function preview_inline_style( array $style ): string {
+		if ( array() === $style ) {
+			return '';
+		}
+
+		$background = $this->preview_background_value( $style );
+		$vars       = array(
+			'--adam-card-surface'                 => $background,
+			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
+			'--adam-card-muted'                   => (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.82)' ),
+			'--adam-card-border'                  => (string) ( $style['border_color'] ?? 'rgba(255,255,255,0.22)' ),
+			'--adam-card-radius'                  => (int) ( $style['border_radius'] ?? 28 ) . 'px',
+			'--adam-card-shadow'                  => '0 ' . max( 12, (int) ( $style['frame_shadow'] ?? 28 ) ) . 'px ' . max( 28, ( (int) ( $style['frame_shadow'] ?? 28 ) * 2 ) ) . 'px rgba(16,32,51,0.22)',
+			'--adam-card-frame-width'             => max( 0, (int) ( $style['border_width'] ?? 7 ) ) . 'px',
+			'--adam-card-frame-accent'            => $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), (int) ( $style['frame_opacity'] ?? 100 ) / 100 ),
+			'--adam-card-frame-shadow'            => '0 0 ' . max( 0, (int) ( $style['frame_glow'] ?? 0 ) ) . 'px ' . $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.26 ),
+			'--adam-card-frame-inner-highlight'   => $this->color_with_alpha( (string) ( $style['frame_inner_color'] ?? '#ffffff' ), 0.28 ),
+			'--adam-card-frame-inner-shadow'      => 'rgba(9,17,27,0.18)',
+			'--adam-card-frame-inner-width'       => max( 0, (int) ( $style['frame_inner_width'] ?? 1 ) ) . 'px',
+			'--adam-card-frame-inner-color'       => (string) ( $style['frame_inner_color'] ?? '#ffffff' ),
+			'--adam-card-corner-accent'           => $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.18 ),
+			'--adam-card-corner-size'             => max( 32, (int) ( $style['frame_corner_accent'] ?? 78 ) ) . 'px',
+			'--adam-card-frame-inset'             => max( 0, (int) ( $style['frame_inset'] ?? 24 ) ) . 'px',
+			'--adam-card-content-padding'         => max( 18, (int) ( $style['content_padding'] ?? 28 ) ) . 'px',
+			'--adam-card-content-gap'             => max( 8, (int) ( $style['content_gap'] ?? 20 ) ) . 'px',
+			'--adam-card-title-surface'           => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.18 ),
+			'--adam-card-title-border'            => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.26 ),
+			'--adam-card-title-color'             => (string) ( $style['title_color'] ?? ( $style['text_color'] ?? '#ffffff' ) ),
+			'--adam-card-title-size'              => max( 14, (int) ( $style['title_size'] ?? 15 ) ) . 'px',
+			'--adam-card-title-weight'            => (string) max( 400, (int) ( $style['title_weight'] ?? 900 ) ),
+			'--adam-card-title-align'             => (string) ( $style['title_align'] ?? 'left' ),
+			'--adam-card-title-shadow'            => max( 0, (int) ( $style['title_shadow'] ?? 0 ) ) . 'px',
+			'--adam-card-photo-border'            => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.8 ),
+			'--adam-card-pattern-color'           => (string) ( $style['pattern_color'] ?? '#86efac' ),
+			'--adam-card-pattern-base'            => (string) ( $style['pattern_background_color'] ?? '#143826' ),
+			'--adam-card-pattern-opacity'         => (string) ( max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 18 ) ) ) / 100 ),
+			'--adam-card-pattern-size'            => max( 6, (int) ( $style['pattern_scale'] ?? 24 ) ) . 'px',
+			'--adam-card-pattern-spacing'         => max( 6, (int) ( $style['pattern_spacing'] ?? 24 ) ) . 'px',
+			'--adam-card-pattern-density'         => (string) max( 1, (int) ( $style['pattern_density'] ?? 2 ) ),
+			'--adam-card-pattern-rotation'        => max( 0, (int) ( $style['pattern_rotation'] ?? 45 ) ) . 'deg',
+			'--adam-card-background-opacity'      => (string) ( max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ) / 100 ),
+			'--adam-card-background-size'         => max( 20, (int) ( $style['background_image_size'] ?? 100 ) ) . '%',
+			'--adam-card-background-position'     => str_replace( '-', ' ', (string) ( $style['background_image_position'] ?? 'center' ) ),
+			'--adam-card-background-blend'        => (string) ( $style['background_image_blend_mode'] ?? 'screen' ),
+			'--adam-card-art-opacity'             => (string) ( max( 0, min( 100, (int) ( $style['card_image_opacity'] ?? 22 ) ) ) / 100 ),
+			'--adam-card-art-size'                => max( 10, (int) ( $style['card_image_size'] ?? 36 ) ) . '%',
+		);
+
+		$parts = array();
+
+		foreach ( $vars as $property => $value ) {
+			$parts[] = $property . ':' . $value;
+		}
+
+		return implode( ';', $parts ) . ';';
+	}
+
+	/**
+	 * @param array<string, mixed> $shape Shape configuration.
+	 */
+	private function render_shape( array $shape ): void {
+		$type     = sanitize_html_class( (string) ( $shape['type'] ?? 'circle' ) );
+		$x        = max( 0, min( 100, (int) ( $shape['x'] ?? 50 ) ) );
+		$y        = max( 0, min( 100, (int) ( $shape['y'] ?? 50 ) ) );
+		$width    = max( 1, min( 100, (int) ( $shape['width'] ?? 12 ) ) );
+		$height   = max( 1, min( 100, (int) ( $shape['height'] ?? 12 ) ) );
+		$rotation = max( 0, min( 360, (int) ( $shape['rotation'] ?? 0 ) ) );
+		$opacity  = max( 0, min( 100, (int) ( $shape['opacity'] ?? 28 ) ) ) / 100;
+		$color    = sanitize_text_field( (string) ( $shape['color'] ?? '#ffffff' ) );
+		?>
+		<span class="adam-digital-card__shape adam-digital-card__shape--<?php echo esc_attr( $type ); ?>" style="<?php echo esc_attr( sprintf( 'left:%1$s%%;top:%2$s%%;width:%3$s%%;height:%4$s%%;transform:rotate(%5$sdeg);opacity:%6$s;background:%7$s;', (string) $x, (string) $y, (string) $width, (string) $height, (string) $rotation, (string) $opacity, $color ) ); ?>"></span>
+		<?php
+	}
+
+	private function status_badge_markup( string $status ): string {
+		return sprintf(
+			'<span class="adam-badge %1$s">%2$s</span>',
+			esc_attr( $this->status_class( $status ) ),
+			esc_html( $status )
+		);
+	}
+
+	private function status_class( string $status ): string {
+		if ( Member::STATUS_ACTIVE === $status ) {
+			return 'active';
+		}
+
+		if ( Member::STATUS_REJECTED === $status ) {
+			return 'rejected expired';
+		}
+
+		if ( Member::STATUS_EXPIRED === $status ) {
+			return 'expired';
+		}
+
+		if ( Member::STATUS_RENEWAL_PENDING === $status ) {
+			return 'pending warning renewal-pending';
+		}
+
+		if ( Member::STATUS_PENDING === $status ) {
+			return 'pending warning';
+		}
+
+		return 'unknown';
+	}
+
+	private function preview_background_value( array $style ): string {
+		$primary   = (string) ( $style['background_color'] ?? '#143826' );
+		$secondary = (string) ( $style['background_color_secondary'] ?? $primary );
+		$tertiary  = (string) ( $style['background_color_tertiary'] ?? $secondary );
+		$angle     = max( 0, min( 360, (int) ( $style['gradient_angle'] ?? 135 ) ) );
+		$origin    = str_replace( '-', ' ', (string) ( $style['gradient_origin'] ?? 'center' ) );
+		$midpoint  = max( 0, min( 100, (int) ( $style['gradient_stop_secondary'] ?? 52 ) ) );
+		$end       = max( 0, min( 100, (int) ( $style['gradient_stop_tertiary'] ?? 100 ) ) );
+		$opacity   = max( 0, min( 100, (int) ( $style['gradient_opacity'] ?? 100 ) ) ) / 100;
+
+		if ( 'solid' === (string) ( $style['background_mode'] ?? 'gradient' ) ) {
+			return $primary;
+		}
+
+		return sprintf(
+			'radial-gradient(circle at %1$s, %2$s 0%%, transparent 34%%), linear-gradient(%3$sdeg, %4$s 0%%, %5$s %6$s%%, %7$s %8$s%%)',
+			$origin,
+			$this->color_with_alpha( $primary, $opacity * 0.48 ),
+			(string) $angle,
+			$primary,
+			$secondary,
+			(string) $midpoint,
+			$tertiary,
+			(string) $end
+		);
+	}
+
+	private function color_with_alpha( string $color, float $alpha ): string {
+		$color = trim( $color );
+		$alpha = max( 0, min( 1, $alpha ) );
+
+		if ( preg_match( '/^#([a-f0-9]{6})$/i', $color, $matches ) ) {
+			$hex = $matches[1];
+
+			return sprintf(
+				'rgba(%1$d, %2$d, %3$d, %4$s)',
+				hexdec( substr( $hex, 0, 2 ) ),
+				hexdec( substr( $hex, 2, 2 ) ),
+				hexdec( substr( $hex, 4, 2 ) ),
+				(string) $alpha
+			);
+		}
+
+		if ( preg_match( '/^#([a-f0-9]{3})$/i', $color, $matches ) ) {
+			$hex = $matches[1];
+
+			return sprintf(
+				'rgba(%1$d, %2$d, %3$d, %4$s)',
+				hexdec( str_repeat( $hex[0], 2 ) ),
+				hexdec( str_repeat( $hex[1], 2 ) ),
+				hexdec( str_repeat( $hex[2], 2 ) ),
+				(string) $alpha
+			);
+		}
+
+		return $color;
+	}
+
+	private function member_initials( string $full_name ): string {
+		$parts = preg_split( '/\s+/', trim( $full_name ) );
+		$parts = is_array( $parts ) ? array_values( array_filter( $parts ) ) : array();
+
+		if ( array() === $parts ) {
+			return 'AD';
+		}
+
+		$initials = '';
+
+		foreach ( array_slice( $parts, 0, 2 ) as $part ) {
+			$initials .= strtoupper( substr( $part, 0, 1 ) );
+		}
+
+		return $initials;
+	}
+
+	private function preview_qr_data_uri(): string {
+		$svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
+<rect width="220" height="220" fill="#ffffff"/>
+<g fill="#0f2f1e">
+<rect x="16" y="16" width="56" height="56"/><rect x="24" y="24" width="40" height="40" fill="#fff"/><rect x="32" y="32" width="24" height="24"/>
+<rect x="148" y="16" width="56" height="56"/><rect x="156" y="24" width="40" height="40" fill="#fff"/><rect x="164" y="32" width="24" height="24"/>
+<rect x="16" y="148" width="56" height="56"/><rect x="24" y="156" width="40" height="40" fill="#fff"/><rect x="32" y="164" width="24" height="24"/>
+<rect x="92" y="20" width="12" height="12"/><rect x="108" y="20" width="12" height="12"/><rect x="124" y="20" width="12" height="12"/>
+<rect x="88" y="48" width="16" height="16"/><rect x="112" y="48" width="12" height="12"/><rect x="128" y="44" width="16" height="16"/>
+<rect x="88" y="84" width="12" height="12"/><rect x="104" y="84" width="12" height="12"/><rect x="120" y="84" width="12" height="12"/><rect x="136" y="84" width="12" height="12"/>
+<rect x="88" y="108" width="20" height="20"/><rect x="116" y="108" width="12" height="12"/><rect x="136" y="108" width="20" height="20"/>
+<rect x="84" y="140" width="12" height="12"/><rect x="100" y="140" width="12" height="12"/><rect x="120" y="140" width="12" height="12"/><rect x="140" y="140" width="12" height="12"/>
+<rect x="88" y="160" width="16" height="16"/><rect x="112" y="160" width="28" height="12"/><rect x="148" y="160" width="16" height="16"/>
+<rect x="88" y="184" width="12" height="12"/><rect x="108" y="184" width="12" height="12"/><rect x="128" y="184" width="12" height="12"/><rect x="148" y="184" width="12" height="12"/>
+</g>
+</svg>
+SVG;
+
+		return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode( $svg );
 	}
 
 	/**

@@ -122,7 +122,7 @@ final class Plugin {
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
 		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
-		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics );
+		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
 		$config             = new RegistrationFormConfig();
 		$account_setup      = new AccountSetup( $settings, $members, $history );
 		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup );
@@ -166,7 +166,7 @@ final class Plugin {
 			( new DocumentController( $documents ) )->register();
 			( new EventController( $events ) )->register();
 			( new PointsController( $points, $members, $events ) )->register();
-			( new RewardController( $rewards, $members ) )->register();
+			( new RewardController( $rewards, $members, $cards ) )->register();
 			( new StatisticsController( $statistics, $events, $points ) )->register();
 
 			return;
