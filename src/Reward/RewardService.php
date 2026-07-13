@@ -721,7 +721,10 @@ final class RewardService {
 	 * @return array<string, mixed>
 	 */
 	public function reward_visual_style( Reward $reward ): array {
-		$stored = $this->sanitize_visual_style( $reward->visual_style() );
+		$defaults = $this->default_reward_visual_style( $reward->rarity(), $reward->category() );
+		$raw_style = $reward->visual_style();
+		$stored = $this->sanitize_visual_style( $raw_style, $defaults, $raw_style );
+		$this->maybe_migrate_reward_visual_style( $reward, $raw_style, $stored );
 		$preset  = $this->preset_visual_style_for_reward( sanitize_key( $reward->reward_value() ) );
 		$subtype = (string) ( $stored['card_subtype'] ?? $preset['card_subtype'] ?? '' );
 
@@ -735,7 +738,6 @@ final class RewardService {
 			$subtype = str_contains( $value, 'frame' ) || str_contains( $value, 'style' ) || str_contains( $name, 'frame' ) || str_contains( $name, 'moldura' ) || str_contains( $name, 'estilo' ) ? 'card_style' : 'background';
 		}
 
-		$defaults = $this->default_reward_visual_style( $reward->rarity(), $reward->category() );
 		$preset_background = is_array( $preset['background'] ?? null ) ? (array) $preset['background'] : array();
 		$preset_style      = is_array( $preset['style'] ?? null ) ? (array) $preset['style'] : array();
 		$runtime  = array_merge(
@@ -752,7 +754,7 @@ final class RewardService {
 
 		$runtime['shapes'] = $this->sanitize_visual_shapes( $runtime['shapes'] ?? array() );
 
-		return $runtime;
+		return $this->complete_reward_visual_style( $runtime, $reward->rarity(), $reward->category() );
 	}
 
 	/**
@@ -875,6 +877,13 @@ final class RewardService {
 				'title_weight'                => 900,
 				'title_align'                 => 'left',
 				'title_shadow'                => 0,
+				'title_width'                 => 100,
+				'description_color'           => $palette['muted_text_color'],
+				'description_size'            => 16,
+				'description_weight'          => 500,
+				'description_align'           => 'left',
+				'description_shadow'          => 0,
+				'description_width'           => 66,
 				'shapes'                      => $this->default_visual_shapes( $rarity ),
 			)
 		);
@@ -1157,7 +1166,7 @@ final class RewardService {
 	 * @return array<string, mixed>
 	 */
 	public function reward_card_presentation( Reward $reward ): array {
-		$style            = $this->reward_visual_style( $reward );
+		$style            = $this->complete_reward_visual_style( $this->reward_visual_style( $reward ), $reward->rarity(), $reward->category() );
 		$background_value = $this->reward_background_value( $style );
 		$badge_style      = sanitize_html_class( (string) $style['badge_style'] );
 		$effect           = sanitize_html_class( (string) $style['rarity_effect'] );
@@ -1362,6 +1371,7 @@ final class RewardService {
 		$meta_align         = isset( $style['meta_align'] ) ? sanitize_key( (string) $style['meta_align'] ) : (string) $defaults['meta_align'];
 		$stats_align        = isset( $style['stats_align'] ) ? sanitize_key( (string) $style['stats_align'] ) : (string) $defaults['stats_align'];
 		$title_align        = isset( $style['title_align'] ) ? sanitize_key( (string) $style['title_align'] ) : (string) $defaults['title_align'];
+		$description_align  = isset( $style['description_align'] ) ? sanitize_key( (string) $style['description_align'] ) : (string) $defaults['description_align'];
 
 		if ( ! in_array( $badge_style, array( 'soft', 'outline', 'glow', 'solid' ), true ) ) {
 			$badge_style = (string) $defaults['badge_style'];
@@ -1399,12 +1409,16 @@ final class RewardService {
 			$title_align = (string) $defaults['title_align'];
 		}
 
+		if ( ! in_array( $description_align, array( 'left', 'center', 'right' ), true ) ) {
+			$description_align = (string) $defaults['description_align'];
+		}
+
 		return array(
 			'text_color'          => $this->sanitize_color_value( $style['text_color'] ?? $defaults['text_color'] ),
 			'muted_text_color'    => $this->sanitize_color_value( $style['muted_text_color'] ?? $defaults['muted_text_color'] ),
 			'accent_color'        => $this->sanitize_color_value( $style['accent_color'] ?? $defaults['accent_color'] ),
 			'border_color'        => $this->sanitize_color_value( $style['border_color'] ?? $defaults['border_color'] ),
-			'border_width'        => max( 1, min( 16, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) ),
+			'border_width'        => max( 0, min( 16, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) ),
 			'border_radius'       => max( 8, min( 36, (int) ( $style['border_radius'] ?? $defaults['border_radius'] ) ) ),
 			'frame_style'         => $frame_style,
 			'frame_opacity'       => max( 0, min( 100, (int) ( $style['frame_opacity'] ?? $defaults['frame_opacity'] ) ) ),
@@ -1430,6 +1444,13 @@ final class RewardService {
 			'title_weight'        => max( 400, min( 900, (int) ( $style['title_weight'] ?? $defaults['title_weight'] ) ) ),
 			'title_align'         => $title_align,
 			'title_shadow'        => max( 0, min( 40, (int) ( $style['title_shadow'] ?? $defaults['title_shadow'] ) ) ),
+			'title_width'         => max( 40, min( 100, (int) ( $style['title_width'] ?? $defaults['title_width'] ) ) ),
+			'description_color'   => $this->sanitize_color_value( $style['description_color'] ?? $defaults['description_color'] ),
+			'description_size'    => max( 12, min( 24, (int) ( $style['description_size'] ?? $defaults['description_size'] ) ) ),
+			'description_weight'  => max( 300, min( 900, (int) ( $style['description_weight'] ?? $defaults['description_weight'] ) ) ),
+			'description_align'   => $description_align,
+			'description_shadow'  => max( 0, min( 40, (int) ( $style['description_shadow'] ?? $defaults['description_shadow'] ) ) ),
+			'description_width'   => max( 30, min( 100, (int) ( $style['description_width'] ?? $defaults['description_width'] ) ) ),
 			'shapes'              => $this->sanitize_visual_shapes( $style['shapes'] ?? $defaults['shapes'] ?? array() ),
 		);
 	}
@@ -1598,6 +1619,43 @@ final class RewardService {
 		}
 
 		return '#ffffff';
+	}
+
+	/**
+	 * Persist upgraded visual-style schema for older rewards when needed.
+	 *
+	 * @param array<string, mixed> $raw_style Original stored payload.
+	 * @param array<string, mixed> $migrated_style Canonicalized payload.
+	 */
+	private function maybe_migrate_reward_visual_style( Reward $reward, array $raw_style, array $migrated_style ): void {
+		if ( $raw_style == $migrated_style ) {
+			return;
+		}
+
+		$data = $reward->data();
+		$data['visual_style'] = $migrated_style;
+
+		$this->repository->update_reward( $reward, $data );
+	}
+
+	/**
+	 * Ensure a runtime reward style always contains the full current schema.
+	 *
+	 * @param array<string, mixed> $style Style payload.
+	 * @return array<string, mixed>
+	 */
+	private function complete_reward_visual_style( array $style, string $rarity, string $category ): array {
+		$defaults = $this->default_reward_visual_style( $rarity, $category );
+
+		if ( isset( $style['background'] ) && is_array( $style['background'] ) ) {
+			$style['background'] = wp_parse_args( $style['background'], $this->sanitize_background_style_config( array(), $defaults ) );
+		}
+
+		if ( isset( $style['style'] ) && is_array( $style['style'] ) ) {
+			$style['style'] = wp_parse_args( $style['style'], $this->sanitize_card_style_config( array(), $defaults ) );
+		}
+
+		return wp_parse_args( $style, $defaults );
 	}
 
 	private function css_alignment_value( string $alignment, bool $allow_space_between ): string {
