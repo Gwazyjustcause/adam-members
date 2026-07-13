@@ -191,7 +191,8 @@ final class RewardService {
 	 * @return Reward|WP_Error
 	 */
 	public function save_reward( array $data, array $file = array(), int $id = 0 ): Reward|WP_Error {
-		$prepared = $this->sanitize_reward_data( $data );
+		$current = $id > 0 ? $this->repository->find_reward( $id ) : null;
+		$prepared = $this->sanitize_reward_data( $data, $current );
 
 		if ( '' === $prepared['name'] ) {
 			return new WP_Error( 'adam_membership_reward_name_required', __( 'O nome da recompensa e obrigatorio.', 'adam-membership' ) );
@@ -229,8 +230,6 @@ final class RewardService {
 
 			return $reward;
 		}
-
-		$current = $this->repository->find_reward( $id );
 
 		if ( null === $current ) {
 			return new WP_Error( 'adam_membership_reward_not_found', __( 'Recompensa nao encontrada.', 'adam-membership' ) );
@@ -837,16 +836,16 @@ final class RewardService {
 				'gradient_stop_secondary'     => 52,
 				'gradient_stop_tertiary'      => 100,
 				'gradient_opacity'            => 100,
-				'border_width'                => Reward::RARITY_LEGENDARY === $rarity ? 9 : 7,
+				'border_width'                => 0,
 				'border_radius'               => 28,
 				'frame_style'                 => 'solid',
-				'frame_opacity'               => 100,
-				'frame_glow'                  => Reward::RARITY_COMMON === $rarity ? 14 : 28,
-				'frame_shadow'                => 28,
-				'frame_inner_width'           => 1,
-				'frame_inner_color'           => $palette['accent_color'],
+				'frame_opacity'               => 0,
+				'frame_glow'                  => 0,
+				'frame_shadow'                => 0,
+				'frame_inner_width'           => 0,
+				'frame_inner_color'           => 'rgba(255,255,255,0)',
 				'frame_corner_style'          => 'rounded',
-				'frame_corner_accent'         => 78,
+				'frame_corner_accent'         => 0,
 				'frame_inset'                 => 24,
 				'content_padding'             => 28,
 				'content_gap'                 => 20,
@@ -1196,7 +1195,7 @@ final class RewardService {
 	 * @param array<string, mixed> $data Raw reward data.
 	 * @return array<string, mixed>
 	 */
-	private function sanitize_reward_data( array $data ): array {
+	private function sanitize_reward_data( array $data, ?Reward $current = null ): array {
 		$type = isset( $data['type'] ) ? sanitize_key( (string) $data['type'] ) : Reward::TYPE_PERMANENT_UNLOCK;
 
 		if ( ! in_array( $type, Reward::types(), true ) ) {
@@ -1209,10 +1208,12 @@ final class RewardService {
 			$rarity = Reward::RARITY_COMMON;
 		}
 
+		$category = isset( $data['category'] ) ? sanitize_text_field( (string) $data['category'] ) : 'Outras';
+
 		return array(
 			'name'                => isset( $data['name'] ) ? sanitize_text_field( (string) $data['name'] ) : '',
 			'description'         => isset( $data['description'] ) ? sanitize_textarea_field( (string) $data['description'] ) : '',
-			'category'            => isset( $data['category'] ) ? sanitize_text_field( (string) $data['category'] ) : 'Outras',
+			'category'            => $category,
 			'type'                => $type,
 			'rarity'              => $rarity,
 			'points_cost'         => max( 0, absint( $data['points_cost'] ?? 0 ) ),
@@ -1223,7 +1224,11 @@ final class RewardService {
 			'approval_required'   => ! empty( $data['approval_required'] ),
 			'mystery_reveal_text' => isset( $data['mystery_reveal_text'] ) ? sanitize_textarea_field( (string) $data['mystery_reveal_text'] ) : '',
 			'reward_value'        => isset( $data['reward_value'] ) ? sanitize_text_field( (string) $data['reward_value'] ) : '',
-			'visual_style'        => $this->sanitize_visual_style( $data['visual_style'] ?? array() ),
+			'visual_style'        => $this->sanitize_visual_style(
+				$data['visual_style'] ?? array(),
+				$this->default_reward_visual_style( $rarity, $category ),
+				$current instanceof Reward ? $current->visual_style() : array()
+			),
 		);
 	}
 
@@ -1233,20 +1238,33 @@ final class RewardService {
 	 * @param mixed $style Raw style data.
 	 * @return array<string, mixed>
 	 */
-	private function sanitize_visual_style( mixed $style ): array {
+	private function sanitize_visual_style( mixed $style, array $defaults = array(), mixed $existing_style = array() ): array {
 		if ( is_string( $style ) ) {
 			$decoded = json_decode( $style, true );
 			$style   = is_array( $decoded ) ? $decoded : array();
+		}
+
+		if ( is_string( $existing_style ) ) {
+			$decoded_existing = json_decode( $existing_style, true );
+			$existing_style   = is_array( $decoded_existing ) ? $decoded_existing : array();
 		}
 
 		if ( ! is_array( $style ) ) {
 			$style = array();
 		}
 
-		$defaults               = $this->default_reward_visual_style();
-		$has_grouped_source     = is_array( $style['background'] ?? null ) || is_array( $style['style'] ?? null );
+		if ( ! is_array( $existing_style ) ) {
+			$existing_style = array();
+		}
+
+		if ( array() === $defaults ) {
+			$defaults = $this->default_reward_visual_style();
+		}
+
 		$has_explicit_subtype   = isset( $style['card_subtype'] );
-		$card_subtype           = $has_explicit_subtype ? sanitize_key( (string) $style['card_subtype'] ) : 'background';
+		$existing_grouped       = is_array( $existing_style['background'] ?? null ) || is_array( $existing_style['style'] ?? null );
+		$existing_subtype       = isset( $existing_style['card_subtype'] ) ? sanitize_key( (string) $existing_style['card_subtype'] ) : 'background';
+		$card_subtype           = $has_explicit_subtype ? sanitize_key( (string) $style['card_subtype'] ) : $existing_subtype;
 
 		if ( 'frame' === $card_subtype ) {
 			$card_subtype = 'card_style';
@@ -1256,15 +1274,17 @@ final class RewardService {
 			$card_subtype = 'background';
 		}
 
-		$background_source = is_array( $style['background'] ?? null ) ? (array) $style['background'] : $style;
-		$style_source      = is_array( $style['style'] ?? null ) ? (array) $style['style'] : $style;
-		$background        = $this->sanitize_background_style_config( $background_source, $defaults );
-		$card_style        = $this->sanitize_card_style_config( $style_source, $defaults );
+		$existing_background = is_array( $existing_style['background'] ?? null ) ? (array) $existing_style['background'] : ( $existing_grouped ? array() : $existing_style );
+		$existing_card_style = is_array( $existing_style['style'] ?? null ) ? (array) $existing_style['style'] : ( $existing_grouped ? array() : $existing_style );
+		$background_source   = is_array( $style['background'] ?? null ) ? array_merge( $existing_background, (array) $style['background'] ) : array_merge( $existing_background, $style );
+		$style_source        = is_array( $style['style'] ?? null ) ? array_merge( $existing_card_style, (array) $style['style'] ) : array_merge( $existing_card_style, $style );
+		$background          = $this->sanitize_background_style_config( $background_source, $defaults );
+		$card_style          = $this->sanitize_card_style_config( $style_source, $defaults );
 
 		return array(
 			'card_subtype' => $card_subtype,
-			'background'   => ( ! $has_grouped_source && ! $has_explicit_subtype ) || 'background' === $card_subtype ? $background : array(),
-			'style'        => ( ! $has_grouped_source && ! $has_explicit_subtype ) || 'card_style' === $card_subtype ? $card_style : array(),
+			'background'   => 'background' === $card_subtype ? $background : $existing_background,
+			'style'        => 'card_style' === $card_subtype ? $card_style : $existing_card_style,
 		);
 	}
 

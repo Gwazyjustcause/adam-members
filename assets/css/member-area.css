@@ -639,12 +639,13 @@
 	--adam-card-logo-surface: #ffffff;
 	--adam-card-qr-surface: #ffffff;
 	--adam-card-qr-ink: var(--adam-green-900);
-	--adam-card-frame-width: 7px;
+	--adam-card-frame-width: 0px;
+	--adam-card-frame-visibility: 0;
 	--adam-card-frame-accent: transparent;
 	--adam-card-frame-shadow: none;
-	--adam-card-frame-inner-highlight: rgba(255, 255, 255, 0.12);
+	--adam-card-frame-inner-highlight: rgba(255, 255, 255, 0);
 	--adam-card-frame-inner-shadow: rgba(9, 17, 27, 0.18);
-	--adam-card-corner-accent: rgba(255, 255, 255, 0.12);
+	--adam-card-corner-accent: rgba(255, 255, 255, 0);
 	--adam-card-shine: rgba(255, 255, 255, 0.10);
 	--adam-card-title-surface: rgba(255, 255, 255, 0.14);
 	--adam-card-title-border: rgba(255, 255, 255, 0.18);
@@ -670,6 +671,7 @@
 	-webkit-mask-composite: xor;
 	mask-composite: exclude;
 	box-shadow: var(--adam-card-frame-shadow);
+	opacity: var(--adam-card-frame-visibility);
 	content: "";
 	pointer-events: none;
 	z-index: 0;
@@ -688,6 +690,7 @@
 		inset 0 1px 0 var(--adam-card-frame-inner-highlight),
 		inset 0 -16px 24px rgba(0, 0, 0, 0.12),
 		inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+	opacity: var(--adam-card-frame-visibility);
 	content: "";
 	pointer-events: none;
 	z-index: 0;
@@ -695,6 +698,7 @@
 
 .adam-digital-card--has-frame {
 	--adam-card-frame-width: 15px;
+	--adam-card-frame-visibility: 1;
 }
 
 .adam-digital-card::after,
