@@ -351,6 +351,7 @@ final class CardCosmeticsService {
 	 */
 	private function card_style_keys(): array {
 		return array(
+			'image_url',
 			'border_color',
 			'border_width',
 			'border_radius',

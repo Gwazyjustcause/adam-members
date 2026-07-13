@@ -723,7 +723,8 @@ final class RewardService {
 	 */
 	public function reward_visual_style( Reward $reward ): array {
 		$stored = $this->sanitize_visual_style( $reward->visual_style() );
-		$subtype = (string) ( $stored['card_subtype'] ?? '' );
+		$preset  = $this->preset_visual_style_for_reward( sanitize_key( $reward->reward_value() ) );
+		$subtype = (string) ( $stored['card_subtype'] ?? $preset['card_subtype'] ?? '' );
 
 		if ( 'frame' === $subtype ) {
 			$subtype = 'card_style';
@@ -736,13 +737,17 @@ final class RewardService {
 		}
 
 		$defaults = $this->default_reward_visual_style( $reward->rarity(), $reward->category() );
+		$preset_background = is_array( $preset['background'] ?? null ) ? (array) $preset['background'] : array();
+		$preset_style      = is_array( $preset['style'] ?? null ) ? (array) $preset['style'] : array();
 		$runtime  = array_merge(
 			$defaults,
+			'card_style' === $subtype ? $preset_style : $preset_background,
 			'card_style' === $subtype ? (array) ( $stored['style'] ?? array() ) : (array) ( $stored['background'] ?? array() ),
 			array(
 				'card_subtype' => $subtype,
-				'background'   => is_array( $stored['background'] ?? null ) ? $stored['background'] : array(),
-				'style'        => is_array( $stored['style'] ?? null ) ? $stored['style'] : array(),
+				'image_url'    => $reward->image_url(),
+				'background'   => array_merge( $preset_background, is_array( $stored['background'] ?? null ) ? $stored['background'] : array() ),
+				'style'        => array_merge( $preset_style, is_array( $stored['style'] ?? null ) ? $stored['style'] : array() ),
 			)
 		);
 
@@ -858,7 +863,7 @@ final class RewardService {
 				'pattern_opacity'             => Reward::RARITY_COMMON === $rarity ? 10 : 18,
 				'pattern_scale'               => 24,
 				'pattern_density'             => 2,
-				'pattern_rotation'            => 'diagonal' === $pattern ? 135 : 45,
+				'pattern_rotation'            => 0,
 				'pattern_spacing'             => 24,
 				'card_image_opacity'          => 22,
 				'card_image_position'         => 'top-right',
@@ -874,6 +879,277 @@ final class RewardService {
 				'shapes'                      => $this->default_visual_shapes( $rarity ),
 			)
 		);
+	}
+
+	/**
+	 * Provide curated preset defaults for built-in digital card rewards.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function preset_visual_style_for_reward( string $reward_value ): array {
+		return match ( $reward_value ) {
+			'card_theme_carbon_fiber' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#091912',
+					'background_color_secondary'  => '#0d2a1c',
+					'background_color_tertiary'   => '#112a1f',
+					'gradient_angle'              => 135,
+					'gradient_origin'             => 'top-right',
+					'gradient_stop_secondary'     => 46,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'carbon',
+					'pattern_color'               => '#2ecc71',
+					'pattern_background_color'    => '#08140f',
+					'pattern_opacity'             => 30,
+					'pattern_scale'               => 18,
+					'pattern_density'             => 3,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 18,
+				),
+			),
+			'card_theme_gold' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#5a3a09',
+					'background_color_secondary'  => '#d3a52b',
+					'background_color_tertiary'   => '#7a5310',
+					'gradient_angle'              => 128,
+					'gradient_origin'             => 'top-left',
+					'gradient_stop_secondary'     => 44,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'diagonal',
+					'pattern_color'               => '#f6d365',
+					'pattern_background_color'    => '#5a3a09',
+					'pattern_opacity'             => 18,
+					'pattern_scale'               => 28,
+					'pattern_density'             => 2,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 26,
+				),
+			),
+			'card_theme_woodland' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#132415',
+					'background_color_secondary'  => '#284f2d',
+					'background_color_tertiary'   => '#0f1d14',
+					'gradient_angle'              => 145,
+					'gradient_origin'             => 'center',
+					'gradient_stop_secondary'     => 48,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'diagonal',
+					'pattern_color'               => '#5e8a49',
+					'pattern_background_color'    => '#122217',
+					'pattern_opacity'             => 16,
+					'pattern_scale'               => 30,
+					'pattern_density'             => 3,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 24,
+				),
+			),
+			'card_theme_flecktarn' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#1b2617',
+					'background_color_secondary'  => '#3d4f28',
+					'background_color_tertiary'   => '#1f2818',
+					'gradient_angle'              => 138,
+					'gradient_origin'             => 'top',
+					'gradient_stop_secondary'     => 52,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'dots',
+					'pattern_color'               => '#7b8f4b',
+					'pattern_background_color'    => '#212b17',
+					'pattern_opacity'             => 22,
+					'pattern_scale'               => 22,
+					'pattern_density'             => 4,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 18,
+				),
+			),
+			'card_theme_desert' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#7f6847',
+					'background_color_secondary'  => '#c9ab72',
+					'background_color_tertiary'   => '#8d7147',
+					'gradient_angle'              => 135,
+					'gradient_origin'             => 'right',
+					'gradient_stop_secondary'     => 42,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'grid',
+					'pattern_color'               => '#e6d0a5',
+					'pattern_background_color'    => '#7b6443',
+					'pattern_opacity'             => 12,
+					'pattern_scale'               => 30,
+					'pattern_density'             => 2,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 26,
+				),
+			),
+			'card_theme_urban' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#1b2430',
+					'background_color_secondary'  => '#445168',
+					'background_color_tertiary'   => '#151c25',
+					'gradient_angle'              => 135,
+					'gradient_origin'             => 'bottom-right',
+					'gradient_stop_secondary'     => 48,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'grid',
+					'pattern_color'               => '#8b98ab',
+					'pattern_background_color'    => '#151d27',
+					'pattern_opacity'             => 14,
+					'pattern_scale'               => 26,
+					'pattern_density'             => 2,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 22,
+				),
+			),
+			'card_theme_anniversary_edition' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#12351f',
+					'background_color_secondary'  => '#22a55b',
+					'background_color_tertiary'   => '#0f2b1a',
+					'gradient_angle'              => 120,
+					'gradient_origin'             => 'top-left',
+					'gradient_stop_secondary'     => 50,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'grid',
+					'pattern_color'               => '#c7f9d4',
+					'pattern_background_color'    => '#12351f',
+					'pattern_opacity'             => 14,
+					'pattern_scale'               => 24,
+					'pattern_density'             => 2,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 22,
+				),
+			),
+			'card_theme_christmas_edition' => array(
+				'card_subtype' => 'background',
+				'background'   => array(
+					'background_mode'             => 'gradient',
+					'background_color'            => '#17391f',
+					'background_color_secondary'  => '#a31e2e',
+					'background_color_tertiary'   => '#132f1a',
+					'gradient_angle'              => 135,
+					'gradient_origin'             => 'top-right',
+					'gradient_stop_secondary'     => 56,
+					'gradient_stop_tertiary'      => 100,
+					'gradient_opacity'            => 100,
+					'pattern'                     => 'dots',
+					'pattern_color'               => '#f6d365',
+					'pattern_background_color'    => '#17391f',
+					'pattern_opacity'             => 18,
+					'pattern_scale'               => 18,
+					'pattern_density'             => 3,
+					'pattern_rotation'            => 0,
+					'pattern_spacing'             => 20,
+				),
+			),
+			'card_frame_standard_silver' => array(
+				'card_subtype' => 'card_style',
+				'style'        => array(
+					'border_color'        => '#d8dee9',
+					'border_width'        => 10,
+					'frame_style'         => 'double',
+					'frame_opacity'       => 100,
+					'frame_glow'          => 8,
+					'frame_shadow'        => 18,
+					'frame_inner_width'   => 2,
+					'frame_inner_color'   => '#f8fafc',
+					'frame_corner_style'  => 'rounded',
+					'frame_corner_accent' => 56,
+					'frame_inset'         => 22,
+				),
+			),
+			'card_frame_tactical_green' => array(
+				'card_subtype' => 'card_style',
+				'style'        => array(
+					'border_color'        => '#2fbf71',
+					'border_width'        => 11,
+					'frame_style'         => 'tech',
+					'frame_opacity'       => 100,
+					'frame_glow'          => 16,
+					'frame_shadow'        => 22,
+					'frame_inner_width'   => 1,
+					'frame_inner_color'   => '#88f2b3',
+					'frame_corner_style'  => 'cut',
+					'frame_corner_accent' => 72,
+					'frame_inset'         => 20,
+				),
+			),
+			'card_frame_carbon_edge' => array(
+				'card_subtype' => 'card_style',
+				'style'        => array(
+					'border_color'        => '#7fb7aa',
+					'border_width'        => 12,
+					'frame_style'         => 'bevel',
+					'frame_opacity'       => 100,
+					'frame_glow'          => 14,
+					'frame_shadow'        => 24,
+					'frame_inner_width'   => 1,
+					'frame_inner_color'   => '#d1fae5',
+					'frame_corner_style'  => 'cut',
+					'frame_corner_accent' => 84,
+					'frame_inset'         => 24,
+				),
+			),
+			'card_frame_golden_honor' => array(
+				'card_subtype' => 'card_style',
+				'style'        => array(
+					'border_color'        => '#f4c84b',
+					'border_width'        => 14,
+					'frame_style'         => 'double',
+					'frame_opacity'       => 100,
+					'frame_glow'          => 28,
+					'frame_shadow'        => 30,
+					'frame_inner_width'   => 2,
+					'frame_inner_color'   => '#fff2b2',
+					'frame_corner_style'  => 'pill',
+					'frame_corner_accent' => 96,
+					'frame_inset'         => 24,
+					'badge_style'         => 'glow',
+					'rarity_effect'       => 'metallic',
+				),
+			),
+			'card_frame_diamond_frame' => array(
+				'card_subtype' => 'card_style',
+				'style'        => array(
+					'border_color'        => '#ecfeff',
+					'border_width'        => 16,
+					'frame_style'         => 'double',
+					'frame_opacity'       => 100,
+					'frame_glow'          => 34,
+					'frame_shadow'        => 36,
+					'frame_inner_width'   => 2,
+					'frame_inner_color'   => '#ffffff',
+					'frame_corner_style'  => 'rounded',
+					'frame_corner_accent' => 104,
+					'frame_inset'         => 26,
+					'badge_style'         => 'glow',
+					'rarity_effect'       => 'glow',
+				),
+			),
+			default => array(),
+		};
 	}
 
 	/**

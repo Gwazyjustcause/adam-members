@@ -49,6 +49,20 @@
 		$section.find( '[data-adam-accordion-toggle]' ).attr( 'aria-expanded', open ? 'true' : 'false' );
 	}
 
+	function normalizeHexColor( value ) {
+		var color = String( value || '' ).trim();
+
+		if ( /^#[0-9a-fA-F]{6}$/.test( color ) ) {
+			return color;
+		}
+
+		if ( /^#[0-9a-fA-F]{3}$/.test( color ) ) {
+			return '#' + color.charAt( 1 ) + color.charAt( 1 ) + color.charAt( 2 ) + color.charAt( 2 ) + color.charAt( 3 ) + color.charAt( 3 );
+		}
+
+		return '#ffffff';
+	}
+
 	function rememberInitialState( $field ) {
 		if ( $field.is( ':radio, :checkbox' ) ) {
 			$field.data( 'adamInitialChecked', $field.prop( 'checked' ) );
@@ -90,22 +104,79 @@
 		);
 	}
 
-	function initColorPicker( context ) {
+	function initColorControls( context ) {
 		$( context ).find( '.adam-color-picker' ).each( function () {
 			var $input = $( this );
+			var $control;
+			var $swatch;
+			var swatchValue;
 
-			if ( $input.hasClass( 'wp-color-picker' ) ) {
+			if ( $input.data( 'adamColorEnhanced' ) ) {
 				return;
 			}
 
-			$input.wpColorPicker(
-				{
-					change: function () {
-						window.setTimeout( updatePreview, 10 );
-					},
-					clear: function () {
-						window.setTimeout( updatePreview, 10 );
-					},
+			$control = $( '<div class="adam-reward-editor__color-control"></div>' );
+			$swatch = $( '<input type="color" class="adam-reward-editor__color-swatch" aria-label="Escolher cor">' );
+			swatchValue = normalizeHexColor( $input.val() );
+
+			$input.addClass( 'adam-reward-editor__color-value' );
+			$input.wrap( $control );
+			$input.before( $swatch );
+			$swatch.val( swatchValue );
+			$input.data( 'adamColorEnhanced', true );
+
+			$swatch.on(
+				'input change',
+				function () {
+					$input.val( $( this ).val() ).trigger( 'input' );
+				}
+			);
+
+			$input.on(
+				'input change',
+				function () {
+					var normalized = normalizeHexColor( $input.val() );
+
+					if ( /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test( String( $input.val() || '' ) ) ) {
+						$swatch.val( normalized );
+					}
+				}
+			);
+		} );
+	}
+
+	function initRangeControls( context ) {
+		$( context ).find( 'input[type="range"][data-adam-style]' ).each( function () {
+			var $range = $( this );
+			var $number;
+			var $group;
+
+			if ( $range.data( 'adamRangeEnhanced' ) ) {
+				return;
+			}
+
+			$group = $( '<div class="adam-reward-editor__range-group"></div>' );
+			$number = $( '<input type="number" class="adam-reward-editor__range-number">' );
+			$number.attr( 'min', $range.attr( 'min' ) || 0 );
+			$number.attr( 'max', $range.attr( 'max' ) || 100 );
+			$number.attr( 'step', $range.attr( 'step' ) || 1 );
+			$number.val( $range.val() );
+
+			$range.wrap( $group );
+			$range.after( $number );
+			$range.data( 'adamRangeEnhanced', true );
+
+			$range.on(
+				'input change',
+				function () {
+					$number.val( $range.val() );
+				}
+			);
+
+			$number.on(
+				'input change',
+				function () {
+					$range.val( $number.val() ).trigger( 'input' );
 				}
 			);
 		} );
@@ -332,6 +403,7 @@
 		var mode = currentBackgroundMode();
 		var backgroundVisible = digital && subtype === 'background';
 		var styleVisible = digital && subtype === 'card_style';
+		var patternVisible = backgroundVisible && ( previewStyleValue( 'pattern' ) || 'grid' ) !== 'none';
 
 		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
 		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
@@ -350,6 +422,9 @@
 				$( this ).find( 'input, select, textarea, button' ).prop( 'disabled', ! visible );
 			}
 		);
+
+		$( '[data-adam-pattern-detail]' ).toggleClass( 'is-hidden', ! patternVisible );
+		$( '[data-adam-pattern-detail]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! patternVisible );
 	}
 
 	var $editor = $( '.adam-reward-editor' );
@@ -562,7 +637,7 @@
 			shapeCount += 1;
 			$row = shapeRowTemplate( type, shapeCount );
 			$shapeList.append( $row );
-			initColorPicker( $row );
+			initColorControls( $row );
 			$row.find( '[data-shape-prop="type"]' ).val( type );
 			updatePreview();
 		}
@@ -579,7 +654,8 @@
 
 	$editor.on( 'input change', '[data-shape-prop]', updatePreview );
 
-	initColorPicker( document );
+	initColorControls( document );
+	initRangeControls( document );
 	$editor.find( '[data-adam-style], [data-adam-preview-image], [data-adam-preview-image-upload]' ).each(
 		function () {
 			rememberInitialState( $( this ) );

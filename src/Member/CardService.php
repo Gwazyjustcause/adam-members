@@ -367,6 +367,8 @@ final class CardService {
 	private function resolve_card_presentation( array $presentation ): array {
 		$style            = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
 		$classes          = array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) );
+		$card_subtype     = sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
+		$background_mode  = sanitize_key( (string) ( $style['background_mode'] ?? 'gradient' ) );
 		$pattern          = sanitize_html_class( (string) ( $style['pattern'] ?? 'grid' ) );
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
@@ -376,8 +378,8 @@ final class CardService {
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
 		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
 		$rarity_effect    = 'auto' === $rarity_effect ? $this->auto_rarity_effect( $classes_for_auto ) : $rarity_effect;
-		$art_image_url    = esc_url_raw( (string) ( $style['image_url'] ?? '' ) );
-		$background_image = esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) );
+		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
+		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
 		$classes[] = 'adam-digital-card--preview-frame-' . $frame_style;
@@ -440,7 +442,7 @@ final class CardService {
 			'--adam-card-pattern-size'            => max( 6, (int) ( $style['pattern_scale'] ?? 24 ) ) . 'px',
 			'--adam-card-pattern-spacing'         => max( 6, (int) ( $style['pattern_spacing'] ?? 24 ) ) . 'px',
 			'--adam-card-pattern-density'         => (string) max( 1, (int) ( $style['pattern_density'] ?? 2 ) ),
-			'--adam-card-pattern-rotation'        => max( 0, (int) ( $style['pattern_rotation'] ?? 45 ) ) . 'deg',
+			'--adam-card-pattern-rotation'        => max( 0, (int) ( $style['pattern_rotation'] ?? 0 ) ) . 'deg',
 			'--adam-card-background-opacity'      => (string) ( max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ) / 100 ),
 			'--adam-card-background-size'         => max( 20, (int) ( $style['background_image_size'] ?? 100 ) ) . '%',
 			'--adam-card-background-position'     => str_replace( '-', ' ', (string) ( $style['background_image_position'] ?? 'center' ) ),
