@@ -12,13 +12,20 @@
 	}
 
 	function previewStyleValue( key ) {
-		var $field = $( '[data-adam-style="' + key + '"]:checked, [data-adam-style="' + key + '"]' );
+		var $fields = $( '[data-adam-style="' + key + '"]' );
+		var $field;
 
-		if ( ! $field.length ) {
+		if ( ! $fields.length ) {
 			return '';
 		}
 
-		return $field.first().val();
+		if ( $fields.first().is( ':radio' ) || $fields.first().is( ':checkbox' ) ) {
+			$field = $fields.filter( ':checked' ).first();
+
+			return $field.length ? $field.val() : '';
+		}
+
+		return $fields.first().val();
 	}
 
 	function isDigitalReward() {
