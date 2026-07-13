@@ -1820,33 +1820,38 @@ final class RewardService {
 	 */
 	private function merge_catalogue_reward( Reward $current, array $prepared ): array {
 		$current_data = $current->data();
+		$merged       = array_merge( $prepared, $current_data );
+		$defaults     = $this->default_reward_visual_style( $current->rarity(), $current->category() );
 
-		if ( '' !== $current->image_url() ) {
-			$prepared['image_url'] = $current->image_url();
-		}
+		/*
+		 * Seed catalogue sync must never restore the original preset over an
+		 * administrator-edited reward. Existing values stay authoritative and
+		 * defaults are only used to backfill genuinely missing keys.
+		 */
+		$merged['visual_style'] = $this->sanitize_visual_style(
+			$current_data['visual_style'] ?? array(),
+			$defaults,
+			$current_data['visual_style'] ?? array()
+		);
 
-		if ( '' !== $current->availability_label() ) {
-			$prepared['availability_label'] = $current->availability_label();
-		}
-
-		$prepared['redeemable']        = $current->redeemable();
-		$prepared['approval_required'] = $current->approval_required();
+		$merged['redeemable']        = array_key_exists( 'redeemable', $current_data ) ? $current->redeemable() : (bool) $prepared['redeemable'];
+		$merged['approval_required'] = array_key_exists( 'approval_required', $current_data ) ? $current->approval_required() : (bool) $prepared['approval_required'];
 
 		if ( $this->is_seasonal_reward( (string) ( $prepared['reward_value'] ?? '' ) ) ) {
 			if ( empty( $current_data['seasonal_visibility_initialized'] ) ) {
-				$prepared['active'] = false;
+				$merged['active'] = false;
 			} else {
-				$prepared['active'] = $current->active();
+				$merged['active'] = $current->active();
 			}
 
-			$prepared['seasonal_visibility_initialized'] = 1;
+			$merged['seasonal_visibility_initialized'] = 1;
 
-			return $prepared;
+			return $merged;
 		}
 
-		$prepared['active'] = $current->active();
+		$merged['active'] = $current->active();
 
-		return $prepared;
+		return $merged;
 	}
 
 	private function member_reward_rank( Member $member, Reward $reward ): int {
