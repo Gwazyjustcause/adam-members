@@ -1156,6 +1156,34 @@
 	box-shadow: inset 0 1px 2px rgba(16, 46, 27, 0.03);
 }
 
+.adam-reward-editor__slider-field {
+	gap: 10px !important;
+}
+
+.adam-reward-editor__slider-field > span {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.adam-reward-editor__slider-field small {
+	order: -1;
+	margin-left: auto;
+	color: #2f6b3b;
+	font-size: 12px;
+	font-weight: 800;
+}
+
+.adam-reward-editor__slider-field input[type="range"] {
+	min-height: auto;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: none;
+}
+
 .adam-reward-editor__radio-group,
 .adam-reward-editor__shape-toolbar {
 	display: flex;
@@ -1247,8 +1275,12 @@
 	padding: 22px;
 }
 
-.adam-reward-editor__section--preview .adam-digital-card {
+.adam-reward-editor__section--preview .adam-digital-card-shell {
 	width: min(100%, 980px);
+}
+
+.adam-reward-editor__section--preview .adam-digital-card {
+	width: 100%;
 }
 
 .adam-reward-editor__range-group {

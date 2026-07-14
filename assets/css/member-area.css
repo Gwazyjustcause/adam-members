@@ -313,7 +313,6 @@
 .adam-digital-card {
 	--adam-card-radius: 28px;
 	--adam-card-inner-radius: 22px;
-	--adam-card-frame-inset: 0px;
 	--adam-card-content-padding: 36px;
 	--adam-card-content-gap: 20px;
 	--adam-card-pattern-color: rgba(255, 255, 255, 0.18);
@@ -632,13 +631,9 @@
 	--adam-frame-visibility: 0;
 	--adam-frame-color: transparent;
 	--adam-frame-secondary-color: transparent;
-	--adam-frame-inner-highlight: 0;
-	--adam-frame-inner-glow: 0;
-	--adam-frame-accent-line: 0;
+	--adam-frame-tertiary-color: transparent;
+	--adam-frame-gradient-angle: 135deg;
 	--adam-frame-shine-opacity: 0;
-	--adam-frame-shine-angle: 135deg;
-	--adam-frame-shine-width: 26%;
-	--adam-frame-shine-duration: 10s;
 	--adam-card-shine: rgba(255, 255, 255, 0.10);
 	--adam-card-title-surface: rgba(255, 255, 255, 0.14);
 	--adam-card-title-border: rgba(255, 255, 255, 0.18);
@@ -648,6 +643,14 @@
 	border-color: var(--adam-card-border);
 	box-shadow: var(--adam-card-shadow);
 	color: var(--adam-card-ink);
+}
+
+.adam-digital-card-shell {
+	position: relative;
+	display: block;
+	width: 100%;
+	overflow: visible;
+	isolation: isolate;
 }
 
 .adam-digital-card__frame,
@@ -661,8 +664,8 @@
 }
 
 .adam-digital-card__frame {
-	inset: 0;
-	border-radius: inherit;
+	inset: -2px;
+	border-radius: calc(var(--adam-card-radius) + 2px);
 	z-index: 3;
 	opacity: var(--adam-frame-visibility);
 	box-sizing: border-box;
@@ -670,7 +673,7 @@
 
 .adam-digital-card__frame::before {
 	position: absolute;
-	inset: 1px;
+	inset: 0;
 	padding: var(--adam-frame-width);
 	border-radius: inherit;
 	background: var(--adam-frame-color);
@@ -683,7 +686,7 @@
 
 .adam-digital-card__frame::after {
 	position: absolute;
-	inset: 2px;
+	inset: 0;
 	padding: calc(var(--adam-frame-width) + 2px);
 	border-radius: inherit;
 	opacity: 0;
@@ -695,8 +698,8 @@
 }
 
 .adam-digital-card__frame-shine {
-	inset: 0;
-	border-radius: inherit;
+	inset: -2px;
+	border-radius: calc(var(--adam-card-radius) + 2px);
 	z-index: 4;
 	opacity: var(--adam-frame-visibility);
 	overflow: hidden;
@@ -704,15 +707,15 @@
 
 .adam-digital-card__frame-shine::before {
 	position: absolute;
-	inset: 1px;
+	inset: 0;
 	padding: var(--adam-frame-width);
 	border-radius: inherit;
 	background: linear-gradient(
-		var(--adam-frame-shine-angle),
+		135deg,
 		transparent 0,
-		transparent calc(50% - (var(--adam-frame-shine-width) / 2)),
+		transparent 38%,
 		rgba(255, 255, 255, calc(var(--adam-frame-shine-opacity) * 0.92)) 50%,
-		transparent calc(50% + (var(--adam-frame-shine-width) / 2)),
+		transparent 62%,
 		transparent 100%
 	);
 	opacity: var(--adam-frame-shine-opacity);
@@ -721,125 +724,29 @@
 		linear-gradient(#000 0 0);
 	-webkit-mask-composite: xor;
 	mask-composite: exclude;
-	transform: translateX(-120%);
-}
-
-.adam-digital-card--preview-frame-shine-animated .adam-digital-card__frame-shine::before {
-	animation: adam-card-frame-shine var(--adam-frame-shine-duration) linear infinite;
+	transform: translateX(0);
 }
 
 .adam-digital-card--preview-frame-simple .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.5)), transparent 34%),
-		var(--adam-frame-color);
-}
-
-.adam-digital-card--preview-frame-double .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.56)), rgba(255, 255, 255, 0) 30%),
-		var(--adam-frame-color);
-}
-
-.adam-digital-card--preview-frame-double .adam-digital-card__frame::after {
-	opacity: 1;
-	background: var(--adam-frame-secondary-color);
+	background: var(--adam-frame-color);
 }
 
 .adam-digital-card--preview-frame-metallic .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, color-mix(in srgb, var(--adam-frame-secondary-color) 86%, #ffffff 14%), var(--adam-frame-color) 28%, color-mix(in srgb, var(--adam-frame-color) 62%, #000000 38%) 64%, var(--adam-frame-secondary-color));
+	background: linear-gradient(180deg, var(--adam-frame-secondary-color) 0%, var(--adam-frame-color) 34%, color-mix(in srgb, var(--adam-frame-color) 68%, #000000 32%) 72%, var(--adam-frame-secondary-color) 100%);
 }
 
 .adam-digital-card--preview-frame-metallic .adam-digital-card__frame::after {
 	opacity: 1;
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.8)), transparent 26%, rgba(0, 0, 0, calc(var(--adam-frame-inner-glow) * 0.32)) 100%),
-		color-mix(in srgb, var(--adam-frame-secondary-color) calc((var(--adam-frame-accent-line) + 0.22) * 100%), transparent);
+	background: linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-shine-opacity) * 0.42)), transparent 28%, rgba(0, 0, 0, calc(var(--adam-frame-shine-opacity) * 0.22)) 100%);
 }
 
-.adam-digital-card--preview-frame-accent .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.48)), transparent 32%),
-		var(--adam-frame-color);
-}
-
-.adam-digital-card--preview-frame-accent .adam-digital-card__frame::after {
-	opacity: 1;
-	background:
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 12px left 14px / 56px 3px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 14px right 16px / 40px 3px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 14px right 14px / 58px 3px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 16px left 16px / 42px 3px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 14px left 12px / 3px 34px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 14px right 12px / 3px 26px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 14px right 12px / 3px 34px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 14px left 12px / 3px 26px no-repeat;
-	border-radius: inherit;
-}
-
-.adam-digital-card--preview-frame-neon .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.62)), transparent 32%),
-		var(--adam-frame-color);
-	box-shadow: inset 0 0 calc(12px + (var(--adam-frame-inner-glow) * 22px)) color-mix(in srgb, var(--adam-frame-secondary-color) 54%, transparent);
-}
-
-.adam-digital-card--preview-frame-neon .adam-digital-card__frame::after {
-	opacity: 1;
-	background: color-mix(in srgb, var(--adam-frame-secondary-color) calc((var(--adam-frame-accent-line) + 0.18) * 100%), transparent);
-}
-
-.adam-digital-card--preview-frame-premium .adam-digital-card__frame::before {
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.75)), rgba(255, 255, 255, 0) 28%, rgba(0, 0, 0, 0.18) 100%),
-		linear-gradient(135deg, var(--adam-frame-color), var(--adam-frame-secondary-color) 45%, var(--adam-frame-color) 100%);
-}
-
-.adam-digital-card--preview-frame-premium .adam-digital-card__frame::after {
-	opacity: 1;
-	background:
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 10px left 24px / 72px 2px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) top 10px right 24px / 52px 2px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 10px right 24px / 72px 2px no-repeat,
-		linear-gradient(var(--adam-frame-secondary-color), var(--adam-frame-secondary-color)) bottom 10px left 24px / 52px 2px no-repeat,
-		color-mix(in srgb, var(--adam-frame-secondary-color) calc((var(--adam-frame-accent-line) + 0.2) * 100%), transparent);
-}
-
-.adam-digital-card--preview-frame-finish-glossy .adam-digital-card__frame::before {
-	background-image:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.9)), rgba(255, 255, 255, 0) 36%),
-		var(--adam-frame-color);
-}
-
-.adam-digital-card--preview-frame-finish-metallic .adam-digital-card__frame::before {
-	background-image:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.72)), rgba(255, 255, 255, 0.02) 18%, rgba(0, 0, 0, 0.16) 60%, rgba(255, 255, 255, 0.14) 100%),
-		var(--adam-frame-color);
-}
-
-.adam-digital-card--preview-frame-finish-neon .adam-digital-card__frame::before {
-	box-shadow: inset 0 0 calc(10px + (var(--adam-frame-inner-glow) * 26px)) color-mix(in srgb, var(--adam-frame-secondary-color) 68%, transparent);
-}
-
-.adam-digital-card--preview-frame-finish-satin .adam-digital-card__frame::before {
-	background-image:
-		linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-inner-highlight) * 0.42)), rgba(255, 255, 255, 0) 26%),
-		var(--adam-frame-color);
+.adam-digital-card--preview-frame-gradient .adam-digital-card__frame::before {
+	background: linear-gradient(var(--adam-frame-gradient-angle), var(--adam-frame-color) 0%, var(--adam-frame-secondary-color) 50%, var(--adam-frame-tertiary-color) 100%);
 }
 
 .adam-digital-card--has-frame {
 	--adam-frame-width: 15px;
 	--adam-frame-visibility: 1;
-}
-
-@keyframes adam-card-frame-shine {
-	0% {
-		transform: translateX(-120%);
-	}
-
-	100% {
-		transform: translateX(120%);
-	}
 }
 
 .adam-digital-card__shine {

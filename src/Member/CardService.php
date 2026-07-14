@@ -254,88 +254,90 @@ final class CardService {
 
 		ob_start();
 		?>
-		<article class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( $resolved['base_class_name'] ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
-			<div class="adam-digital-card__shine" aria-hidden="true"></div>
-			<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_url( $resolved['background_image_url'] ) . ');"' : ''; ?> data-adam-card-backdrop></div>
-			<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
-			<div class="adam-digital-card__art adam-digital-card__art--<?php echo esc_attr( $resolved['image_position'] ); ?> adam-digital-card__art--layer-<?php echo esc_attr( $resolved['image_layer'] ); ?>"<?php echo '' === $resolved['art_image_url'] ? ' hidden' : ''; ?> data-adam-card-art-wrap>
-				<img src="<?php echo esc_url( $resolved['art_image_url'] ); ?>" alt="" data-adam-card-art>
-			</div>
-			<div class="adam-digital-card__shapes" data-adam-card-shapes>
-				<?php foreach ( $resolved['shapes'] as $shape ) : ?>
-					<?php $this->render_shape( (array) $shape ); ?>
-				<?php endforeach; ?>
-			</div>
-			<div class="adam-digital-card__frame" aria-hidden="true"></div>
-			<div class="adam-digital-card__frame-shine" aria-hidden="true"></div>
+		<div class="<?php echo esc_attr( trim( $resolved['class_name'] ) ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( trim( $resolved['base_class_name'] ) ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+			<article class="adam-digital-card">
+				<div class="adam-digital-card__shine" aria-hidden="true"></div>
+				<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_url( $resolved['background_image_url'] ) . ');"' : ''; ?> data-adam-card-backdrop></div>
+				<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
+				<div class="adam-digital-card__art adam-digital-card__art--<?php echo esc_attr( $resolved['image_position'] ); ?> adam-digital-card__art--layer-<?php echo esc_attr( $resolved['image_layer'] ); ?>"<?php echo '' === $resolved['art_image_url'] ? ' hidden' : ''; ?> data-adam-card-art-wrap>
+					<img src="<?php echo esc_url( $resolved['art_image_url'] ); ?>" alt="" data-adam-card-art>
+				</div>
+				<div class="adam-digital-card__shapes" data-adam-card-shapes>
+					<?php foreach ( $resolved['shapes'] as $shape ) : ?>
+						<?php $this->render_shape( (array) $shape ); ?>
+					<?php endforeach; ?>
+				</div>
 
-			<header class="adam-digital-card__header">
-				<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
-				<div>
-					<span><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
-					<div class="adam-digital-card__badges">
-						<?php if ( '' !== (string) ( $presentation['founder_badge'] ?? '' ) ) : ?>
-							<small class="adam-digital-card__founder"><?php echo esc_html( (string) $presentation['founder_badge'] ); ?></small>
-						<?php endif; ?>
-						<?php if ( '' !== (string) ( $presentation['loyalty_badge'] ?? '' ) ) : ?>
-							<small class="adam-digital-card__loyalty"><?php echo esc_html( (string) $presentation['loyalty_badge'] ); ?></small>
+				<header class="adam-digital-card__header">
+					<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
+					<div>
+						<span><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
+						<div class="adam-digital-card__badges">
+							<?php if ( '' !== (string) ( $presentation['founder_badge'] ?? '' ) ) : ?>
+								<small class="adam-digital-card__founder"><?php echo esc_html( (string) $presentation['founder_badge'] ); ?></small>
+							<?php endif; ?>
+							<?php if ( '' !== (string) ( $presentation['loyalty_badge'] ?? '' ) ) : ?>
+								<small class="adam-digital-card__loyalty"><?php echo esc_html( (string) $presentation['loyalty_badge'] ); ?></small>
+							<?php endif; ?>
+						</div>
+					</div>
+					<?php echo wp_kses_post( $this->status_badge_markup( (string) $card_data['status'] ) ); ?>
+				</header>
+
+				<div class="adam-digital-card__body">
+					<div class="adam-digital-card__photo">
+						<?php if ( '' !== (string) $card_data['photo_url'] ) : ?>
+							<img src="<?php echo esc_url( (string) $card_data['photo_url'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
+						<?php else : ?>
+							<span><?php echo esc_html( (string) $card_data['initials'] ); ?></span>
 						<?php endif; ?>
 					</div>
-				</div>
-				<?php echo wp_kses_post( $this->status_badge_markup( (string) $card_data['status'] ) ); ?>
-			</header>
 
-			<div class="adam-digital-card__body">
-				<div class="adam-digital-card__photo">
-					<?php if ( '' !== (string) $card_data['photo_url'] ) : ?>
-						<img src="<?php echo esc_url( (string) $card_data['photo_url'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
-					<?php else : ?>
-						<span><?php echo esc_html( (string) $card_data['initials'] ); ?></span>
-					<?php endif; ?>
-				</div>
+					<div class="adam-digital-card__identity">
+						<span><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></span>
+						<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
+							<div class="adam-digital-card__rank">
+								<small><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></small>
+								<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) ( $presentation['active_title']['rarity'] ?? 'common' ) ) ); ?>" data-adam-card-title>
+									<span class="adam-digital-card__title-mark" aria-hidden="true"></span>
+									<span data-adam-card-title-text><?php echo esc_html( (string) $presentation['active_title']['name'] ); ?></span>
+								</em>
+							</div>
+						<?php endif; ?>
+						<strong><?php echo esc_html( (string) $card_data['member_name'] ); ?></strong>
+						<small><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></small>
+					</div>
 
-				<div class="adam-digital-card__identity">
-					<span><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></span>
-					<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
-						<div class="adam-digital-card__rank">
-							<small><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></small>
-							<em class="adam-digital-card__title adam-digital-card__title--<?php echo esc_attr( sanitize_html_class( (string) ( $presentation['active_title']['rarity'] ?? 'common' ) ) ); ?>" data-adam-card-title>
-								<span class="adam-digital-card__title-mark" aria-hidden="true"></span>
-								<span data-adam-card-title-text><?php echo esc_html( (string) $presentation['active_title']['name'] ); ?></span>
-							</em>
-						</div>
-					<?php endif; ?>
-					<strong><?php echo esc_html( (string) $card_data['member_name'] ); ?></strong>
-					<small><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></small>
+					<div class="adam-digital-card__qr">
+						<img src="<?php echo esc_url( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+						<span><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></span>
+					</div>
 				</div>
 
-				<div class="adam-digital-card__qr">
-					<img src="<?php echo esc_url( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					<span><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></span>
+				<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
+					<div>
+						<span><?php esc_html_e( 'N.º de socio', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></strong>
+					</div>
+					<div>
+						<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+					</div>
+					<div>
+						<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+					</div>
 				</div>
-			</div>
 
-			<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
-				<div>
-					<span><?php esc_html_e( 'N.º de socio', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></strong>
-				</div>
-				<div>
-					<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
-				</div>
-				<div>
-					<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
-					<strong><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
-				</div>
-			</div>
-
-			<footer class="adam-digital-card__footer">
-				<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-				<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
-			</footer>
-		</article>
+				<footer class="adam-digital-card__footer">
+					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
+					<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+				</footer>
+			</article>
+			<div class="adam-digital-card__frame" aria-hidden="true"></div>
+			<div class="adam-digital-card__frame-shine" aria-hidden="true"></div>
+		</div>
 		<?php
 
 		return (string) ob_get_clean();
@@ -375,7 +377,6 @@ final class CardService {
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
 		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$frame_finish     = $this->normalize_frame_finish( $style['frame_finish'] ?? 'none' );
 		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
 		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
@@ -385,16 +386,19 @@ final class CardService {
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
 		$classes[] = 'adam-digital-card--preview-frame-' . $frame_style;
-		$classes[] = 'adam-digital-card--preview-frame-finish-' . $frame_finish;
-		if ( ! empty( $style['frame_shine_animated'] ) ) {
-			$classes[] = 'adam-digital-card--preview-frame-shine-animated';
-		}
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
 		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
 
+		$shell_classes = array_values(
+			array_filter(
+				$classes,
+				static fn( string $class_name ): bool => 'adam-digital-card' !== $class_name
+			)
+		);
+
 		return array(
-			'base_class_name'     => implode( ' ', array_values( array_unique( array_filter( array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) ) ) ) ) ),
-			'class_name'          => implode( ' ', array_values( array_unique( array_filter( $classes ) ) ) ),
+			'base_class_name'     => 'adam-digital-card-shell ' . implode( ' ', array_values( array_unique( array_filter( array_map( 'sanitize_html_class', array_diff( (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ), array( 'adam-digital-card' ) ) ) ) ) ) ),
+			'class_name'          => 'adam-digital-card-shell ' . implode( ' ', array_values( array_unique( array_filter( $shell_classes ) ) ) ),
 			'inline_style'        => $this->preview_inline_style( $style ),
 			'pattern'             => '' !== $pattern ? $pattern : 'grid',
 			'image_position'      => '' !== $image_position ? $image_position : 'top-right',
@@ -418,10 +422,12 @@ final class CardService {
 		$frame_style    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 0, (int) ( $style['border_width'] ?? 0 ) ) : 0;
 		$frame_color    = (string) ( $style['border_color'] ?? '#ffffff' );
-		$frame_finish   = $this->normalize_frame_finish( $style['frame_finish'] ?? 'none' );
 		$frame_secondary = $this->frame_supports_secondary_color( $frame_style )
 			? (string) ( $style['frame_inner_color'] ?? '#ffffff' )
 			: $frame_color;
+		$frame_tertiary = 'gradient' === $frame_style
+			? (string) ( $style['frame_gradient_color'] ?? $frame_secondary )
+			: $frame_secondary;
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
@@ -432,14 +438,9 @@ final class CardService {
 			'--adam-frame-visibility'             => $frame_width > 0 ? '1' : '0',
 			'--adam-frame-color'                  => $frame_color,
 			'--adam-frame-secondary-color'        => $frame_secondary,
-			'--adam-card-frame-inset'             => '0px',
-			'--adam-frame-inner-highlight'        => (string) ( max( 0, min( 100, (int) ( $style['frame_inner_highlight'] ?? 24 ) ) ) / 100 ),
-			'--adam-frame-inner-glow'             => (string) ( max( 0, min( 100, (int) ( $style['frame_inner_glow'] ?? 0 ) ) ) / 100 ),
-			'--adam-frame-accent-line'            => (string) ( max( 0, min( 100, (int) ( $style['frame_accent_line'] ?? 0 ) ) ) / 100 ),
-			'--adam-frame-shine-opacity'          => ! empty( $style['frame_shine_enabled'] ) ? (string) ( max( 0, min( 100, (int) ( $style['frame_shine_intensity'] ?? 0 ) ) ) / 100 ) : '0',
-			'--adam-frame-shine-angle'            => max( 0, min( 180, (int) ( $style['frame_shine_angle'] ?? 135 ) ) ) . 'deg',
-			'--adam-frame-shine-width'            => max( 10, min( 60, (int) ( $style['frame_shine_width'] ?? 26 ) ) ) . '%',
-			'--adam-frame-shine-duration'         => max( 4, min( 24, (int) ( $style['frame_shine_speed'] ?? 10 ) ) ) . 's',
+			'--adam-frame-tertiary-color'         => $frame_tertiary,
+			'--adam-frame-gradient-angle'         => max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) ) . 'deg',
+			'--adam-frame-shine-opacity'          => 'metallic' === $frame_style ? (string) ( max( 0, min( 100, (int) ( $style['frame_shine_intensity'] ?? 0 ) ) ) / 100 ) : '0',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
 			'--adam-card-title-surface'           => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.18 ),
@@ -465,12 +466,6 @@ final class CardService {
 			'--adam-card-art-size'                => max( 10, (int) ( $style['card_image_size'] ?? 36 ) ) . '%',
 		);
 
-		if ( 'none' === $frame_finish ) {
-			$vars['--adam-frame-inner-highlight'] = '0';
-			$vars['--adam-frame-inner-glow']      = '0';
-			$vars['--adam-frame-accent-line']     = '0';
-		}
-
 		$parts = array();
 
 		foreach ( $vars as $property => $value ) {
@@ -488,11 +483,9 @@ final class CardService {
 
 		return match ( $preset ) {
 			'solid', 'simple' => 'simple',
-			'double' => 'double',
-			'segmented', 'accent' => 'accent',
-			'metallic' => 'metallic',
-			'neon' => 'neon',
-			'premium' => 'premium',
+			'double', 'segmented', 'accent' => 'simple',
+			'metallic', 'neon', 'premium' => 'metallic',
+			'gradient' => 'gradient',
 			default => 'none',
 		};
 	}
@@ -501,16 +494,7 @@ final class CardService {
 	 * Determine whether a frame preset needs a secondary tone.
 	 */
 	private function frame_supports_secondary_color( string $preset ): bool {
-		return in_array( $preset, array( 'double', 'accent', 'metallic', 'neon', 'premium' ), true );
-	}
-
-	/**
-	 * Normalize frame finish values.
-	 */
-	private function normalize_frame_finish( mixed $value ): string {
-		$finish = sanitize_key( (string) $value );
-
-		return in_array( $finish, array( 'none', 'glossy', 'metallic', 'neon', 'satin' ), true ) ? $finish : 'none';
+		return in_array( $preset, array( 'metallic', 'gradient' ), true );
 	}
 
 	/**
