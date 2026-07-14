@@ -420,7 +420,7 @@ final class CardService {
 		$background = $this->preview_background_value( $style );
 		$is_style_reward = 'card_style' === sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
 		$frame_style    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 0, (int) ( $style['border_width'] ?? 0 ) ) : 0;
+		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 0, min( 12, (int) ( $style['border_width'] ?? 0 ) ) ) : 0;
 		$frame_color    = (string) ( $style['border_color'] ?? '#ffffff' );
 		$frame_secondary = $this->frame_supports_secondary_color( $frame_style )
 			? (string) ( $style['frame_inner_color'] ?? '#ffffff' )

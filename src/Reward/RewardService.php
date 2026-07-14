@@ -1098,7 +1098,7 @@ final class RewardService {
 				'card_subtype' => 'card_style',
 				'style'        => array(
 					'border_color'        => '#f4c84b',
-					'border_width'        => 14,
+					'border_width'        => 12,
 					'frame_style'         => 'metallic',
 					'frame_inner_color'   => '#fff2b2',
 					'frame_shine_intensity' => 48,
@@ -1110,7 +1110,7 @@ final class RewardService {
 				'card_subtype' => 'card_style',
 				'style'        => array(
 					'border_color'        => '#ecfeff',
-					'border_width'        => 16,
+					'border_width'        => 12,
 					'frame_style'         => 'gradient',
 					'frame_inner_color'   => '#ffffff',
 					'frame_gradient_color'=> '#93c5fd',
@@ -1367,7 +1367,7 @@ final class RewardService {
 			$description_align = (string) $defaults['description_align'];
 		}
 
-		$border_width        = 'none' === $frame_style ? 0 : max( 2, min( 16, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) );
+		$border_width        = 'none' === $frame_style ? 0 : max( 2, min( 12, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) );
 		$border_color        = $this->sanitize_color_value( $style['border_color'] ?? $defaults['border_color'] );
 		$secondary_color     = $this->frame_supports_secondary_color( $frame_style )
 			? $this->sanitize_color_value( $style['frame_inner_color'] ?? $defaults['frame_inner_color'] )

@@ -654,98 +654,61 @@
 }
 
 .adam-digital-card__frame,
-.adam-digital-card__frame::before,
-.adam-digital-card__frame::after,
-.adam-digital-card__frame-shine,
-.adam-digital-card__frame-shine::before {
+.adam-digital-card__frame-shine {
 	position: absolute;
 	pointer-events: none;
-	content: "";
 }
 
 .adam-digital-card__frame {
-	inset: -2px;
-	border-radius: calc(var(--adam-card-radius) + 2px);
+	inset: 0;
+	border: var(--adam-frame-width) solid transparent;
+	border-radius: var(--adam-card-radius);
 	z-index: 3;
 	opacity: var(--adam-frame-visibility);
 	box-sizing: border-box;
-}
-
-.adam-digital-card__frame::before {
-	position: absolute;
-	inset: 0;
-	padding: var(--adam-frame-width);
-	border-radius: inherit;
-	background: var(--adam-frame-color);
-	-webkit-mask:
-		linear-gradient(#000 0 0) content-box,
-		linear-gradient(#000 0 0);
-	-webkit-mask-composite: xor;
-	mask-composite: exclude;
-}
-
-.adam-digital-card__frame::after {
-	position: absolute;
-	inset: 0;
-	padding: calc(var(--adam-frame-width) + 2px);
-	border-radius: inherit;
-	opacity: 0;
-	-webkit-mask:
-		linear-gradient(#000 0 0) content-box,
-		linear-gradient(#000 0 0);
-	-webkit-mask-composite: xor;
-	mask-composite: exclude;
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(var(--adam-frame-color), var(--adam-frame-color)) border-box;
+	background-clip: padding-box, border-box;
+	box-shadow: none;
 }
 
 .adam-digital-card__frame-shine {
-	inset: -2px;
-	border-radius: calc(var(--adam-card-radius) + 2px);
-	z-index: 4;
-	opacity: var(--adam-frame-visibility);
-	overflow: hidden;
-}
-
-.adam-digital-card__frame-shine::before {
-	position: absolute;
 	inset: 0;
-	padding: var(--adam-frame-width);
-	border-radius: inherit;
-	background: linear-gradient(
-		135deg,
-		transparent 0,
-		transparent 38%,
-		rgba(255, 255, 255, calc(var(--adam-frame-shine-opacity) * 0.92)) 50%,
-		transparent 62%,
-		transparent 100%
-	);
-	opacity: var(--adam-frame-shine-opacity);
-	-webkit-mask:
-		linear-gradient(#000 0 0) content-box,
-		linear-gradient(#000 0 0);
-	-webkit-mask-composite: xor;
-	mask-composite: exclude;
-	transform: translateX(0);
+	display: none;
 }
 
-.adam-digital-card--preview-frame-simple .adam-digital-card__frame::before {
-	background: var(--adam-frame-color);
+.adam-digital-card--preview-frame-simple .adam-digital-card__frame {
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(var(--adam-frame-color), var(--adam-frame-color)) border-box;
 }
 
-.adam-digital-card--preview-frame-metallic .adam-digital-card__frame::before {
-	background: linear-gradient(180deg, var(--adam-frame-secondary-color) 0%, var(--adam-frame-color) 34%, color-mix(in srgb, var(--adam-frame-color) 68%, #000000 32%) 72%, var(--adam-frame-secondary-color) 100%);
+.adam-digital-card--preview-frame-metallic .adam-digital-card__frame {
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--adam-frame-secondary-color) calc(72% + (var(--adam-frame-shine-opacity) * 18%)), #ffffff calc(var(--adam-frame-shine-opacity) * 22%)) 0%,
+			var(--adam-frame-color) 34%,
+			color-mix(in srgb, var(--adam-frame-color) 68%, #000000 32%) 72%,
+			var(--adam-frame-secondary-color) 100%
+		) border-box;
 }
 
-.adam-digital-card--preview-frame-metallic .adam-digital-card__frame::after {
-	opacity: 1;
-	background: linear-gradient(180deg, rgba(255, 255, 255, calc(var(--adam-frame-shine-opacity) * 0.42)), transparent 28%, rgba(0, 0, 0, calc(var(--adam-frame-shine-opacity) * 0.22)) 100%);
-}
-
-.adam-digital-card--preview-frame-gradient .adam-digital-card__frame::before {
-	background: linear-gradient(var(--adam-frame-gradient-angle), var(--adam-frame-color) 0%, var(--adam-frame-secondary-color) 50%, var(--adam-frame-tertiary-color) 100%);
+.adam-digital-card--preview-frame-gradient .adam-digital-card__frame {
+	background:
+		linear-gradient(transparent, transparent) padding-box,
+		linear-gradient(
+			var(--adam-frame-gradient-angle),
+			var(--adam-frame-color) 0%,
+			var(--adam-frame-secondary-color) 50%,
+			var(--adam-frame-tertiary-color) 100%
+		) border-box;
 }
 
 .adam-digital-card--has-frame {
-	--adam-frame-width: 15px;
+	--adam-frame-width: 5px;
 	--adam-frame-visibility: 1;
 }
 

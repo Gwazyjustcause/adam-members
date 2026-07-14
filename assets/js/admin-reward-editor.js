@@ -482,7 +482,7 @@
 		var rarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
 		var subtype = currentSubtype();
 		var framePreset = currentFramePreset();
-		var hasStyleLayer = subtype === 'card_style' && framePreset !== 'none' && clamp( previewStyleValue( 'border_width' ), 0, 18 ) > 0;
+		var hasStyleLayer = subtype === 'card_style' && framePreset !== 'none' && clamp( previewStyleValue( 'border_width' ), 0, 12 ) > 0;
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
@@ -506,7 +506,7 @@
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
-				'--adam-frame-width': ( hasStyleLayer ? clamp( previewStyleValue( 'border_width' ), 0, 18 ) : 0 ) + 'px',
+				'--adam-frame-width': ( hasStyleLayer ? clamp( previewStyleValue( 'border_width' ), 0, 12 ) : 0 ) + 'px',
 				'--adam-frame-visibility': hasStyleLayer ? 1 : 0,
 				'--adam-frame-color': hasStyleLayer ? border : 'rgba(255,255,255,0)',
 				'--adam-frame-secondary-color': hasStyleLayer ? secondaryFrameColor : 'rgba(255,255,255,0)',
