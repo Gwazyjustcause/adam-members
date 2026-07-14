@@ -846,10 +846,14 @@ final class RewardService {
 				'gradient_opacity'            => 100,
 				'frame_enabled'               => false,
 				'frame_color'                 => $palette['frame_color'],
+				'frame_highlight_color'       => '#ffffff',
 				'frame_thickness'             => 0,
 				'border_width'                => 0,
 				'border_radius'               => 28,
 				'frame_style'                 => 'none',
+				'frame_gradient_color_1'      => $palette['frame_color'],
+				'frame_gradient_color_2'      => '#ffd700',
+				'frame_gradient_color_3'      => '#146aff',
 				'frame_inner_color'           => '#ffffff',
 				'frame_shine_intensity'       => 0,
 				'frame_gradient_color'        => '#60a5fa',
@@ -1377,16 +1381,18 @@ final class RewardService {
 		}
 
 		$frame_enabled      = 'none' !== $frame_style;
-		$frame_thickness    = $frame_enabled ? max( 0, min( 12, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'] ) ) ) : 0;
+		$frame_thickness    = $frame_enabled ? max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'] ) ) ) : 0;
 		$frame_color        = $this->sanitize_color_value( $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_color'] ?? $defaults['border_color'] );
+		$frame_highlight    = $this->sanitize_color_value( $style['frame_highlight_color'] ?? $style['frame_inner_color'] ?? $defaults['frame_highlight_color'] ?? $defaults['frame_inner_color'] );
 		$border_width       = $frame_thickness;
 		$border_color       = $frame_color;
 		$secondary_color     = $this->frame_supports_secondary_color( $frame_style )
-			? $this->sanitize_color_value( $style['frame_inner_color'] ?? $defaults['frame_inner_color'] )
+			? $this->sanitize_color_value( $style['frame_inner_color'] ?? $frame_highlight ?? $defaults['frame_inner_color'] )
 			: $border_color;
-		$tertiary_color      = 'gradient' === $frame_style
-			? $this->sanitize_color_value( $style['frame_gradient_color'] ?? $defaults['frame_gradient_color'] )
-			: $secondary_color;
+		$gradient_color_1    = $this->sanitize_color_value( $style['frame_gradient_color_1'] ?? $style['frame_color'] ?? $defaults['frame_gradient_color_1'] ?? $frame_color );
+		$gradient_color_2    = $this->sanitize_color_value( $style['frame_gradient_color_2'] ?? $style['frame_inner_color'] ?? $defaults['frame_gradient_color_2'] ?? $frame_highlight );
+		$gradient_color_3    = $this->sanitize_color_value( $style['frame_gradient_color_3'] ?? $style['frame_gradient_color'] ?? $defaults['frame_gradient_color_3'] ?? $defaults['frame_gradient_color'] );
+		$tertiary_color      = 'gradient' === $frame_style ? $gradient_color_3 : $secondary_color;
 		$shine_intensity     = 'metallic' === $frame_style ? max( 0, min( 100, (int) ( $style['frame_shine_intensity'] ?? $defaults['frame_shine_intensity'] ) ) ) : 0;
 		$frame_gradient_angle = 'gradient' === $frame_style ? max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? $defaults['frame_gradient_angle'] ) ) ) : (int) $defaults['frame_gradient_angle'];
 
@@ -1396,6 +1402,7 @@ final class RewardService {
 			'accent_color'        => $this->sanitize_color_value( $style['accent_color'] ?? $defaults['accent_color'] ),
 			'frame_enabled'       => $frame_enabled,
 			'frame_color'         => $frame_color,
+			'frame_highlight_color' => $frame_highlight,
 			'frame_thickness'     => $frame_thickness,
 			'border_color'        => $border_color,
 			'border_width'        => $border_width,
@@ -1403,6 +1410,9 @@ final class RewardService {
 			'frame_style'         => $frame_style,
 			'frame_inner_color'   => $secondary_color,
 			'frame_shine_intensity' => $shine_intensity,
+			'frame_gradient_color_1' => $gradient_color_1,
+			'frame_gradient_color_2' => $gradient_color_2,
+			'frame_gradient_color_3' => $gradient_color_3,
 			'frame_gradient_color' => $tertiary_color,
 			'frame_gradient_angle' => $frame_gradient_angle,
 			'content_padding'     => max( 12, min( 48, (int) ( $style['content_padding'] ?? $defaults['content_padding'] ) ) ),
@@ -1447,6 +1457,8 @@ final class RewardService {
 			$style['frame_thickness'] = $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'];
 		}
 
+		$style['frame_thickness'] = max( 0, min( 16, (int) $style['frame_thickness'] ) );
+
 		$requested_frame_style = $style['frame_style'] ?? $defaults['frame_style'];
 		$style['frame_style']  = $this->normalize_frame_preset( $requested_frame_style );
 
@@ -1454,12 +1466,28 @@ final class RewardService {
 			$style['frame_style'] = 'simple';
 		}
 
+		if ( ! isset( $style['frame_highlight_color'] ) || '' === trim( (string) $style['frame_highlight_color'] ) ) {
+			$style['frame_highlight_color'] = $style['frame_inner_color'] ?? $style['frame_color'] ?? $defaults['frame_highlight_color'] ?? $defaults['frame_inner_color'];
+		}
+
 		if ( ! isset( $style['frame_inner_color'] ) || '' === trim( (string) $style['frame_inner_color'] ) ) {
-			$style['frame_inner_color'] = $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_inner_color'];
+			$style['frame_inner_color'] = $style['frame_highlight_color'] ?? $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_inner_color'];
+		}
+
+		if ( ! isset( $style['frame_gradient_color_1'] ) || '' === trim( (string) $style['frame_gradient_color_1'] ) ) {
+			$style['frame_gradient_color_1'] = $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_gradient_color_1'] ?? $defaults['frame_color'];
+		}
+
+		if ( ! isset( $style['frame_gradient_color_2'] ) || '' === trim( (string) $style['frame_gradient_color_2'] ) ) {
+			$style['frame_gradient_color_2'] = $style['frame_highlight_color'] ?? $style['frame_inner_color'] ?? $defaults['frame_gradient_color_2'] ?? $defaults['frame_inner_color'];
+		}
+
+		if ( ! isset( $style['frame_gradient_color_3'] ) || '' === trim( (string) $style['frame_gradient_color_3'] ) ) {
+			$style['frame_gradient_color_3'] = $style['frame_gradient_color'] ?? $defaults['frame_gradient_color_3'] ?? $defaults['frame_gradient_color'];
 		}
 
 		if ( ! isset( $style['frame_gradient_color'] ) || '' === trim( (string) $style['frame_gradient_color'] ) ) {
-			$style['frame_gradient_color'] = $style['frame_inner_color'] ?? $defaults['frame_gradient_color'];
+			$style['frame_gradient_color'] = $style['frame_gradient_color_3'] ?? $style['frame_inner_color'] ?? $defaults['frame_gradient_color'];
 		}
 
 		if ( isset( $style['frame_enabled'] ) ) {

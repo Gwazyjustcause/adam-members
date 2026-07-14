@@ -374,10 +374,10 @@ final class CardService {
 		$rarity_effect    = 'auto' === $rarity_effect ? $this->auto_rarity_effect( $classes_for_auto ) : $rarity_effect;
 		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
 		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
-		$frame_thickness  = (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 );
+		$frame_thickness  = max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) );
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
-		if ( 'card_style' === $card_subtype && 'simple' === $frame_style && $frame_thickness > 0 ) {
+		if ( 'card_style' === $card_subtype && in_array( $frame_style, array( 'simple', 'metallic', 'gradient' ), true ) && $frame_thickness > 0 ) {
 			$classes[] = 'adam-digital-card--has-frame';
 		}
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
@@ -407,8 +407,25 @@ final class CardService {
 		$background = $this->preview_background_value( $style );
 		$is_style_reward = 'card_style' === sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
 		$frame_style     = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$frame_thickness = $is_style_reward && 'simple' === $frame_style ? max( 0, min( 12, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) ) : 0;
+		$frame_thickness = $is_style_reward && 'none' !== $frame_style ? max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) ) : 0;
 		$frame_color     = (string) ( $style['frame_color'] ?? $style['border_color'] ?? '#ffffff' );
+		$frame_fill      = 'linear-gradient(135deg, transparent 0%, transparent 100%)';
+
+		if ( $frame_thickness > 0 ) {
+			if ( 'metallic' === $frame_style ) {
+				$highlight  = (string) ( $style['frame_highlight_color'] ?? $style['frame_inner_color'] ?? '#ffffff' );
+				$frame_fill = sprintf( 'linear-gradient(135deg, %1$s 0%%, %2$s 18%%, %1$s 36%%, %2$s 52%%, %1$s 70%%, %2$s 84%%, %1$s 100%%)', $frame_color, $highlight );
+			} elseif ( 'gradient' === $frame_style ) {
+				$color_1    = (string) ( $style['frame_gradient_color_1'] ?? $frame_color );
+				$color_2    = (string) ( $style['frame_gradient_color_2'] ?? $style['frame_inner_color'] ?? '#ffd700' );
+				$color_3    = (string) ( $style['frame_gradient_color_3'] ?? $style['frame_gradient_color'] ?? '#146aff' );
+				$angle      = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
+				$frame_fill = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) $angle, $color_1, $color_2, $color_3 );
+			} else {
+				$frame_fill = sprintf( 'linear-gradient(135deg, %1$s 0%%, %1$s 100%%)', $frame_color );
+			}
+		}
+
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
@@ -417,6 +434,7 @@ final class CardService {
 			'--adam-card-shadow'                  => 'none',
 			'--adam-frame-width'                  => $frame_thickness . 'px',
 			'--adam-frame-color'                  => 0 === $frame_thickness ? 'transparent' : $frame_color,
+			'--adam-frame-fill'                   => $frame_fill,
 			'--adam-card-frame-inset'             => '12px',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
@@ -462,8 +480,16 @@ final class CardService {
 			return 'none';
 		}
 
-		if ( in_array( $preset, array( 'simple', 'solid', 'double', 'accent', 'segmented', 'metallic', 'gradient', 'neon', 'premium' ), true ) ) {
+		if ( in_array( $preset, array( 'simple', 'solid', 'double', 'accent', 'segmented' ), true ) ) {
 			return 'simple';
+		}
+
+		if ( in_array( $preset, array( 'metallic', 'neon', 'premium' ), true ) ) {
+			return 'metallic';
+		}
+
+		if ( 'gradient' === $preset ) {
+			return 'gradient';
 		}
 
 		return 'none';
@@ -473,7 +499,7 @@ final class CardService {
 	 * Determine whether a frame preset needs a secondary tone.
 	 */
 	private function frame_supports_secondary_color( string $preset ): bool {
-		return false;
+		return in_array( $preset, array( 'metallic', 'gradient' ), true );
 	}
 
 	/**

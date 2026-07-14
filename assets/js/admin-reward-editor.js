@@ -19,6 +19,12 @@
 			return '';
 		}
 
+		$fields = $fields.filter( ':enabled' );
+
+		if ( ! $fields.length ) {
+			$fields = $( '[data-adam-style="' + key + '"]' );
+		}
+
 		if ( $fields.first().is( ':radio' ) || $fields.first().is( ':checkbox' ) ) {
 			$field = $fields.filter( ':checked' ).first();
 
@@ -54,7 +60,11 @@
 	function currentFramePreset() {
 		var preset = previewStyleValue( 'frame_style' ) || 'simple';
 
-		return preset === 'simple' ? 'simple' : 'none';
+		if ( [ 'simple', 'metallic', 'gradient' ].indexOf( preset ) !== -1 ) {
+			return preset;
+		}
+
+		return 'none';
 	}
 
 	function setAccordionState( $section, open ) {
@@ -207,7 +217,7 @@
 				}
 
 				if ( key.indexOf( 'angle' ) !== -1 || key.indexOf( 'rotation' ) !== -1 ) {
-					suffix = 'deg';
+					suffix = '°';
 				}
 
 				if (
@@ -335,7 +345,7 @@
 			}
 		}
 
-		if ( frameStyle === 'simple' && clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) > 0 ) {
+		if ( frameStyle !== 'none' && clamp( previewStyleValue( 'frame_thickness' ), 0, 16 ) > 0 ) {
 			classes.push( 'adam-digital-card--has-frame' );
 		}
 
@@ -419,6 +429,15 @@
 		$( '[data-adam-style-controls]' ).toggleClass( 'is-hidden', ! styleVisible );
 		$( '[data-adam-style-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! styleVisible );
 		$( '[data-adam-details-controls]' ).toggleClass( 'is-hidden', false );
+		$( '[data-adam-frame-group]' ).each(
+			function () {
+				var presets = String( $( this ).data( 'adamFrameGroup' ) || '' ).split( /\s+/ );
+				var visible = styleVisible && presets.indexOf( currentFramePreset() ) !== -1;
+
+				$( this ).toggleClass( 'is-hidden', ! visible );
+				$( this ).find( 'input, select, textarea, button' ).prop( 'disabled', ! visible );
+			}
+		);
 
 		$( '[data-adam-background-mode-group]' ).each(
 			function () {
@@ -454,13 +473,28 @@
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
 		var frameColor = previewStyleValue( 'frame_color' ) || '#ffffff';
+		var frameHighlight = previewStyleValue( 'frame_highlight_color' ) || '#ffffff';
+		var gradientColor1 = previewStyleValue( 'frame_gradient_color_1' ) || frameColor;
+		var gradientColor2 = previewStyleValue( 'frame_gradient_color_2' ) || '#ffd700';
+		var gradientColor3 = previewStyleValue( 'frame_gradient_color_3' ) || '#146aff';
+		var frameGradientAngle = clamp( previewStyleValue( 'frame_gradient_angle' ), 0, 360 );
 		var backgroundMode = currentBackgroundMode();
 		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
-		var hasSimpleFrame = framePreset === 'simple' && subtype === 'card_style' && clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) > 0;
+		var frameThickness = clamp( previewStyleValue( 'frame_thickness' ), 0, 16 );
+		var hasFrame = framePreset !== 'none' && subtype === 'card_style' && frameThickness > 0;
+		var frameFill = 'linear-gradient(135deg, transparent 0%, transparent 100%)';
 
 		if ( ! $preview.length ) {
 			return;
+		}
+
+		if ( framePreset === 'simple' ) {
+			frameFill = 'linear-gradient(135deg, ' + frameColor + ' 0%, ' + frameColor + ' 100%)';
+		} else if ( framePreset === 'metallic' ) {
+			frameFill = 'linear-gradient(135deg, ' + frameColor + ' 0%, ' + frameHighlight + ' 18%, ' + frameColor + ' 36%, ' + frameHighlight + ' 52%, ' + frameColor + ' 70%, ' + frameHighlight + ' 84%, ' + frameColor + ' 100%)';
+		} else if ( framePreset === 'gradient' ) {
+			frameFill = 'linear-gradient(' + frameGradientAngle + 'deg, ' + gradientColor1 + ' 0%, ' + gradientColor2 + ' 50%, ' + gradientColor3 + ' 100%)';
 		}
 
 		$preview.attr( 'class', classNames.join( ' ' ).trim() );
@@ -472,8 +506,9 @@
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
-				'--adam-frame-width': ( hasSimpleFrame ? clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) : 0 ) + 'px',
-				'--adam-frame-color': hasSimpleFrame ? frameColor : 'transparent',
+				'--adam-frame-width': ( hasFrame ? frameThickness : 0 ) + 'px',
+				'--adam-frame-color': hasFrame ? frameColor : 'transparent',
+				'--adam-frame-fill': hasFrame ? frameFill : 'linear-gradient(135deg, transparent 0%, transparent 100%)',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
