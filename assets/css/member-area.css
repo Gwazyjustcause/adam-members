@@ -354,31 +354,6 @@
 
 
 
-.adam-digital-card-shell {
-	position: relative;
-	display: block;
-	width: 100%;
-	overflow: visible;
-}
-
-.adam-digital-card-shell__frame {
-	position: absolute;
-	inset: 0;
-	border: 0 solid transparent;
-	border-radius: var(--adam-card-radius);
-	box-sizing: border-box;
-	background: transparent;
-	pointer-events: none;
-	z-index: 2;
-	visibility: hidden;
-}
-
-.adam-digital-card-shell--has-frame.adam-digital-card-shell--frame-simple .adam-digital-card-shell__frame {
-	border-width: var(--adam-frame-width);
-	border-color: var(--adam-frame-color-1);
-	visibility: visible;
-}
-
 .adam-digital-card__shine {
 	position: absolute;
 	right: -120px;

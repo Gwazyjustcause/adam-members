@@ -249,8 +249,7 @@ final class CardService {
 
 		ob_start();
 		?>
-		<div class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( $resolved['base_class_name'] ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
-			<article class="adam-digital-card">
+		<article class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( $resolved['base_class_name'] ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
 				<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_url( $resolved['background_image_url'] ) . ');"' : ''; ?> data-adam-card-backdrop></div>
 				<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
@@ -328,9 +327,7 @@ final class CardService {
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
 					<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
-			</article>
-			<div class="adam-digital-card-shell__frame" aria-hidden="true"></div>
-		</div>
+		</article>
 		<?php
 
 		return (string) ob_get_clean();
@@ -362,42 +359,27 @@ final class CardService {
 	 * @return array<string, mixed>
 	 */
 	private function resolve_card_presentation( array $presentation ): array {
-		$style                = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
-		$card_classes         = array_values( array_unique( array_filter( array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) ) ) ) );
-		$shell_presentation_classes = array_values(
-			array_filter(
-				$card_classes,
-				static function ( string $class_name ): bool {
-					return 'adam-digital-card' !== $class_name;
-				}
-			)
-		);
-		$classes              = $shell_presentation_classes;
+		$style            = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
+		$classes          = array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) );
 		$card_subtype     = sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
 		$background_mode  = sanitize_key( (string) ( $style['background_mode'] ?? 'gradient' ) );
 		$pattern          = sanitize_html_class( (string) ( $style['pattern'] ?? 'grid' ) );
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
-		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
-		$classes_for_auto = $card_classes;
+		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
 		$rarity_effect    = 'auto' === $rarity_effect ? $this->auto_rarity_effect( $classes_for_auto ) : $rarity_effect;
 		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
 		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
-		if ( 'none' !== $frame_style ) {
-			$classes[] = 'adam-digital-card-shell--has-frame';
-			$classes[] = 'adam-digital-card-shell--frame-' . $frame_style;
-		}
-		$classes[]           = 'adam-digital-card--preview-badge-' . $badge_style;
-		$classes[]           = 'adam-digital-card--preview-effect-' . $rarity_effect;
-		$shell_active_classes = array_values( array_unique( array_filter( $classes ) ) );
+		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
+		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
 
 		return array(
-			'base_class_name'      => 'adam-digital-card-shell' . ( array() !== $shell_presentation_classes ? ' ' . implode( ' ', $shell_presentation_classes ) : '' ),
-			'class_name'           => 'adam-digital-card-shell' . ( array() !== $shell_active_classes ? ' ' . implode( ' ', $shell_active_classes ) : '' ),
+			'base_class_name'      => implode( ' ', array_values( array_unique( array_filter( array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) ) ) ) ) ),
+			'class_name'           => implode( ' ', array_values( array_unique( array_filter( $classes ) ) ) ),
 			'inline_style'        => $this->preview_inline_style( $style ),
 			'pattern'             => '' !== $pattern ? $pattern : 'grid',
 			'image_position'      => '' !== $image_position ? $image_position : 'top-right',
@@ -417,20 +399,12 @@ final class CardService {
 		}
 
 		$background = $this->preview_background_value( $style );
-		$is_style_reward = 'card_style' === sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
-		$frame_style    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 2, min( 12, (int) ( $style['border_width'] ?? 0 ) ) ) : 0;
-		$frame_color    = (string) ( $style['border_color'] ?? '#ffffff' );
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
 			'--adam-card-muted'                   => (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.82)' ),
 			'--adam-card-radius'                  => '28px',
 			'--adam-card-shadow'                  => 'none',
-			'--adam-frame-width'                  => $frame_width . 'px',
-			'--adam-frame-color-1'                => $frame_color,
-			'--adam-frame-color-2'                => 'transparent',
-			'--adam-frame-color-3'                => 'transparent',
 			'--adam-card-frame-inset'             => '12px',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
@@ -470,12 +444,6 @@ final class CardService {
 	 * Normalize legacy frame presets to the new compact model.
 	 */
 	private function normalize_frame_preset( mixed $value ): string {
-		$preset = sanitize_key( (string) $value );
-
-		if ( in_array( $preset, array( 'simple', 'solid', 'double', 'accent', 'segmented', 'metallic', 'gradient', 'neon', 'premium' ), true ) ) {
-			return 'simple';
-		}
-
 		return 'none';
 	}
 
