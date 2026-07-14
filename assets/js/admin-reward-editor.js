@@ -62,11 +62,21 @@
 			return 'accent';
 		}
 
-		if ( [ 'none', 'simple', 'double', 'accent', 'metallic' ].indexOf( preset ) === -1 ) {
+		if ( [ 'none', 'simple', 'double', 'accent', 'metallic', 'neon', 'premium' ].indexOf( preset ) === -1 ) {
 			return 'none';
 		}
 
 		return preset;
+	}
+
+	function currentFrameFinish() {
+		var finish = previewStyleValue( 'frame_finish' ) || 'none';
+
+		if ( [ 'none', 'glossy', 'metallic', 'neon', 'satin' ].indexOf( finish ) === -1 ) {
+			return 'none';
+		}
+
+		return finish;
 	}
 
 	function setAccordionState( $section, open ) {
@@ -218,8 +228,16 @@
 					suffix = '%';
 				}
 
+				if ( key === 'frame_shine_intensity' || key === 'frame_inner_highlight' || key === 'frame_inner_glow' || key === 'frame_accent_line' || key === 'frame_shine_width' ) {
+					suffix = '%';
+				}
+
 				if ( key.indexOf( 'angle' ) !== -1 || key.indexOf( 'rotation' ) !== -1 ) {
 					suffix = 'deg';
+				}
+
+				if ( key === 'frame_shine_speed' ) {
+					suffix = 's';
 				}
 
 				if (
@@ -332,6 +350,7 @@
 
 	function previewClasses() {
 		var frameStyle = currentFramePreset();
+		var frameFinish = currentFrameFinish();
 		var badgeStyle = previewStyleValue( 'badge_style' ) || 'soft';
 		var rarityEffect = previewStyleValue( 'rarity_effect' ) || 'auto';
 		var rewardRarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
@@ -348,6 +367,10 @@
 		}
 
 		classes.push( 'adam-digital-card--preview-frame-' + frameStyle );
+		classes.push( 'adam-digital-card--preview-frame-finish-' + frameFinish );
+		if ( previewStyleValue( 'frame_shine_animated' ) ) {
+			classes.push( 'adam-digital-card--preview-frame-shine-animated' );
+		}
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
 		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
 
@@ -426,7 +449,8 @@
 		var styleVisible = digital && subtype === 'card_style';
 		var patternVisible = backgroundVisible && ( previewStyleValue( 'pattern' ) || 'grid' ) !== 'none';
 		var framePreset = currentFramePreset();
-		var showSecondaryFrameColor = styleVisible && [ 'double', 'metallic', 'accent' ].indexOf( framePreset ) !== -1;
+		var showSecondaryFrameColor = styleVisible && [ 'double', 'metallic', 'accent', 'neon', 'premium' ].indexOf( framePreset ) !== -1;
+		var showFrameEffects = styleVisible && framePreset !== 'none';
 
 		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
 		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
@@ -450,6 +474,8 @@
 		$( '[data-adam-pattern-detail]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! patternVisible );
 		$( '[data-adam-frame-secondary-field]' ).toggleClass( 'is-hidden', ! showSecondaryFrameColor );
 		$( '[data-adam-frame-secondary-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showSecondaryFrameColor );
+		$( '[data-adam-frame-effects-field]' ).toggleClass( 'is-hidden', ! showFrameEffects );
+		$( '[data-adam-frame-effects-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showFrameEffects );
 	}
 
 	var $editor = $( '.adam-reward-editor' );
@@ -495,7 +521,14 @@
 				'--adam-frame-visibility': hasStyleLayer ? 1 : 0,
 				'--adam-frame-color': hasStyleLayer ? border : 'rgba(255,255,255,0)',
 				'--adam-frame-secondary-color': hasStyleLayer ? secondaryFrameColor : 'rgba(255,255,255,0)',
-				'--adam-card-frame-inset': '12px',
+				'--adam-card-frame-inset': '0px',
+				'--adam-frame-inner-highlight': clamp( previewStyleValue( 'frame_inner_highlight' ), 0, 100 ) / 100,
+				'--adam-frame-inner-glow': clamp( previewStyleValue( 'frame_inner_glow' ), 0, 100 ) / 100,
+				'--adam-frame-accent-line': clamp( previewStyleValue( 'frame_accent_line' ), 0, 100 ) / 100,
+				'--adam-frame-shine-opacity': ( previewStyleValue( 'frame_shine_enabled' ) ? clamp( previewStyleValue( 'frame_shine_intensity' ), 0, 100 ) / 100 : 0 ),
+				'--adam-frame-shine-angle': clamp( previewStyleValue( 'frame_shine_angle' ), 0, 180 ) + 'deg',
+				'--adam-frame-shine-width': clamp( previewStyleValue( 'frame_shine_width' ), 10, 60 ) + '%',
+				'--adam-frame-shine-duration': clamp( previewStyleValue( 'frame_shine_speed' ), 4, 24 ) + 's',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
 				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),

@@ -267,6 +267,7 @@ final class CardService {
 				<?php endforeach; ?>
 			</div>
 			<div class="adam-digital-card__frame" aria-hidden="true"></div>
+			<div class="adam-digital-card__frame-shine" aria-hidden="true"></div>
 
 			<header class="adam-digital-card__header">
 				<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
@@ -374,6 +375,7 @@ final class CardService {
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
 		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
+		$frame_finish     = $this->normalize_frame_finish( $style['frame_finish'] ?? 'none' );
 		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
 		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
@@ -383,6 +385,10 @@ final class CardService {
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
 		$classes[] = 'adam-digital-card--preview-frame-' . $frame_style;
+		$classes[] = 'adam-digital-card--preview-frame-finish-' . $frame_finish;
+		if ( ! empty( $style['frame_shine_animated'] ) ) {
+			$classes[] = 'adam-digital-card--preview-frame-shine-animated';
+		}
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
 		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
 
@@ -412,6 +418,7 @@ final class CardService {
 		$frame_style    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 0, (int) ( $style['border_width'] ?? 0 ) ) : 0;
 		$frame_color    = (string) ( $style['border_color'] ?? '#ffffff' );
+		$frame_finish   = $this->normalize_frame_finish( $style['frame_finish'] ?? 'none' );
 		$frame_secondary = $this->frame_supports_secondary_color( $frame_style )
 			? (string) ( $style['frame_inner_color'] ?? '#ffffff' )
 			: $frame_color;
@@ -425,7 +432,14 @@ final class CardService {
 			'--adam-frame-visibility'             => $frame_width > 0 ? '1' : '0',
 			'--adam-frame-color'                  => $frame_color,
 			'--adam-frame-secondary-color'        => $frame_secondary,
-			'--adam-card-frame-inset'             => '12px',
+			'--adam-card-frame-inset'             => '0px',
+			'--adam-frame-inner-highlight'        => (string) ( max( 0, min( 100, (int) ( $style['frame_inner_highlight'] ?? 24 ) ) ) / 100 ),
+			'--adam-frame-inner-glow'             => (string) ( max( 0, min( 100, (int) ( $style['frame_inner_glow'] ?? 0 ) ) ) / 100 ),
+			'--adam-frame-accent-line'            => (string) ( max( 0, min( 100, (int) ( $style['frame_accent_line'] ?? 0 ) ) ) / 100 ),
+			'--adam-frame-shine-opacity'          => ! empty( $style['frame_shine_enabled'] ) ? (string) ( max( 0, min( 100, (int) ( $style['frame_shine_intensity'] ?? 0 ) ) ) / 100 ) : '0',
+			'--adam-frame-shine-angle'            => max( 0, min( 180, (int) ( $style['frame_shine_angle'] ?? 135 ) ) ) . 'deg',
+			'--adam-frame-shine-width'            => max( 10, min( 60, (int) ( $style['frame_shine_width'] ?? 26 ) ) ) . '%',
+			'--adam-frame-shine-duration'         => max( 4, min( 24, (int) ( $style['frame_shine_speed'] ?? 10 ) ) ) . 's',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
 			'--adam-card-title-surface'           => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.18 ),
@@ -451,6 +465,12 @@ final class CardService {
 			'--adam-card-art-size'                => max( 10, (int) ( $style['card_image_size'] ?? 36 ) ) . '%',
 		);
 
+		if ( 'none' === $frame_finish ) {
+			$vars['--adam-frame-inner-highlight'] = '0';
+			$vars['--adam-frame-inner-glow']      = '0';
+			$vars['--adam-frame-accent-line']     = '0';
+		}
+
 		$parts = array();
 
 		foreach ( $vars as $property => $value ) {
@@ -471,6 +491,8 @@ final class CardService {
 			'double' => 'double',
 			'segmented', 'accent' => 'accent',
 			'metallic' => 'metallic',
+			'neon' => 'neon',
+			'premium' => 'premium',
 			default => 'none',
 		};
 	}
@@ -479,7 +501,16 @@ final class CardService {
 	 * Determine whether a frame preset needs a secondary tone.
 	 */
 	private function frame_supports_secondary_color( string $preset ): bool {
-		return in_array( $preset, array( 'double', 'accent', 'metallic' ), true );
+		return in_array( $preset, array( 'double', 'accent', 'metallic', 'neon', 'premium' ), true );
+	}
+
+	/**
+	 * Normalize frame finish values.
+	 */
+	private function normalize_frame_finish( mixed $value ): string {
+		$finish = sanitize_key( (string) $value );
+
+		return in_array( $finish, array( 'none', 'glossy', 'metallic', 'neon', 'satin' ), true ) ? $finish : 'none';
 	}
 
 	/**

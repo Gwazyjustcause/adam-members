@@ -379,6 +379,16 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Cor principal', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[border_color]" value="<?php echo esc_attr( (string) $resolved_style['border_color'] ); ?>" data-adam-style="border_color"></label>
 									<label data-adam-frame-secondary-field><span><?php esc_html_e( 'Cor secundaria', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_inner_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_color'] ); ?>" data-adam-style="frame_inner_color"></label>
 									<label><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="2" max="16" name="visual_style[border_width]" value="<?php echo esc_attr( (string) $resolved_style['border_width'] ); ?>" data-adam-style="border_width"><small data-adam-value-for="border_width"><?php echo esc_html( (string) $resolved_style['border_width'] ); ?>px</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Acabamento', 'adam-membership' ); ?></span><select name="visual_style[frame_finish]" data-adam-style="frame_finish"><?php $this->render_frame_finish_options( (string) $resolved_style['frame_finish'] ); ?></select></label>
+									<label class="adam-admin-checkbox-field" data-adam-style-inline-field data-adam-frame-effects-field><input type="checkbox" name="visual_style[frame_shine_enabled]" value="1" <?php checked( ! empty( $resolved_style['frame_shine_enabled'] ) ); ?> data-adam-style="frame_shine_enabled"> <?php esc_html_e( 'Brilho ativo', 'adam-membership' ); ?></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Intensidade do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[frame_shine_intensity]" value="<?php echo esc_attr( (string) $resolved_style['frame_shine_intensity'] ); ?>" data-adam-style="frame_shine_intensity"><small data-adam-value-for="frame_shine_intensity"><?php echo esc_html( (string) $resolved_style['frame_shine_intensity'] ); ?>%</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Angulo do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="180" name="visual_style[frame_shine_angle]" value="<?php echo esc_attr( (string) $resolved_style['frame_shine_angle'] ); ?>" data-adam-style="frame_shine_angle"><small data-adam-value-for="frame_shine_angle"><?php echo esc_html( (string) $resolved_style['frame_shine_angle'] ); ?>deg</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Largura do brilho', 'adam-membership' ); ?></span><input type="range" min="10" max="60" name="visual_style[frame_shine_width]" value="<?php echo esc_attr( (string) $resolved_style['frame_shine_width'] ); ?>" data-adam-style="frame_shine_width"><small data-adam-value-for="frame_shine_width"><?php echo esc_html( (string) $resolved_style['frame_shine_width'] ); ?>%</small></label>
+									<label class="adam-admin-checkbox-field" data-adam-style-inline-field data-adam-frame-effects-field><input type="checkbox" name="visual_style[frame_shine_animated]" value="1" <?php checked( ! empty( $resolved_style['frame_shine_animated'] ) ); ?> data-adam-style="frame_shine_animated"> <?php esc_html_e( 'Animar brilho', 'adam-membership' ); ?></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Velocidade do brilho', 'adam-membership' ); ?></span><input type="range" min="4" max="24" name="visual_style[frame_shine_speed]" value="<?php echo esc_attr( (string) $resolved_style['frame_shine_speed'] ); ?>" data-adam-style="frame_shine_speed"><small data-adam-value-for="frame_shine_speed"><?php echo esc_html( (string) $resolved_style['frame_shine_speed'] ); ?>s</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Realce interior', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[frame_inner_highlight]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_highlight'] ); ?>" data-adam-style="frame_inner_highlight"><small data-adam-value-for="frame_inner_highlight"><?php echo esc_html( (string) $resolved_style['frame_inner_highlight'] ); ?>%</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Brilho interior', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[frame_inner_glow]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_glow'] ); ?>" data-adam-style="frame_inner_glow"><small data-adam-value-for="frame_inner_glow"><?php echo esc_html( (string) $resolved_style['frame_inner_glow'] ); ?>%</small></label>
+									<label data-adam-frame-effects-field><span><?php esc_html_e( 'Linha de acento', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[frame_accent_line]" value="<?php echo esc_attr( (string) $resolved_style['frame_accent_line'] ); ?>" data-adam-style="frame_accent_line"><small data-adam-value-for="frame_accent_line"><?php echo esc_html( (string) $resolved_style['frame_accent_line'] ); ?>%</small></label>
 								</div>
 								</div>
 							</section>
@@ -685,6 +695,22 @@ final class RewardController {
 			'double'    => __( 'Dupla', 'adam-membership' ),
 			'accent'    => __( 'Acento', 'adam-membership' ),
 			'metallic'  => __( 'Metalica', 'adam-membership' ),
+			'neon'      => __( 'Neon', 'adam-membership' ),
+			'premium'   => __( 'Premium', 'adam-membership' ),
+		);
+
+		foreach ( $options as $value => $label ) {
+			$this->render_select_option( $value, $label, $current );
+		}
+	}
+
+	private function render_frame_finish_options( string $current ): void {
+		$options = array(
+			'none'     => __( 'Sem acabamento', 'adam-membership' ),
+			'glossy'   => __( 'Glossy', 'adam-membership' ),
+			'metallic' => __( 'Metalico', 'adam-membership' ),
+			'neon'     => __( 'Neon', 'adam-membership' ),
+			'satin'    => __( 'Satinado', 'adam-membership' ),
 		);
 
 		foreach ( $options as $value => $label ) {
