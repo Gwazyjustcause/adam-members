@@ -840,15 +840,8 @@ final class RewardService {
 				'gradient_opacity'            => 100,
 				'border_width'                => 0,
 				'border_radius'               => 28,
-				'frame_style'                 => 'solid',
-				'frame_opacity'               => 100,
-				'frame_glow'                  => 0,
-				'frame_shadow'                => 0,
-				'frame_inner_width'           => 0,
-				'frame_inner_color'           => 'rgba(255,255,255,0)',
-				'frame_corner_style'          => 'rounded',
-				'frame_corner_accent'         => 0,
-				'frame_inset'                 => 24,
+				'frame_style'                 => 'none',
+				'frame_inner_color'           => '#ffffff',
 				'content_padding'             => 28,
 				'content_gap'                 => 20,
 				'meta_align'                  => 'space-between',
@@ -1078,13 +1071,7 @@ final class RewardService {
 					'border_color'        => '#d8dee9',
 					'border_width'        => 10,
 					'frame_style'         => 'double',
-					'frame_opacity'       => 100,
-					'frame_glow'          => 0,
-					'frame_shadow'        => 0,
-					'frame_inner_width'   => 2,
 					'frame_inner_color'   => '#f8fafc',
-					'frame_corner_style'  => 'rounded',
-					'frame_corner_accent' => 56,
 				),
 			),
 			'card_frame_tactical_green' => array(
@@ -1092,14 +1079,8 @@ final class RewardService {
 				'style'        => array(
 					'border_color'        => '#2fbf71',
 					'border_width'        => 11,
-					'frame_style'         => 'segmented',
-					'frame_opacity'       => 100,
-					'frame_glow'          => 6,
-					'frame_shadow'        => 0,
-					'frame_inner_width'   => 1,
+					'frame_style'         => 'accent',
 					'frame_inner_color'   => '#88f2b3',
-					'frame_corner_style'  => 'cut',
-					'frame_corner_accent' => 72,
 				),
 			),
 			'card_frame_carbon_edge' => array(
@@ -1108,13 +1089,7 @@ final class RewardService {
 					'border_color'        => '#7fb7aa',
 					'border_width'        => 12,
 					'frame_style'         => 'metallic',
-					'frame_opacity'       => 100,
-					'frame_glow'          => 4,
-					'frame_shadow'        => 0,
-					'frame_inner_width'   => 1,
 					'frame_inner_color'   => '#d1fae5',
-					'frame_corner_style'  => 'cut',
-					'frame_corner_accent' => 84,
 				),
 			),
 			'card_frame_golden_honor' => array(
@@ -1123,13 +1098,7 @@ final class RewardService {
 					'border_color'        => '#f4c84b',
 					'border_width'        => 14,
 					'frame_style'         => 'metallic',
-					'frame_opacity'       => 100,
-					'frame_glow'          => 10,
-					'frame_shadow'        => 0,
-					'frame_inner_width'   => 2,
 					'frame_inner_color'   => '#fff2b2',
-					'frame_corner_style'  => 'pill',
-					'frame_corner_accent' => 96,
 					'badge_style'         => 'glow',
 					'rarity_effect'       => 'metallic',
 				),
@@ -1140,13 +1109,7 @@ final class RewardService {
 					'border_color'        => '#ecfeff',
 					'border_width'        => 16,
 					'frame_style'         => 'double',
-					'frame_opacity'       => 100,
-					'frame_glow'          => 12,
-					'frame_shadow'        => 0,
-					'frame_inner_width'   => 2,
 					'frame_inner_color'   => '#ffffff',
-					'frame_corner_style'  => 'rounded',
-					'frame_corner_accent' => 104,
 					'badge_style'         => 'glow',
 					'rarity_effect'       => 'glow',
 				),
@@ -1167,7 +1130,6 @@ final class RewardService {
 		$effect           = sanitize_html_class( (string) $style['rarity_effect'] );
 		$image_position   = sanitize_html_class( (string) $style['card_image_position'] );
 		$frame_style      = sanitize_html_class( (string) $style['frame_style'] );
-		$corner_style     = sanitize_html_class( (string) $style['frame_corner_style'] );
 		$image_layer      = sanitize_html_class( (string) $style['card_image_layer'] );
 
 		return array(
@@ -1177,7 +1139,7 @@ final class RewardService {
 			'badge_style_class'    => 'adam-reward-card--badge-' . $badge_style,
 			'effect_class'         => 'adam-reward-card--effect-' . ( 'auto' === $effect ? sanitize_html_class( $reward->rarity() ) : $effect ),
 			'frame_style_class'    => 'adam-reward-card--frame-' . $frame_style,
-			'corner_style_class'   => 'adam-reward-card--corner-' . $corner_style,
+			'corner_style_class'   => '',
 			'image_position_class' => 'adam-reward-card__art--' . $image_position,
 			'image_layer_class'    => 'adam-reward-card__art--layer-' . $image_layer,
 		);
@@ -1357,12 +1319,12 @@ final class RewardService {
 	 * @return array<string, mixed>
 	 */
 	private function sanitize_card_style_config( array $style, array $defaults ): array {
+		$style              = $this->normalize_frame_style_schema( $style, $defaults );
 		$badge_style        = isset( $style['badge_style'] ) ? sanitize_key( (string) $style['badge_style'] ) : (string) $defaults['badge_style'];
 		$rarity_effect      = isset( $style['rarity_effect'] ) ? sanitize_key( (string) $style['rarity_effect'] ) : (string) $defaults['rarity_effect'];
 		$image_position     = isset( $style['card_image_position'] ) ? sanitize_key( (string) $style['card_image_position'] ) : (string) $defaults['card_image_position'];
 		$card_image_layer   = isset( $style['card_image_layer'] ) ? sanitize_key( (string) $style['card_image_layer'] ) : (string) $defaults['card_image_layer'];
-		$frame_style        = isset( $style['frame_style'] ) ? sanitize_key( (string) $style['frame_style'] ) : (string) $defaults['frame_style'];
-		$frame_corner_style = isset( $style['frame_corner_style'] ) ? sanitize_key( (string) $style['frame_corner_style'] ) : (string) $defaults['frame_corner_style'];
+		$frame_style        = $this->normalize_frame_preset( $style['frame_style'] ?? $defaults['frame_style'] );
 		$meta_align         = isset( $style['meta_align'] ) ? sanitize_key( (string) $style['meta_align'] ) : (string) $defaults['meta_align'];
 		$stats_align        = isset( $style['stats_align'] ) ? sanitize_key( (string) $style['stats_align'] ) : (string) $defaults['stats_align'];
 		$title_align        = isset( $style['title_align'] ) ? sanitize_key( (string) $style['title_align'] ) : (string) $defaults['title_align'];
@@ -1384,14 +1346,6 @@ final class RewardService {
 			$card_image_layer = (string) $defaults['card_image_layer'];
 		}
 
-		if ( ! in_array( $frame_style, array( 'solid', 'double', 'metallic', 'segmented' ), true ) ) {
-			$frame_style = (string) $defaults['frame_style'];
-		}
-
-		if ( ! in_array( $frame_corner_style, array( 'rounded', 'cut', 'pill' ), true ) ) {
-			$frame_corner_style = (string) $defaults['frame_corner_style'];
-		}
-
 		if ( ! in_array( $meta_align, array( 'left', 'center', 'right', 'space-between' ), true ) ) {
 			$meta_align = (string) $defaults['meta_align'];
 		}
@@ -1408,22 +1362,21 @@ final class RewardService {
 			$description_align = (string) $defaults['description_align'];
 		}
 
+		$border_width       = 'none' === $frame_style ? 0 : max( 2, min( 16, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) );
+		$border_color       = $this->sanitize_color_value( $style['border_color'] ?? $defaults['border_color'] );
+		$secondary_color    = $this->frame_supports_secondary_color( $frame_style )
+			? $this->sanitize_color_value( $style['frame_inner_color'] ?? $defaults['frame_inner_color'] )
+			: $border_color;
+
 		return array(
 			'text_color'          => $this->sanitize_color_value( $style['text_color'] ?? $defaults['text_color'] ),
 			'muted_text_color'    => $this->sanitize_color_value( $style['muted_text_color'] ?? $defaults['muted_text_color'] ),
 			'accent_color'        => $this->sanitize_color_value( $style['accent_color'] ?? $defaults['accent_color'] ),
-			'border_color'        => $this->sanitize_color_value( $style['border_color'] ?? $defaults['border_color'] ),
-			'border_width'        => max( 0, min( 16, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) ),
+			'border_color'        => $border_color,
+			'border_width'        => $border_width,
 			'border_radius'       => (int) $defaults['border_radius'],
 			'frame_style'         => $frame_style,
-			'frame_opacity'       => max( 60, min( 100, (int) ( $style['frame_opacity'] ?? $defaults['frame_opacity'] ) ) ),
-			'frame_glow'          => max( 0, min( 100, (int) ( $style['frame_glow'] ?? $defaults['frame_glow'] ) ) ),
-			'frame_shadow'        => 0,
-			'frame_inner_width'   => max( 0, min( 10, (int) ( $style['frame_inner_width'] ?? $defaults['frame_inner_width'] ) ) ),
-			'frame_inner_color'   => $this->sanitize_color_value( $style['frame_inner_color'] ?? $defaults['frame_inner_color'] ),
-			'frame_corner_style'  => $frame_corner_style,
-			'frame_corner_accent' => max( 0, min( 140, (int) ( $style['frame_corner_accent'] ?? $defaults['frame_corner_accent'] ) ) ),
-			'frame_inset'         => (int) $defaults['frame_inset'],
+			'frame_inner_color'   => $secondary_color,
 			'content_padding'     => max( 12, min( 48, (int) ( $style['content_padding'] ?? $defaults['content_padding'] ) ) ),
 			'content_gap'         => max( 6, min( 32, (int) ( $style['content_gap'] ?? $defaults['content_gap'] ) ) ),
 			'meta_align'          => $meta_align,
@@ -1448,6 +1401,59 @@ final class RewardService {
 			'description_width'   => max( 30, min( 100, (int) ( $style['description_width'] ?? $defaults['description_width'] ) ) ),
 			'shapes'              => $this->sanitize_visual_shapes( $style['shapes'] ?? $defaults['shapes'] ?? array() ),
 		);
+	}
+
+	/**
+	 * Collapse legacy frame fields into the compact schema.
+	 *
+	 * @param array<string, mixed> $style
+	 * @param array<string, mixed> $defaults
+	 * @return array<string, mixed>
+	 */
+	private function normalize_frame_style_schema( array $style, array $defaults ): array {
+		$style['frame_style'] = $this->normalize_frame_preset( $style['frame_style'] ?? $defaults['frame_style'] );
+
+		if ( ! isset( $style['frame_inner_color'] ) || '' === trim( (string) $style['frame_inner_color'] ) ) {
+			$style['frame_inner_color'] = $style['border_color'] ?? $defaults['frame_inner_color'];
+		}
+
+		if ( isset( $style['frame_enabled'] ) ) {
+			$enabled = filter_var( $style['frame_enabled'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+
+			if ( false === $enabled ) {
+				$style['frame_style'] = 'none';
+				$style['border_width'] = 0;
+			}
+		}
+
+		if ( 0 === (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) {
+			$style['frame_style'] = 'none';
+		}
+
+		return $style;
+	}
+
+	/**
+	 * Normalize legacy frame preset names to the new renderer presets.
+	 */
+	private function normalize_frame_preset( mixed $value ): string {
+		$preset = sanitize_key( (string) $value );
+
+		return match ( $preset ) {
+			'solid', 'simple' => 'simple',
+			'double' => 'double',
+			'segmented', 'accent' => 'accent',
+			'metallic' => 'metallic',
+			'none' => 'none',
+			default => 'none',
+		};
+	}
+
+	/**
+	 * Determine whether a frame preset uses a secondary tone.
+	 */
+	private function frame_supports_secondary_color( string $preset ): bool {
+		return in_array( $preset, array( 'double', 'accent', 'metallic' ), true );
 	}
 
 	/**
@@ -1561,13 +1567,13 @@ final class RewardService {
 			'--adam-reward-card-background-size'     => (string) (int) $style['background_image_size'] . '%',
 			'--adam-reward-card-background-position' => str_replace( '-', ' ', (string) $style['background_image_position'] ),
 			'--adam-reward-card-background-blend'    => (string) $style['background_image_blend_mode'],
-			'--adam-reward-card-frame-opacity'       => (string) ( (int) $style['frame_opacity'] / 100 ),
-			'--adam-reward-card-frame-glow'          => (string) ( (int) $style['frame_glow'] / 2 ) . 'px',
-			'--adam-reward-card-frame-shadow'        => (string) ( (int) $style['frame_shadow'] / 2 ) . 'px',
-			'--adam-reward-card-frame-inner-width'   => (string) (int) $style['frame_inner_width'] . 'px',
-			'--adam-reward-card-frame-inner-color'   => (string) $style['frame_inner_color'],
-			'--adam-reward-card-frame-corner'        => (string) (int) $style['frame_corner_accent'] . 'px',
-			'--adam-reward-card-frame-inset'         => (string) (int) $style['frame_inset'] . 'px',
+			'--adam-reward-card-frame-opacity'       => '1',
+			'--adam-reward-card-frame-glow'          => '0px',
+			'--adam-reward-card-frame-shadow'        => '0px',
+			'--adam-reward-card-frame-inner-width'   => in_array( (string) $style['frame_style'], array( 'double', 'accent', 'metallic' ), true ) ? '2px' : '0px',
+			'--adam-reward-card-frame-inner-color'   => (string) ( $style['frame_inner_color'] ?? $style['border_color'] ),
+			'--adam-reward-card-frame-corner'        => '0px',
+			'--adam-reward-card-frame-inset'         => '12px',
 			'--adam-reward-card-content-padding'     => (string) (int) $style['content_padding'] . 'px',
 			'--adam-reward-card-content-gap'         => (string) (int) $style['content_gap'] . 'px',
 			'--adam-reward-card-meta-align'          => $this->css_alignment_value( (string) $style['meta_align'], true ),

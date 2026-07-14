@@ -373,8 +373,7 @@ final class CardService {
 		$pattern          = sanitize_html_class( (string) ( $style['pattern'] ?? 'grid' ) );
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
-		$frame_style      = sanitize_html_class( (string) ( $style['frame_style'] ?? 'solid' ) );
-		$corner_style     = sanitize_html_class( (string) ( $style['frame_corner_style'] ?? 'rounded' ) );
+		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
 		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
@@ -384,7 +383,6 @@ final class CardService {
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
 		$classes[] = 'adam-digital-card--preview-frame-' . $frame_style;
-		$classes[] = 'adam-digital-card--preview-corners-' . $corner_style;
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
 		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
 
@@ -411,11 +409,12 @@ final class CardService {
 
 		$background = $this->preview_background_value( $style );
 		$is_style_reward = 'card_style' === sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
-		$frame_width = $is_style_reward ? max( 0, (int) ( $style['border_width'] ?? 0 ) ) : 0;
-		$frame_opacity = $is_style_reward ? max( 0, min( 100, (int) ( $style['frame_opacity'] ?? 0 ) ) ) : 0;
-		$frame_glow = $is_style_reward ? max( 0, (int) ( $style['frame_glow'] ?? 0 ) ) : 0;
-		$frame_inner_width = $is_style_reward ? max( 0, (int) ( $style['frame_inner_width'] ?? 0 ) ) : 0;
-		$frame_corner_accent = $is_style_reward ? max( 0, (int) ( $style['frame_corner_accent'] ?? 0 ) ) : 0;
+		$frame_style    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
+		$frame_width    = $is_style_reward && 'none' !== $frame_style ? max( 0, (int) ( $style['border_width'] ?? 0 ) ) : 0;
+		$frame_color    = (string) ( $style['border_color'] ?? '#ffffff' );
+		$frame_secondary = $this->frame_supports_secondary_color( $frame_style )
+			? (string) ( $style['frame_inner_color'] ?? '#ffffff' )
+			: $frame_color;
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
@@ -423,19 +422,12 @@ final class CardService {
 			'--adam-card-radius'                  => '28px',
 			'--adam-card-shadow'                  => 'none',
 			'--adam-frame-width'                  => $frame_width . 'px',
-			'--adam-frame-visibility'             => $is_style_reward && $frame_width > 0 ? '1' : '0',
-			'--adam-frame-color'                  => (string) ( $style['border_color'] ?? '#ffffff' ),
-			'--adam-frame-opacity'                => (string) max( 0.6, $frame_opacity / 100 ),
-			'--adam-frame-glow'                   => '0 0 ' . min( 24, $frame_glow ) . 'px ' . $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.26 ),
-			'--adam-card-frame-inner-highlight'   => 0 === $frame_inner_width ? 'rgba(255,255,255,0)' : $this->color_with_alpha( (string) ( $style['frame_inner_color'] ?? '#ffffff' ), 0.28 ),
-			'--adam-card-frame-inner-shadow'      => 'rgba(9,17,27,0.18)',
-			'--adam-card-frame-inner-width'       => $frame_inner_width . 'px',
-			'--adam-card-frame-inner-color'       => 0 === $frame_inner_width ? 'rgba(255,255,255,0)' : (string) ( $style['frame_inner_color'] ?? '#ffffff' ),
-			'--adam-card-corner-accent'           => 0 === $frame_corner_accent ? 'rgba(255,255,255,0)' : $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.18 ),
-			'--adam-card-corner-size'             => max( 0, $frame_corner_accent ) . 'px',
-			'--adam-card-frame-inset'             => '24px',
-			'--adam-card-content-padding'         => max( 18, (int) ( $style['content_padding'] ?? 28 ) ) . 'px',
-			'--adam-card-content-gap'             => max( 8, (int) ( $style['content_gap'] ?? 20 ) ) . 'px',
+			'--adam-frame-visibility'             => $frame_width > 0 ? '1' : '0',
+			'--adam-frame-color'                  => $frame_color,
+			'--adam-frame-secondary-color'        => $frame_secondary,
+			'--adam-card-frame-inset'             => '12px',
+			'--adam-card-content-padding'         => '28px',
+			'--adam-card-content-gap'             => '20px',
 			'--adam-card-title-surface'           => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.18 ),
 			'--adam-card-title-border'            => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.26 ),
 			'--adam-card-title-color'             => (string) ( $style['title_color'] ?? ( $style['text_color'] ?? '#ffffff' ) ),
@@ -466,6 +458,28 @@ final class CardService {
 		}
 
 		return implode( ';', $parts ) . ';';
+	}
+
+	/**
+	 * Normalize legacy frame presets to the new compact model.
+	 */
+	private function normalize_frame_preset( mixed $value ): string {
+		$preset = sanitize_key( (string) $value );
+
+		return match ( $preset ) {
+			'solid', 'simple' => 'simple',
+			'double' => 'double',
+			'segmented', 'accent' => 'accent',
+			'metallic' => 'metallic',
+			default => 'none',
+		};
+	}
+
+	/**
+	 * Determine whether a frame preset needs a secondary tone.
+	 */
+	private function frame_supports_secondary_color( string $preset ): bool {
+		return in_array( $preset, array( 'double', 'accent', 'metallic' ), true );
 	}
 
 	/**

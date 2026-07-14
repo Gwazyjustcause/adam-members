@@ -373,21 +373,12 @@ final class RewardController {
 							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-style-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Estilo do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
-								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Define a presenca visual da moldura, a linha interna e os acabamentos realmente visiveis do cartao.', 'adam-membership' ); ?></p>
+								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Escolhe um preset de moldura e ajusta apenas as cores e a espessura. A geometria do cartao permanece fixa em toda a ADAM.', 'adam-membership' ); ?></p>
 								<div class="adam-reward-editor__field-grid">
-									<label><span><?php esc_html_e( 'Cor da moldura', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[border_color]" value="<?php echo esc_attr( (string) $resolved_style['border_color'] ); ?>" data-adam-style="border_color"></label>
-									<label><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="1" max="16" name="visual_style[border_width]" value="<?php echo esc_attr( (string) $resolved_style['border_width'] ); ?>" data-adam-style="border_width"><small data-adam-value-for="border_width"><?php echo esc_html( (string) $resolved_style['border_width'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Estilo da moldura', 'adam-membership' ); ?></span><select name="visual_style[frame_style]" data-adam-style="frame_style"><?php $this->render_frame_style_options( (string) $resolved_style['frame_style'] ); ?></select></label>
-									<label><span><?php esc_html_e( 'Opacidade da moldura', 'adam-membership' ); ?></span><input type="range" min="60" max="100" name="visual_style[frame_opacity]" value="<?php echo esc_attr( (string) $resolved_style['frame_opacity'] ); ?>" data-adam-style="frame_opacity"><small data-adam-value-for="frame_opacity"><?php echo esc_html( (string) $resolved_style['frame_opacity'] ); ?>%</small></label>
-									<label><span><?php esc_html_e( 'Realce da moldura', 'adam-membership' ); ?></span><input type="range" min="0" max="24" name="visual_style[frame_glow]" value="<?php echo esc_attr( (string) $resolved_style['frame_glow'] ); ?>" data-adam-style="frame_glow"><small data-adam-value-for="frame_glow"><?php echo esc_html( (string) $resolved_style['frame_glow'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Linha interna', 'adam-membership' ); ?></span><input type="range" min="0" max="10" name="visual_style[frame_inner_width]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_width'] ); ?>" data-adam-style="frame_inner_width"><small data-adam-value-for="frame_inner_width"><?php echo esc_html( (string) $resolved_style['frame_inner_width'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Cor da linha interna', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_inner_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_color'] ); ?>" data-adam-style="frame_inner_color"></label>
-									<label><span><?php esc_html_e( 'Estilo dos cantos', 'adam-membership' ); ?></span><select name="visual_style[frame_corner_style]" data-adam-style="frame_corner_style"><?php $this->render_frame_corner_options( (string) $resolved_style['frame_corner_style'] ); ?></select></label>
-									<label><span><?php esc_html_e( 'Detalhe dos cantos', 'adam-membership' ); ?></span><input type="range" min="0" max="140" name="visual_style[frame_corner_accent]" value="<?php echo esc_attr( (string) $resolved_style['frame_corner_accent'] ); ?>" data-adam-style="frame_corner_accent"><small data-adam-value-for="frame_corner_accent"><?php echo esc_html( (string) $resolved_style['frame_corner_accent'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Padding do conteudo', 'adam-membership' ); ?></span><input type="range" min="12" max="40" name="visual_style[content_padding]" value="<?php echo esc_attr( (string) $resolved_style['content_padding'] ); ?>" data-adam-style="content_padding"><small data-adam-value-for="content_padding"><?php echo esc_html( (string) $resolved_style['content_padding'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Espacamento interno', 'adam-membership' ); ?></span><input type="range" min="6" max="32" name="visual_style[content_gap]" value="<?php echo esc_attr( (string) $resolved_style['content_gap'] ); ?>" data-adam-style="content_gap"><small data-adam-value-for="content_gap"><?php echo esc_html( (string) $resolved_style['content_gap'] ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Alinhamento da faixa superior', 'adam-membership' ); ?></span><select name="visual_style[meta_align]" data-adam-style="meta_align"><?php $this->render_meta_align_options( (string) $resolved_style['meta_align'] ); ?></select></label>
-									<label><span><?php esc_html_e( 'Alinhamento do bloco de pontos', 'adam-membership' ); ?></span><select name="visual_style[stats_align]" data-adam-style="stats_align"><?php $this->render_text_align_options( (string) $resolved_style['stats_align'] ); ?></select></label>
+									<label><span><?php esc_html_e( 'Preset da moldura', 'adam-membership' ); ?></span><select name="visual_style[frame_style]" data-adam-style="frame_style"><?php $this->render_frame_style_options( (string) $resolved_style['frame_style'] ); ?></select></label>
+									<label><span><?php esc_html_e( 'Cor principal', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[border_color]" value="<?php echo esc_attr( (string) $resolved_style['border_color'] ); ?>" data-adam-style="border_color"></label>
+									<label data-adam-frame-secondary-field><span><?php esc_html_e( 'Cor secundaria', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_inner_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_color'] ); ?>" data-adam-style="frame_inner_color"></label>
+									<label><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="2" max="16" name="visual_style[border_width]" value="<?php echo esc_attr( (string) $resolved_style['border_width'] ); ?>" data-adam-style="border_width"><small data-adam-value-for="border_width"><?php echo esc_html( (string) $resolved_style['border_width'] ); ?>px</small></label>
 								</div>
 								</div>
 							</section>
@@ -689,10 +680,11 @@ final class RewardController {
 
 	private function render_frame_style_options( string $current ): void {
 		$options = array(
-			'solid'     => __( 'Solida', 'adam-membership' ),
+			'none'      => __( 'Sem moldura', 'adam-membership' ),
+			'simple'    => __( 'Simples', 'adam-membership' ),
 			'double'    => __( 'Dupla', 'adam-membership' ),
+			'accent'    => __( 'Acento', 'adam-membership' ),
 			'metallic'  => __( 'Metalica', 'adam-membership' ),
-			'segmented' => __( 'Segmentada', 'adam-membership' ),
 		);
 
 		foreach ( $options as $value => $label ) {

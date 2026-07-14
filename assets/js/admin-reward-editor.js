@@ -51,6 +51,24 @@
 		return mode;
 	}
 
+	function currentFramePreset() {
+		var preset = previewStyleValue( 'frame_style' ) || 'none';
+
+		if ( preset === 'solid' ) {
+			return 'simple';
+		}
+
+		if ( preset === 'segmented' ) {
+			return 'accent';
+		}
+
+		if ( [ 'none', 'simple', 'double', 'accent', 'metallic' ].indexOf( preset ) === -1 ) {
+			return 'none';
+		}
+
+		return preset;
+	}
+
 	function setAccordionState( $section, open ) {
 		$section.toggleClass( 'is-open', open );
 		$section.find( '[data-adam-accordion-toggle]' ).attr( 'aria-expanded', open ? 'true' : 'false' );
@@ -313,8 +331,7 @@
 	}
 
 	function previewClasses() {
-		var frameStyle = previewStyleValue( 'frame_style' ) || 'solid';
-		var cornerStyle = previewStyleValue( 'frame_corner_style' ) || 'rounded';
+		var frameStyle = currentFramePreset();
 		var badgeStyle = previewStyleValue( 'badge_style' ) || 'soft';
 		var rarityEffect = previewStyleValue( 'rarity_effect' ) || 'auto';
 		var rewardRarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
@@ -331,7 +348,6 @@
 		}
 
 		classes.push( 'adam-digital-card--preview-frame-' + frameStyle );
-		classes.push( 'adam-digital-card--preview-corners-' + cornerStyle );
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
 		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
 
@@ -409,6 +425,8 @@
 		var backgroundVisible = digital && subtype === 'background';
 		var styleVisible = digital && subtype === 'card_style';
 		var patternVisible = backgroundVisible && ( previewStyleValue( 'pattern' ) || 'grid' ) !== 'none';
+		var framePreset = currentFramePreset();
+		var showSecondaryFrameColor = styleVisible && [ 'double', 'metallic', 'accent' ].indexOf( framePreset ) !== -1;
 
 		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
 		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
@@ -430,6 +448,8 @@
 
 		$( '[data-adam-pattern-detail]' ).toggleClass( 'is-hidden', ! patternVisible );
 		$( '[data-adam-pattern-detail]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! patternVisible );
+		$( '[data-adam-frame-secondary-field]' ).toggleClass( 'is-hidden', ! showSecondaryFrameColor );
+		$( '[data-adam-frame-secondary-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showSecondaryFrameColor );
 	}
 
 	var $editor = $( '.adam-reward-editor' );
@@ -447,11 +467,13 @@
 	function updatePreview() {
 		var rarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
 		var subtype = currentSubtype();
-		var hasStyleLayer = subtype === 'card_style';
+		var framePreset = currentFramePreset();
+		var hasStyleLayer = subtype === 'card_style' && framePreset !== 'none' && clamp( previewStyleValue( 'border_width' ), 0, 18 ) > 0;
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
 		var border = previewStyleValue( 'border_color' ) || 'rgba(255,255,255,0.22)';
+		var secondaryFrameColor = previewStyleValue( 'frame_inner_color' ) || '#ffffff';
 		var backgroundMode = currentBackgroundMode();
 		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
@@ -470,17 +492,12 @@
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
 				'--adam-frame-width': ( hasStyleLayer ? clamp( previewStyleValue( 'border_width' ), 0, 18 ) : 0 ) + 'px',
-				'--adam-frame-visibility': hasStyleLayer && clamp( previewStyleValue( 'border_width' ), 0, 18 ) > 0 ? 1 : 0,
+				'--adam-frame-visibility': hasStyleLayer ? 1 : 0,
 				'--adam-frame-color': hasStyleLayer ? border : 'rgba(255,255,255,0)',
-				'--adam-frame-opacity': hasStyleLayer ? clamp( previewStyleValue( 'frame_opacity' ), 60, 100 ) / 100 : 0,
-				'--adam-frame-glow': hasStyleLayer ? '0 0 ' + clamp( previewStyleValue( 'frame_glow' ), 0, 24 ) + 'px ' + colorWithAlpha( border, 0.26 ) : 'none',
-				'--adam-card-frame-inner-width': ( hasStyleLayer ? clamp( previewStyleValue( 'frame_inner_width' ), 0, 10 ) : 0 ) + 'px',
-				'--adam-card-frame-inner-color': hasStyleLayer ? ( previewStyleValue( 'frame_inner_color' ) || '#ffffff' ) : 'rgba(255,255,255,0)',
-				'--adam-card-corner-accent': hasStyleLayer ? colorWithAlpha( border, 0.18 ) : 'rgba(255,255,255,0)',
-				'--adam-card-corner-size': ( hasStyleLayer ? Math.max( 0, clamp( previewStyleValue( 'frame_corner_accent' ), 0, 140 ) ) : 0 ) + 'px',
-				'--adam-card-frame-inset': '24px',
-				'--adam-card-content-padding': clamp( previewStyleValue( 'content_padding' ), 12, 48 ) + 'px',
-				'--adam-card-content-gap': clamp( previewStyleValue( 'content_gap' ), 6, 32 ) + 'px',
+				'--adam-frame-secondary-color': hasStyleLayer ? secondaryFrameColor : 'rgba(255,255,255,0)',
+				'--adam-card-frame-inset': '12px',
+				'--adam-card-content-padding': '28px',
+				'--adam-card-content-gap': '20px',
 				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),
 				'--adam-card-title-border': colorWithAlpha( accent, 0.26 ),
 				'--adam-card-title-color': previewStyleValue( 'title_color' ) || '#ffffff',
