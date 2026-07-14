@@ -315,40 +315,60 @@
 	--adam-card-inner-radius: 22px;
 	--adam-card-content-padding: 36px;
 	--adam-card-content-gap: 20px;
-	--adam-card-pattern-color: rgba(255, 255, 255, 0.18);
-	--adam-card-pattern-base: transparent;
-	--adam-card-pattern-opacity: 0;
-	--adam-card-pattern-size: 24px;
-	--adam-card-pattern-spacing: 24px;
-	--adam-card-pattern-density: 2;
-	--adam-card-pattern-rotation: 45deg;
-	--adam-card-background-opacity: 0;
-	--adam-card-background-size: cover;
-	--adam-card-background-position: center;
-	--adam-card-background-blend: screen;
-	--adam-card-art-opacity: 0;
-	--adam-card-art-size: 36%;
+	--adam-bg-surface:
+		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
+		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
+		var(--adam-green-900);
+	--adam-bg-pattern-color: rgba(255, 255, 255, 0.18);
+	--adam-bg-pattern-base: transparent;
+	--adam-bg-pattern-opacity: 0;
+	--adam-bg-pattern-size: 24px;
+	--adam-bg-pattern-spacing: 24px;
+	--adam-bg-pattern-density: 2;
+	--adam-bg-pattern-rotation: 45deg;
+	--adam-bg-image-opacity: 0;
+	--adam-bg-image-size: cover;
+	--adam-bg-image-position: center;
+	--adam-bg-image-blend: screen;
+	--adam-bg-art-opacity: 0;
+	--adam-bg-art-size: 36%;
 	--adam-card-title-color: var(--adam-card-ink);
 	--adam-card-title-size: 0.92rem;
 	--adam-card-title-weight: 900;
 	--adam-card-title-align: left;
 	--adam-card-title-shadow: 0px;
 	position: relative;
+	min-height: 360px;
+	border: 0;
+	border-radius: var(--adam-card-radius);
+	background: transparent;
+	color: #ffffff;
+	overflow: hidden;
+	box-shadow: none;
+	isolation: isolate;
+}
+
+.adam-digital-card__background,
+.adam-digital-card__content {
+	position: relative;
+}
+
+.adam-digital-card__background {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	overflow: hidden;
+	background: var(--adam-bg-surface);
+	z-index: 0;
+}
+
+.adam-digital-card__content {
+	z-index: 1;
 	display: grid;
 	grid-template-rows: auto auto auto auto;
 	gap: var(--adam-card-content-gap);
 	min-height: 360px;
 	padding: var(--adam-card-content-padding) 38px 34px;
-	border: 0;
-	border-radius: var(--adam-card-radius);
-	background:
-		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
-		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
-		var(--adam-green-900);
-	color: #ffffff;
-	overflow: hidden;
-	box-shadow: none;
-	isolation: isolate;
 }
 
 .adam-digital-card__shine {
@@ -375,55 +395,55 @@
 
 .adam-digital-card__backdrop {
 	z-index: 0;
-	opacity: var(--adam-card-background-opacity);
-	background-position: var(--adam-card-background-position);
+	opacity: var(--adam-bg-image-opacity);
+	background-position: var(--adam-bg-image-position);
 	background-repeat: no-repeat;
-	background-size: var(--adam-card-background-size);
-	mix-blend-mode: var(--adam-card-background-blend);
+	background-size: var(--adam-bg-image-size);
+	mix-blend-mode: var(--adam-bg-image-blend);
 }
 
 .adam-digital-card__pattern {
 	z-index: 0;
-	opacity: var(--adam-card-pattern-opacity);
-	background-color: var(--adam-card-pattern-base);
-	transform: rotate(var(--adam-card-pattern-rotation)) scale(1.05);
+	opacity: var(--adam-bg-pattern-opacity);
+	background-color: var(--adam-bg-pattern-base);
+	transform: rotate(var(--adam-bg-pattern-rotation)) scale(1.05);
 	transform-origin: center;
 }
 
 .adam-digital-card__pattern--grid {
 	background-image:
-		linear-gradient(var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px)),
-		linear-gradient(90deg, var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px));
+		linear-gradient(var(--adam-bg-pattern-color) calc(var(--adam-bg-pattern-density) * 1px), transparent calc(var(--adam-bg-pattern-density) * 1px)),
+		linear-gradient(90deg, var(--adam-bg-pattern-color) calc(var(--adam-bg-pattern-density) * 1px), transparent calc(var(--adam-bg-pattern-density) * 1px));
 	background-size:
-		calc(var(--adam-card-pattern-size) + (var(--adam-card-pattern-spacing) / 2))
-		calc(var(--adam-card-pattern-size) + (var(--adam-card-pattern-spacing) / 2));
+		calc(var(--adam-bg-pattern-size) + (var(--adam-bg-pattern-spacing) / 2))
+		calc(var(--adam-bg-pattern-size) + (var(--adam-bg-pattern-spacing) / 2));
 }
 
 .adam-digital-card__pattern--carbon {
 	background-image:
 		repeating-linear-gradient(
 			45deg,
-			color-mix(in srgb, var(--adam-card-pattern-color) 90%, transparent) 0 calc(var(--adam-card-pattern-density) * 3px),
-			rgba(0, 0, 0, 0.14) calc(var(--adam-card-pattern-density) * 3px) calc(var(--adam-card-pattern-spacing) / 1.8)
+			color-mix(in srgb, var(--adam-bg-pattern-color) 90%, transparent) 0 calc(var(--adam-bg-pattern-density) * 3px),
+			rgba(0, 0, 0, 0.14) calc(var(--adam-bg-pattern-density) * 3px) calc(var(--adam-bg-pattern-spacing) / 1.8)
 		);
-	background-size: var(--adam-card-pattern-size) var(--adam-card-pattern-size);
+	background-size: var(--adam-bg-pattern-size) var(--adam-bg-pattern-size);
 }
 
 .adam-digital-card__pattern--diagonal {
 	background-image:
 		repeating-linear-gradient(
 			135deg,
-			color-mix(in srgb, var(--adam-card-pattern-color) 80%, transparent) 0 calc(var(--adam-card-pattern-density) * 4px),
-			transparent calc(var(--adam-card-pattern-density) * 4px) var(--adam-card-pattern-spacing)
+			color-mix(in srgb, var(--adam-bg-pattern-color) 80%, transparent) 0 calc(var(--adam-bg-pattern-density) * 4px),
+			transparent calc(var(--adam-bg-pattern-density) * 4px) var(--adam-bg-pattern-spacing)
 		);
-	background-size: var(--adam-card-pattern-size) var(--adam-card-pattern-size);
+	background-size: var(--adam-bg-pattern-size) var(--adam-bg-pattern-size);
 }
 
 .adam-digital-card__pattern--dots {
-	background-image: radial-gradient(var(--adam-card-pattern-color) calc(var(--adam-card-pattern-density) * 1px), transparent calc(var(--adam-card-pattern-density) * 1px));
+	background-image: radial-gradient(var(--adam-bg-pattern-color) calc(var(--adam-bg-pattern-density) * 1px), transparent calc(var(--adam-bg-pattern-density) * 1px));
 	background-size:
-		calc(var(--adam-card-pattern-size) + (var(--adam-card-pattern-spacing) / 2))
-		calc(var(--adam-card-pattern-size) + (var(--adam-card-pattern-spacing) / 2));
+		calc(var(--adam-bg-pattern-size) + (var(--adam-bg-pattern-spacing) / 2))
+		calc(var(--adam-bg-pattern-size) + (var(--adam-bg-pattern-spacing) / 2));
 }
 
 .adam-digital-card__pattern--none {
@@ -434,11 +454,11 @@
 	display: grid;
 	z-index: 1;
 	padding: 18px;
-	opacity: var(--adam-card-art-opacity);
+	opacity: var(--adam-bg-art-opacity);
 }
 
 .adam-digital-card__art img {
-	max-width: var(--adam-card-art-size);
+	max-width: var(--adam-bg-art-size);
 	max-height: 72%;
 	object-fit: contain;
 	filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
@@ -500,14 +520,6 @@
 
 .adam-digital-card__shape--line {
 	border-radius: 999px;
-}
-
-.adam-digital-card__header,
-.adam-digital-card__body,
-.adam-digital-card__details,
-.adam-digital-card__footer {
-	position: relative;
-	z-index: 1;
 }
 
 .adam-digital-card__header {
@@ -611,10 +623,6 @@
 }
 
 .adam-digital-card {
-	--adam-card-surface:
-		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
-		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
-		var(--adam-green-900);
 	--adam-card-border: rgba(255, 255, 255, 0.22);
 	--adam-card-shadow: none;
 	--adam-card-ink: #ffffff;
@@ -628,20 +636,16 @@
 	--adam-card-qr-surface: #ffffff;
 	--adam-card-qr-ink: var(--adam-green-900);
 	--adam-frame-width: 0px;
-	--adam-frame-visibility: 0;
-	--adam-frame-color: transparent;
-	--adam-frame-secondary-color: transparent;
-	--adam-frame-tertiary-color: transparent;
-	--adam-frame-gradient-angle: 135deg;
-	--adam-frame-shine-opacity: 0;
+	--adam-frame-color-1: transparent;
+	--adam-frame-color-2: transparent;
+	--adam-frame-color-3: transparent;
+	--adam-frame-angle: 135deg;
+	--adam-frame-shine-intensity: 0;
 	--adam-card-shine: rgba(255, 255, 255, 0.10);
 	--adam-card-title-surface: rgba(255, 255, 255, 0.14);
 	--adam-card-title-border: rgba(255, 255, 255, 0.18);
 	--adam-card-chip-surface: rgba(255, 255, 255, 0.16);
 	--adam-card-chip-border: rgba(255, 255, 255, 0.16);
-	background: var(--adam-card-surface);
-	border-color: var(--adam-card-border);
-	box-shadow: var(--adam-card-shadow);
 	color: var(--adam-card-ink);
 }
 
@@ -653,35 +657,30 @@
 	isolation: isolate;
 }
 
-.adam-digital-card__frame,
-.adam-digital-card__frame-shine {
+.adam-digital-card__frame {
 	position: absolute;
 	pointer-events: none;
 }
 
 .adam-digital-card__frame {
-	inset: 0;
+	inset: -1px;
 	border: var(--adam-frame-width) solid transparent;
 	border-radius: var(--adam-card-radius);
 	z-index: 3;
-	opacity: var(--adam-frame-visibility);
 	box-sizing: border-box;
 	background:
 		linear-gradient(transparent, transparent) padding-box,
-		linear-gradient(var(--adam-frame-color), var(--adam-frame-color)) border-box;
+		linear-gradient(var(--adam-frame-color-1), var(--adam-frame-color-1)) border-box;
 	background-clip: padding-box, border-box;
 	box-shadow: none;
-}
-
-.adam-digital-card__frame-shine {
-	inset: 0;
-	display: none;
+	visibility: hidden;
 }
 
 .adam-digital-card--preview-frame-simple .adam-digital-card__frame {
 	background:
 		linear-gradient(transparent, transparent) padding-box,
-		linear-gradient(var(--adam-frame-color), var(--adam-frame-color)) border-box;
+		linear-gradient(var(--adam-frame-color-1), var(--adam-frame-color-1)) border-box;
+	visibility: visible;
 }
 
 .adam-digital-card--preview-frame-metallic .adam-digital-card__frame {
@@ -689,27 +688,28 @@
 		linear-gradient(transparent, transparent) padding-box,
 		linear-gradient(
 			180deg,
-			color-mix(in srgb, var(--adam-frame-secondary-color) calc(72% + (var(--adam-frame-shine-opacity) * 18%)), #ffffff calc(var(--adam-frame-shine-opacity) * 22%)) 0%,
-			var(--adam-frame-color) 34%,
-			color-mix(in srgb, var(--adam-frame-color) 68%, #000000 32%) 72%,
-			var(--adam-frame-secondary-color) 100%
+			color-mix(in srgb, var(--adam-frame-color-2) calc(72% + (var(--adam-frame-shine-intensity) * 18%)), #ffffff calc(var(--adam-frame-shine-intensity) * 22%)) 0%,
+			var(--adam-frame-color-1) 34%,
+			color-mix(in srgb, var(--adam-frame-color-1) 68%, #000000 32%) 72%,
+			var(--adam-frame-color-2) 100%
 		) border-box;
+	visibility: visible;
 }
 
 .adam-digital-card--preview-frame-gradient .adam-digital-card__frame {
 	background:
 		linear-gradient(transparent, transparent) padding-box,
 		linear-gradient(
-			var(--adam-frame-gradient-angle),
-			var(--adam-frame-color) 0%,
-			var(--adam-frame-secondary-color) 50%,
-			var(--adam-frame-tertiary-color) 100%
+			var(--adam-frame-angle),
+			var(--adam-frame-color-1) 0%,
+			var(--adam-frame-color-2) 50%,
+			var(--adam-frame-color-3) 100%
 		) border-box;
+	visibility: visible;
 }
 
 .adam-digital-card--has-frame {
 	--adam-frame-width: 5px;
-	--adam-frame-visibility: 1;
 }
 
 .adam-digital-card__shine {
@@ -907,7 +907,7 @@
 }
 
 .adam-digital-card--theme-woodland {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 16% 22%, rgba(182, 208, 140, 0.16), transparent 18%),
 		linear-gradient(135deg, rgba(22, 44, 26, 0.96), rgba(57, 82, 46, 0.92) 35%, rgba(92, 110, 62, 0.9) 70%, rgba(27, 42, 31, 0.98)),
 		repeating-linear-gradient(125deg, rgba(22, 44, 26, 0.18) 0 18px, rgba(119, 141, 88, 0.12) 18px 34px, rgba(53, 72, 38, 0.16) 34px 52px),
@@ -915,7 +915,7 @@
 }
 
 .adam-digital-card--theme-desert {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 16%, rgba(255, 247, 221, 0.55), transparent 26%),
 		linear-gradient(135deg, #8c6b3f, #c09a5d 40%, #d8c08d 76%, #8e6d43),
 		repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 16px, rgba(113, 76, 30, 0.05) 16px 32px);
@@ -931,22 +931,21 @@
 }
 
 .adam-digital-card--theme-urban {
-	--adam-card-surface:
+	--adam-bg-surface:
 		linear-gradient(135deg, #2b3440, #4c5b69 48%, #1c2530),
 		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 12px, rgba(0, 0, 0, 0.04) 12px 24px),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.12));
 }
 
 .adam-digital-card--theme-carbon-fiber {
-	--adam-card-surface:
+	--adam-bg-surface:
 		linear-gradient(135deg, #101418, #2a3139 45%, #11161b),
 		repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 6px, rgba(0, 0, 0, 0.08) 6px 12px),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.24));
-	--adam-card-frame-shadow: 0 0 28px rgba(148, 163, 184, 0.16), 0 18px 32px rgba(0, 0, 0, 0.18);
 }
 
 .adam-digital-card--theme-flecktarn {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 22% 34%, rgba(117, 92, 54, 0.7) 0 11%, transparent 12%),
 		radial-gradient(circle at 62% 54%, rgba(71, 89, 48, 0.7) 0 12%, transparent 13%),
 		radial-gradient(circle at 42% 72%, rgba(37, 45, 29, 0.78) 0 10%, transparent 11%),
@@ -954,28 +953,27 @@
 }
 
 .adam-digital-card--theme-digital-green {
-	--adam-card-surface:
+	--adam-bg-surface:
 		linear-gradient(135deg, #0d3121, #1f5f44 45%, #153f31),
 		repeating-linear-gradient(90deg, rgba(123, 186, 151, 0.12) 0 14px, rgba(255, 255, 255, 0.03) 14px 28px),
 		repeating-linear-gradient(0deg, rgba(12, 29, 18, 0.15) 0 10px, transparent 10px 20px);
 }
 
 .adam-digital-card--theme-blue-steel {
-	--adam-card-surface:
+	--adam-bg-surface:
 		linear-gradient(135deg, #11263b, #486b8f 48%, #192d44),
 		linear-gradient(45deg, rgba(255, 255, 255, 0.12), transparent 45%),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.16));
 }
 
 .adam-digital-card--theme-midnight-black {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 84% 18%, rgba(96, 165, 250, 0.18), transparent 20%),
 		linear-gradient(135deg, #05070a, #12161d 48%, #090b0f);
-	--adam-card-frame-shadow: 0 0 34px rgba(96, 165, 250, 0.14);
 }
 
 .adam-digital-card--theme-arctic-white {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.82), transparent 20%),
 		linear-gradient(135deg, #eef6ff, #dce9f6 48%, #b9cad8);
 	--adam-card-ink: #0f1f33;
@@ -990,64 +988,58 @@
 }
 
 .adam-digital-card--theme-crimson-strike {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.16), transparent 18%),
 		linear-gradient(135deg, #55111b, #a61d2d 46%, #2c0912);
 }
 
 .adam-digital-card--theme-purple-nebula {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 22% 28%, rgba(216, 180, 254, 0.22), transparent 18%),
 		radial-gradient(circle at 76% 24%, rgba(196, 181, 253, 0.2), transparent 16%),
 		linear-gradient(135deg, #2f1447, #5f2490 52%, #12061f);
 }
 
 .adam-digital-card--theme-gold {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 12%, rgba(255, 244, 184, 0.34), transparent 24%),
 		linear-gradient(135deg, #7f5a0f, #cda33a 48%, #8a6310),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.14));
-	--adam-card-frame-shadow: 0 0 36px rgba(250, 204, 21, 0.24), 0 16px 28px rgba(92, 57, 3, 0.18);
 }
 
 .adam-digital-card--theme-emerald {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 14%, rgba(220, 252, 231, 0.18), transparent 22%),
 		linear-gradient(135deg, #0b3f34, #0f766e 48%, #07322b);
-	--adam-card-frame-shadow: 0 0 34px rgba(16, 185, 129, 0.22);
 }
 
 .adam-digital-card--theme-sapphire {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 76% 12%, rgba(191, 219, 254, 0.2), transparent 22%),
 		linear-gradient(135deg, #102c64, #1d4ed8 48%, #0b1f45);
-	--adam-card-frame-shadow: 0 0 34px rgba(59, 130, 246, 0.22);
 }
 
 .adam-digital-card--theme-ruby {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 14%, rgba(254, 202, 202, 0.18), transparent 20%),
 		linear-gradient(135deg, #6b0f1a, #b91c1c 48%, #3f0912);
-	--adam-card-frame-shadow: 0 0 34px rgba(239, 68, 68, 0.2);
 }
 
 .adam-digital-card--theme-obsidian {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.08), transparent 20%),
 		linear-gradient(135deg, #020305, #151a20 46%, #05070a),
 		linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.3));
-	--adam-card-frame-shadow: 0 0 44px rgba(255, 255, 255, 0.08), 0 20px 30px rgba(0, 0, 0, 0.2);
 }
 
 .adam-digital-card--theme-phoenix {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 18%, rgba(253, 224, 71, 0.26), transparent 20%),
 		linear-gradient(135deg, #5f1d00, #d9480f 40%, #f59e0b 72%, #7c2d12);
-	--adam-card-frame-shadow: 0 0 44px rgba(245, 158, 11, 0.26);
 }
 
 .adam-digital-card--theme-platinum {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 78% 14%, rgba(255, 255, 255, 0.35), transparent 24%),
 		linear-gradient(135deg, #6b7280, #d1d5db 48%, #8c95a3);
 	--adam-card-ink: #172033;
@@ -1061,111 +1053,33 @@
 }
 
 .adam-digital-card--theme-founder {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 82% 14%, rgba(255, 244, 184, 0.28), transparent 20%),
 		linear-gradient(135deg, #113b2f, #1f6a56 40%, #d7aa31 76%, #0a2219);
-	--adam-card-frame-shadow: 0 0 42px rgba(234, 179, 8, 0.26);
-	--adam-card-frame-accent: rgba(250, 204, 21, 0.42);
 }
 
 .adam-digital-card--theme-legendary-loyalty {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.2), transparent 20%),
 		linear-gradient(135deg, #24103f, #5b21b6 42%, #d97706 76%, #140822);
-	--adam-card-frame-shadow: 0 0 42px rgba(168, 85, 247, 0.24);
 }
 
 .adam-digital-card--theme-christmas-edition {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.18), transparent 20%),
 		linear-gradient(135deg, #0f5132, #15803d 42%, #b91c1c 78%);
-	--adam-card-frame-accent: rgba(255, 255, 255, 0.34);
 }
 
 .adam-digital-card--theme-halloween-edition {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 82% 14%, rgba(255, 184, 0, 0.2), transparent 20%),
 		linear-gradient(135deg, #140c22, #4c1d95 38%, #f97316 74%, #1f1114);
-	--adam-card-frame-accent: rgba(251, 146, 60, 0.32);
 }
 
 .adam-digital-card--theme-anniversary-edition {
-	--adam-card-surface:
+	--adam-bg-surface:
 		radial-gradient(circle at 80% 14%, rgba(250, 204, 21, 0.24), transparent 20%),
 		linear-gradient(135deg, #123f3a, #0f766e 38%, #f59e0b 74%, #102033);
-	--adam-card-frame-accent: rgba(250, 204, 21, 0.34);
-}
-
-.adam-digital-card--frame-standard-silver {
-	--adam-frame-width: 12px;
-	--adam-frame-color: rgba(203, 213, 225, 0.72);
-	--adam-frame-secondary-color: #f8fafc;
-}
-
-.adam-digital-card--frame-tactical-green {
-	--adam-frame-width: 13px;
-	--adam-frame-color: rgba(110, 231, 183, 0.82);
-	--adam-frame-secondary-color: #88f2b3;
-}
-
-.adam-digital-card--frame-veteran-bronze {
-	--adam-frame-width: 14px;
-	--adam-frame-color: rgba(205, 127, 50, 0.88);
-	--adam-frame-secondary-color: #fbbf24;
-}
-
-.adam-digital-card--frame-carbon-edge {
-	--adam-frame-width: 14px;
-	--adam-frame-color: rgba(148, 163, 184, 0.78);
-	--adam-frame-secondary-color: #d1fae5;
-}
-
-.adam-digital-card--frame-elite-blue {
-	--adam-frame-width: 14px;
-	--adam-frame-color: rgba(96, 165, 250, 0.88);
-	--adam-frame-secondary-color: #93c5fd;
-}
-
-.adam-digital-card--frame-titanium {
-	--adam-frame-width: 15px;
-	--adam-frame-color: rgba(203, 213, 225, 0.9);
-	--adam-frame-secondary-color: #ffffff;
-}
-
-.adam-digital-card--frame-veteran-gold {
-	--adam-frame-width: 15px;
-	--adam-frame-color: rgba(245, 158, 11, 0.9);
-	--adam-frame-secondary-color: #fef08a;
-}
-
-.adam-digital-card--frame-golden-honor {
-	--adam-frame-width: 16px;
-	--adam-frame-color: rgba(250, 204, 21, 0.94);
-	--adam-frame-secondary-color: #fef9c3;
-}
-
-.adam-digital-card--frame-emerald-prestige {
-	--adam-frame-width: 16px;
-	--adam-frame-color: rgba(52, 211, 153, 0.88);
-	--adam-frame-secondary-color: #d1fae5;
-}
-
-.adam-digital-card--frame-diamond-frame {
-	--adam-frame-width: 17px;
-	--adam-frame-color: rgba(255, 255, 255, 0.98);
-	--adam-frame-secondary-color: #ffffff;
-}
-
-.adam-digital-card--frame-founder-frame {
-	--adam-frame-width: 17px;
-	--adam-frame-color: rgba(250, 204, 21, 0.96);
-	--adam-frame-secondary-color: #fef3c7;
-}
-
-.adam-digital-card--frame-legendary-loyalty {
-	--adam-frame-width: 17px;
-	--adam-frame-color: rgba(217, 119, 6, 0.9);
-	--adam-frame-secondary-color: #f5d0fe;
 }
 
 .adam-digital-card__title--common {
