@@ -327,8 +327,11 @@ final class CardService {
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
 					<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
-				<div class="adam-digital-card__frame" aria-hidden="true"></div>
-		</article>
+				<div class="adam-digital-card__frame" aria-hidden="true">
+					<div class="adam-digital-card__frame-layer adam-digital-card__frame-layer--outer"></div>
+					<div class="adam-digital-card__frame-layer adam-digital-card__frame-layer--inner"></div>
+				</div>
+			</article>
 		<?php
 
 		return (string) ob_get_clean();
@@ -379,6 +382,7 @@ final class CardService {
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
 		if ( 'card_style' === $card_subtype && in_array( $frame_style, array( 'simple', 'metallic', 'gradient' ), true ) && $frame_thickness > 0 ) {
 			$classes[] = 'adam-digital-card--has-frame';
+			$classes[] = 'adam-digital-card--frame-' . $frame_style;
 		}
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
 		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
@@ -409,22 +413,11 @@ final class CardService {
 		$frame_style     = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$frame_thickness = $is_style_reward && 'none' !== $frame_style ? max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) ) : 0;
 		$frame_color     = (string) ( $style['frame_color'] ?? $style['border_color'] ?? '#ffffff' );
-		$frame_fill      = 'linear-gradient(135deg, transparent 0%, transparent 100%)';
-
-		if ( $frame_thickness > 0 ) {
-			if ( 'metallic' === $frame_style ) {
-				$highlight  = (string) ( $style['frame_highlight_color'] ?? $style['frame_inner_color'] ?? '#ffffff' );
-				$frame_fill = sprintf( 'linear-gradient(135deg, %1$s 0%%, %2$s 18%%, %1$s 36%%, %2$s 52%%, %1$s 70%%, %2$s 84%%, %1$s 100%%)', $frame_color, $highlight );
-			} elseif ( 'gradient' === $frame_style ) {
-				$color_1    = (string) ( $style['frame_gradient_color_1'] ?? $frame_color );
-				$color_2    = (string) ( $style['frame_gradient_color_2'] ?? $style['frame_inner_color'] ?? '#ffd700' );
-				$color_3    = (string) ( $style['frame_gradient_color_3'] ?? $style['frame_gradient_color'] ?? '#146aff' );
-				$angle      = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
-				$frame_fill = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) $angle, $color_1, $color_2, $color_3 );
-			} else {
-				$frame_fill = sprintf( 'linear-gradient(135deg, %1$s 0%%, %1$s 100%%)', $frame_color );
-			}
-		}
+		$frame_highlight = (string) ( $style['frame_highlight_color'] ?? $style['frame_inner_color'] ?? '#ffffff' );
+		$frame_gradient_1 = (string) ( $style['frame_gradient_color_1'] ?? $frame_color );
+		$frame_gradient_2 = (string) ( $style['frame_gradient_color_2'] ?? $style['frame_inner_color'] ?? '#ffd700' );
+		$frame_gradient_3 = (string) ( $style['frame_gradient_color_3'] ?? $style['frame_gradient_color'] ?? '#146aff' );
+		$frame_angle     = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
 
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
@@ -434,7 +427,11 @@ final class CardService {
 			'--adam-card-shadow'                  => 'none',
 			'--adam-frame-width'                  => $frame_thickness . 'px',
 			'--adam-frame-color'                  => 0 === $frame_thickness ? 'transparent' : $frame_color,
-			'--adam-frame-fill'                   => $frame_fill,
+			'--adam-frame-highlight-color'        => 0 === $frame_thickness ? 'transparent' : $frame_highlight,
+			'--adam-frame-gradient-color-1'       => 0 === $frame_thickness ? 'transparent' : $frame_gradient_1,
+			'--adam-frame-gradient-color-2'       => 0 === $frame_thickness ? 'transparent' : $frame_gradient_2,
+			'--adam-frame-gradient-color-3'       => 0 === $frame_thickness ? 'transparent' : $frame_gradient_3,
+			'--adam-frame-angle'                  => $frame_angle . 'deg',
 			'--adam-card-frame-inset'             => '12px',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',

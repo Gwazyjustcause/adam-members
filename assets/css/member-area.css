@@ -331,7 +331,11 @@
 	--adam-card-art-size: 36%;
 	--adam-frame-width: 0px;
 	--adam-frame-color: transparent;
-	--adam-frame-fill: linear-gradient(135deg, transparent 0%, transparent 100%);
+	--adam-frame-highlight-color: transparent;
+	--adam-frame-gradient-color-1: transparent;
+	--adam-frame-gradient-color-2: transparent;
+	--adam-frame-gradient-color-3: transparent;
+	--adam-frame-angle: 135deg;
 	--adam-card-title-color: var(--adam-card-ink);
 	--adam-card-title-size: 0.92rem;
 	--adam-card-title-weight: 900;
@@ -372,14 +376,9 @@
 .adam-digital-card__frame {
 	position: absolute;
 	inset: -1px;
-	border: var(--adam-frame-width, 0px) solid transparent;
 	border-radius: inherit;
 	box-sizing: border-box;
-	background:
-		linear-gradient(transparent, transparent) padding-box,
-		var(--adam-frame-fill, linear-gradient(135deg, transparent 0%, transparent 100%)) border-box;
-	background-clip: padding-box, border-box;
-	background-origin: border-box;
+	background: transparent;
 	pointer-events: none;
 	z-index: 20;
 	display: none;
@@ -387,6 +386,52 @@
 
 .adam-digital-card--has-frame .adam-digital-card__frame {
 	display: block;
+}
+
+.adam-digital-card__frame-layer {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	box-sizing: border-box;
+	background: transparent;
+	pointer-events: none;
+}
+
+.adam-digital-card__frame-layer--inner {
+	display: none;
+}
+
+.adam-digital-card--frame-simple .adam-digital-card__frame-layer--outer {
+	border: var(--adam-frame-width, 0px) solid var(--adam-frame-color, transparent);
+}
+
+.adam-digital-card--frame-metallic .adam-digital-card__frame-layer--outer {
+	border: var(--adam-frame-width, 0px) solid var(--adam-frame-color, transparent);
+}
+
+.adam-digital-card--frame-metallic .adam-digital-card__frame-layer--inner {
+	display: block;
+	inset: calc(var(--adam-frame-width, 0px) * 0.28);
+	border: max(1px, calc(var(--adam-frame-width, 0px) * 0.18)) solid var(--adam-frame-highlight-color, transparent);
+	border-radius: inherit;
+}
+
+.adam-digital-card--frame-gradient .adam-digital-card__frame-layer--outer {
+	padding: var(--adam-frame-width, 0px);
+	background: linear-gradient(
+		var(--adam-frame-angle, 135deg),
+		var(--adam-frame-gradient-color-1, transparent) 0%,
+		var(--adam-frame-gradient-color-2, transparent) 50%,
+		var(--adam-frame-gradient-color-3, transparent) 100%
+	);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	mask-composite: exclude;
 }
 
 .adam-digital-card__backdrop,

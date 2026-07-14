@@ -347,6 +347,7 @@
 
 		if ( frameStyle !== 'none' && clamp( previewStyleValue( 'frame_thickness' ), 0, 16 ) > 0 ) {
 			classes.push( 'adam-digital-card--has-frame' );
+			classes.push( 'adam-digital-card--frame-' + frameStyle );
 		}
 
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
@@ -483,18 +484,8 @@
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
 		var frameThickness = clamp( previewStyleValue( 'frame_thickness' ), 0, 16 );
 		var hasFrame = framePreset !== 'none' && subtype === 'card_style' && frameThickness > 0;
-		var frameFill = 'linear-gradient(135deg, transparent 0%, transparent 100%)';
-
 		if ( ! $preview.length ) {
 			return;
-		}
-
-		if ( framePreset === 'simple' ) {
-			frameFill = 'linear-gradient(135deg, ' + frameColor + ' 0%, ' + frameColor + ' 100%)';
-		} else if ( framePreset === 'metallic' ) {
-			frameFill = 'linear-gradient(135deg, ' + frameColor + ' 0%, ' + frameHighlight + ' 18%, ' + frameColor + ' 36%, ' + frameHighlight + ' 52%, ' + frameColor + ' 70%, ' + frameHighlight + ' 84%, ' + frameColor + ' 100%)';
-		} else if ( framePreset === 'gradient' ) {
-			frameFill = 'linear-gradient(' + frameGradientAngle + 'deg, ' + gradientColor1 + ' 0%, ' + gradientColor2 + ' 50%, ' + gradientColor3 + ' 100%)';
 		}
 
 		$preview.attr( 'class', classNames.join( ' ' ).trim() );
@@ -508,7 +499,11 @@
 				'--adam-card-shadow': 'none',
 				'--adam-frame-width': ( hasFrame ? frameThickness : 0 ) + 'px',
 				'--adam-frame-color': hasFrame ? frameColor : 'transparent',
-				'--adam-frame-fill': hasFrame ? frameFill : 'linear-gradient(135deg, transparent 0%, transparent 100%)',
+				'--adam-frame-highlight-color': hasFrame ? frameHighlight : 'transparent',
+				'--adam-frame-gradient-color-1': hasFrame ? gradientColor1 : 'transparent',
+				'--adam-frame-gradient-color-2': hasFrame ? gradientColor2 : 'transparent',
+				'--adam-frame-gradient-color-3': hasFrame ? gradientColor3 : 'transparent',
+				'--adam-frame-angle': frameGradientAngle + 'deg',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
