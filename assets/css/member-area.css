@@ -354,6 +354,31 @@
 
 
 
+.adam-digital-card-shell {
+	position: relative;
+	display: block;
+	width: 100%;
+	overflow: visible;
+}
+
+.adam-digital-card-shell__frame {
+	position: absolute;
+	inset: 0;
+	border: 0 solid transparent;
+	border-radius: var(--adam-card-radius);
+	box-sizing: border-box;
+	background: transparent;
+	pointer-events: none;
+	z-index: 2;
+	visibility: hidden;
+}
+
+.adam-digital-card-shell--has-frame.adam-digital-card-shell--frame-simple .adam-digital-card-shell__frame {
+	border-width: var(--adam-frame-width);
+	border-color: var(--adam-frame-color-1);
+	visibility: visible;
+}
+
 .adam-digital-card__shine {
 	position: absolute;
 	right: -120px;
@@ -739,7 +764,6 @@
 	gap: 6px;
 	margin: 10px 0 10px;
 }
-
 .adam-digital-card__rank small {
 	display: block;
 	color: var(--adam-card-muted);
@@ -765,7 +789,7 @@
 
 .adam-digital-card__title-mark::before,
 .adam-member-rank-card__plate-mark::before {
-	content: "★";
+	content: "\2605";
 	color: rgba(255, 255, 255, 0.96);
 	font-size: 0.78rem;
 	line-height: 1;

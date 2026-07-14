@@ -52,7 +52,13 @@
 	}
 
 	function currentFramePreset() {
-		return 'none';
+		var preset = previewStyleValue( 'frame_style' ) || 'none';
+
+		if ( preset === 'none' ) {
+			return 'none';
+		}
+
+		return 'simple';
 	}
 
 	function setAccordionState( $section, open ) {
@@ -337,6 +343,11 @@
 			}
 		}
 
+		if ( frameStyle !== 'none' && clamp( previewStyleValue( 'border_width' ), 0, 12 ) > 0 ) {
+			classes.push( 'adam-digital-card-shell--has-frame' );
+			classes.push( 'adam-digital-card-shell--frame-' + frameStyle );
+		}
+
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
 		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
 
@@ -461,9 +472,11 @@
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
+		var frameColor = previewStyleValue( 'border_color' ) || '#ffffff';
 		var backgroundMode = currentBackgroundMode();
 		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
+		var hasSimpleFrame = framePreset !== 'none' && subtype === 'card_style' && clamp( previewStyleValue( 'border_width' ), 0, 12 ) > 0;
 
 		if ( ! $preview.length ) {
 			return;
@@ -478,10 +491,10 @@
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
-				'--adam-frame-width': '0px',
-				'--adam-frame-visibility': 0,
-				'--adam-frame-color': 'transparent',
-				'--adam-frame-secondary-color': 'transparent',
+				'--adam-frame-width': ( hasSimpleFrame ? clamp( previewStyleValue( 'border_width' ), 0, 12 ) : 0 ) + 'px',
+				'--adam-frame-color-1': hasSimpleFrame ? frameColor : 'transparent',
+				'--adam-frame-color-2': 'transparent',
+				'--adam-frame-color-3': 'transparent',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',

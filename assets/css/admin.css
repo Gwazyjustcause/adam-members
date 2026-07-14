@@ -1275,8 +1275,9 @@
 	padding: 22px;
 }
 
-.adam-reward-editor__section--preview .adam-digital-card-shell {
-	width: min(100%, 980px);
+.adam-reward-editor__section--preview [data-adam-card-preview] {
+	width: min(100%, 860px);
+	margin-inline: auto;
 }
 
 .adam-reward-editor__section--preview .adam-digital-card {
