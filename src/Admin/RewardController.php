@@ -401,7 +401,9 @@ final class RewardController {
 								<h2><?php esc_html_e( 'Cartao ADAM real', 'adam-membership' ); ?></h2>
 								<p><?php esc_html_e( 'A pre-visualizacao usa a mesma estrutura do cartao do socio, incluindo logo, fotografia, QR code, titulos e area de estado.', 'adam-membership' ); ?></p>
 								<div class="adam-reward-editor__preview-stage">
-									<?php echo $card_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+									<div class="adam-reward-editor__preview-scale">
+										<?php echo $card_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+									</div>
 								</div>
 							</section>
 						</div>
