@@ -770,6 +770,7 @@ final class RewardService {
 				'background_color'           => '#0d1f16',
 				'background_color_secondary' => '#1c5a33',
 				'accent_color'               => '#6ee7b7',
+				'frame_color'                => '#4ade80',
 				'border_color'               => '#4ade80',
 				'text_color'                 => '#f4fff7',
 				'muted_text_color'           => 'rgba(236, 253, 245, 0.78)',
@@ -778,6 +779,7 @@ final class RewardService {
 				'background_color'           => '#10233d',
 				'background_color_secondary' => '#1d4f91',
 				'accent_color'               => '#93c5fd',
+				'frame_color'                => '#60a5fa',
 				'border_color'               => '#60a5fa',
 				'text_color'                 => '#f2f8ff',
 				'muted_text_color'           => 'rgba(219, 234, 254, 0.78)',
@@ -786,6 +788,7 @@ final class RewardService {
 				'background_color'           => '#261141',
 				'background_color_secondary' => '#6d28d9',
 				'accent_color'               => '#d8b4fe',
+				'frame_color'                => '#c084fc',
 				'border_color'               => '#c084fc',
 				'text_color'                 => '#faf5ff',
 				'muted_text_color'           => 'rgba(243, 232, 255, 0.78)',
@@ -794,6 +797,7 @@ final class RewardService {
 				'background_color'           => '#4c2b06',
 				'background_color_secondary' => '#c27a10',
 				'accent_color'               => '#fde68a',
+				'frame_color'                => '#fbbf24',
 				'border_color'               => '#fbbf24',
 				'text_color'                 => '#fff9eb',
 				'muted_text_color'           => 'rgba(254, 240, 138, 0.82)',
@@ -802,6 +806,7 @@ final class RewardService {
 				'background_color'           => '#40111a',
 				'background_color_secondary' => '#b91c1c',
 				'accent_color'               => '#fca5a5',
+				'frame_color'                => '#ef4444',
 				'border_color'               => '#ef4444',
 				'text_color'                 => '#fff5f5',
 				'muted_text_color'           => 'rgba(254, 226, 226, 0.82)',
@@ -810,6 +815,7 @@ final class RewardService {
 				'background_color'           => '#143826',
 				'background_color_secondary' => '#215b39',
 				'accent_color'               => '#86efac',
+				'frame_color'                => '#9ca3af',
 				'border_color'               => '#9ca3af',
 				'text_color'                 => '#f8fafc',
 				'muted_text_color'           => 'rgba(226, 232, 240, 0.78)',
@@ -838,6 +844,9 @@ final class RewardService {
 				'gradient_stop_secondary'     => 52,
 				'gradient_stop_tertiary'      => 100,
 				'gradient_opacity'            => 100,
+				'frame_enabled'               => false,
+				'frame_color'                 => $palette['frame_color'],
+				'frame_thickness'             => 0,
 				'border_width'                => 0,
 				'border_radius'               => 28,
 				'frame_style'                 => 'none',
@@ -1367,8 +1376,11 @@ final class RewardService {
 			$description_align = (string) $defaults['description_align'];
 		}
 
-		$border_width        = 'none' === $frame_style ? 0 : max( 2, min( 12, (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) );
-		$border_color        = $this->sanitize_color_value( $style['border_color'] ?? $defaults['border_color'] );
+		$frame_enabled      = 'none' !== $frame_style;
+		$frame_thickness    = $frame_enabled ? max( 0, min( 12, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'] ) ) ) : 0;
+		$frame_color        = $this->sanitize_color_value( $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_color'] ?? $defaults['border_color'] );
+		$border_width       = $frame_thickness;
+		$border_color       = $frame_color;
 		$secondary_color     = $this->frame_supports_secondary_color( $frame_style )
 			? $this->sanitize_color_value( $style['frame_inner_color'] ?? $defaults['frame_inner_color'] )
 			: $border_color;
@@ -1382,6 +1394,9 @@ final class RewardService {
 			'text_color'          => $this->sanitize_color_value( $style['text_color'] ?? $defaults['text_color'] ),
 			'muted_text_color'    => $this->sanitize_color_value( $style['muted_text_color'] ?? $defaults['muted_text_color'] ),
 			'accent_color'        => $this->sanitize_color_value( $style['accent_color'] ?? $defaults['accent_color'] ),
+			'frame_enabled'       => $frame_enabled,
+			'frame_color'         => $frame_color,
+			'frame_thickness'     => $frame_thickness,
 			'border_color'        => $border_color,
 			'border_width'        => $border_width,
 			'border_radius'       => (int) $defaults['border_radius'],
@@ -1424,10 +1439,23 @@ final class RewardService {
 	 * @return array<string, mixed>
 	 */
 	private function normalize_frame_style_schema( array $style, array $defaults ): array {
-		$style['frame_style'] = $this->normalize_frame_preset( $style['frame_style'] ?? $defaults['frame_style'] );
+		if ( ! isset( $style['frame_color'] ) || '' === trim( (string) $style['frame_color'] ) ) {
+			$style['frame_color'] = $style['border_color'] ?? $defaults['frame_color'] ?? $defaults['border_color'];
+		}
+
+		if ( ! isset( $style['frame_thickness'] ) || '' === trim( (string) $style['frame_thickness'] ) ) {
+			$style['frame_thickness'] = $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'];
+		}
+
+		$requested_frame_style = $style['frame_style'] ?? $defaults['frame_style'];
+		$style['frame_style']  = $this->normalize_frame_preset( $requested_frame_style );
+
+		if ( 'none' === $style['frame_style'] && 0 < (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) {
+			$style['frame_style'] = 'simple';
+		}
 
 		if ( ! isset( $style['frame_inner_color'] ) || '' === trim( (string) $style['frame_inner_color'] ) ) {
-			$style['frame_inner_color'] = $style['border_color'] ?? $defaults['frame_inner_color'];
+			$style['frame_inner_color'] = $style['frame_color'] ?? $style['border_color'] ?? $defaults['frame_inner_color'];
 		}
 
 		if ( ! isset( $style['frame_gradient_color'] ) || '' === trim( (string) $style['frame_gradient_color'] ) ) {
@@ -1439,11 +1467,12 @@ final class RewardService {
 
 			if ( false === $enabled ) {
 				$style['frame_style'] = 'none';
+				$style['frame_thickness'] = 0;
 				$style['border_width'] = 0;
 			}
 		}
 
-		if ( 0 === (int) ( $style['border_width'] ?? $defaults['border_width'] ) ) {
+		if ( 0 === (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? $defaults['frame_thickness'] ?? $defaults['border_width'] ) ) {
 			$style['frame_style'] = 'none';
 		}
 

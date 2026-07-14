@@ -327,6 +327,7 @@ final class CardService {
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
 					<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
+				<div class="adam-digital-card__frame" aria-hidden="true"></div>
 		</article>
 		<?php
 
@@ -366,14 +367,19 @@ final class CardService {
 		$pattern          = sanitize_html_class( (string) ( $style['pattern'] ?? 'grid' ) );
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
+		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
 		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
 		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
 		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
 		$rarity_effect    = 'auto' === $rarity_effect ? $this->auto_rarity_effect( $classes_for_auto ) : $rarity_effect;
 		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
 		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
+		$frame_thickness  = (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 );
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
+		if ( 'card_style' === $card_subtype && 'simple' === $frame_style && $frame_thickness > 0 ) {
+			$classes[] = 'adam-digital-card--has-frame';
+		}
 		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
 		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
 
@@ -399,12 +405,18 @@ final class CardService {
 		}
 
 		$background = $this->preview_background_value( $style );
+		$is_style_reward = 'card_style' === sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
+		$frame_style     = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
+		$frame_thickness = $is_style_reward && 'simple' === $frame_style ? max( 0, min( 12, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) ) : 0;
+		$frame_color     = (string) ( $style['frame_color'] ?? $style['border_color'] ?? '#ffffff' );
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
 			'--adam-card-muted'                   => (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.82)' ),
 			'--adam-card-radius'                  => '28px',
 			'--adam-card-shadow'                  => 'none',
+			'--adam-frame-width'                  => $frame_thickness . 'px',
+			'--adam-frame-color'                  => 0 === $frame_thickness ? 'transparent' : $frame_color,
 			'--adam-card-frame-inset'             => '12px',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
@@ -444,6 +456,16 @@ final class CardService {
 	 * Normalize legacy frame presets to the new compact model.
 	 */
 	private function normalize_frame_preset( mixed $value ): string {
+		$preset = sanitize_key( (string) $value );
+
+		if ( 'none' === $preset || '' === $preset ) {
+			return 'none';
+		}
+
+		if ( in_array( $preset, array( 'simple', 'solid', 'double', 'accent', 'segmented', 'metallic', 'gradient', 'neon', 'premium' ), true ) ) {
+			return 'simple';
+		}
+
 		return 'none';
 	}
 

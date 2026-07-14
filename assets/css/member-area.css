@@ -329,6 +329,8 @@
 	--adam-card-background-blend: screen;
 	--adam-card-art-opacity: 0;
 	--adam-card-art-size: 36%;
+	--adam-frame-width: 0px;
+	--adam-frame-color: transparent;
 	--adam-card-title-color: var(--adam-card-ink);
 	--adam-card-title-size: 0.92rem;
 	--adam-card-title-weight: 900;
@@ -364,6 +366,22 @@
 	background: rgba(255, 255, 255, 0.10);
 	filter: blur(2px);
 	z-index: -1;
+}
+
+.adam-digital-card__frame {
+	position: absolute;
+	inset: -1px;
+	border: var(--adam-frame-width, 0px) solid var(--adam-frame-color, transparent);
+	border-radius: inherit;
+	box-sizing: border-box;
+	background: transparent;
+	pointer-events: none;
+	z-index: 20;
+	display: none;
+}
+
+.adam-digital-card--has-frame .adam-digital-card__frame {
+	display: block;
 }
 
 .adam-digital-card__backdrop,

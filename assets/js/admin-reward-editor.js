@@ -52,7 +52,9 @@
 	}
 
 	function currentFramePreset() {
-		return 'none';
+		var preset = previewStyleValue( 'frame_style' ) || 'simple';
+
+		return preset === 'simple' ? 'simple' : 'none';
 	}
 
 	function setAccordionState( $section, open ) {
@@ -204,16 +206,13 @@
 					suffix = '%';
 				}
 
-				if ( key === 'frame_shine_intensity' ) {
-					suffix = '%';
-				}
-
 				if ( key.indexOf( 'angle' ) !== -1 || key.indexOf( 'rotation' ) !== -1 ) {
 					suffix = 'deg';
 				}
 
 				if (
 					key.indexOf( 'width' ) !== -1 ||
+					key.indexOf( 'thickness' ) !== -1 ||
 					key.indexOf( 'size' ) !== -1 ||
 					key.indexOf( 'spacing' ) !== -1 ||
 					key.indexOf( 'shadow' ) !== -1 ||
@@ -337,6 +336,10 @@
 			}
 		}
 
+		if ( frameStyle === 'simple' && clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) > 0 ) {
+			classes.push( 'adam-digital-card--has-frame' );
+		}
+
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
 		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
 
@@ -409,10 +412,6 @@
 		var backgroundVisible = digital && subtype === 'background';
 		var styleVisible = digital && subtype === 'card_style';
 		var patternVisible = backgroundVisible && ( previewStyleValue( 'pattern' ) || 'grid' ) !== 'none';
-		var framePreset = currentFramePreset();
-		var showSecondaryFrameColor = styleVisible && [ 'metallic', 'gradient' ].indexOf( framePreset ) !== -1;
-		var showGradientFrameColor = styleVisible && framePreset === 'gradient';
-		var showMetallicShine = styleVisible && framePreset === 'metallic';
 
 		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
 		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
@@ -434,12 +433,6 @@
 
 		$( '[data-adam-pattern-detail]' ).toggleClass( 'is-hidden', ! patternVisible );
 		$( '[data-adam-pattern-detail]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! patternVisible );
-		$( '[data-adam-frame-secondary-field]' ).toggleClass( 'is-hidden', ! showSecondaryFrameColor );
-		$( '[data-adam-frame-secondary-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showSecondaryFrameColor );
-		$( '[data-adam-frame-gradient-field]' ).toggleClass( 'is-hidden', ! showGradientFrameColor );
-		$( '[data-adam-frame-gradient-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showGradientFrameColor );
-		$( '[data-adam-frame-metallic-field]' ).toggleClass( 'is-hidden', ! showMetallicShine );
-		$( '[data-adam-frame-metallic-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! showMetallicShine );
 	}
 
 	var $editor = $( '.adam-reward-editor' );
@@ -461,9 +454,11 @@
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
+		var frameColor = previewStyleValue( 'frame_color' ) || '#ffffff';
 		var backgroundMode = currentBackgroundMode();
 		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
+		var hasSimpleFrame = framePreset === 'simple' && subtype === 'card_style' && clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) > 0;
 
 		if ( ! $preview.length ) {
 			return;
@@ -478,6 +473,8 @@
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
+				'--adam-frame-width': ( hasSimpleFrame ? clamp( previewStyleValue( 'frame_thickness' ), 0, 12 ) : 0 ) + 'px',
+				'--adam-frame-color': hasSimpleFrame ? frameColor : 'transparent',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',

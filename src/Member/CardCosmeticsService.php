@@ -374,13 +374,10 @@ final class CardCosmeticsService {
 	private function card_style_keys(): array {
 		return array(
 			'image_url',
-			'border_color',
-			'border_width',
+			'frame_enabled',
+			'frame_color',
+			'frame_thickness',
 			'frame_style',
-			'frame_inner_color',
-			'frame_shine_intensity',
-			'frame_gradient_color',
-			'frame_gradient_angle',
 			'meta_align',
 			'stats_align',
 			'card_image_opacity',

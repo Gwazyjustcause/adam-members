@@ -373,15 +373,11 @@ final class RewardController {
 							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-style-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Estilo do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
-								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Escolhe um preset de moldura e ajusta apenas as cores e a espessura. A geometria do cartao permanece fixa em toda a ADAM.', 'adam-membership' ); ?></p>
+								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Configura uma moldura simples sem alterar o fundo, a geometria ou a estrutura do cartao.', 'adam-membership' ); ?></p>
 								<div class="adam-reward-editor__field-grid">
 									<label><span><?php esc_html_e( 'Preset da moldura', 'adam-membership' ); ?></span><select name="visual_style[frame_style]" data-adam-style="frame_style"><?php $this->render_frame_style_options( (string) $resolved_style['frame_style'] ); ?></select></label>
-									<label><span><?php esc_html_e( 'Cor 1', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[border_color]" value="<?php echo esc_attr( (string) $resolved_style['border_color'] ); ?>" data-adam-style="border_color"></label>
-									<label data-adam-frame-secondary-field><span><?php esc_html_e( 'Cor 2', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_inner_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_inner_color'] ); ?>" data-adam-style="frame_inner_color"></label>
-									<label data-adam-frame-gradient-field><span><?php esc_html_e( 'Cor 3', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_gradient_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_gradient_color'] ); ?>" data-adam-style="frame_gradient_color"></label>
-									<label class="adam-reward-editor__slider-field"><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="2" max="12" name="visual_style[border_width]" value="<?php echo esc_attr( (string) $resolved_style['border_width'] ); ?>" data-adam-style="border_width"><small data-adam-value-for="border_width"><?php echo esc_html( (string) $resolved_style['border_width'] ); ?>px</small></label>
-									<label class="adam-reward-editor__slider-field" data-adam-frame-metallic-field><span><?php esc_html_e( 'Intensidade do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="100" name="visual_style[frame_shine_intensity]" value="<?php echo esc_attr( (string) $resolved_style['frame_shine_intensity'] ); ?>" data-adam-style="frame_shine_intensity"><small data-adam-value-for="frame_shine_intensity"><?php echo esc_html( (string) $resolved_style['frame_shine_intensity'] ); ?>%</small></label>
-									<label class="adam-reward-editor__slider-field" data-adam-frame-gradient-field><span><?php esc_html_e( 'Angulo do gradiente', 'adam-membership' ); ?></span><input type="range" min="0" max="360" name="visual_style[frame_gradient_angle]" value="<?php echo esc_attr( (string) $resolved_style['frame_gradient_angle'] ); ?>" data-adam-style="frame_gradient_angle"><small data-adam-value-for="frame_gradient_angle"><?php echo esc_html( (string) $resolved_style['frame_gradient_angle'] ); ?>deg</small></label>
+									<label><span><?php esc_html_e( 'Cor da moldura', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[frame_color]" value="<?php echo esc_attr( (string) $resolved_style['frame_color'] ); ?>" data-adam-style="frame_color"></label>
+									<label class="adam-reward-editor__slider-field"><span><?php esc_html_e( 'Espessura da moldura', 'adam-membership' ); ?></span><input type="range" min="0" max="12" name="visual_style[frame_thickness]" value="<?php echo esc_attr( (string) $resolved_style['frame_thickness'] ); ?>" data-adam-style="frame_thickness"><small data-adam-value-for="frame_thickness"><?php echo esc_html( (string) $resolved_style['frame_thickness'] ); ?>px</small></label>
 								</div>
 								</div>
 							</section>
@@ -683,10 +679,7 @@ final class RewardController {
 
 	private function render_frame_style_options( string $current ): void {
 		$options = array(
-			'none'      => __( 'Sem moldura', 'adam-membership' ),
-			'simple'    => __( 'Simples', 'adam-membership' ),
-			'metallic'  => __( 'Metalica', 'adam-membership' ),
-			'gradient'  => __( 'Gradiente', 'adam-membership' ),
+			'simple' => __( 'Simples', 'adam-membership' ),
 		);
 
 		foreach ( $options as $value => $label ) {
