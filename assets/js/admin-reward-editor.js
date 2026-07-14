@@ -283,7 +283,6 @@
 		var defaults = {
 			circle: { x: 74, y: 14, width: 14, height: 14, rotation: 0, opacity: 26 },
 			square: { x: 10, y: 66, width: 18, height: 18, rotation: 12, opacity: 18 },
-			line: { x: 60, y: 72, width: 26, height: 2, rotation: 0, opacity: 44 },
 		}[ type ] || { x: 74, y: 14, width: 14, height: 14, rotation: 0, opacity: 26 };
 
 		return $(
@@ -293,7 +292,7 @@
 					'<button type="button" class="button-link-delete" data-adam-remove-shape>Remover</button>' +
 				'</div>' +
 				'<div class="adam-reward-editor__shape-grid">' +
-					'<label><span>Tipo</span><select data-shape-prop="type"><option value="circle">Circulo</option><option value="square">Quadrado</option><option value="line">Linha</option></select></label>' +
+					'<label><span>Tipo</span><select data-shape-prop="type"><option value="circle">Circulo</option><option value="square">Quadrado</option></select></label>' +
 					'<label><span>X</span><input type="number" min="0" max="100" data-shape-prop="x" value="' + defaults.x + '"></label>' +
 					'<label><span>Y</span><input type="number" min="0" max="100" data-shape-prop="y" value="' + defaults.y + '"></label>' +
 					'<label><span>Largura</span><input type="number" min="2" max="90" data-shape-prop="width" value="' + defaults.width + '"></label>' +

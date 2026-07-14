@@ -481,6 +481,11 @@ final class CardService {
 	 */
 	private function render_shape( array $shape ): void {
 		$type     = sanitize_html_class( (string) ( $shape['type'] ?? 'circle' ) );
+
+		if ( ! in_array( $type, array( 'circle', 'square' ), true ) ) {
+			return;
+		}
+
 		$x        = max( 0, min( 100, (int) ( $shape['x'] ?? 50 ) ) );
 		$y        = max( 0, min( 100, (int) ( $shape['y'] ?? 50 ) ) );
 		$width    = max( 1, min( 100, (int) ( $shape['width'] ?? 12 ) ) );

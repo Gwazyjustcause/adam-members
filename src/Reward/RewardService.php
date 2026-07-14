@@ -1540,7 +1540,7 @@ final class RewardService {
 
 			$type = isset( $shape['type'] ) ? sanitize_key( (string) $shape['type'] ) : 'circle';
 
-			if ( ! in_array( $type, array( 'circle', 'square', 'line' ), true ) ) {
+			if ( ! in_array( $type, array( 'circle', 'square' ), true ) ) {
 				continue;
 			}
 
@@ -1568,15 +1568,11 @@ final class RewardService {
 		return match ( $rarity ) {
 			Reward::RARITY_EPIC => array(
 				array( 'type' => 'circle', 'x' => 84, 'y' => 16, 'width' => 14, 'height' => 14, 'rotation' => 0, 'opacity' => 24, 'color' => '#ffffff' ),
-				array( 'type' => 'line', 'x' => 58, 'y' => 78, 'width' => 28, 'height' => 2, 'rotation' => 0, 'opacity' => 38, 'color' => '#d8b4fe' ),
 			),
 			Reward::RARITY_LEGENDARY => array(
 				array( 'type' => 'circle', 'x' => 84, 'y' => 14, 'width' => 16, 'height' => 16, 'rotation' => 0, 'opacity' => 28, 'color' => '#fff4b8' ),
-				array( 'type' => 'line', 'x' => 8, 'y' => 22, 'width' => 22, 'height' => 2, 'rotation' => 24, 'opacity' => 54, 'color' => '#fde68a' ),
 			),
-			default => array(
-				array( 'type' => 'line', 'x' => 72, 'y' => 18, 'width' => 20, 'height' => 2, 'rotation' => 0, 'opacity' => 36, 'color' => '#ffffff' ),
-			),
+			default => array(),
 		};
 	}
 

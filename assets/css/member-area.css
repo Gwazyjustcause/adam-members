@@ -519,10 +519,6 @@
 	border-radius: 6px;
 }
 
-.adam-digital-card__shape--line {
-	border-radius: 999px;
-}
-
 .adam-digital-card__header,
 .adam-digital-card__body,
 .adam-digital-card__details,
