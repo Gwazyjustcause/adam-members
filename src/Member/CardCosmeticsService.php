@@ -51,11 +51,6 @@ final class CardCosmeticsService {
 			$classes[] = 'adam-digital-card--theme-rarity-' . sanitize_html_class( (string) $active_theme['rarity'] );
 		}
 
-		if ( is_array( $active_frame ) && isset( $active_frame['css_class'] ) ) {
-			$classes[] = 'adam-digital-card--has-frame';
-			$classes[] = 'adam-digital-card--frame-rarity-' . sanitize_html_class( (string) $active_frame['rarity'] );
-		}
-
 		if ( $member->is_founder() ) {
 			$classes[] = 'adam-digital-card--is-founder';
 		}

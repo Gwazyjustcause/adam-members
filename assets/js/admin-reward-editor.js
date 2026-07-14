@@ -52,25 +52,7 @@
 	}
 
 	function currentFramePreset() {
-		var preset = previewStyleValue( 'frame_style' ) || 'none';
-
-		if ( preset === 'solid' ) {
-			return 'simple';
-		}
-
-		if ( [ 'double', 'segmented', 'accent' ].indexOf( preset ) !== -1 ) {
-			return 'simple';
-		}
-
-		if ( [ 'neon', 'premium' ].indexOf( preset ) !== -1 ) {
-			return 'metallic';
-		}
-
-		if ( [ 'none', 'simple', 'metallic', 'gradient' ].indexOf( preset ) === -1 ) {
-			return 'none';
-		}
-
-		return preset;
+		return 'none';
 	}
 
 	function setAccordionState( $section, open ) {
@@ -355,14 +337,8 @@
 			}
 		}
 
-		classes.push( 'adam-digital-card--preview-frame-' + frameStyle );
 		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
 		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
-
-		if ( String( currentRewardValue() || '' ).toLowerCase().indexOf( 'card_frame_' ) === 0 ) {
-			classes.push( 'adam-digital-card--has-frame' );
-			classes.push( 'adam-digital-card--frame-rarity-' + rewardRarity );
-		}
 
 		if ( String( currentRewardValue() || '' ).toLowerCase().indexOf( 'card_theme_' ) === 0 ) {
 			classes.push( 'adam-digital-card--theme-rarity-' + rewardRarity );
@@ -482,13 +458,9 @@
 		var rarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
 		var subtype = currentSubtype();
 		var framePreset = currentFramePreset();
-		var hasStyleLayer = subtype === 'card_style' && framePreset !== 'none' && clamp( previewStyleValue( 'border_width' ), 0, 12 ) > 0;
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
 		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
-		var border = previewStyleValue( 'border_color' ) || 'rgba(255,255,255,0.22)';
-		var secondaryFrameColor = previewStyleValue( 'frame_inner_color' ) || '#ffffff';
-		var tertiaryFrameColor = previewStyleValue( 'frame_gradient_color' ) || secondaryFrameColor;
 		var backgroundMode = currentBackgroundMode();
 		var baseClass = $preview.attr( 'data-adam-card-base-class' ) || 'adam-digital-card';
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
@@ -501,17 +473,16 @@
 
 		$preview.css(
 			{
-				'--adam-bg-surface': backgroundValue(),
+				'--adam-card-surface': backgroundValue(),
 				'--adam-card-ink': previewStyleValue( 'text_color' ) || '#ffffff',
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
-				'--adam-frame-width': ( hasStyleLayer ? clamp( previewStyleValue( 'border_width' ), 0, 12 ) : 0 ) + 'px',
-				'--adam-frame-color-1': hasStyleLayer ? border : 'rgba(255,255,255,0)',
-				'--adam-frame-color-2': hasStyleLayer ? secondaryFrameColor : 'rgba(255,255,255,0)',
-				'--adam-frame-color-3': hasStyleLayer ? tertiaryFrameColor : 'rgba(255,255,255,0)',
-				'--adam-frame-angle': clamp( previewStyleValue( 'frame_gradient_angle' ), 0, 360 ) + 'deg',
-				'--adam-frame-shine-intensity': ( framePreset === 'metallic' ? clamp( previewStyleValue( 'frame_shine_intensity' ), 0, 100 ) / 100 : 0 ),
+				'--adam-frame-width': '0px',
+				'--adam-frame-visibility': 0,
+				'--adam-frame-color': 'transparent',
+				'--adam-frame-secondary-color': 'transparent',
+				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
 				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),
@@ -522,19 +493,19 @@
 				'--adam-card-title-align': previewStyleValue( 'title_align' ) || 'left',
 				'--adam-card-title-shadow': clamp( previewStyleValue( 'title_shadow' ), 0, 40 ) + 'px',
 				'--adam-card-photo-border': colorWithAlpha( accent, 0.8 ),
-				'--adam-bg-pattern-color': previewStyleValue( 'pattern_color' ) || accent,
-				'--adam-bg-pattern-base': previewStyleValue( 'pattern_background_color' ) || '#143826',
-				'--adam-bg-pattern-opacity': clamp( previewStyleValue( 'pattern_opacity' ), 0, 100 ) / 100,
-				'--adam-bg-pattern-size': clamp( previewStyleValue( 'pattern_scale' ), 6, 120 ) + 'px',
-				'--adam-bg-pattern-spacing': clamp( previewStyleValue( 'pattern_spacing' ), 6, 120 ) + 'px',
-				'--adam-bg-pattern-density': clamp( previewStyleValue( 'pattern_density' ), 1, 12 ),
-				'--adam-bg-pattern-rotation': clamp( previewStyleValue( 'pattern_rotation' ), 0, 360 ) + 'deg',
-				'--adam-bg-image-opacity': clamp( previewStyleValue( 'background_image_opacity' ), 0, 100 ) / 100,
-				'--adam-bg-image-size': clamp( previewStyleValue( 'background_image_size' ), 20, 200 ) + '%',
-				'--adam-bg-image-position': ( previewStyleValue( 'background_image_position' ) || 'center' ).replace( /-/g, ' ' ),
-				'--adam-bg-image-blend': previewStyleValue( 'background_image_blend_mode' ) || 'screen',
-				'--adam-bg-art-opacity': clamp( previewStyleValue( 'card_image_opacity' ), 0, 100 ) / 100,
-				'--adam-bg-art-size': clamp( previewStyleValue( 'card_image_size' ), 10, 80 ) + '%',
+				'--adam-card-pattern-color': previewStyleValue( 'pattern_color' ) || accent,
+				'--adam-card-pattern-base': previewStyleValue( 'pattern_background_color' ) || '#143826',
+				'--adam-card-pattern-opacity': clamp( previewStyleValue( 'pattern_opacity' ), 0, 100 ) / 100,
+				'--adam-card-pattern-size': clamp( previewStyleValue( 'pattern_scale' ), 6, 120 ) + 'px',
+				'--adam-card-pattern-spacing': clamp( previewStyleValue( 'pattern_spacing' ), 6, 120 ) + 'px',
+				'--adam-card-pattern-density': clamp( previewStyleValue( 'pattern_density' ), 1, 12 ),
+				'--adam-card-pattern-rotation': clamp( previewStyleValue( 'pattern_rotation' ), 0, 360 ) + 'deg',
+				'--adam-card-background-opacity': clamp( previewStyleValue( 'background_image_opacity' ), 0, 100 ) / 100,
+				'--adam-card-background-size': clamp( previewStyleValue( 'background_image_size' ), 20, 200 ) + '%',
+				'--adam-card-background-position': ( previewStyleValue( 'background_image_position' ) || 'center' ).replace( /-/g, ' ' ),
+				'--adam-card-background-blend': previewStyleValue( 'background_image_blend_mode' ) || 'screen',
+				'--adam-card-art-opacity': clamp( previewStyleValue( 'card_image_opacity' ), 0, 100 ) / 100,
+				'--adam-card-art-size': clamp( previewStyleValue( 'card_image_size' ), 10, 80 ) + '%',
 			}
 		);
 
