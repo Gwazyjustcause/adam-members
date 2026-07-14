@@ -1248,10 +1248,12 @@
 .adam-reward-editor__preview-scale {
 	display: flex;
 	justify-content: center;
-	width: min(100%, 860px);
+	width: 1076px;
+	min-width: 1076px;
+	max-width: none;
 	padding: 4px 0 36px;
-	transform: scale(0.78);
-	transform-origin: top center;
+	flex: 0 0 auto;
+	zoom: 0.78;
 }
 
 .adam-reward-editor__actions {
@@ -1287,8 +1289,11 @@
 }
 
 .adam-reward-editor__section--preview .adam-reward-editor__preview-scale [data-adam-card-preview] {
-	width: min(100%, 860px);
-	margin-inline: auto;
+	width: 1076px;
+	min-width: 1076px;
+	max-width: none;
+	margin: 0;
+	flex: 0 0 auto;
 }
 
 .adam-reward-editor__section--preview .adam-digital-card {
@@ -1655,7 +1660,7 @@
 
 	.adam-reward-editor__preview-scale {
 		padding-bottom: 18px;
-		transform: scale(0.88);
+		zoom: 0.88;
 	}
 
 	.adam-reward-card--editor-preview {
