@@ -336,11 +336,17 @@
 	--adam-frame-gradient-color-2: transparent;
 	--adam-frame-gradient-color-3: transparent;
 	--adam-frame-angle: 135deg;
-	--adam-card-title-color: var(--adam-card-ink);
-	--adam-card-title-size: 0.92rem;
-	--adam-card-title-weight: 900;
-	--adam-card-title-align: left;
-	--adam-card-title-shadow: 0px;
+	--adam-card-text-primary: #ffffff;
+	--adam-card-text-secondary: rgba(255, 255, 255, 0.82);
+	--adam-card-member-name-color: var(--adam-card-text-primary);
+	--adam-card-member-name-weight: 900;
+	--adam-title-badge-background: rgba(255, 255, 255, 0.14);
+	--adam-title-badge-text: var(--adam-card-text-primary);
+	--adam-title-badge-border: rgba(255, 255, 255, 0.18);
+	--adam-title-badge-border-width: 1px;
+	--adam-title-badge-icon: rgba(0, 0, 0, 0.22);
+	--adam-title-badge-icon-highlight: rgba(255, 255, 255, 0.92);
+	--adam-title-badge-icon-glow: 0px;
 	position: relative;
 	display: grid;
 	grid-template-rows: auto auto auto auto;
@@ -684,8 +690,6 @@
 		var(--adam-green-900);
 	--adam-card-border: rgba(255, 255, 255, 0.22);
 	--adam-card-shadow: none;
-	--adam-card-ink: #ffffff;
-	--adam-card-muted: rgba(255, 255, 255, 0.82);
 	--adam-card-panel-border: rgba(255, 255, 255, 0.16);
 	--adam-card-panel-bg: rgba(255, 255, 255, 0.10);
 	--adam-card-photo-border: rgba(255, 255, 255, 0.82);
@@ -697,16 +701,13 @@
 	--adam-frame-width: 0px;
 	--adam-frame-visibility: 0;
 	--adam-frame-color: transparent;
-	--adam-frame-secondary-color: transparent;
 	--adam-card-shine: rgba(255, 255, 255, 0.10);
-	--adam-card-title-surface: rgba(255, 255, 255, 0.14);
-	--adam-card-title-border: rgba(255, 255, 255, 0.18);
 	--adam-card-chip-surface: rgba(255, 255, 255, 0.16);
 	--adam-card-chip-border: rgba(255, 255, 255, 0.16);
 	background: var(--adam-card-surface);
 	border-color: var(--adam-card-border);
 	box-shadow: var(--adam-card-shadow);
-	color: var(--adam-card-ink);
+	color: var(--adam-card-text-primary);
 }
 
 
@@ -719,7 +720,7 @@
 .adam-digital-card__identity span,
 .adam-digital-card__details span,
 .adam-digital-card__footer span {
-	color: var(--adam-card-muted);
+	color: var(--adam-card-text-secondary);
 }
 
 .adam-digital-card__logo {
@@ -727,11 +728,10 @@
 }
 
 .adam-digital-card__header strong,
-.adam-digital-card__identity strong,
 .adam-digital-card__details strong,
 .adam-digital-card__identity small,
 .adam-digital-card__photo span {
-	color: var(--adam-card-ink);
+	color: var(--adam-card-text-primary);
 }
 
 .adam-digital-card__badges {
@@ -778,22 +778,22 @@
 	min-height: 52px;
 	margin: 0;
 	padding: 10px 18px 10px 14px;
-	border: 1px solid var(--adam-card-title-border);
+	border: var(--adam-title-badge-border-width) solid var(--adam-title-badge-border);
 	border-radius: 16px;
 	background:
 		linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)),
-		var(--adam-card-title-surface);
-	color: var(--adam-card-title-color);
-	font-size: var(--adam-card-title-size);
+		var(--adam-title-badge-background);
+	color: var(--adam-title-badge-text);
+	font-size: 0.92rem;
 	font-style: normal;
-	font-weight: var(--adam-card-title-weight);
+	font-weight: 900;
 	letter-spacing: 0.08em;
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.22),
 		inset 0 -6px 14px rgba(0, 0, 0, 0.18),
 		0 14px 24px rgba(7, 12, 20, 0.22);
-	text-align: var(--adam-card-title-align);
-	text-shadow: 0 0 var(--adam-card-title-shadow) rgba(0, 0, 0, 0.45);
+	text-align: left;
+	text-shadow: none;
 	text-transform: uppercase;
 }
 
@@ -805,7 +805,7 @@
 }
 .adam-digital-card__rank small {
 	display: block;
-	color: var(--adam-card-muted);
+	color: var(--adam-card-text-secondary);
 	font-size: 0.72rem;
 	font-weight: 800;
 	letter-spacing: 0.08em;
@@ -822,16 +822,21 @@
 	width: 22px;
 	height: 22px;
 	border-radius: 999px;
-	background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.14) 34%, rgba(0, 0, 0, 0.22));
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 6px 12px rgba(0, 0, 0, 0.22);
+	background: radial-gradient(circle at 30% 30%, var(--adam-title-badge-icon-highlight), color-mix(in srgb, var(--adam-title-badge-icon-highlight) 18%, var(--adam-title-badge-icon) 82%) 34%, var(--adam-title-badge-icon));
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 0 var(--adam-title-badge-icon-glow) color-mix(in srgb, var(--adam-title-badge-icon-highlight) 55%, transparent), 0 6px 12px rgba(0, 0, 0, 0.22);
 }
 
 .adam-digital-card__title-mark::before,
 .adam-member-rank-card__plate-mark::before {
 	content: "\2605";
-	color: rgba(255, 255, 255, 0.96);
+	color: var(--adam-title-badge-text);
 	font-size: 0.78rem;
 	line-height: 1;
+}
+
+.adam-digital-card__identity strong {
+	color: var(--adam-card-member-name-color);
+	font-weight: var(--adam-card-member-name-weight);
 }
 
 .adam-digital-card__details div {
@@ -917,11 +922,18 @@
 		radial-gradient(circle at 80% 16%, rgba(255, 247, 221, 0.55), transparent 26%),
 		linear-gradient(135deg, #8c6b3f, #c09a5d 40%, #d8c08d 76%, #8e6d43),
 		repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 16px, rgba(113, 76, 30, 0.05) 16px 32px);
+	--adam-card-text-primary: #2f2418;
+	--adam-card-text-secondary: rgba(47, 36, 24, 0.75);
+	--adam-card-member-name-color: #2f2418;
 	--adam-card-ink: #2f2418;
 	--adam-card-muted: rgba(47, 36, 24, 0.75);
 	--adam-card-panel-border: rgba(64, 45, 20, 0.12);
 	--adam-card-panel-bg: rgba(255, 250, 239, 0.24);
 	--adam-card-photo-border: rgba(255, 247, 221, 0.9);
+	--adam-title-badge-background: rgba(255, 248, 230, 0.32);
+	--adam-title-badge-text: #2f2418;
+	--adam-title-badge-border: rgba(82, 61, 28, 0.18);
+	--adam-title-badge-icon: rgba(82, 61, 28, 0.82);
 	--adam-card-title-surface: rgba(255, 248, 230, 0.32);
 	--adam-card-title-border: rgba(82, 61, 28, 0.18);
 	--adam-card-chip-surface: rgba(255, 251, 239, 0.36);
@@ -974,11 +986,18 @@
 	--adam-card-surface:
 		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.82), transparent 20%),
 		linear-gradient(135deg, #eef6ff, #dce9f6 48%, #b9cad8);
+	--adam-card-text-primary: #0f1f33;
+	--adam-card-text-secondary: rgba(15, 31, 51, 0.76);
+	--adam-card-member-name-color: #0f1f33;
 	--adam-card-ink: #0f1f33;
 	--adam-card-muted: rgba(15, 31, 51, 0.76);
 	--adam-card-panel-border: rgba(15, 31, 51, 0.12);
 	--adam-card-panel-bg: rgba(255, 255, 255, 0.3);
 	--adam-card-photo-border: rgba(255, 255, 255, 0.98);
+	--adam-title-badge-background: rgba(255, 255, 255, 0.46);
+	--adam-title-badge-text: #0f1f33;
+	--adam-title-badge-border: rgba(15, 31, 51, 0.12);
+	--adam-title-badge-icon: rgba(15, 31, 51, 0.82);
 	--adam-card-title-surface: rgba(255, 255, 255, 0.46);
 	--adam-card-title-border: rgba(15, 31, 51, 0.12);
 	--adam-card-chip-surface: rgba(255, 255, 255, 0.44);
@@ -1040,10 +1059,17 @@
 	--adam-card-surface:
 		radial-gradient(circle at 78% 14%, rgba(255, 255, 255, 0.35), transparent 24%),
 		linear-gradient(135deg, #6b7280, #d1d5db 48%, #8c95a3);
+	--adam-card-text-primary: #172033;
+	--adam-card-text-secondary: rgba(23, 32, 51, 0.76);
+	--adam-card-member-name-color: #172033;
 	--adam-card-ink: #172033;
 	--adam-card-muted: rgba(23, 32, 51, 0.76);
 	--adam-card-panel-border: rgba(23, 32, 51, 0.14);
 	--adam-card-panel-bg: rgba(255, 255, 255, 0.28);
+	--adam-title-badge-background: rgba(255, 255, 255, 0.4);
+	--adam-title-badge-text: #172033;
+	--adam-title-badge-border: rgba(23, 32, 51, 0.12);
+	--adam-title-badge-icon: rgba(23, 32, 51, 0.82);
 	--adam-card-title-surface: rgba(255, 255, 255, 0.4);
 	--adam-card-title-border: rgba(23, 32, 51, 0.12);
 	--adam-card-chip-surface: rgba(255, 255, 255, 0.42);
@@ -1078,80 +1104,6 @@
 	--adam-card-surface:
 		radial-gradient(circle at 80% 14%, rgba(250, 204, 21, 0.24), transparent 20%),
 		linear-gradient(135deg, #123f3a, #0f766e 38%, #f59e0b 74%, #102033);
-}
-
-.adam-digital-card__title--common {
-	color: #f8fafc;
-	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
-		var(--adam-card-title-surface);
-}
-
-.adam-digital-card__title--common .adam-digital-card__title-mark {
-	background: radial-gradient(circle at 30% 30%, #f8fafc, rgba(203, 213, 225, 0.78) 42%, rgba(71, 85, 105, 0.76));
-}
-
-.adam-digital-card__title--uncommon {
-	color: #dcfce7;
-	border-color: rgba(134, 239, 172, 0.3);
-	box-shadow:
-		inset 0 1px 0 rgba(187, 247, 208, 0.18),
-		0 8px 18px rgba(22, 163, 74, 0.14);
-}
-
-.adam-digital-card__title--uncommon .adam-digital-card__title-mark {
-	background: radial-gradient(circle at 30% 30%, #f0fdf4, rgba(134, 239, 172, 0.84) 42%, rgba(21, 128, 61, 0.84));
-}
-
-.adam-digital-card__title--rare {
-	color: #dbeafe;
-	border-color: rgba(147, 197, 253, 0.32);
-	background:
-		linear-gradient(180deg, rgba(191, 219, 254, 0.16), rgba(30, 64, 175, 0.08)),
-		var(--adam-card-title-surface);
-	box-shadow:
-		inset 0 1px 0 rgba(219, 234, 254, 0.2),
-		0 10px 22px rgba(37, 99, 235, 0.16);
-}
-
-.adam-digital-card__title--rare .adam-digital-card__title-mark {
-	background: radial-gradient(circle at 30% 30%, #eff6ff, rgba(147, 197, 253, 0.88) 42%, rgba(29, 78, 216, 0.84));
-}
-
-.adam-digital-card__title--epic {
-	color: #ede9fe;
-	border-color: rgba(196, 181, 253, 0.32);
-	background:
-		linear-gradient(180deg, rgba(221, 214, 254, 0.18), rgba(91, 33, 182, 0.08)),
-		var(--adam-card-title-surface);
-	box-shadow:
-		inset 0 1px 0 rgba(233, 213, 255, 0.22),
-		0 10px 22px rgba(124, 58, 237, 0.18);
-}
-
-.adam-digital-card__title--epic .adam-digital-card__title-mark {
-	background: radial-gradient(circle at 30% 30%, #faf5ff, rgba(196, 181, 253, 0.88) 42%, rgba(109, 40, 217, 0.84));
-}
-
-.adam-digital-card__title--legendary,
-.adam-digital-card__title--founder {
-	color: #fef3c7;
-	border-color: rgba(253, 224, 71, 0.34);
-	background:
-		linear-gradient(180deg, rgba(254, 243, 199, 0.2), rgba(180, 83, 9, 0.08)),
-		var(--adam-card-title-surface);
-	box-shadow:
-		inset 0 1px 0 rgba(254, 249, 195, 0.26),
-		0 12px 24px rgba(217, 119, 6, 0.2);
-}
-
-.adam-digital-card__title--legendary .adam-digital-card__title-mark,
-.adam-digital-card__title--founder .adam-digital-card__title-mark {
-	background: radial-gradient(circle at 30% 30%, #fff7ed, rgba(253, 224, 71, 0.92) 42%, rgba(180, 83, 9, 0.84));
-}
-
-.adam-digital-card__title--limited_edition {
-	color: #fee2e2;
 }
 
 .adam-points-summary {
@@ -2189,26 +2141,6 @@
 	gap: 22px;
 	padding: 14px 14px 12px;
 	line-height: 1.2;
-}
-
-.adam-digital-card--preview-badge-outline .adam-digital-card__founder,
-.adam-digital-card--preview-badge-outline .adam-digital-card__loyalty,
-.adam-digital-card--preview-badge-outline .adam-digital-card__identity small {
-	background: transparent;
-	border-color: rgba(255, 255, 255, 0.28);
-}
-
-.adam-digital-card--preview-badge-solid .adam-digital-card__founder,
-.adam-digital-card--preview-badge-solid .adam-digital-card__loyalty,
-.adam-digital-card--preview-badge-solid .adam-digital-card__identity small {
-	background: var(--adam-card-title-surface);
-	border-color: var(--adam-card-title-border);
-}
-
-.adam-digital-card--preview-badge-glow .adam-digital-card__founder,
-.adam-digital-card--preview-badge-glow .adam-digital-card__loyalty,
-.adam-digital-card--preview-badge-glow .adam-digital-card__identity small {
-	box-shadow: 0 0 18px color-mix(in srgb, var(--adam-card-title-border) 35%, transparent);
 }
 
 .adam-digital-card__footer a {

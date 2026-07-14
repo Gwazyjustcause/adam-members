@@ -371,10 +371,6 @@ final class CardService {
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
 		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$badge_style      = sanitize_html_class( (string) ( $style['badge_style'] ?? 'soft' ) );
-		$rarity_effect    = sanitize_html_class( (string) ( $style['rarity_effect'] ?? 'auto' ) );
-		$classes_for_auto = (array) ( $presentation['classes'] ?? array() );
-		$rarity_effect    = 'auto' === $rarity_effect ? $this->auto_rarity_effect( $classes_for_auto ) : $rarity_effect;
 		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
 		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
 		$frame_thickness  = max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) );
@@ -384,9 +380,6 @@ final class CardService {
 			$classes[] = 'adam-digital-card--has-frame';
 			$classes[] = 'adam-digital-card--frame-' . $frame_style;
 		}
-		$classes[] = 'adam-digital-card--preview-badge-' . $badge_style;
-		$classes[] = 'adam-digital-card--preview-effect-' . $rarity_effect;
-
 		return array(
 			'base_class_name'      => implode( ' ', array_values( array_unique( array_filter( array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) ) ) ) ) ),
 			'class_name'           => implode( ' ', array_values( array_unique( array_filter( $classes ) ) ) ),
@@ -418,11 +411,24 @@ final class CardService {
 		$frame_gradient_2 = (string) ( $style['frame_gradient_color_2'] ?? $style['frame_inner_color'] ?? '#ffd700' );
 		$frame_gradient_3 = (string) ( $style['frame_gradient_color_3'] ?? $style['frame_gradient_color'] ?? '#146aff' );
 		$frame_angle     = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
+		$text_primary    = (string) ( $style['text_color'] ?? '#ffffff' );
+		$text_secondary  = (string) ( $style['muted_text_color'] ?? '#cccccc' );
+		$member_name_color = (string) ( $style['member_name_color'] ?? $text_primary );
+		$member_name_weight = max( 700, min( 900, (int) ( $style['member_name_weight'] ?? 900 ) ) );
+		$badge_background = (string) ( $style['badge_background_color'] ?? $style['accent_color'] ?? '#215b39' );
+		$badge_text       = (string) ( $style['badge_text_color'] ?? $style['title_color'] ?? $text_primary );
+		$badge_border     = (string) ( $style['badge_border_color'] ?? $style['accent_color'] ?? '#86efac' );
+		$badge_border_width = max( 1, min( 4, (int) ( $style['badge_border_width'] ?? 1 ) ) );
+		$badge_icon_color = (string) ( $style['badge_icon_color'] ?? '#2f4b3b' );
+		$badge_icon_highlight = (string) ( $style['badge_icon_highlight_color'] ?? '#ffffff' );
+		$badge_icon_glow = max( 0, min( 40, (int) ( $style['badge_icon_glow'] ?? 10 ) ) );
 
 		$vars       = array(
 			'--adam-card-surface'                 => $background,
-			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
-			'--adam-card-muted'                   => (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.82)' ),
+			'--adam-card-text-primary'            => $text_primary,
+			'--adam-card-text-secondary'          => $text_secondary,
+			'--adam-card-member-name-color'       => $member_name_color,
+			'--adam-card-member-name-weight'      => (string) $member_name_weight,
 			'--adam-card-radius'                  => '28px',
 			'--adam-card-shadow'                  => 'none',
 			'--adam-frame-width'                  => $frame_thickness . 'px',
@@ -432,17 +438,17 @@ final class CardService {
 			'--adam-frame-gradient-color-2'       => 0 === $frame_thickness ? 'transparent' : $frame_gradient_2,
 			'--adam-frame-gradient-color-3'       => 0 === $frame_thickness ? 'transparent' : $frame_gradient_3,
 			'--adam-frame-angle'                  => $frame_angle . 'deg',
+			'--adam-title-badge-background'       => $badge_background,
+			'--adam-title-badge-text'             => $badge_text,
+			'--adam-title-badge-border'           => $badge_border,
+			'--adam-title-badge-border-width'     => $badge_border_width . 'px',
+			'--adam-title-badge-icon'             => $badge_icon_color,
+			'--adam-title-badge-icon-highlight'   => $badge_icon_highlight,
+			'--adam-title-badge-icon-glow'        => $badge_icon_glow . 'px',
 			'--adam-card-frame-inset'             => '12px',
 			'--adam-card-content-padding'         => '28px',
 			'--adam-card-content-gap'             => '20px',
-			'--adam-card-title-surface'           => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.18 ),
-			'--adam-card-title-border'            => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.26 ),
-			'--adam-card-title-color'             => (string) ( $style['title_color'] ?? ( $style['text_color'] ?? '#ffffff' ) ),
-			'--adam-card-title-size'              => max( 14, min( 28, (int) ( $style['title_size'] ?? 15 ) ) ) . 'px',
-			'--adam-card-title-weight'            => (string) max( 400, (int) ( $style['title_weight'] ?? 900 ) ),
-			'--adam-card-title-align'             => (string) ( $style['title_align'] ?? 'left' ),
-			'--adam-card-title-shadow'            => max( 0, (int) ( $style['title_shadow'] ?? 0 ) ) . 'px',
-			'--adam-card-photo-border'            => $this->color_with_alpha( (string) ( $style['accent_color'] ?? '#ffffff' ), 0.8 ),
+			'--adam-card-photo-border'            => 'rgba(255,255,255,0.82)',
 			'--adam-card-pattern-color'           => (string) ( $style['pattern_color'] ?? '#86efac' ),
 			'--adam-card-pattern-base'            => (string) ( $style['pattern_background_color'] ?? '#143826' ),
 			'--adam-card-pattern-opacity'         => (string) ( max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 18 ) ) ) / 100 ),
@@ -648,23 +654,6 @@ final class CardService {
 SVG;
 
 		return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode( $svg );
-	}
-
-	/**
-	 * @param array<int, string> $classes Base presentation classes.
-	 */
-	private function auto_rarity_effect( array $classes ): string {
-		$class_string = implode( ' ', $classes );
-
-		if ( str_contains( $class_string, 'legendary' ) || str_contains( $class_string, 'founder' ) ) {
-			return 'metallic';
-		}
-
-		if ( str_contains( $class_string, 'epic' ) || str_contains( $class_string, 'rare' ) || str_contains( $class_string, 'limited_edition' ) ) {
-			return 'glow';
-		}
-
-		return 'subtle';
 	}
 
 	/**

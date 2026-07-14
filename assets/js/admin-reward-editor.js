@@ -330,28 +330,13 @@
 
 	function previewClasses() {
 		var frameStyle = currentFramePreset();
-		var badgeStyle = previewStyleValue( 'badge_style' ) || 'soft';
-		var rarityEffect = previewStyleValue( 'rarity_effect' ) || 'auto';
 		var rewardRarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
 		var classes = [];
-
-		if ( rarityEffect === 'auto' ) {
-			if ( [ 'legendary', 'founder' ].indexOf( rewardRarity ) !== -1 ) {
-				rarityEffect = 'metallic';
-			} else if ( [ 'epic', 'rare', 'limited_edition' ].indexOf( rewardRarity ) !== -1 ) {
-				rarityEffect = 'glow';
-			} else {
-				rarityEffect = 'subtle';
-			}
-		}
 
 		if ( frameStyle !== 'none' && clamp( previewStyleValue( 'frame_thickness' ), 0, 16 ) > 0 ) {
 			classes.push( 'adam-digital-card--has-frame' );
 			classes.push( 'adam-digital-card--frame-' + frameStyle );
 		}
-
-		classes.push( 'adam-digital-card--preview-badge-' + badgeStyle );
-		classes.push( 'adam-digital-card--preview-effect-' + rarityEffect );
 
 		if ( String( currentRewardValue() || '' ).toLowerCase().indexOf( 'card_theme_' ) === 0 ) {
 			classes.push( 'adam-digital-card--theme-rarity-' + rewardRarity );
@@ -472,7 +457,6 @@
 		var framePreset = currentFramePreset();
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
 		var backgroundImageUrl = previewStyleValue( 'background_image_url' ) || '';
-		var accent = previewStyleValue( 'accent_color' ) || '#86efac';
 		var frameColor = previewStyleValue( 'frame_color' ) || '#ffffff';
 		var frameHighlight = previewStyleValue( 'frame_highlight_color' ) || '#ffffff';
 		var gradientColor1 = previewStyleValue( 'frame_gradient_color_1' ) || frameColor;
@@ -493,8 +477,10 @@
 		$preview.css(
 			{
 				'--adam-card-surface': backgroundValue(),
-				'--adam-card-ink': previewStyleValue( 'text_color' ) || '#ffffff',
-				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
+				'--adam-card-text-primary': previewStyleValue( 'text_color' ) || '#ffffff',
+				'--adam-card-text-secondary': previewStyleValue( 'muted_text_color' ) || '#cccccc',
+				'--adam-card-member-name-color': previewStyleValue( 'member_name_color' ) || ( previewStyleValue( 'text_color' ) || '#ffffff' ),
+				'--adam-card-member-name-weight': clamp( previewStyleValue( 'member_name_weight' ), 700, 900 ),
 				'--adam-card-radius': '28px',
 				'--adam-card-shadow': 'none',
 				'--adam-frame-width': ( hasFrame ? frameThickness : 0 ) + 'px',
@@ -504,18 +490,18 @@
 				'--adam-frame-gradient-color-2': hasFrame ? gradientColor2 : 'transparent',
 				'--adam-frame-gradient-color-3': hasFrame ? gradientColor3 : 'transparent',
 				'--adam-frame-angle': frameGradientAngle + 'deg',
+				'--adam-title-badge-background': previewStyleValue( 'badge_background_color' ) || '#215b39',
+				'--adam-title-badge-text': previewStyleValue( 'badge_text_color' ) || '#ffffff',
+				'--adam-title-badge-border': previewStyleValue( 'badge_border_color' ) || '#86efac',
+				'--adam-title-badge-border-width': clamp( previewStyleValue( 'badge_border_width' ), 1, 4 ) + 'px',
+				'--adam-title-badge-icon': previewStyleValue( 'badge_icon_color' ) || '#2f4b3b',
+				'--adam-title-badge-icon-highlight': previewStyleValue( 'badge_icon_highlight_color' ) || '#ffffff',
+				'--adam-title-badge-icon-glow': clamp( previewStyleValue( 'badge_icon_glow' ), 0, 40 ) + 'px',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
-				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),
-				'--adam-card-title-border': colorWithAlpha( accent, 0.26 ),
-				'--adam-card-title-color': previewStyleValue( 'title_color' ) || '#ffffff',
-				'--adam-card-title-size': Math.max( 14, clamp( previewStyleValue( 'title_size' ), 14, 28 ) ) + 'px',
-				'--adam-card-title-weight': clamp( previewStyleValue( 'title_weight' ), 400, 900 ),
-				'--adam-card-title-align': previewStyleValue( 'title_align' ) || 'left',
-				'--adam-card-title-shadow': clamp( previewStyleValue( 'title_shadow' ), 0, 40 ) + 'px',
-				'--adam-card-photo-border': colorWithAlpha( accent, 0.8 ),
-				'--adam-card-pattern-color': previewStyleValue( 'pattern_color' ) || accent,
+				'--adam-card-photo-border': 'rgba(255,255,255,0.82)',
+				'--adam-card-pattern-color': previewStyleValue( 'pattern_color' ) || '#86efac',
 				'--adam-card-pattern-base': previewStyleValue( 'pattern_background_color' ) || '#143826',
 				'--adam-card-pattern-opacity': clamp( previewStyleValue( 'pattern_opacity' ), 0, 100 ) / 100,
 				'--adam-card-pattern-size': clamp( previewStyleValue( 'pattern_scale' ), 6, 120 ) + 'px',

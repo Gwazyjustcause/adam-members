@@ -1132,6 +1132,14 @@
 	letter-spacing: 0.04em;
 }
 
+.adam-reward-editor__subheading {
+	margin: 18px 0 12px;
+	color: #1f3c27;
+	font-size: 13px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+}
+
 .adam-reward-editor__media-field {
 	grid-template-columns: 1fr auto;
 	align-items: end;

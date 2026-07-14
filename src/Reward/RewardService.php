@@ -879,13 +879,15 @@ final class RewardService {
 				'card_image_position'         => 'top-right',
 				'card_image_size'             => 36,
 				'card_image_layer'            => 'overlay',
-				'badge_style'                 => 'soft',
-				'rarity_effect'               => 'auto',
-				'title_color'                 => $palette['text_color'],
-				'title_size'                  => 15,
-				'title_weight'                => 900,
-				'title_align'                 => 'left',
-				'title_shadow'                => 0,
+				'member_name_color'           => $palette['text_color'],
+				'member_name_weight'          => 900,
+				'badge_background_color'      => $palette['background_color_secondary'],
+				'badge_text_color'            => $palette['text_color'],
+				'badge_border_color'          => $palette['accent_color'],
+				'badge_border_width'          => 1,
+				'badge_icon_color'            => '#2f4b3b',
+				'badge_icon_highlight_color'  => '#ffffff',
+				'badge_icon_glow'             => 10,
 				'title_width'                 => 100,
 				'description_color'           => $palette['muted_text_color'],
 				'description_size'            => 16,
@@ -1338,23 +1340,12 @@ final class RewardService {
 	 */
 	private function sanitize_card_style_config( array $style, array $defaults ): array {
 		$style              = $this->normalize_frame_style_schema( $style, $defaults );
-		$badge_style        = isset( $style['badge_style'] ) ? sanitize_key( (string) $style['badge_style'] ) : (string) $defaults['badge_style'];
-		$rarity_effect      = isset( $style['rarity_effect'] ) ? sanitize_key( (string) $style['rarity_effect'] ) : (string) $defaults['rarity_effect'];
 		$image_position     = isset( $style['card_image_position'] ) ? sanitize_key( (string) $style['card_image_position'] ) : (string) $defaults['card_image_position'];
 		$card_image_layer   = isset( $style['card_image_layer'] ) ? sanitize_key( (string) $style['card_image_layer'] ) : (string) $defaults['card_image_layer'];
 		$frame_style        = $this->normalize_frame_preset( $style['frame_style'] ?? $defaults['frame_style'] );
 		$meta_align         = isset( $style['meta_align'] ) ? sanitize_key( (string) $style['meta_align'] ) : (string) $defaults['meta_align'];
 		$stats_align        = isset( $style['stats_align'] ) ? sanitize_key( (string) $style['stats_align'] ) : (string) $defaults['stats_align'];
-		$title_align        = isset( $style['title_align'] ) ? sanitize_key( (string) $style['title_align'] ) : (string) $defaults['title_align'];
 		$description_align  = isset( $style['description_align'] ) ? sanitize_key( (string) $style['description_align'] ) : (string) $defaults['description_align'];
-
-		if ( ! in_array( $badge_style, array( 'soft', 'outline', 'glow', 'solid' ), true ) ) {
-			$badge_style = (string) $defaults['badge_style'];
-		}
-
-		if ( ! in_array( $rarity_effect, array( 'auto', 'subtle', 'metallic', 'glow', 'none' ), true ) ) {
-			$rarity_effect = (string) $defaults['rarity_effect'];
-		}
 
 		if ( ! in_array( $image_position, array( 'top-left', 'top-right', 'center', 'bottom-right', 'bottom-left' ), true ) ) {
 			$image_position = (string) $defaults['card_image_position'];
@@ -1370,10 +1361,6 @@ final class RewardService {
 
 		if ( ! in_array( $stats_align, array( 'left', 'center', 'right' ), true ) ) {
 			$stats_align = (string) $defaults['stats_align'];
-		}
-
-		if ( ! in_array( $title_align, array( 'left', 'center', 'right' ), true ) ) {
-			$title_align = (string) $defaults['title_align'];
 		}
 
 		if ( ! in_array( $description_align, array( 'left', 'center', 'right' ), true ) ) {
@@ -1399,7 +1386,15 @@ final class RewardService {
 		return array(
 			'text_color'          => $this->sanitize_color_value( $style['text_color'] ?? $defaults['text_color'] ),
 			'muted_text_color'    => $this->sanitize_color_value( $style['muted_text_color'] ?? $defaults['muted_text_color'] ),
-			'accent_color'        => $this->sanitize_color_value( $style['accent_color'] ?? $defaults['accent_color'] ),
+			'member_name_color'   => $this->sanitize_color_value( $style['member_name_color'] ?? $style['text_color'] ?? $defaults['member_name_color'] ?? $defaults['text_color'] ),
+			'member_name_weight'  => max( 700, min( 900, (int) ( $style['member_name_weight'] ?? $defaults['member_name_weight'] ?? 900 ) ) ),
+			'badge_background_color' => $this->sanitize_color_value( $style['badge_background_color'] ?? $style['accent_color'] ?? $defaults['badge_background_color'] ?? $defaults['background_color_secondary'] ),
+			'badge_text_color'    => $this->sanitize_color_value( $style['badge_text_color'] ?? $style['title_color'] ?? $style['text_color'] ?? $defaults['badge_text_color'] ?? $defaults['text_color'] ),
+			'badge_border_color'  => $this->sanitize_color_value( $style['badge_border_color'] ?? $style['accent_color'] ?? $defaults['badge_border_color'] ?? $defaults['accent_color'] ),
+			'badge_border_width'  => max( 1, min( 4, (int) ( $style['badge_border_width'] ?? $defaults['badge_border_width'] ?? 1 ) ) ),
+			'badge_icon_color'    => $this->sanitize_color_value( $style['badge_icon_color'] ?? $defaults['badge_icon_color'] ?? '#2f4b3b' ),
+			'badge_icon_highlight_color' => $this->sanitize_color_value( $style['badge_icon_highlight_color'] ?? $defaults['badge_icon_highlight_color'] ?? '#ffffff' ),
+			'badge_icon_glow'     => max( 0, min( 40, (int) ( $style['badge_icon_glow'] ?? $defaults['badge_icon_glow'] ?? 10 ) ) ),
 			'frame_enabled'       => $frame_enabled,
 			'frame_color'         => $frame_color,
 			'frame_highlight_color' => $frame_highlight,
@@ -1423,13 +1418,6 @@ final class RewardService {
 			'card_image_position' => $image_position,
 			'card_image_size'     => max( 10, min( 80, (int) ( $style['card_image_size'] ?? $defaults['card_image_size'] ) ) ),
 			'card_image_layer'    => $card_image_layer,
-			'badge_style'         => $badge_style,
-			'rarity_effect'       => $rarity_effect,
-			'title_color'         => $this->sanitize_color_value( $style['title_color'] ?? $defaults['title_color'] ),
-			'title_size'          => max( 14, min( 28, (int) ( $style['title_size'] ?? $defaults['title_size'] ) ) ),
-			'title_weight'        => max( 400, min( 900, (int) ( $style['title_weight'] ?? $defaults['title_weight'] ) ) ),
-			'title_align'         => $title_align,
-			'title_shadow'        => max( 0, min( 40, (int) ( $style['title_shadow'] ?? $defaults['title_shadow'] ) ) ),
 			'title_width'         => max( 40, min( 100, (int) ( $style['title_width'] ?? $defaults['title_width'] ) ) ),
 			'description_color'   => $this->sanitize_color_value( $style['description_color'] ?? $defaults['description_color'] ),
 			'description_size'    => max( 12, min( 24, (int) ( $style['description_size'] ?? $defaults['description_size'] ) ) ),
@@ -1458,6 +1446,42 @@ final class RewardService {
 		}
 
 		$style['frame_thickness'] = max( 0, min( 16, (int) $style['frame_thickness'] ) );
+
+		if ( ! isset( $style['member_name_color'] ) || '' === trim( (string) $style['member_name_color'] ) ) {
+			$style['member_name_color'] = $style['text_color'] ?? $defaults['member_name_color'] ?? $defaults['text_color'];
+		}
+
+		if ( ! isset( $style['member_name_weight'] ) || '' === trim( (string) $style['member_name_weight'] ) ) {
+			$style['member_name_weight'] = $style['title_weight'] ?? $defaults['member_name_weight'] ?? 900;
+		}
+
+		if ( ! isset( $style['badge_background_color'] ) || '' === trim( (string) $style['badge_background_color'] ) ) {
+			$style['badge_background_color'] = $style['accent_color'] ?? $defaults['badge_background_color'] ?? $defaults['background_color_secondary'];
+		}
+
+		if ( ! isset( $style['badge_text_color'] ) || '' === trim( (string) $style['badge_text_color'] ) ) {
+			$style['badge_text_color'] = $style['title_color'] ?? $style['text_color'] ?? $defaults['badge_text_color'] ?? $defaults['text_color'];
+		}
+
+		if ( ! isset( $style['badge_border_color'] ) || '' === trim( (string) $style['badge_border_color'] ) ) {
+			$style['badge_border_color'] = $style['accent_color'] ?? $defaults['badge_border_color'] ?? $defaults['accent_color'];
+		}
+
+		if ( ! isset( $style['badge_border_width'] ) || '' === trim( (string) $style['badge_border_width'] ) ) {
+			$style['badge_border_width'] = $defaults['badge_border_width'] ?? 1;
+		}
+
+		if ( ! isset( $style['badge_icon_color'] ) || '' === trim( (string) $style['badge_icon_color'] ) ) {
+			$style['badge_icon_color'] = $defaults['badge_icon_color'] ?? '#2f4b3b';
+		}
+
+		if ( ! isset( $style['badge_icon_highlight_color'] ) || '' === trim( (string) $style['badge_icon_highlight_color'] ) ) {
+			$style['badge_icon_highlight_color'] = $defaults['badge_icon_highlight_color'] ?? '#ffffff';
+		}
+
+		if ( ! isset( $style['badge_icon_glow'] ) || '' === trim( (string) $style['badge_icon_glow'] ) ) {
+			$style['badge_icon_glow'] = $defaults['badge_icon_glow'] ?? 10;
+		}
 
 		$requested_frame_style = $style['frame_style'] ?? $defaults['frame_style'];
 		$style['frame_style']  = $this->normalize_frame_preset( $requested_frame_style );
@@ -1514,7 +1538,15 @@ final class RewardService {
 			$style['frame_shine_speed'],
 			$style['frame_inner_highlight'],
 			$style['frame_inner_glow'],
-			$style['frame_accent_line']
+			$style['frame_accent_line'],
+			$style['accent_color'],
+			$style['badge_style'],
+			$style['rarity_effect'],
+			$style['title_color'],
+			$style['title_size'],
+			$style['title_weight'],
+			$style['title_align'],
+			$style['title_shadow']
 		);
 
 		return $style;
