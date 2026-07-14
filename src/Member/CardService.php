@@ -266,6 +266,7 @@ final class CardService {
 					<?php $this->render_shape( (array) $shape ); ?>
 				<?php endforeach; ?>
 			</div>
+			<div class="adam-digital-card__frame" aria-hidden="true"></div>
 
 			<header class="adam-digital-card__header">
 				<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
@@ -419,13 +420,13 @@ final class CardService {
 			'--adam-card-surface'                 => $background,
 			'--adam-card-ink'                     => (string) ( $style['text_color'] ?? '#ffffff' ),
 			'--adam-card-muted'                   => (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.82)' ),
-			'--adam-card-border'                  => (string) ( $style['border_color'] ?? 'rgba(255,255,255,0.22)' ),
 			'--adam-card-radius'                  => '28px',
 			'--adam-card-shadow'                  => 'none',
-			'--adam-card-frame-width'             => $frame_width . 'px',
-			'--adam-card-frame-visibility'        => $is_style_reward && $frame_width > 0 ? '1' : '0',
-			'--adam-card-frame-accent'            => $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), max( 0.6, $frame_opacity / 100 ) ),
-			'--adam-card-frame-shadow'            => '0 0 ' . min( 24, $frame_glow ) . 'px ' . $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.26 ),
+			'--adam-frame-width'                  => $frame_width . 'px',
+			'--adam-frame-visibility'             => $is_style_reward && $frame_width > 0 ? '1' : '0',
+			'--adam-frame-color'                  => (string) ( $style['border_color'] ?? '#ffffff' ),
+			'--adam-frame-opacity'                => (string) max( 0.6, $frame_opacity / 100 ),
+			'--adam-frame-glow'                   => '0 0 ' . min( 24, $frame_glow ) . 'px ' . $this->color_with_alpha( (string) ( $style['border_color'] ?? '#ffffff' ), 0.26 ),
 			'--adam-card-frame-inner-highlight'   => 0 === $frame_inner_width ? 'rgba(255,255,255,0)' : $this->color_with_alpha( (string) ( $style['frame_inner_color'] ?? '#ffffff' ), 0.28 ),
 			'--adam-card-frame-inner-shadow'      => 'rgba(9,17,27,0.18)',
 			'--adam-card-frame-inner-width'       => $frame_inner_width . 'px',
