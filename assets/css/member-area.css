@@ -349,18 +349,8 @@
 		var(--adam-green-900);
 	color: #ffffff;
 	overflow: hidden;
-	box-shadow: 0 28px 68px rgba(16, 32, 51, 0.22);
+	box-shadow: none;
 	isolation: isolate;
-}
-
-.adam-digital-card::before {
-	position: absolute;
-	inset: var(--adam-card-frame-inset);
-	border: var(--adam-card-frame-inner-width, 1px) solid var(--adam-card-frame-inner-color, rgba(255, 255, 255, 0.16));
-	border-radius: var(--adam-card-inner-radius);
-	content: "";
-	pointer-events: none;
-	z-index: 0;
 }
 
 .adam-digital-card__shine {
@@ -628,7 +618,7 @@
 		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
 		var(--adam-green-900);
 	--adam-card-border: rgba(255, 255, 255, 0.22);
-	--adam-card-shadow: 0 28px 68px rgba(16, 32, 51, 0.22);
+	--adam-card-shadow: none;
 	--adam-card-ink: #ffffff;
 	--adam-card-muted: rgba(255, 255, 255, 0.82);
 	--adam-card-panel-border: rgba(255, 255, 255, 0.16);
@@ -662,9 +652,7 @@
 	inset: 0;
 	padding: var(--adam-card-frame-width);
 	border-radius: inherit;
-	background:
-		linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08) 12%, var(--adam-card-frame-accent) 42%, rgba(0, 0, 0, 0.22) 76%, rgba(255, 255, 255, 0.12)),
-		linear-gradient(180deg, var(--adam-card-frame-inner-highlight), rgba(255, 255, 255, 0));
+	background: var(--adam-card-frame-accent);
 	-webkit-mask:
 		linear-gradient(#000 0 0) content-box,
 		linear-gradient(#000 0 0);
@@ -694,6 +682,58 @@
 	content: "";
 	pointer-events: none;
 	z-index: 0;
+}
+
+.adam-digital-card--preview-frame-solid::before,
+.adam-digital-card--preview-frame-solid::after {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 35%),
+		var(--adam-card-frame-accent);
+}
+
+.adam-digital-card--preview-frame-double::before {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.02) 32%, rgba(0, 0, 0, 0.28) 100%),
+		var(--adam-card-frame-accent);
+}
+
+.adam-digital-card--preview-frame-double::after {
+	box-shadow:
+		inset 0 0 0 2px var(--adam-card-frame-inner-color),
+		inset 0 1px 0 var(--adam-card-frame-inner-highlight),
+		inset 0 -16px 24px rgba(0, 0, 0, 0.12),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.adam-digital-card--preview-frame-metallic::before {
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08) 18%, rgba(0, 0, 0, 0.16) 54%, rgba(255, 255, 255, 0.24) 82%, rgba(0, 0, 0, 0.18)),
+		var(--adam-card-frame-accent);
+}
+
+.adam-digital-card--preview-frame-metallic::after {
+	box-shadow:
+		inset 0 0 0 max(1px, var(--adam-card-frame-inner-width)) var(--adam-card-frame-inner-color),
+		inset 0 1px 0 rgba(255, 255, 255, 0.28),
+		inset 0 -14px 20px rgba(0, 0, 0, 0.16),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.adam-digital-card--preview-frame-segmented::before {
+	background:
+		repeating-linear-gradient(
+			135deg,
+			var(--adam-card-frame-accent) 0 18px,
+			rgba(255, 255, 255, 0.12) 18px 24px,
+			var(--adam-card-frame-accent) 24px 42px,
+			rgba(0, 0, 0, 0.28) 42px 48px
+		);
+}
+
+.adam-digital-card--preview-frame-segmented::after {
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+		inset 0 0 0 max(1px, var(--adam-card-frame-inner-width)) var(--adam-card-frame-inner-color);
 }
 
 .adam-digital-card--has-frame {
@@ -2105,19 +2145,28 @@
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) rgba(255, 255, 255, 0.08);
 }
 
-.adam-reward-card--frame-bevel {
+.adam-reward-card--frame-metallic {
 	box-shadow:
 		0 12px 28px rgba(16, 46, 27, 0.07),
-		inset 0 2px 0 rgba(255, 255, 255, 0.28),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+		inset 0 2px 0 rgba(255, 255, 255, 0.36),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 1px) color-mix(in srgb, var(--adam-reward-card-border) 42%, transparent),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 28%, transparent);
 }
 
-.adam-reward-card--frame-tech {
+.adam-reward-card--frame-segmented {
 	box-shadow:
 		0 12px 28px rgba(16, 46, 27, 0.07),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) rgba(255, 255, 255, 0.06),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-accent) 30%, transparent);
+	background-image:
+		repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 0 18px,
+			rgba(255, 255, 255, 0.18) 18px 24px,
+			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 24px 42px,
+			rgba(0, 0, 0, 0.22) 42px 48px
+		);
 }
 
 .adam-reward-card--corner-cut {
@@ -2340,20 +2389,6 @@
 	box-shadow:
 		0 0 0 calc(var(--adam-card-frame-inner-width, 1px) + 4px) color-mix(in srgb, var(--adam-card-frame-accent) 28%, transparent),
 		inset 0 0 0 var(--adam-card-frame-inner-width, 1px) var(--adam-card-frame-inner-color, rgba(255, 255, 255, 0.2));
-}
-
-.adam-digital-card--preview-frame-bevel::before {
-	box-shadow:
-		inset 0 2px 0 rgba(255, 255, 255, 0.3),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.28),
-		var(--adam-card-frame-shadow);
-}
-
-.adam-digital-card--preview-frame-tech::after {
-	box-shadow:
-		inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-		inset 0 0 0 10px color-mix(in srgb, var(--adam-card-frame-accent) 8%, transparent),
-		0 0 18px color-mix(in srgb, var(--adam-card-frame-accent) 24%, transparent);
 }
 
 .adam-digital-card--preview-corners-cut {

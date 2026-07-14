@@ -1772,19 +1772,28 @@
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) rgba(255, 255, 255, 0.08);
 }
 
-.adam-reward-card--frame-bevel {
+.adam-reward-card--frame-metallic {
 	box-shadow:
 		0 24px 46px rgba(16, 46, 27, 0.18),
-		inset 0 2px 0 rgba(255, 255, 255, 0.28),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.28),
+		inset 0 2px 0 rgba(255, 255, 255, 0.36),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 1px) color-mix(in srgb, var(--adam-reward-card-border) 42%, transparent),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 28%, transparent);
 }
 
-.adam-reward-card--frame-tech {
+.adam-reward-card--frame-segmented {
 	box-shadow:
 		0 24px 46px rgba(16, 46, 27, 0.18),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) rgba(255, 255, 255, 0.06),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-accent) 30%, transparent);
+	background-image:
+		repeating-linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 0 18px,
+			rgba(255, 255, 255, 0.18) 18px 24px,
+			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 24px 42px,
+			rgba(0, 0, 0, 0.22) 42px 48px
+		);
 }
 
 .adam-reward-card--corner-cut {

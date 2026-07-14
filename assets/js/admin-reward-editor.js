@@ -206,15 +206,13 @@
 
 				if (
 					key.indexOf( 'width' ) !== -1 ||
-					key.indexOf( 'radius' ) !== -1 ||
 					key.indexOf( 'size' ) !== -1 ||
 					key.indexOf( 'spacing' ) !== -1 ||
 					key.indexOf( 'shadow' ) !== -1 ||
 					key.indexOf( 'glow' ) !== -1 ||
 					key.indexOf( 'accent' ) !== -1 ||
 					key === 'content_padding' ||
-					key === 'content_gap' ||
-					key === 'frame_inset'
+					key === 'content_gap'
 				) {
 					suffix = suffix || 'px';
 				}
@@ -470,17 +468,17 @@
 				'--adam-card-ink': previewStyleValue( 'text_color' ) || '#ffffff',
 				'--adam-card-muted': previewStyleValue( 'muted_text_color' ) || 'rgba(255,255,255,0.82)',
 				'--adam-card-border': border,
-				'--adam-card-radius': clamp( previewStyleValue( 'border_radius' ), 8, 36 ) + 'px',
-				'--adam-card-shadow': hasStyleLayer && clamp( previewStyleValue( 'frame_shadow' ), 0, 100 ) > 0 ? '0 ' + Math.max( 12, clamp( previewStyleValue( 'frame_shadow' ), 0, 100 ) ) + 'px ' + Math.max( 28, clamp( previewStyleValue( 'frame_shadow' ), 0, 100 ) * 2 ) + 'px rgba(16,32,51,0.22)' : '0 28px 68px rgba(16,32,51,0.22)',
+				'--adam-card-radius': '28px',
+				'--adam-card-shadow': 'none',
 				'--adam-card-frame-width': ( hasStyleLayer ? clamp( previewStyleValue( 'border_width' ), 0, 18 ) : 0 ) + 'px',
 				'--adam-card-frame-visibility': hasStyleLayer && clamp( previewStyleValue( 'border_width' ), 0, 18 ) > 0 ? 1 : 0,
-				'--adam-card-frame-accent': hasStyleLayer ? colorWithAlpha( border, clamp( previewStyleValue( 'frame_opacity' ), 0, 100 ) / 100 ) : 'rgba(255,255,255,0)',
-				'--adam-card-frame-shadow': hasStyleLayer ? '0 0 ' + clamp( previewStyleValue( 'frame_glow' ), 0, 100 ) + 'px ' + colorWithAlpha( border, 0.26 ) : 'none',
+				'--adam-card-frame-accent': hasStyleLayer ? colorWithAlpha( border, clamp( previewStyleValue( 'frame_opacity' ), 60, 100 ) / 100 ) : 'rgba(255,255,255,0)',
+				'--adam-card-frame-shadow': hasStyleLayer ? '0 0 ' + clamp( previewStyleValue( 'frame_glow' ), 0, 24 ) + 'px ' + colorWithAlpha( border, 0.26 ) : 'none',
 				'--adam-card-frame-inner-width': ( hasStyleLayer ? clamp( previewStyleValue( 'frame_inner_width' ), 0, 10 ) : 0 ) + 'px',
 				'--adam-card-frame-inner-color': hasStyleLayer ? ( previewStyleValue( 'frame_inner_color' ) || '#ffffff' ) : 'rgba(255,255,255,0)',
 				'--adam-card-corner-accent': hasStyleLayer ? colorWithAlpha( border, 0.18 ) : 'rgba(255,255,255,0)',
 				'--adam-card-corner-size': ( hasStyleLayer ? Math.max( 0, clamp( previewStyleValue( 'frame_corner_accent' ), 0, 140 ) ) : 0 ) + 'px',
-				'--adam-card-frame-inset': clamp( previewStyleValue( 'frame_inset' ), 0, 40 ) + 'px',
+				'--adam-card-frame-inset': '24px',
 				'--adam-card-content-padding': clamp( previewStyleValue( 'content_padding' ), 12, 48 ) + 'px',
 				'--adam-card-content-gap': clamp( previewStyleValue( 'content_gap' ), 6, 32 ) + 'px',
 				'--adam-card-title-surface': colorWithAlpha( accent, 0.18 ),
