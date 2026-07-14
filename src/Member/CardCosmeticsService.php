@@ -288,31 +288,59 @@ final class CardCosmeticsService {
 	 * @return array<string, mixed>
 	 */
 	private function merged_custom_style( ?array $active_theme, ?array $active_frame ): array {
-		$merged = array();
+		$merged           = array();
+		$has_background   = false;
+		$has_card_style   = false;
+		$background_style = $this->reward_style_for_cosmetic( $active_theme );
+		$card_style       = $this->reward_style_for_cosmetic( $active_frame );
 
-		foreach ( array( $active_theme, $active_frame ) as $cosmetic ) {
-			if ( ! is_array( $cosmetic ) || empty( $cosmetic['reward_id'] ) ) {
-				continue;
-			}
+		if ( is_array( $background_style ) ) {
+			$has_background = true;
 
-			$reward = $this->rewards->repository()->find_reward( (int) $cosmetic['reward_id'] );
-
-			if ( ! $reward instanceof Reward ) {
-				continue;
-			}
-
-			$style   = $this->rewards->reward_visual_style( $reward );
-			$subtype = (string) ( $style['card_subtype'] ?? '' );
-			$keys    = 'card_style' === $subtype ? $this->card_style_keys() : $this->background_style_keys();
-
-			foreach ( $keys as $key ) {
-				if ( array_key_exists( $key, $style ) ) {
-					$merged[ $key ] = $style[ $key ];
+			foreach ( $this->background_style_keys() as $key ) {
+				if ( array_key_exists( $key, $background_style ) ) {
+					$merged[ $key ] = $background_style[ $key ];
 				}
 			}
 		}
 
+		if ( is_array( $card_style ) ) {
+			$has_card_style = true;
+
+			foreach ( $this->card_style_keys() as $key ) {
+				if ( array_key_exists( $key, $card_style ) ) {
+					$merged[ $key ] = $card_style[ $key ];
+				}
+			}
+		}
+
+		if ( $has_card_style ) {
+			$merged['card_subtype'] = 'card_style';
+		} elseif ( $has_background ) {
+			$merged['card_subtype'] = 'background';
+		}
+
 		return $merged;
+	}
+
+	/**
+	 * Resolve the normalized style payload for an equipped cosmetic reward.
+	 *
+	 * @param array<string, mixed>|null $cosmetic Equipped cosmetic descriptor.
+	 * @return array<string, mixed>|null
+	 */
+	private function reward_style_for_cosmetic( ?array $cosmetic ): ?array {
+		if ( ! is_array( $cosmetic ) || empty( $cosmetic['reward_id'] ) ) {
+			return null;
+		}
+
+		$reward = $this->rewards->repository()->find_reward( (int) $cosmetic['reward_id'] );
+
+		if ( ! $reward instanceof Reward ) {
+			return null;
+		}
+
+		return $this->rewards->reward_visual_style( $reward );
 	}
 
 	/**
@@ -382,6 +410,15 @@ final class CardCosmeticsService {
 			'title_weight',
 			'title_align',
 			'title_shadow',
+			'title_width',
+			'description_color',
+			'description_size',
+			'description_weight',
+			'description_align',
+			'description_shadow',
+			'description_width',
+			'badge_style',
+			'rarity_effect',
 		);
 	}
 
