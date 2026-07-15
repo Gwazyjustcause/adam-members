@@ -1,6 +1,24 @@
+.adam-print-route {
+	margin: 0;
+	padding: 32px;
+	background: #ffffff;
+}
+
+.adam-card-print-page {
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+.adam-card-print-image {
+	display: block;
+	max-width: min(100%, 1011px);
+	height: auto;
+}
+
 .adam-print-error {
-	margin: 0 0 16px;
-	padding: 12px 14px;
+	margin: 0;
+	padding: 16px 18px;
 	border: 1px solid #fecaca;
 	border-radius: 12px;
 	background: #fef2f2;
@@ -8,40 +26,8 @@
 	font-weight: 600;
 }
 
-.adam-print-actions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: 12px;
-	margin-bottom: 16px;
-}
-
-.adam-print-trigger,
-.adam-print-retry {
-	cursor: pointer;
-}
-
-.adam-print-trigger[disabled],
-.adam-print-retry[disabled] {
-	opacity: 0.65;
-	cursor: wait;
-}
-
-.adam-card-image-print {
-	display: flex;
-	justify-content: center;
-	padding: 24px;
-}
-
-.adam-card-image-print img {
-	display: block;
-	max-width: min(100%, 960px);
-	height: auto;
-}
-
 @media print {
 	@page {
-		size: auto;
 		margin: 10mm;
 	}
 
@@ -52,26 +38,17 @@
 		background: #ffffff !important;
 	}
 
-	.adam-print-error,
-	.adam-print-actions,
-	.adam-member-area,
-	.adam-member-dashboard,
-	.adam-digital-card-section,
+	.adam-print-route {
+		padding: 0;
+	}
+
 	.adam-card-print-page {
-		display: none !important;
+		display: block;
 	}
 
-	.adam-card-image-print {
-		display: block !important;
-		width: 85.6mm;
-		padding: 0 !important;
-		margin: 0 auto !important;
-	}
-
-	.adam-card-image-print img {
+	.adam-card-print-image {
 		display: block;
 		width: 85.6mm;
 		height: auto;
-		margin: 0;
 	}
 }

@@ -22,6 +22,7 @@ use WP_User_Query;
 final class CardService {
 	private const TOKEN_META = 'adam_membership_card_token';
 	private const PRINT_QUERY_VAR = 'adam_card_print';
+	private const IMAGE_QUERY_VAR = 'adam_card_image';
 	private const QR_QUERY_VAR = 'adam_card_qr';
 
 	private MemberRepository $members;
@@ -29,16 +30,18 @@ final class CardService {
 	private Logger $logger;
 	private CardCosmeticsService $cosmetics;
 	private RewardService $rewards;
+	private CardImageRenderer $image_renderer;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics, RewardService $rewards ) {
-		$this->members   = $members;
-		$this->settings  = $settings;
-		$this->logger    = $logger;
-		$this->cosmetics = $cosmetics;
-		$this->rewards   = $rewards;
+	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics, RewardService $rewards, CardImageRenderer $image_renderer ) {
+		$this->members         = $members;
+		$this->settings        = $settings;
+		$this->logger          = $logger;
+		$this->cosmetics       = $cosmetics;
+		$this->rewards         = $rewards;
+		$this->image_renderer  = $image_renderer;
 	}
 
 	/**
@@ -119,20 +122,42 @@ final class CardService {
 	public function print_url( Member $member ): string {
 		return add_query_arg(
 			array(
-				self::PRINT_QUERY_VAR => (string) $member->user_id(),
+				self::PRINT_QUERY_VAR => '1',
 			),
 			home_url( '/' )
 		);
 	}
 
 	/**
+	 * Get the dedicated server-rendered PNG URL for the logged-in member card.
+	 */
+	public function image_url( bool $download = false ): string {
+		$args = array(
+			self::IMAGE_QUERY_VAR => '1',
+		);
+
+		if ( $download ) {
+			$args['download'] = '1';
+		}
+
+		return add_query_arg( $args, home_url( '/' ) );
+	}
+
+	/**
 	 * Render the public card validation page when requested.
 	 */
 	public function maybe_render_validation_page(): void {
-		$print_member = isset( $_GET[ self::PRINT_QUERY_VAR ] ) ? absint( wp_unslash( $_GET[ self::PRINT_QUERY_VAR ] ) ) : 0;
+		$image_request = isset( $_GET[ self::IMAGE_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::IMAGE_QUERY_VAR ] ) ) : '';
 
-		if ( $print_member > 0 ) {
-			$this->render_print_page( $print_member );
+		if ( '' !== $image_request ) {
+			$this->render_card_image();
+			exit;
+		}
+
+		$print_request = isset( $_GET[ self::PRINT_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::PRINT_QUERY_VAR ] ) ) : '';
+
+		if ( '' !== $print_request ) {
+			$this->render_print_page();
 			exit;
 		}
 
@@ -164,23 +189,13 @@ final class CardService {
 
 	/**
 	 * Render the dedicated print page for the current member.
-	 *
-	 * @param int $requested_user_id Requested user id.
 	 */
-	private function render_print_page( int $requested_user_id ): void {
+	private function render_print_page(): void {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
 		}
 
-		$current_user_id = get_current_user_id();
-
-		if ( $current_user_id !== $requested_user_id ) {
-			status_header( 403 );
-			nocache_headers();
-			wp_die( esc_html__( 'Nao tens permissao para imprimir este cartao.', 'adam-membership' ) );
-		}
-
-		$member = $this->members->find( $current_user_id );
+		$member = $this->members->find( get_current_user_id() );
 
 		if ( null === $member ) {
 			status_header( 404 );
@@ -188,15 +203,19 @@ final class CardService {
 			wp_die( esc_html__( 'Nao foi encontrado um socio associado a esta conta.', 'adam-membership' ) );
 		}
 
-		$card_data         = $this->card_data( $member );
-		$card_presentation = $this->card_presentation( $member );
-		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
-		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
-		$print_js          = ADAM_MEMBERSHIP_PATH . 'assets/js/member-card-print.js';
-		$html_to_image_js  = ADAM_MEMBERSHIP_PATH . 'assets/vendor/html-to-image/package/dist/html-to-image.js';
+		$engine = $this->image_renderer->available_engine();
 
-		status_header( 200 );
-		nocache_headers();
+		if ( '' === $engine ) {
+			status_header( 503 );
+			nocache_headers();
+		} else {
+			status_header( 200 );
+			nocache_headers();
+		}
+
+		$print_css = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
+		$image_url = $this->image_url();
+	 
 		?>
 		<!doctype html>
 		<html <?php language_attributes(); ?>>
@@ -204,33 +223,94 @@ final class CardService {
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php esc_html_e( 'Imprimir Cartao ADAM', 'adam-membership' ); ?></title>
-			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 		</head>
 		<body class="adam-print-route">
-			<main class="adam-member-area adam-member-dashboard">
-				<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
-					<p class="adam-print-error" data-adam-print-error hidden></p>
-					<div class="adam-print-actions">
-						<button type="button" class="adam-card-link adam-print-trigger" data-adam-print-trigger><?php esc_html_e( 'Gerar imagem e imprimir', 'adam-membership' ); ?></button>
-						<button type="button" class="adam-text-link adam-print-retry" data-adam-print-retry><?php esc_html_e( 'Tentar novamente', 'adam-membership' ); ?></button>
-					</div>
-					<div class="adam-card-print-page">
-						<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					</div>
-				</section>
-			</main>
-			<script>
-				window.adamCardPrintConfig = {
-					errorMessage: <?php echo wp_json_encode( __( 'Nao foi possivel gerar a imagem do cartao. Verifica a consola do navegador e tenta novamente.', 'adam-membership' ) ); ?>,
-					imageAlt: <?php echo wp_json_encode( __( 'Cartao ADAM', 'adam-membership' ) ); ?>
-				};
-			</script>
-			<script src="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/vendor/html-to-image/package/dist/html-to-image.js' ); ?>?ver=<?php echo esc_attr( file_exists( $html_to_image_js ) ? (string) filemtime( $html_to_image_js ) : ADAM_MEMBERSHIP_VERSION ); ?>"></script>
-			<script src="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/js/member-card-print.js' ); ?>?ver=<?php echo esc_attr( file_exists( $print_js ) ? (string) filemtime( $print_js ) : ADAM_MEMBERSHIP_VERSION ); ?>"></script>
+			<?php if ( '' === $engine ) : ?>
+				<main class="adam-card-print-page">
+					<p class="adam-print-error"><?php esc_html_e( 'O servidor precisa de Imagick ou GD ativo para gerar o cartao imprimivel em PNG.', 'adam-membership' ); ?></p>
+				</main>
+			<?php else : ?>
+				<main class="adam-card-print-page">
+					<img class="adam-card-print-image" src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'Cartao ADAM', 'adam-membership' ); ?>">
+				</main>
+				<script>
+					(function () {
+						const printImage = document.querySelector('.adam-card-print-image');
+
+						if (!printImage) {
+							return;
+						}
+
+						const triggerPrint = function () {
+							window.setTimeout(function () {
+								window.print();
+							}, 150);
+						};
+
+						if (printImage.complete) {
+							triggerPrint();
+							return;
+						}
+
+						printImage.addEventListener('load', triggerPrint, { once: true });
+					})();
+				</script>
+			<?php endif; ?>
 		</body>
 		</html>
 		<?php
+	}
+
+	/**
+	 * Render the server-generated PNG card for the logged-in member.
+	 */
+	private function render_card_image(): void {
+		if ( ! is_user_logged_in() ) {
+			status_header( 401 );
+			nocache_headers();
+			exit;
+		}
+
+		$member = $this->members->find( get_current_user_id() );
+
+		if ( null === $member ) {
+			status_header( 404 );
+			nocache_headers();
+			exit;
+		}
+
+		$card_data         = $this->card_data( $member );
+		$card_presentation = $this->card_presentation( $member );
+		$png               = $this->image_renderer->cached_png( $member, $card_data, $card_presentation );
+
+		if ( is_wp_error( $png ) ) {
+			status_header( 503 );
+			nocache_headers();
+			header( 'Content-Type: text/plain; charset=UTF-8' );
+			echo esc_html( $png->get_error_message() );
+			exit;
+		}
+
+		$contents = file_get_contents( $png['path'] );
+
+		if ( ! is_string( $contents ) || '' === $contents ) {
+			status_header( 500 );
+			nocache_headers();
+			exit;
+		}
+
+		status_header( 200 );
+		nocache_headers();
+		header( 'Content-Type: image/png' );
+		header( 'Cache-Control: private, no-store, max-age=0' );
+
+		if ( isset( $_GET['download'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['download'] ) ) ) {
+			header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $png['filename'] ) . '"' );
+		}
+
+		echo $contents;
+		exit;
 	}
 
 	/**
