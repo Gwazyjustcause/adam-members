@@ -408,23 +408,76 @@
 		};
 	}
 
-	function buildSvgMarkup( clone, width, height ) {
-		var styles =
+	function captureSimplificationCss( width, height ) {
+		return (
 			'html,body{margin:0;padding:0;background:transparent !important;}' +
 			'.adam-card-capture-root{width:' + width + 'px;height:' + height + 'px;overflow:hidden;}' +
 			'.adam-card-capture-root .adam-digital-card{margin:0 !important;max-width:none !important;min-width:' + width + 'px !important;width:' + width + 'px !important;height:' + height + 'px !important;transform:none !important;zoom:1 !important;display:grid !important;}' +
-			collectStylesheetText();
-
-		return (
-			'<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' +
-				'<foreignObject width="100%" height="100%">' +
-					'<div xmlns="http://www.w3.org/1999/xhtml" class="adam-card-capture-root">' +
-						'<style>' + escapeXml( styles ) + '</style>' +
-						clone.outerHTML +
-					'</div>' +
-				'</foreignObject>' +
-			'</svg>'
+			'.adam-card-capture-root .adam-digital-card__shine,' +
+			'.adam-card-capture-root .adam-digital-card__art img,' +
+			'.adam-card-capture-root .adam-digital-card__pattern,' +
+			'.adam-card-capture-root .adam-digital-card__backdrop,' +
+			'.adam-card-capture-root .adam-digital-card__details div{' +
+				'filter:none !important;' +
+				'backdrop-filter:none !important;' +
+				'-webkit-backdrop-filter:none !important;' +
+				'mix-blend-mode:normal !important;' +
+				'isolation:auto !important;' +
+				'-webkit-mask:none !important;' +
+				'mask:none !important;' +
+			'}' +
+			'.adam-card-capture-root .adam-digital-card__art img{box-shadow:none !important;}' +
+			'.adam-card-capture-root .adam-digital-card__frame-layer--outer,' +
+			'.adam-card-capture-root .adam-digital-card__frame-layer--inner{' +
+				'-webkit-mask:none !important;' +
+				'mask:none !important;' +
+			'}'
 		);
+	}
+
+	function extractSvgDiagnostics( svgMarkup ) {
+		var externalUrls = svgMarkup.match( /https?:\/\/[^"' )<>]+/g ) || [];
+
+		return {
+			length: svgMarkup.length,
+			firstChunk: svgMarkup.slice( 0, 600 ),
+			hasForeignObject: -1 !== svgMarkup.indexOf( '<foreignObject' ),
+			hasImageTag: -1 !== svgMarkup.indexOf( '<image' ),
+			hasMask: -1 !== svgMarkup.indexOf( 'mask' ),
+			hasFilter: -1 !== svgMarkup.indexOf( 'filter' ),
+			hasUrlFunction: -1 !== svgMarkup.indexOf( 'url(' ),
+			externalUrls: Array.from( new Set( externalUrls ) ),
+		};
+	}
+
+	function buildSvgMarkup( clone, width, height ) {
+		var serializer = new XMLSerializer();
+		var svgNamespace = 'http://www.w3.org/2000/svg';
+		var xhtmlNamespace = 'http://www.w3.org/1999/xhtml';
+		var svg = document.createElementNS( svgNamespace, 'svg' );
+		var foreignObject = document.createElementNS( svgNamespace, 'foreignObject' );
+		var root = document.createElementNS( xhtmlNamespace, 'div' );
+		var style = document.createElementNS( xhtmlNamespace, 'style' );
+		var styleText = collectStylesheetText() + captureSimplificationCss( width, height );
+
+		svg.setAttribute( 'xmlns', svgNamespace );
+		svg.setAttribute( 'width', String( width ) );
+		svg.setAttribute( 'height', String( height ) );
+		svg.setAttribute( 'viewBox', '0 0 ' + width + ' ' + height );
+
+		foreignObject.setAttribute( 'width', '100%' );
+		foreignObject.setAttribute( 'height', '100%' );
+
+		root.setAttribute( 'xmlns', xhtmlNamespace );
+		root.setAttribute( 'class', 'adam-card-capture-root' );
+
+		style.textContent = styleText;
+		root.appendChild( style );
+		root.appendChild( clone );
+		foreignObject.appendChild( root );
+		svg.appendChild( foreignObject );
+
+		return serializer.serializeToString( svg );
 	}
 
 	function renderSvgToPngDataUrl( svgMarkup, width, height ) {
@@ -432,8 +485,24 @@
 			var canvas = document.createElement( 'canvas' );
 			var context = canvas.getContext( '2d' );
 			var image = new Image();
+			var diagnostics = extractSvgDiagnostics( svgMarkup );
 			var blob = new Blob( [ svgMarkup ], { type: 'image/svg+xml;charset=utf-8' } );
 			var url = URL.createObjectURL( blob );
+
+			debugPrint( 'print: svg diagnostics', {
+				length: diagnostics.length,
+				blobSize: blob.size,
+				objectUrl: url,
+				firstChunk: diagnostics.firstChunk,
+				width: width,
+				height: height,
+				hasForeignObject: diagnostics.hasForeignObject,
+				hasImageTag: diagnostics.hasImageTag,
+				hasMask: diagnostics.hasMask,
+				hasFilter: diagnostics.hasFilter,
+				hasUrlFunction: diagnostics.hasUrlFunction,
+				externalUrls: diagnostics.externalUrls,
+			} );
 
 			canvas.width = Math.ceil( width * CAPTURE_SCALE );
 			canvas.height = Math.ceil( height * CAPTURE_SCALE );
@@ -461,6 +530,17 @@
 			};
 
 			image.onerror = function () {
+				console.error( 'Card image capture failed:', {
+					message: 'Failed to load SVG capture image.',
+					objectUrl: url,
+					blobSize: blob.size,
+					width: width,
+					height: height,
+					naturalWidth: image.naturalWidth,
+					naturalHeight: image.naturalHeight,
+					svgLength: diagnostics.length,
+					externalUrls: diagnostics.externalUrls,
+				} );
 				URL.revokeObjectURL( url );
 				reject( new Error( 'Failed to load SVG capture image.' ) );
 			};
