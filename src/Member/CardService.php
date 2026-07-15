@@ -205,13 +205,29 @@ final class CardService {
 			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 		</head>
-		<body class="adam-print">
-			<div class="adam-print-card">
-				<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<body class="adam-print adam-card-print-document">
+			<div class="adam-print-card adam-card-print-sheet">
+				<div class="adam-card-print-stage">
+					<div class="adam-card-print-capture">
+						<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					</div>
+				</div>
 			</div>
 			<script>
-				window.addEventListener('load', function () {
-					window.print();
+				window.addEventListener('load', async function () {
+					if (document.fonts && document.fonts.ready) {
+						try {
+							await document.fonts.ready;
+						} catch (error) {
+							// Ignore font readiness failures and continue printing.
+						}
+					}
+
+					window.requestAnimationFrame(function () {
+						window.requestAnimationFrame(function () {
+							window.print();
+						});
+					});
 				});
 			</script>
 		</body>
