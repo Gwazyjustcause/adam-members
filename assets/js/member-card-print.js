@@ -12,6 +12,7 @@
 	};
 
 	let inProgress = false;
+	let activeBlobUrl = null;
 
 	const getElements = () => ({
 		card: document.querySelector(selectors.card),
@@ -78,23 +79,64 @@
 		);
 	};
 
-	const replaceWithPrintableImage = async (dataUrl) => {
-		document.body.innerHTML =
-			'<main class="adam-card-image-print"><img alt="' +
-			config.imageAlt +
-			'" /></main>';
+	const loadImageSource = (source, label) =>
+		new Promise((resolve, reject) => {
+			const image = new Image();
 
-		const image = document.querySelector('.adam-card-image-print img');
-
-		if (!image) {
-			throw new Error('Printable image element was not created.');
-		}
-
-		await new Promise((resolve, reject) => {
-			image.onload = () => resolve();
-			image.onerror = () => reject(new Error('Generated PNG could not be loaded into the print view.'));
-			image.src = dataUrl;
+			image.onload = () => resolve(image);
+			image.onerror = () =>
+				reject(new Error('Generated PNG ' + label + ' could not be loaded'));
+			image.src = source;
 		});
+
+	const validateDataUrl = (dataUrl) => {
+		console.log('Generated card data URL:', {
+			type: typeof dataUrl,
+			length: dataUrl?.length,
+			prefix: dataUrl?.slice(0, 50),
+		});
+
+		if (
+			typeof dataUrl !== 'string' ||
+			!dataUrl.startsWith('data:image/png') ||
+			dataUrl.length < 1000
+		) {
+			throw new Error('html-to-image returned an invalid PNG data URL');
+		}
+	};
+
+	const createBlobUrlFromDataUrl = async (dataUrl) => {
+		const response = await fetch(dataUrl);
+		const blob = await response.blob();
+		return URL.createObjectURL(blob);
+	};
+
+	const replaceWithPrintableImage = async (sourceUrl, isBlobUrl) => {
+		const printRoot = document.createElement('main');
+		printRoot.className = 'adam-card-image-print';
+
+		const image = document.createElement('img');
+		image.alt = config.imageAlt;
+		image.src = sourceUrl;
+
+		printRoot.appendChild(image);
+		document.body.replaceChildren(printRoot);
+
+		await loadImageSource(sourceUrl, 'in the print page');
+
+		if (isBlobUrl) {
+			activeBlobUrl = sourceUrl;
+			window.addEventListener(
+				'afterprint',
+				() => {
+					if (activeBlobUrl) {
+						URL.revokeObjectURL(activeBlobUrl);
+						activeBlobUrl = null;
+					}
+				},
+				{ once: true }
+			);
+		}
 
 		window.print();
 	};
@@ -110,6 +152,11 @@
 			throw new Error('Full card root not available for capture.');
 		}
 
+		console.log('html-to-image global check:', {
+			exists: !!window.htmlToImage,
+			toPngType: typeof window.htmlToImage?.toPng,
+		});
+
 		if (!window.htmlToImage || typeof window.htmlToImage.toPng !== 'function') {
 			throw new Error('html-to-image is not loaded.');
 		}
@@ -117,6 +164,8 @@
 		await document.fonts.ready;
 		await waitForCardImages(card);
 		await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+		console.log('Starting ADAM card PNG capture');
 
 		return window.htmlToImage.toPng(card, {
 			pixelRatio: 3,
@@ -131,11 +180,33 @@
 
 		try {
 			const dataUrl = await captureAndPrint();
-			await replaceWithPrintableImage(dataUrl);
+			validateDataUrl(dataUrl);
+
+			let printableSource = dataUrl;
+			let usesBlobUrl = false;
+
+			try {
+				await loadImageSource(dataUrl, 'as an in-memory data URL');
+				console.log('Generated PNG in-memory image load succeeded');
+			} catch (error) {
+				console.warn('Data URL image load failed, trying Blob URL fallback:', error);
+				console.warn('If the console shows a CSP error for data:, Blob fallback should avoid it.');
+				printableSource = await createBlobUrlFromDataUrl(dataUrl);
+				usesBlobUrl = true;
+
+				console.log('Generated Blob URL for print image:', {
+					prefix: printableSource.slice(0, 50),
+				});
+
+				await loadImageSource(printableSource, 'as an in-memory Blob URL');
+				console.log('Generated PNG Blob URL in-memory image load succeeded');
+			}
+
+			await replaceWithPrintableImage(printableSource, usesBlobUrl);
 		} catch (error) {
 			console.error('ADAM card print failed:', error);
 			console.error(error && error.stack ? error.stack : '');
-			showError(config.errorMessage);
+			showError((error && error.message ? error.message : config.errorMessage));
 		} finally {
 			setBusyState(false);
 		}
