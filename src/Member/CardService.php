@@ -21,6 +21,7 @@ use WP_User_Query;
  */
 final class CardService {
 	private const TOKEN_META = 'adam_membership_card_token';
+	private const QR_QUERY_VAR = 'adam_card_qr';
 
 	private MemberRepository $members;
 	private SettingsRepository $settings;
@@ -101,17 +102,11 @@ final class CardService {
 	 * @param Member $member Member.
 	 */
 	public function qr_image_url( Member $member ): string {
-		/*
-		 * Temporary lightweight QR generation: only the opaque validation URL is
-		 * sent to the QR image service. Replace with a bundled local QR encoder
-		 * when a dependency policy is chosen.
-		 */
 		return add_query_arg(
 			array(
-				'size' => '220x220',
-				'data' => $this->validation_url( $member ),
+				self::QR_QUERY_VAR => $this->token( $member ),
 			),
-			'https://api.qrserver.com/v1/create-qr-code/'
+			home_url( '/' )
 		);
 	}
 
@@ -119,6 +114,13 @@ final class CardService {
 	 * Render the public card validation page when requested.
 	 */
 	public function maybe_render_validation_page(): void {
+		$qr_token = isset( $_GET[ self::QR_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::QR_QUERY_VAR ] ) ) : '';
+
+		if ( '' !== $qr_token ) {
+			$this->render_qr_proxy( $qr_token );
+			exit;
+		}
+
 		$token = isset( $_GET['adam_card_token'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_card_token'] ) ) : '';
 
 		if ( '' === $token ) {
@@ -136,6 +138,63 @@ final class CardService {
 		nocache_headers();
 		$this->render_validation_markup( $member, $is_valid );
 		exit;
+	}
+
+	/**
+	 * Render a same-origin QR image for the member card.
+	 *
+	 * @param string $token Member card token.
+	 */
+	private function render_qr_proxy( string $token ): void {
+		$member = $this->member_by_token( $token );
+
+		if ( null === $member ) {
+			status_header( 404 );
+			nocache_headers();
+			header( 'Content-Type: image/svg+xml; charset=UTF-8' );
+			echo rawurldecode( substr( $this->preview_qr_data_uri(), strlen( 'data:image/svg+xml;charset=UTF-8,' ) ) );
+			return;
+		}
+
+		$remote_url = add_query_arg(
+			array(
+				'size' => '220x220',
+				'data' => $this->validation_url( $member ),
+			),
+			'https://api.qrserver.com/v1/create-qr-code/'
+		);
+		$response   = wp_remote_get(
+			$remote_url,
+			array(
+				'timeout'    => 10,
+				'user-agent' => 'ADAM Membership/' . ( defined( 'ADAM_MEMBERSHIP_VERSION' ) ? ADAM_MEMBERSHIP_VERSION : 'dev' ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			status_header( 502 );
+			nocache_headers();
+			header( 'Content-Type: image/svg+xml; charset=UTF-8' );
+			echo rawurldecode( substr( $this->preview_qr_data_uri(), strlen( 'data:image/svg+xml;charset=UTF-8,' ) ) );
+			return;
+		}
+
+		$status_code  = (int) wp_remote_retrieve_response_code( $response );
+		$content_type = (string) wp_remote_retrieve_header( $response, 'content-type' );
+		$body         = wp_remote_retrieve_body( $response );
+
+		if ( 200 !== $status_code || '' === $body ) {
+			status_header( 502 );
+			nocache_headers();
+			header( 'Content-Type: image/svg+xml; charset=UTF-8' );
+			echo rawurldecode( substr( $this->preview_qr_data_uri(), strlen( 'data:image/svg+xml;charset=UTF-8,' ) ) );
+			return;
+		}
+
+		status_header( 200 );
+		header( 'Content-Type: ' . ( '' !== $content_type ? $content_type : 'image/png' ) );
+		header( 'Cache-Control: private, max-age=300' );
+		echo $body;
 	}
 
 	/**

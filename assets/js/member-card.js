@@ -47,6 +47,8 @@
 	function notifyFailure( message, error, printWindow ) {
 		if ( error ) {
 			console.error( 'Card print failed:', error );
+			console.error( 'Card image capture failed:', error );
+			console.error( error && error.stack ? error.stack : '' );
 		}
 
 		if ( printWindow && ! printWindow.closed ) {
@@ -54,6 +56,7 @@
 				printWindow,
 				'<div class="adam-card-print-status" role="alert" aria-live="assertive">' +
 					'<p>' + message + '</p>' +
+					( error && error.message ? '<p>Falha ao gerar imagem: ' + String( error.message ) + '</p>' : '' ) +
 				'</div>'
 			);
 		}
@@ -300,13 +303,18 @@
 				var sourceImage = sourceImages[ index ];
 				var url = sourceImage ? ( sourceImage.currentSrc || sourceImage.src || '' ) : ( image.currentSrc || image.src || '' );
 
+				debugPrint( 'print: inline element image ' + index, url || '[empty src]' );
+
 				return fetchAsDataUrl( url ).then(
 					function ( dataUrl ) {
 						if ( dataUrl ) {
 							image.setAttribute( 'src', dataUrl );
 						}
 					},
-					function () {
+					function ( error ) {
+						console.error( 'Card image capture failed:', error );
+						console.error( error && error.stack ? error.stack : '' );
+						debugPrint( 'print: inline element image fallback ' + index, url || '[empty src]' );
 						if ( url ) {
 							image.setAttribute( 'src', url );
 						}
@@ -344,7 +352,9 @@
 					node.style.backgroundPosition = computedStyle.backgroundPosition;
 					node.style.backgroundSize = computedStyle.backgroundSize;
 					node.style.backgroundRepeat = computedStyle.backgroundRepeat;
-				} ).catch( function () {
+				} ).catch( function ( error ) {
+					console.error( 'Card image capture failed:', error );
+					console.error( error && error.stack ? error.stack : '' );
 					node.style.backgroundImage = backgroundImage;
 				} );
 			} )
@@ -462,13 +472,18 @@
 	function captureCardAsPng( card ) {
 		var prepared = buildCaptureClone( card );
 
+		debugPrint( 'print: capture clone prepared', { width: prepared.width, height: prepared.height } );
+
 		return waitForFonts( document ).then( function () {
+			debugPrint( 'print: capture stage inline element images' );
 			return inlineElementImages( prepared.clone, card );
 		} ).then( function () {
+			debugPrint( 'print: capture stage inline background images' );
 			return inlineBackgroundImages( prepared.clone, card );
 		} ).then( function () {
 			var svgMarkup = buildSvgMarkup( prepared.clone, prepared.width, prepared.height );
 
+			debugPrint( 'print: capture stage render svg to png' );
 			return renderSvgToPngDataUrl( svgMarkup, prepared.width, prepared.height );
 		} ).finally( prepared.cleanup );
 	}
@@ -533,13 +548,35 @@
 		var section = getCardSection( button );
 		var card = getRealCard( section );
 		var printWindow;
+		var cardRect;
 
 		debugPrint( 'print: click' );
+		debugPrint( 'print: finding card element' );
 
 		if ( ! section || ! card ) {
 			console.error( 'Card print failed:', new Error( 'Membership card element not found.' ) );
 			window.print();
 			return;
+		}
+
+		cardRect = card.getBoundingClientRect();
+		debugPrint( 'print: card element', card );
+		debugPrint( 'print: card rect', {
+			width: cardRect.width,
+			height: cardRect.height,
+			top: cardRect.top,
+			left: cardRect.left,
+		} );
+
+		if ( card.querySelectorAll ) {
+			Array.prototype.slice.call( card.querySelectorAll( 'img' ) ).forEach( function ( image, index ) {
+				debugPrint( 'print: card image ' + index, {
+					src: image.currentSrc || image.src || '',
+					complete: image.complete,
+					naturalWidth: image.naturalWidth,
+					naturalHeight: image.naturalHeight,
+				} );
+			} );
 		}
 
 		if ( ACTIVE_SECTIONS.has( section ) ) {
@@ -572,6 +609,7 @@
 			return captureCardAsPng( card );
 		} ).then( function ( pngDataUrl ) {
 			debugPrint( 'print: capture completed' );
+			debugPrint( 'print: converting canvas/blob to PNG completed' );
 			return printCapturedImage( pngDataUrl, printWindow );
 		} ), PRINT_TIMEOUT_MS, 'generating the card image' ).catch( function ( error ) {
 			notifyFailure( 'Não foi possível gerar a imagem do cartão para impressão.', error, printWindow );
