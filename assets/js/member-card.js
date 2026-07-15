@@ -5,6 +5,7 @@
 	var CREDIT_CARD_HEIGHT_MM = 53.98;
 	var CAPTURE_SCALE = Math.max( 2, Math.min( 3, window.devicePixelRatio || 1 ) );
 	var DESKTOP_CAPTURE_WIDTH = 1076;
+	var PRINT_TIMEOUT_MS = 15000;
 	var OPEN_WINDOWS = new WeakMap();
 	var ACTIVE_SECTIONS = new WeakSet();
 	var CACHED_STYLESHEET_TEXT = '';
@@ -45,14 +46,28 @@
 
 	function notifyFailure( message, error, printWindow ) {
 		if ( error ) {
-			console.error( '[ADAM Membership] Falha ao gerar o cartão para impressão.', error );
+			console.error( 'Card print failed:', error );
 		}
 
 		if ( printWindow && ! printWindow.closed ) {
-			printWindow.close();
+			writePrintWindow(
+				printWindow,
+				'<div class="adam-card-print-status" role="alert" aria-live="assertive">' +
+					'<p>' + message + '</p>' +
+				'</div>'
+			);
 		}
 
 		window.alert( message );
+	}
+
+	function debugPrint( message, extra ) {
+		if ( 'undefined' !== typeof extra ) {
+			console.log( message, extra );
+			return;
+		}
+
+		console.log( message );
 	}
 
 	function buildPrintWindowDocument( bodyMarkup ) {
@@ -85,6 +100,38 @@
 		printWindow.document.close();
 	}
 
+	function withTimeout( promise, timeoutMs, stepName ) {
+		return new Promise( function ( resolve, reject ) {
+			var finished = false;
+			var timer = window.setTimeout( function () {
+				if ( finished ) {
+					return;
+				}
+
+				finished = true;
+				reject( new Error( 'Timeout while ' + stepName + ' after ' + timeoutMs + 'ms.' ) );
+			}, timeoutMs );
+
+			promise.then( function ( value ) {
+				if ( finished ) {
+					return;
+				}
+
+				finished = true;
+				window.clearTimeout( timer );
+				resolve( value );
+			} ).catch( function ( error ) {
+				if ( finished ) {
+					return;
+				}
+
+				finished = true;
+				window.clearTimeout( timer );
+				reject( error );
+			} );
+		} );
+	}
+
 	function openPrintWindow() {
 		var printWindow = window.open( '', '_blank' );
 
@@ -113,28 +160,48 @@
 		return Promise.resolve();
 	}
 
+	function waitForImage( image, index ) {
+		return new Promise( function ( resolve ) {
+			var src = image.currentSrc || image.src || '';
+			var label = src || '[empty src]';
+			var done = function ( state ) {
+				debugPrint( 'print: image ' + index + ' ' + state, label );
+				resolve();
+			};
+
+			if ( ! src ) {
+				done( 'ignored' );
+				return;
+			}
+
+			if ( image.complete ) {
+				done( image.naturalWidth > 0 ? 'already loaded' : 'already complete but unavailable' );
+				return;
+			}
+
+			image.addEventListener( 'load', function () {
+				done( 'loaded' );
+			}, { once: true } );
+
+			image.addEventListener( 'error', function () {
+				done( 'failed' );
+			}, { once: true } );
+		} );
+	}
+
 	function waitForImages( root ) {
 		var images = Array.prototype.slice.call( root.querySelectorAll( 'img' ) );
 
 		if ( 0 === images.length ) {
+			debugPrint( 'print: no images found inside card' );
 			return Promise.resolve();
 		}
 
+		debugPrint( 'print: waiting for images', images.length );
+
 		return Promise.all(
-			images.map( function ( image ) {
-				return new Promise( function ( resolve ) {
-					function done() {
-						resolve();
-					}
-
-					if ( image.complete && image.naturalWidth > 0 ) {
-						done();
-						return;
-					}
-
-					image.addEventListener( 'load', done, { once: true } );
-					image.addEventListener( 'error', done, { once: true } );
-				} );
+			images.map( function ( image, index ) {
+				return waitForImage( image, index );
 			} )
 		);
 	}
@@ -410,6 +477,8 @@
 		return new Promise( function ( resolve, reject ) {
 			var image;
 
+			debugPrint( 'print: writing image' );
+
 			writePrintWindow(
 				printWindow,
 				'<img class="adam-card-print-image" src="' + pngDataUrl + '" alt="Cartão digital ADAM">'
@@ -419,6 +488,20 @@
 
 			if ( ! image ) {
 				reject( new Error( 'Print image element not found.' ) );
+				return;
+			}
+
+			if ( image.complete && image.naturalWidth > 0 ) {
+				debugPrint( 'print: image loaded' );
+				printWindow.focus();
+				debugPrint( 'print: opening print dialog' );
+				printWindow.print();
+				window.setTimeout( function () {
+					if ( ! printWindow.closed ) {
+						printWindow.close();
+					}
+				}, 1500 );
+				resolve();
 				return;
 			}
 
@@ -432,7 +515,9 @@
 				};
 
 				printWindow.addEventListener( 'afterprint', cleanup, { once: true } );
+				debugPrint( 'print: image loaded' );
 				printWindow.focus();
+				debugPrint( 'print: opening print dialog' );
 				printWindow.print();
 				window.setTimeout( cleanup, 1500 );
 				resolve();
@@ -449,7 +534,10 @@
 		var card = getRealCard( section );
 		var printWindow;
 
+		debugPrint( 'print: click' );
+
 		if ( ! section || ! card ) {
+			console.error( 'Card print failed:', new Error( 'Membership card element not found.' ) );
 			window.print();
 			return;
 		}
@@ -470,15 +558,22 @@
 			return;
 		}
 
+		debugPrint( 'print: window opened' );
 		OPEN_WINDOWS.set( section, printWindow );
 
-		waitForFonts( document ).then( function () {
+		withTimeout( Promise.resolve().then( function () {
+			debugPrint( 'print: waiting for fonts' );
+			return waitForFonts( document );
+		} ).then( function () {
+			debugPrint( 'print: waiting for images' );
 			return waitForImages( card );
 		} ).then( function () {
+			debugPrint( 'print: starting card capture' );
 			return captureCardAsPng( card );
 		} ).then( function ( pngDataUrl ) {
+			debugPrint( 'print: capture completed' );
 			return printCapturedImage( pngDataUrl, printWindow );
-		} ).catch( function ( error ) {
+		} ), PRINT_TIMEOUT_MS, 'generating the card image' ).catch( function ( error ) {
 			notifyFailure( 'Não foi possível gerar a imagem do cartão para impressão.', error, printWindow );
 		} ).finally( function () {
 			ACTIVE_SECTIONS.delete( section );
