@@ -55,34 +55,50 @@
 		window.alert( message );
 	}
 
-	function openPrintWindow() {
-		var printWindow = window.open( '', '_blank', 'noopener,noreferrer,width=520,height=360' );
-
-		if ( ! printWindow ) {
-			throw new Error( 'Print window blocked.' );
-		}
-
-		printWindow.document.open();
-		printWindow.document.write(
+	function buildPrintWindowDocument( bodyMarkup ) {
+		return (
 			'<!doctype html>' +
 			'<html>' +
 			'<head>' +
 			'<meta charset="' + document.characterSet + '">' +
 			'<meta name="viewport" content="width=device-width, initial-scale=1">' +
-			'<title>ADAM Card Print</title>' +
+			'<title>Cartão ADAM</title>' +
 			'<style>' +
 			'@page{margin:0;size:auto;}' +
 			'html,body{margin:0;padding:0;background:#ffffff;}' +
-			'body{display:grid;place-items:center;min-height:100vh;overflow:hidden;}' +
-			'.adam-card-print-image{display:block;width:85.6mm;height:53.98mm;max-width:100%;object-fit:contain;}' +
+			'body{display:grid;place-items:center;min-height:100vh;overflow:hidden;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2933;}' +
+			'.adam-card-print-status{display:grid;gap:12px;place-items:center;padding:32px 24px;text-align:center;}' +
+			'.adam-card-print-spinner{width:40px;height:40px;border-radius:999px;border:3px solid rgba(27,94,32,0.16);border-top-color:#1b5e20;animation:adam-card-print-spin 0.9s linear infinite;}' +
+			'.adam-card-print-status p{margin:0;font-size:15px;font-weight:600;}' +
+			'.adam-card-print-image{display:block;width:85.6mm;height:53.98mm;object-fit:contain;}' +
+			'@keyframes adam-card-print-spin{to{transform:rotate(360deg);}}' +
 			'</style>' +
 			'</head>' +
-			'<body>' +
-			'<img class="adam-card-print-image" alt="Cartão digital ADAM">' +
-			'</body>' +
+			'<body>' + bodyMarkup + '</body>' +
 			'</html>'
 		);
+	}
+
+	function writePrintWindow( printWindow, bodyMarkup ) {
+		printWindow.document.open();
+		printWindow.document.write( buildPrintWindowDocument( bodyMarkup ) );
 		printWindow.document.close();
+	}
+
+	function openPrintWindow() {
+		var printWindow = window.open( '', '_blank' );
+
+		if ( ! printWindow ) {
+			return null;
+		}
+
+		writePrintWindow(
+			printWindow,
+			'<div class="adam-card-print-status" role="status" aria-live="polite">' +
+				'<span class="adam-card-print-spinner" aria-hidden="true"></span>' +
+				'<p>A preparar cartão...</p>' +
+			'</div>'
+		);
 
 		return printWindow;
 	}
@@ -392,7 +408,14 @@
 
 	function printCapturedImage( pngDataUrl, printWindow ) {
 		return new Promise( function ( resolve, reject ) {
-			var image = printWindow.document.querySelector( '.adam-card-print-image' );
+			var image;
+
+			writePrintWindow(
+				printWindow,
+				'<img class="adam-card-print-image" src="' + pngDataUrl + '" alt="Cartão digital ADAM">'
+			);
+
+			image = printWindow.document.querySelector( '.adam-card-print-image' );
 
 			if ( ! image ) {
 				reject( new Error( 'Print image element not found.' ) );
@@ -418,8 +441,6 @@
 			image.onerror = function () {
 				reject( new Error( 'Failed to load generated card image into print window.' ) );
 			};
-
-			image.src = pngDataUrl;
 		} );
 	}
 
@@ -440,12 +461,12 @@
 		ACTIVE_SECTIONS.add( section );
 		setButtonsBusy( section, true );
 
-		try {
-			printWindow = openPrintWindow();
-		} catch ( error ) {
+		printWindow = openPrintWindow();
+
+		if ( ! printWindow ) {
 			ACTIVE_SECTIONS.delete( section );
 			setButtonsBusy( section, false );
-			notifyFailure( 'Não foi possível abrir a janela de impressão do cartão.', error );
+			notifyFailure( 'O navegador bloqueou a janela de impressão. Permita pop-ups para airsoftmondego.pt e tente novamente.' );
 			return;
 		}
 
