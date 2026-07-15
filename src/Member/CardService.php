@@ -191,7 +191,6 @@ final class CardService {
 		$card_data         = $this->card_data( $member );
 		$card_presentation = $this->card_presentation( $member );
 		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
-		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
 
 		status_header( 200 );
 		nocache_headers();
@@ -203,33 +202,13 @@ final class CardService {
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php esc_html_e( 'Imprimir Cartao ADAM', 'adam-membership' ); ?></title>
 			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
-			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 		</head>
-		<body class="adam-print adam-card-print-document">
-			<div class="adam-print-card adam-card-print-sheet">
-				<div class="adam-card-print-stage">
-					<div class="adam-card-print-capture">
+		<body class="adam-print-route">
+			<main class="adam-member-area adam-member-dashboard">
+				<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 						<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					</div>
-				</div>
-			</div>
-			<script>
-				window.addEventListener('load', async function () {
-					if (document.fonts && document.fonts.ready) {
-						try {
-							await document.fonts.ready;
-						} catch (error) {
-							// Ignore font readiness failures and continue printing.
-						}
-					}
-
-					window.requestAnimationFrame(function () {
-						window.requestAnimationFrame(function () {
-							window.print();
-						});
-					});
-				});
-			</script>
+				</section>
+			</main>
 		</body>
 		</html>
 		<?php
