@@ -21,6 +21,7 @@ use WP_User_Query;
  */
 final class CardService {
 	private const TOKEN_META = 'adam_membership_card_token';
+	private const PRINT_QUERY_VAR = 'adam_card_print';
 	private const QR_QUERY_VAR = 'adam_card_qr';
 
 	private MemberRepository $members;
@@ -111,9 +112,30 @@ final class CardService {
 	}
 
 	/**
+	 * Get the dedicated print URL for the logged-in member card.
+	 *
+	 * @param Member $member Member.
+	 */
+	public function print_url( Member $member ): string {
+		return add_query_arg(
+			array(
+				self::PRINT_QUERY_VAR => (string) $member->user_id(),
+			),
+			home_url( '/' )
+		);
+	}
+
+	/**
 	 * Render the public card validation page when requested.
 	 */
 	public function maybe_render_validation_page(): void {
+		$print_member = isset( $_GET[ self::PRINT_QUERY_VAR ] ) ? absint( wp_unslash( $_GET[ self::PRINT_QUERY_VAR ] ) ) : 0;
+
+		if ( $print_member > 0 ) {
+			$this->render_print_page( $print_member );
+			exit;
+		}
+
 		$qr_token = isset( $_GET[ self::QR_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::QR_QUERY_VAR ] ) ) : '';
 
 		if ( '' !== $qr_token ) {
@@ -138,6 +160,63 @@ final class CardService {
 		nocache_headers();
 		$this->render_validation_markup( $member, $is_valid );
 		exit;
+	}
+
+	/**
+	 * Render the dedicated print page for the current member.
+	 *
+	 * @param int $requested_user_id Requested user id.
+	 */
+	private function render_print_page( int $requested_user_id ): void {
+		if ( ! is_user_logged_in() ) {
+			auth_redirect();
+		}
+
+		$current_user_id = get_current_user_id();
+
+		if ( $current_user_id !== $requested_user_id ) {
+			status_header( 403 );
+			nocache_headers();
+			wp_die( esc_html__( 'Nao tens permissao para imprimir este cartao.', 'adam-membership' ) );
+		}
+
+		$member = $this->members->find( $current_user_id );
+
+		if ( null === $member ) {
+			status_header( 404 );
+			nocache_headers();
+			wp_die( esc_html__( 'Nao foi encontrado um socio associado a esta conta.', 'adam-membership' ) );
+		}
+
+		$card_data         = $this->card_data( $member );
+		$card_presentation = $this->card_presentation( $member );
+		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
+		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
+
+		status_header( 200 );
+		nocache_headers();
+		?>
+		<!doctype html>
+		<html <?php language_attributes(); ?>>
+		<head>
+			<meta charset="<?php bloginfo( 'charset' ); ?>">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title><?php esc_html_e( 'Imprimir Cartao ADAM', 'adam-membership' ); ?></title>
+			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
+			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
+		</head>
+		<body class="adam-print">
+			<div class="adam-print-card">
+				<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			</div>
+			<script>
+				window.addEventListener('load', function () {
+					window.print();
+				});
+			</script>
+		</body>
+		</html>
+		<?php
 	}
 
 	/**
