@@ -158,6 +158,49 @@
 			image.src = source;
 		});
 
+	const logLibraryDiagnostics = () => {
+		console.log('htmlToImage object:', window.htmlToImage);
+		console.log('toPng function:', window.htmlToImage?.toPng);
+		console.log('toPng.length:', window.htmlToImage?.toPng?.length);
+		console.log(
+			'toPng source:',
+			typeof window.htmlToImage?.toPng === 'function'
+				? window.htmlToImage.toPng.toString().slice(0, 300)
+				: 'unavailable'
+		);
+	};
+
+	const runMinimalLibraryTest = async () => {
+		const testElement = document.createElement('div');
+		testElement.textContent = 'ADAM TEST';
+		testElement.style.cssText =
+			'position:fixed;left:-20000px;top:0;width:300px;height:150px;background:#14532d;color:#ffffff;display:flex;align-items:center;justify-content:center;font:700 24px Arial,sans-serif;';
+
+		document.body.appendChild(testElement);
+
+		try {
+			const testResult = await window.htmlToImage.toPng(testElement, {
+				pixelRatio: 2,
+				cacheBust: true,
+				backgroundColor: '#14532d',
+			});
+
+			console.log('html-to-image minimal test result:', {
+				type: typeof testResult,
+				length: testResult?.length,
+				value: testResult,
+				prefix:
+					typeof testResult === 'string'
+						? testResult.slice(0, 50)
+						: null,
+			});
+
+			return testResult;
+		} finally {
+			testElement.remove();
+		}
+	};
+
 	const validateDataUrl = (dataUrl) => {
 		const diagnostic = {
 			type: typeof dataUrl,
@@ -225,10 +268,6 @@
 	};
 
 	const captureAndPrint = async () => {
-		if (inProgress) {
-			return;
-		}
-
 		const { card } = getElements();
 
 		if (!card || !card.offsetWidth || !card.offsetHeight) {
@@ -239,10 +278,14 @@
 			exists: !!window.htmlToImage,
 			toPngType: typeof window.htmlToImage?.toPng,
 		});
+		logLibraryDiagnostics();
 
 		if (!window.htmlToImage || typeof window.htmlToImage.toPng !== 'function') {
 			throw new Error('html-to-image is not loaded.');
 		}
+
+		const minimalResult = await runMinimalLibraryTest();
+		validateDataUrl(minimalResult);
 
 		await document.fonts.ready;
 		await waitForCardImages(card);
