@@ -3,6 +3,8 @@
 
 	var CREDIT_CARD_WIDTH_MM = 85.6;
 	var CREDIT_CARD_HEIGHT_MM = 53.98;
+	var MIN_PRINT_VIEWPORT_WIDTH = 1100;
+	var MIN_PRINT_VIEWPORT_HEIGHT = 700;
 
 	function stylesheetMarkup() {
 		var styles = '';
@@ -28,6 +30,8 @@
 		var images = Array.prototype.slice.call( frame.contentDocument.images || [] );
 		var pending = 0;
 		var resolved = false;
+		var fontsReady = frame.contentDocument.fonts && frame.contentDocument.fonts.ready ? frame.contentDocument.fonts.ready : Promise.resolve();
+		var imagesReady;
 
 		function finish() {
 			if ( resolved ) {
@@ -38,32 +42,35 @@
 			window.setTimeout( callback, 80 );
 		}
 
-		if ( 0 === images.length ) {
-			finish();
-			return;
-		}
-
-		pending = images.length;
-
-		images.forEach( function ( image ) {
-			function markDone() {
-				pending -= 1;
-
-				if ( pending <= 0 ) {
-					finish();
-				}
-			}
-
-			if ( image.complete ) {
-				markDone();
+		imagesReady = new Promise( function ( resolve ) {
+			if ( 0 === images.length ) {
+				resolve();
 				return;
 			}
 
-			image.addEventListener( 'load', markDone, { once: true } );
-			image.addEventListener( 'error', markDone, { once: true } );
+			pending = images.length;
+
+			images.forEach( function ( image ) {
+				function markDone() {
+					pending -= 1;
+
+					if ( pending <= 0 ) {
+						resolve();
+					}
+				}
+
+				if ( image.complete ) {
+					markDone();
+					return;
+				}
+
+				image.addEventListener( 'load', markDone, { once: true } );
+				image.addEventListener( 'error', markDone, { once: true } );
+			} );
 		} );
 
-		window.setTimeout( finish, 2000 );
+		Promise.all( [ fontsReady, imagesReady ] ).then( finish, finish );
+		window.setTimeout( finish, 2500 );
 	}
 
 	function printCard( card ) {
@@ -74,9 +81,11 @@
 
 		var frame = document.createElement( 'iframe' );
 		var rect = card.getBoundingClientRect();
-		var width = Math.max( Math.ceil( rect.width ), 320 );
-		var height = Math.max( Math.ceil( rect.height ), 220 );
+		var width = Math.max( Math.ceil( rect.width ), Math.ceil( card.scrollWidth || 0 ), 960 );
+		var height = Math.max( Math.ceil( rect.height ), Math.ceil( card.scrollHeight || 0 ), 360 );
 		var scale = Math.min( CREDIT_CARD_WIDTH_MM / pxToMm( width ), CREDIT_CARD_HEIGHT_MM / pxToMm( height ) );
+		var viewportWidth = Math.max( width + 80, MIN_PRINT_VIEWPORT_WIDTH );
+		var viewportHeight = Math.max( height + 80, MIN_PRINT_VIEWPORT_HEIGHT );
 		var printHtml =
 			'<!doctype html>' +
 			'<html>' +
@@ -89,7 +98,7 @@
 			'<body class="adam-card-print-document">' +
 			'<main class="adam-card-print-sheet">' +
 			'<div class="adam-card-print-stage">' +
-			'<div class="adam-card-print-capture" style="width:' + width + 'px;height:' + height + 'px;transform:scale(' + scale + ');">' +
+			'<div class="adam-card-print-capture" style="width:' + width + 'px;height:' + height + 'px;zoom:' + scale + ';">' +
 			card.outerHTML +
 			'</div>' +
 			'</div>' +
@@ -102,8 +111,8 @@
 		frame.style.position = 'fixed';
 		frame.style.left = '-10000px';
 		frame.style.top = '0';
-		frame.style.width = String( width ) + 'px';
-		frame.style.height = String( height ) + 'px';
+		frame.style.width = String( viewportWidth ) + 'px';
+		frame.style.height = String( viewportHeight ) + 'px';
 		frame.style.opacity = '0';
 		frame.style.pointerEvents = 'none';
 		frame.style.border = '0';
@@ -120,8 +129,13 @@
 
 				if ( printedCard ) {
 					printedCard.style.width = String( width ) + 'px';
+					printedCard.style.height = String( height ) + 'px';
+					printedCard.style.minWidth = String( width ) + 'px';
+					printedCard.style.maxWidth = 'none';
 					printedCard.style.minHeight = String( height ) + 'px';
 					printedCard.style.margin = '0';
+					printedCard.style.transform = 'none';
+					printedCard.style.zoom = '1';
 				}
 
 				var cleanup = function () {

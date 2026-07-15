@@ -3234,18 +3234,27 @@
 	width: 85.6mm;
 	height: 53.98mm;
 	overflow: hidden;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-start;
 	background: #ffffff;
 }
 
 .adam-card-print-capture {
-	position: absolute;
+	position: relative;
 	top: 0;
 	left: 0;
+	display: block;
+	transform: none;
 	transform-origin: top left;
 }
 
 .adam-card-print-stage .adam-digital-card {
 	margin: 0;
+	display: grid !important;
+	transform: none !important;
+	zoom: 1 !important;
+	max-width: none !important;
 }
 
 @media print {
@@ -3269,6 +3278,14 @@
 		-webkit-print-color-adjust: exact;
 	}
 
+	body.adam-card-print-document .adam-digital-card,
+	body.adam-card-print-document .adam-digital-card *,
+	body.adam-card-print-document .adam-digital-card::before,
+	body.adam-card-print-document .adam-digital-card::after {
+		print-color-adjust: exact !important;
+		-webkit-print-color-adjust: exact !important;
+	}
+
 	body.adam-card-print-document .adam-card-print-sheet {
 		width: 85.6mm;
 		height: 53.98mm;
@@ -3280,10 +3297,33 @@
 		width: 85.6mm !important;
 		height: 53.98mm !important;
 		max-width: none !important;
+		overflow: hidden !important;
+	}
+
+	body.adam-card-print-document .adam-card-print-capture {
+		position: relative !important;
+		top: 0 !important;
+		left: 0 !important;
+		transform: none !important;
+		transform-origin: top left !important;
+	}
+
+	body.adam-card-print-document .adam-digital-card-mobile,
+	body.adam-card-print-document .adam-card-heading,
+	body.adam-card-print-document .adam-card-actions,
+	body.adam-card-print-document .adam-card-link,
+	body.adam-card-print-document .adam-text-link,
+	body.adam-card-print-document .adam-card-print-button {
+		display: none !important;
 	}
 
 	body.adam-card-print-document .adam-digital-card {
 		break-inside: avoid;
 		page-break-inside: avoid;
+		display: grid !important;
+		transform: none !important;
+		zoom: 1 !important;
+		box-shadow: none !important;
+		margin: 0 !important;
 	}
 }
