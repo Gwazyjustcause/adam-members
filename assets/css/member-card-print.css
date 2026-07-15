@@ -1,29 +1,25 @@
 .adam-print-route {
 	margin: 0;
 	padding: 32px;
-	background: #ffffff;
+	background: #f7faf7;
 }
 
 .adam-card-print-page {
 	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	align-items: center;
+}
+
+.adam-print-actions {
+	display: flex;
 	justify-content: center;
-	align-items: flex-start;
 }
 
-.adam-card-print-image {
-	display: block;
-	max-width: min(100%, 1011px);
-	height: auto;
-}
-
-.adam-print-error {
-	margin: 0;
-	padding: 16px 18px;
-	border: 1px solid #fecaca;
-	border-radius: 12px;
-	background: #fef2f2;
-	color: #991b1b;
-	font-weight: 600;
+.adam-card-print-card {
+	width: 100%;
+	display: flex;
+	justify-content: center;
 }
 
 @media print {
@@ -38,17 +34,26 @@
 		background: #ffffff !important;
 	}
 
-	.adam-print-route {
-		padding: 0;
+	body * {
+		visibility: hidden !important;
 	}
 
-	.adam-card-print-page {
-		display: block;
+	.adam-digital-card,
+	.adam-digital-card * {
+		visibility: visible !important;
 	}
 
-	.adam-card-print-image {
-		display: block;
-		width: 85.6mm;
-		height: auto;
+	.adam-digital-card {
+		position: absolute !important;
+		top: 10mm !important;
+		left: 10mm !important;
+		transform: none !important;
+		zoom: 1 !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.adam-print-actions {
+		display: none !important;
 	}
 }

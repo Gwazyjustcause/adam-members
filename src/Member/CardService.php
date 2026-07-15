@@ -203,18 +203,13 @@ final class CardService {
 			wp_die( esc_html__( 'Nao foi encontrado um socio associado a esta conta.', 'adam-membership' ) );
 		}
 
-		$engine = $this->image_renderer->available_engine();
+		$card_data         = $this->card_data( $member );
+		$card_presentation = $this->card_presentation( $member );
+		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
+		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
 
-		if ( '' === $engine ) {
-			status_header( 503 );
-			nocache_headers();
-		} else {
-			status_header( 200 );
-			nocache_headers();
-		}
-
-		$print_css = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
-		$image_url = $this->image_url();
+		status_header( 200 );
+		nocache_headers();
 	 
 		?>
 		<!doctype html>
@@ -223,40 +218,18 @@ final class CardService {
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title><?php esc_html_e( 'Imprimir Cartao ADAM', 'adam-membership' ); ?></title>
+			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
 		</head>
 		<body class="adam-print-route">
-			<?php if ( '' === $engine ) : ?>
-				<main class="adam-card-print-page">
-					<p class="adam-print-error"><?php esc_html_e( 'O servidor precisa de Imagick ou GD ativo para gerar o cartao imprimivel em PNG.', 'adam-membership' ); ?></p>
-				</main>
-			<?php else : ?>
-				<main class="adam-card-print-page">
-					<img class="adam-card-print-image" src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'Cartao ADAM', 'adam-membership' ); ?>">
-				</main>
-				<script>
-					(function () {
-						const printImage = document.querySelector('.adam-card-print-image');
-
-						if (!printImage) {
-							return;
-						}
-
-						const triggerPrint = function () {
-							window.setTimeout(function () {
-								window.print();
-							}, 150);
-						};
-
-						if (printImage.complete) {
-							triggerPrint();
-							return;
-						}
-
-						printImage.addEventListener('load', triggerPrint, { once: true });
-					})();
-				</script>
-			<?php endif; ?>
+			<main class="adam-member-area adam-member-dashboard adam-card-print-page">
+				<div class="adam-print-actions">
+					<button type="button" class="adam-card-link" onclick="window.print();"><?php esc_html_e( 'Imprimir agora', 'adam-membership' ); ?></button>
+				</div>
+				<div class="adam-card-print-card">
+					<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				</div>
+			</main>
 		</body>
 		</html>
 		<?php
