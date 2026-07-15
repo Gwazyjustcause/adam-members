@@ -45,6 +45,7 @@ final class CardCosmeticsService {
 		$loyalty_badge = $this->selected_loyalty_badge( $active_title, $active_theme, $active_frame );
 		$classes       = array( 'adam-digital-card' );
 		$custom_style  = $this->merged_custom_style( $active_theme, $active_frame );
+		$title_style   = $this->reward_style_for_cosmetic( $active_title );
 
 		if ( is_array( $active_theme ) && isset( $active_theme['css_class'] ) ) {
 			$classes[] = (string) $active_theme['css_class'];
@@ -58,6 +59,7 @@ final class CardCosmeticsService {
 		return array(
 			'classes'         => array_values( array_unique( array_filter( $classes ) ) ),
 			'active_title'    => $active_title,
+			'active_title_badge_style' => $this->title_badge_style( $title_style ),
 			'active_theme'    => $active_theme,
 			'active_frame'    => $active_frame,
 			'custom_style'    => $custom_style,
@@ -394,13 +396,6 @@ final class CardCosmeticsService {
 			'muted_text_color',
 			'member_name_color',
 			'member_name_weight',
-			'badge_background_color',
-			'badge_text_color',
-			'badge_border_color',
-			'badge_border_width',
-			'badge_icon_color',
-			'badge_icon_highlight_color',
-			'badge_icon_glow',
 			'title_width',
 			'description_color',
 			'description_size',
@@ -408,6 +403,42 @@ final class CardCosmeticsService {
 			'description_align',
 			'description_shadow',
 			'description_width',
+		);
+	}
+
+	/**
+	 * @param array<string, mixed>|null $style
+	 * @return array<string, mixed>
+	 */
+	private function title_badge_style( ?array $style ): array {
+		if ( ! is_array( $style ) ) {
+			return array();
+		}
+
+		$source = is_array( $style['title_badge'] ?? null ) ? (array) $style['title_badge'] : $style;
+		$badge = array();
+
+		foreach ( $this->title_badge_style_keys() as $key ) {
+			if ( array_key_exists( $key, $source ) ) {
+				$badge[ $key ] = $source[ $key ];
+			}
+		}
+
+		return $badge;
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private function title_badge_style_keys(): array {
+		return array(
+			'background_color',
+			'text_color',
+			'border_color',
+			'border_width',
+			'icon_color',
+			'icon_highlight_color',
+			'icon_glow',
 		);
 	}
 

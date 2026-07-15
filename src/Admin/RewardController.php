@@ -223,13 +223,22 @@ final class RewardController {
 		$reward_rarity      = null !== $reward ? $reward->rarity() : Reward::RARITY_COMMON;
 		$reward_category    = null !== $reward ? $reward->category() : 'Cartao Digital';
 		$reward_type        = null !== $reward ? $reward->type() : Reward::TYPE_DIGITAL_COSMETIC;
-		$is_digital_reward  = Reward::TYPE_DIGITAL_COSMETIC === $reward_type || str_contains( strtolower( $reward_category ), 'cartao' );
+		$normalized_category = strtolower( remove_accents( $reward_category ) );
+		$is_digital_reward  = Reward::TYPE_DIGITAL_COSMETIC === $reward_type || str_contains( $normalized_category, 'cartao' );
+		$is_title_reward    = str_contains( $normalized_category, 'titulo' ) || str_starts_with( strtolower( (string) ( null !== $reward ? $reward->reward_value() : '' ) ), 'title_' );
+		$uses_visual_editor = $is_digital_reward || $is_title_reward;
+		$title_badge_style  = is_array( $resolved_style['title_badge'] ?? null ) ? (array) $resolved_style['title_badge'] : array();
 		$card_preview       = null !== $reward
 			? $this->cards->render_card(
 				$this->cards->preview_card_data(),
 				$this->cards->reward_preview_presentation( $reward, array_merge( $resolved_style, array( 'image_url' => $reward_image ) ) )
 			)
 			: '';
+		$title_badge_preview = $this->cards->render_title_badge_preview(
+			'' !== $reward_name ? $reward_name : 'SOBREVIVENTE',
+			$reward_rarity,
+			$title_badge_style
+		);
 		?>
 		<div class="wrap adam-admin-wrap">
 			<div class="adam-admin-titlebar adam-admin-titlebar--split">
@@ -258,11 +267,11 @@ final class RewardController {
 						</div>
 					</section>
 
-					<div class="adam-admin-notice info adam-reward-editor__conditional-field<?php echo $is_digital_reward ? ' is-hidden' : ''; ?>" data-adam-non-digital-notice>
+					<div class="adam-admin-notice info adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? ' is-hidden' : ''; ?>" data-adam-non-digital-notice>
 						<p><?php esc_html_e( 'Os controlos visuais do cartao digital aparecem apenas em recompensas ligadas ao cartao de socio. Para outras recompensas, guarda apenas os metadados gerais.', 'adam-membership' ); ?></p>
 					</div>
 
-					<div class="adam-reward-editor__workspace adam-reward-editor__conditional-field<?php echo $is_digital_reward ? '' : ' is-hidden'; ?>" data-adam-digital-workspace>
+					<div class="adam-reward-editor__workspace adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? '' : ' is-hidden'; ?>" data-adam-digital-workspace>
 						<div class="adam-reward-editor__controls">
 							<section class="adam-reward-editor__section adam-reward-editor__section--summary">
 								<div class="adam-reward-editor__summary">
@@ -351,10 +360,10 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-style-controls>
-								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Tipografia e badges', 'adam-membership' ); ?></button>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-card-typography-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Tipografia do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
-								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Ajusta apenas a tipografia real do cartao e o badge do titulo ativo.', 'adam-membership' ); ?></p>
+								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Ajusta apenas a tipografia real do cartao. O badge do titulo e definido na propria recompensa de titulo.', 'adam-membership' ); ?></p>
 								<h4 class="adam-reward-editor__subheading"><?php esc_html_e( 'Tipografia do cartao', 'adam-membership' ); ?></h4>
 								<div class="adam-reward-editor__field-grid">
 									<label><span><?php esc_html_e( 'Cor do texto', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[text_color]" value="<?php echo esc_attr( (string) $resolved_style['text_color'] ); ?>" data-adam-style="text_color"></label>
@@ -362,16 +371,21 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Cor do nome do socio', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[member_name_color]" value="<?php echo esc_attr( (string) ( $resolved_style['member_name_color'] ?? $resolved_style['text_color'] ) ); ?>" data-adam-style="member_name_color"></label>
 									<label><span><?php esc_html_e( 'Peso do nome do socio', 'adam-membership' ); ?></span><input type="range" min="700" max="900" step="100" name="visual_style[member_name_weight]" value="<?php echo esc_attr( (string) ( $resolved_style['member_name_weight'] ?? 900 ) ); ?>" data-adam-style="member_name_weight"><small data-adam-value-for="member_name_weight"><?php echo esc_html( (string) ( $resolved_style['member_name_weight'] ?? 900 ) ); ?></small></label>
 								</div>
-								<h4 class="adam-reward-editor__subheading"><?php esc_html_e( 'Badge do titulo ativo', 'adam-membership' ); ?></h4>
-								<div class="adam-reward-editor__field-grid">
-									<label><span><?php esc_html_e( 'Fundo do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[badge_background_color]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_background_color'] ?? '#215b39' ) ); ?>" data-adam-style="badge_background_color"></label>
-									<label><span><?php esc_html_e( 'Texto do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[badge_text_color]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_text_color'] ?? $resolved_style['text_color'] ) ); ?>" data-adam-style="badge_text_color"></label>
-									<label><span><?php esc_html_e( 'Contorno do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[badge_border_color]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_border_color'] ?? '#86efac' ) ); ?>" data-adam-style="badge_border_color"></label>
-									<label><span><?php esc_html_e( 'Espessura do contorno', 'adam-membership' ); ?></span><input type="range" min="1" max="4" step="1" name="visual_style[badge_border_width]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_border_width'] ?? 1 ) ); ?>" data-adam-style="badge_border_width"><small data-adam-value-for="badge_border_width"><?php echo esc_html( (string) ( $resolved_style['badge_border_width'] ?? 1 ) ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Cor do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[badge_icon_color]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_icon_color'] ?? '#2f4b3b' ) ); ?>" data-adam-style="badge_icon_color"></label>
-									<label><span><?php esc_html_e( 'Cor do brilho do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[badge_icon_highlight_color]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_icon_highlight_color'] ?? '#ffffff' ) ); ?>" data-adam-style="badge_icon_highlight_color"></label>
-									<label><span><?php esc_html_e( 'Intensidade do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="40" name="visual_style[badge_icon_glow]" value="<?php echo esc_attr( (string) ( $resolved_style['badge_icon_glow'] ?? 10 ) ); ?>" data-adam-style="badge_icon_glow"><small data-adam-value-for="badge_icon_glow"><?php echo esc_html( (string) ( $resolved_style['badge_icon_glow'] ?? 10 ) ); ?>px</small></label>
 								</div>
+							</section>
+
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-title-badge-controls>
+								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Badge do titulo', 'adam-membership' ); ?></button>
+								<div class="adam-reward-editor__accordion-body">
+								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Desenha o badge visual deste titulo. Esta aparencia segue sempre o titulo ativo do socio.', 'adam-membership' ); ?></p>
+								<div class="adam-reward-editor__field-grid">
+									<label><span><?php esc_html_e( 'Fundo do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][background_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['background_color'] ?? '#215b39' ) ); ?>" data-adam-style="badge_background_color"></label>
+									<label><span><?php esc_html_e( 'Texto do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][text_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['text_color'] ?? $resolved_style['text_color'] ) ); ?>" data-adam-style="badge_text_color"></label>
+									<label><span><?php esc_html_e( 'Contorno do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][border_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['border_color'] ?? '#86efac' ) ); ?>" data-adam-style="badge_border_color"></label>
+									<label><span><?php esc_html_e( 'Espessura do contorno', 'adam-membership' ); ?></span><input type="range" min="1" max="4" step="1" name="visual_style[title_badge][border_width]" value="<?php echo esc_attr( (string) ( $title_badge_style['border_width'] ?? 1 ) ); ?>" data-adam-style="badge_border_width"><small data-adam-value-for="badge_border_width"><?php echo esc_html( (string) ( $title_badge_style['border_width'] ?? 1 ) ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Cor do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][icon_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_color'] ?? '#2f4b3b' ) ); ?>" data-adam-style="badge_icon_color"></label>
+									<label><span><?php esc_html_e( 'Cor do brilho do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][icon_highlight_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_highlight_color'] ?? '#ffffff' ) ); ?>" data-adam-style="badge_icon_highlight_color"></label>
+									<label><span><?php esc_html_e( 'Intensidade do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="40" name="visual_style[title_badge][icon_glow]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_glow'] ?? 10 ) ); ?>" data-adam-style="badge_icon_glow"><small data-adam-value-for="badge_icon_glow"><?php echo esc_html( (string) ( $title_badge_style['icon_glow'] ?? 10 ) ); ?>px</small></label>
 								</div>
 							</section>
 
@@ -409,12 +423,17 @@ final class RewardController {
 						<div class="adam-reward-editor__preview-panel">
 							<section class="adam-reward-editor__section adam-reward-editor__section--preview">
 								<p class="adam-reward-editor__eyebrow"><?php esc_html_e( 'Pre-visualizacao em tempo real', 'adam-membership' ); ?></p>
-								<h2><?php esc_html_e( 'Cartao ADAM real', 'adam-membership' ); ?></h2>
-								<p><?php esc_html_e( 'A pre-visualizacao usa a mesma estrutura do cartao do socio, incluindo logo, fotografia, QR code, titulos e area de estado.', 'adam-membership' ); ?></p>
-								<div class="adam-reward-editor__preview-stage">
+								<h2 class="<?php echo $is_title_reward ? 'is-hidden' : ''; ?>" data-adam-card-preview-panel><?php esc_html_e( 'Cartao ADAM real', 'adam-membership' ); ?></h2>
+								<h2 class="<?php echo $is_title_reward ? '' : 'is-hidden'; ?>" data-adam-title-preview-panel><?php esc_html_e( 'Badge real do titulo', 'adam-membership' ); ?></h2>
+								<p class="<?php echo $is_title_reward ? '' : 'is-hidden'; ?>" data-adam-title-preview-panel><?php esc_html_e( 'Esta pre-visualizacao usa o mesmo componente do badge apresentado no cartao digital quando este titulo fica ativo.', 'adam-membership' ); ?></p>
+								<p class="<?php echo $is_title_reward ? 'is-hidden' : ''; ?>" data-adam-card-preview-panel><?php esc_html_e( 'A pre-visualizacao usa a mesma estrutura do cartao do socio, incluindo logo, fotografia, QR code, titulos e area de estado.', 'adam-membership' ); ?></p>
+								<div class="adam-reward-editor__preview-stage<?php echo $is_title_reward ? ' is-hidden' : ''; ?>" data-adam-card-preview-panel>
 									<div class="adam-reward-editor__preview-scale">
 										<?php echo $card_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 									</div>
+								</div>
+								<div class="adam-reward-editor__title-preview<?php echo $is_title_reward ? '' : ' is-hidden'; ?>" data-adam-title-preview-panel>
+									<?php echo $title_badge_preview; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 								</div>
 							</section>
 						</div>

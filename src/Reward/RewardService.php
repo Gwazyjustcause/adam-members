@@ -749,6 +749,10 @@ final class RewardService {
 				'image_url'    => $reward->image_url(),
 				'background'   => array_merge( $preset_background, is_array( $stored['background'] ?? null ) ? $stored['background'] : array() ),
 				'style'        => array_merge( $preset_style, is_array( $stored['style'] ?? null ) ? $stored['style'] : array() ),
+				'title_badge'  => array_merge(
+					is_array( $defaults['title_badge'] ?? null ) ? (array) $defaults['title_badge'] : $this->default_title_badge_style( $defaults ),
+					is_array( $stored['title_badge'] ?? null ) ? (array) $stored['title_badge'] : array()
+				),
 			)
 		);
 
@@ -881,13 +885,6 @@ final class RewardService {
 				'card_image_layer'            => 'overlay',
 				'member_name_color'           => $palette['text_color'],
 				'member_name_weight'          => 900,
-				'badge_background_color'      => $palette['background_color_secondary'],
-				'badge_text_color'            => $palette['text_color'],
-				'badge_border_color'          => $palette['accent_color'],
-				'badge_border_width'          => 1,
-				'badge_icon_color'            => '#2f4b3b',
-				'badge_icon_highlight_color'  => '#ffffff',
-				'badge_icon_glow'             => 10,
 				'title_width'                 => 100,
 				'description_color'           => $palette['muted_text_color'],
 				'description_size'            => 16,
@@ -896,6 +893,7 @@ final class RewardService {
 				'description_shadow'          => 0,
 				'description_width'           => 66,
 				'shapes'                      => $this->default_visual_shapes( $rarity ),
+				'title_badge'                 => $this->default_title_badge_style( $palette ),
 			)
 		);
 	}
@@ -1262,15 +1260,19 @@ final class RewardService {
 
 		$existing_background = is_array( $existing_style['background'] ?? null ) ? (array) $existing_style['background'] : ( $existing_grouped ? array() : $existing_style );
 		$existing_card_style = is_array( $existing_style['style'] ?? null ) ? (array) $existing_style['style'] : ( $existing_grouped ? array() : $existing_style );
+		$existing_title_badge = is_array( $existing_style['title_badge'] ?? null ) ? (array) $existing_style['title_badge'] : $this->extract_legacy_title_badge_source( $existing_style );
 		$background_source   = is_array( $style['background'] ?? null ) ? array_merge( $existing_background, (array) $style['background'] ) : array_merge( $existing_background, $style );
 		$style_source        = is_array( $style['style'] ?? null ) ? array_merge( $existing_card_style, (array) $style['style'] ) : array_merge( $existing_card_style, $style );
+		$title_badge_source  = is_array( $style['title_badge'] ?? null ) ? array_merge( $existing_title_badge, (array) $style['title_badge'] ) : array_merge( $existing_title_badge, $this->extract_legacy_title_badge_source( $style ) );
 		$background          = $this->sanitize_background_style_config( $background_source, $defaults );
 		$card_style          = $this->sanitize_card_style_config( $style_source, $defaults );
+		$title_badge         = $this->sanitize_title_badge_config( $title_badge_source, $defaults );
 
 		return array(
 			'card_subtype' => $card_subtype,
 			'background'   => 'background' === $card_subtype ? $background : $existing_background,
 			'style'        => 'card_style' === $card_subtype ? $card_style : $existing_card_style,
+			'title_badge'  => $title_badge,
 		);
 	}
 
@@ -1388,13 +1390,6 @@ final class RewardService {
 			'muted_text_color'    => $this->sanitize_color_value( $style['muted_text_color'] ?? $defaults['muted_text_color'] ),
 			'member_name_color'   => $this->sanitize_color_value( $style['member_name_color'] ?? $style['text_color'] ?? $defaults['member_name_color'] ?? $defaults['text_color'] ),
 			'member_name_weight'  => max( 700, min( 900, (int) ( $style['member_name_weight'] ?? $defaults['member_name_weight'] ?? 900 ) ) ),
-			'badge_background_color' => $this->sanitize_color_value( $style['badge_background_color'] ?? $style['accent_color'] ?? $defaults['badge_background_color'] ?? $defaults['background_color_secondary'] ),
-			'badge_text_color'    => $this->sanitize_color_value( $style['badge_text_color'] ?? $style['title_color'] ?? $style['text_color'] ?? $defaults['badge_text_color'] ?? $defaults['text_color'] ),
-			'badge_border_color'  => $this->sanitize_color_value( $style['badge_border_color'] ?? $style['accent_color'] ?? $defaults['badge_border_color'] ?? $defaults['accent_color'] ),
-			'badge_border_width'  => max( 1, min( 4, (int) ( $style['badge_border_width'] ?? $defaults['badge_border_width'] ?? 1 ) ) ),
-			'badge_icon_color'    => $this->sanitize_color_value( $style['badge_icon_color'] ?? $defaults['badge_icon_color'] ?? '#2f4b3b' ),
-			'badge_icon_highlight_color' => $this->sanitize_color_value( $style['badge_icon_highlight_color'] ?? $defaults['badge_icon_highlight_color'] ?? '#ffffff' ),
-			'badge_icon_glow'     => max( 0, min( 40, (int) ( $style['badge_icon_glow'] ?? $defaults['badge_icon_glow'] ?? 10 ) ) ),
 			'frame_enabled'       => $frame_enabled,
 			'frame_color'         => $frame_color,
 			'frame_highlight_color' => $frame_highlight,
@@ -1455,34 +1450,6 @@ final class RewardService {
 			$style['member_name_weight'] = $style['title_weight'] ?? $defaults['member_name_weight'] ?? 900;
 		}
 
-		if ( ! isset( $style['badge_background_color'] ) || '' === trim( (string) $style['badge_background_color'] ) ) {
-			$style['badge_background_color'] = $style['accent_color'] ?? $defaults['badge_background_color'] ?? $defaults['background_color_secondary'];
-		}
-
-		if ( ! isset( $style['badge_text_color'] ) || '' === trim( (string) $style['badge_text_color'] ) ) {
-			$style['badge_text_color'] = $style['title_color'] ?? $style['text_color'] ?? $defaults['badge_text_color'] ?? $defaults['text_color'];
-		}
-
-		if ( ! isset( $style['badge_border_color'] ) || '' === trim( (string) $style['badge_border_color'] ) ) {
-			$style['badge_border_color'] = $style['accent_color'] ?? $defaults['badge_border_color'] ?? $defaults['accent_color'];
-		}
-
-		if ( ! isset( $style['badge_border_width'] ) || '' === trim( (string) $style['badge_border_width'] ) ) {
-			$style['badge_border_width'] = $defaults['badge_border_width'] ?? 1;
-		}
-
-		if ( ! isset( $style['badge_icon_color'] ) || '' === trim( (string) $style['badge_icon_color'] ) ) {
-			$style['badge_icon_color'] = $defaults['badge_icon_color'] ?? '#2f4b3b';
-		}
-
-		if ( ! isset( $style['badge_icon_highlight_color'] ) || '' === trim( (string) $style['badge_icon_highlight_color'] ) ) {
-			$style['badge_icon_highlight_color'] = $defaults['badge_icon_highlight_color'] ?? '#ffffff';
-		}
-
-		if ( ! isset( $style['badge_icon_glow'] ) || '' === trim( (string) $style['badge_icon_glow'] ) ) {
-			$style['badge_icon_glow'] = $defaults['badge_icon_glow'] ?? 10;
-		}
-
 		$requested_frame_style = $style['frame_style'] ?? $defaults['frame_style'];
 		$style['frame_style']  = $this->normalize_frame_preset( $requested_frame_style );
 
@@ -1540,6 +1507,13 @@ final class RewardService {
 			$style['frame_inner_glow'],
 			$style['frame_accent_line'],
 			$style['accent_color'],
+			$style['badge_background_color'],
+			$style['badge_text_color'],
+			$style['badge_border_color'],
+			$style['badge_border_width'],
+			$style['badge_icon_color'],
+			$style['badge_icon_highlight_color'],
+			$style['badge_icon_glow'],
 			$style['badge_style'],
 			$style['rarity_effect'],
 			$style['title_color'],
@@ -1550,6 +1524,66 @@ final class RewardService {
 		);
 
 		return $style;
+	}
+
+	/**
+	 * @param array<string, mixed> $style Raw badge data.
+	 * @param array<string, mixed> $defaults Runtime defaults.
+	 * @return array<string, mixed>
+	 */
+	private function sanitize_title_badge_config( array $style, array $defaults ): array {
+		$default_badge = is_array( $defaults['title_badge'] ?? null ) ? (array) $defaults['title_badge'] : $this->default_title_badge_style( $defaults );
+
+		return array(
+			'background_color'     => $this->sanitize_color_value( $style['background_color'] ?? $style['badge_background_color'] ?? $default_badge['background_color'] ?? '#36523f' ),
+			'text_color'           => $this->sanitize_color_value( $style['text_color'] ?? $style['badge_text_color'] ?? $default_badge['text_color'] ?? '#ffffff' ),
+			'border_color'         => $this->sanitize_color_value( $style['border_color'] ?? $style['badge_border_color'] ?? $default_badge['border_color'] ?? '#86efac' ),
+			'border_width'         => max( 1, min( 4, (int) ( $style['border_width'] ?? $style['badge_border_width'] ?? $default_badge['border_width'] ?? 1 ) ) ),
+			'icon_color'           => $this->sanitize_color_value( $style['icon_color'] ?? $style['badge_icon_color'] ?? $default_badge['icon_color'] ?? '#2f4b3b' ),
+			'icon_highlight_color' => $this->sanitize_color_value( $style['icon_highlight_color'] ?? $style['badge_icon_highlight_color'] ?? $default_badge['icon_highlight_color'] ?? '#ffffff' ),
+			'icon_glow'            => max( 0, min( 40, (int) ( $style['icon_glow'] ?? $style['badge_icon_glow'] ?? $default_badge['icon_glow'] ?? 10 ) ) ),
+		);
+	}
+
+	/**
+	 * @param array<string, mixed> $style Raw style payload.
+	 * @return array<string, mixed>
+	 */
+	private function extract_legacy_title_badge_source( array $style ): array {
+		$mapping = array(
+			'badge_background_color'      => 'background_color',
+			'badge_text_color'            => 'text_color',
+			'badge_border_color'          => 'border_color',
+			'badge_border_width'          => 'border_width',
+			'badge_icon_color'            => 'icon_color',
+			'badge_icon_highlight_color'  => 'icon_highlight_color',
+			'badge_icon_glow'             => 'icon_glow',
+		);
+		$badge   = array();
+
+		foreach ( $mapping as $legacy_key => $new_key ) {
+			if ( array_key_exists( $legacy_key, $style ) ) {
+				$badge[ $new_key ] = $style[ $legacy_key ];
+			}
+		}
+
+		return $badge;
+	}
+
+	/**
+	 * @param array<string, mixed> $palette Base reward palette.
+	 * @return array<string, mixed>
+	 */
+	private function default_title_badge_style( array $palette ): array {
+		return array(
+			'background_color'     => (string) ( $palette['background_color_secondary'] ?? '#36523f' ),
+			'text_color'           => (string) ( $palette['text_color'] ?? '#ffffff' ),
+			'border_color'         => (string) ( $palette['accent_color'] ?? '#86efac' ),
+			'border_width'         => 1,
+			'icon_color'           => '#2f4b3b',
+			'icon_highlight_color' => '#ffffff',
+			'icon_glow'            => 10,
+		);
 	}
 
 	/**
@@ -1769,6 +1803,10 @@ final class RewardService {
 
 		if ( isset( $style['style'] ) && is_array( $style['style'] ) ) {
 			$style['style'] = wp_parse_args( $style['style'], $this->sanitize_card_style_config( array(), $defaults ) );
+		}
+
+		if ( isset( $style['title_badge'] ) && is_array( $style['title_badge'] ) ) {
+			$style['title_badge'] = wp_parse_args( $style['title_badge'], $this->sanitize_title_badge_config( array(), $defaults ) );
 		}
 
 		return wp_parse_args( $style, $defaults );

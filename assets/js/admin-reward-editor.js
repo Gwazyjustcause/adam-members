@@ -34,11 +34,28 @@
 		return $fields.first().val();
 	}
 
+	function normalizedString( value ) {
+		var stringValue = String( value || '' ).toLowerCase();
+
+		if ( typeof stringValue.normalize === 'function' ) {
+			return stringValue.normalize( 'NFD' ).replace( /[\u0300-\u036f]/g, '' );
+		}
+
+		return stringValue;
+	}
+
 	function isDigitalReward() {
-		var category = ( $( '[data-adam-reward-category]' ).val() || '' ).toLowerCase();
+		var category = normalizedString( $( '[data-adam-reward-category]' ).val() || '' );
 		var type = $( '[data-adam-reward-type]' ).val() || '';
 
 		return type === 'digital_cosmetic' || category.indexOf( 'cart' ) !== -1;
+	}
+
+	function isTitleReward() {
+		var category = normalizedString( $( '[data-adam-reward-category]' ).val() || '' );
+		var rewardValue = String( currentRewardValue() || '' ).toLowerCase();
+
+		return category.indexOf( 'titulo' ) !== -1 || rewardValue.indexOf( 'title_' ) === 0;
 	}
 
 	function currentSubtype() {
@@ -393,7 +410,7 @@
 		var rewardValue = String( currentRewardValue() || '' ).toLowerCase();
 		var rewardName = $( '[data-adam-preview-name]' ).val() || 'SOBREVIVENTE';
 
-		if ( rewardValue.indexOf( 'title_' ) === 0 ) {
+		if ( rewardValue.indexOf( 'title_' ) === 0 || isTitleReward() ) {
 			return String( rewardName ).toUpperCase();
 		}
 
@@ -402,18 +419,30 @@
 
 	function toggleDesignerSections() {
 		var digital = isDigitalReward();
+		var titleReward = isTitleReward();
 		var subtype = currentSubtype();
 		var mode = currentBackgroundMode();
-		var backgroundVisible = digital && subtype === 'background';
-		var styleVisible = digital && subtype === 'card_style';
+		var editorVisible = digital || titleReward;
+		var backgroundVisible = digital && ! titleReward && subtype === 'background';
+		var styleVisible = digital && ! titleReward && subtype === 'card_style';
+		var cardTypographyVisible = digital && ! titleReward && subtype === 'card_style';
+		var titleBadgeVisible = titleReward;
 		var patternVisible = backgroundVisible && ( previewStyleValue( 'pattern' ) || 'grid' ) !== 'none';
 
-		$( '[data-adam-digital-workspace], [data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital );
-		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', digital );
+		$( '[data-adam-digital-workspace]' ).toggleClass( 'is-hidden', ! editorVisible );
+		$( '[data-adam-card-subtype-field]' ).toggleClass( 'is-hidden', ! digital || titleReward );
+		$( '[data-adam-card-subtype-field]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! digital || titleReward );
+		$( '[data-adam-non-digital-notice]' ).toggleClass( 'is-hidden', editorVisible );
 		$( '[data-adam-background-controls], [data-adam-image-controls]' ).toggleClass( 'is-hidden', ! backgroundVisible );
 		$( '[data-adam-background-controls], [data-adam-image-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! backgroundVisible );
 		$( '[data-adam-style-controls]' ).toggleClass( 'is-hidden', ! styleVisible );
 		$( '[data-adam-style-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! styleVisible );
+		$( '[data-adam-card-typography-controls]' ).toggleClass( 'is-hidden', ! cardTypographyVisible );
+		$( '[data-adam-card-typography-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! cardTypographyVisible );
+		$( '[data-adam-title-badge-controls]' ).toggleClass( 'is-hidden', ! titleBadgeVisible );
+		$( '[data-adam-title-badge-controls]' ).find( 'input, select, textarea, button' ).prop( 'disabled', ! titleBadgeVisible );
+		$( '[data-adam-card-preview-panel]' ).toggleClass( 'is-hidden', titleReward );
+		$( '[data-adam-title-preview-panel]' ).toggleClass( 'is-hidden', ! titleReward );
 		$( '[data-adam-details-controls]' ).toggleClass( 'is-hidden', false );
 		$( '[data-adam-frame-group]' ).each(
 			function () {
@@ -453,6 +482,7 @@
 
 	function updatePreview() {
 		var rarity = $( '[data-adam-preview-rarity]' ).val() || 'common';
+		var titleReward = isTitleReward();
 		var subtype = currentSubtype();
 		var framePreset = currentFramePreset();
 		var imageUrl = $( '[data-adam-preview-image]' ).val() || '';
@@ -468,14 +498,17 @@
 		var classNames = baseClass.split( /\s+/ ).concat( previewClasses() );
 		var frameThickness = clamp( previewStyleValue( 'frame_thickness' ), 0, 16 );
 		var hasFrame = framePreset !== 'none' && subtype === 'card_style' && frameThickness > 0;
-		if ( ! $preview.length ) {
+		var $cardTitleBadge = $preview.find( '[data-adam-card-title]' );
+		var $previewTitleBadge = $( '[data-adam-title-preview-panel] [data-adam-card-title]' );
+		if ( ! $preview.length && ! $previewTitleBadge.length ) {
 			return;
 		}
 
-		$preview.attr( 'class', classNames.join( ' ' ).trim() );
+		if ( $preview.length ) {
+			$preview.attr( 'class', classNames.join( ' ' ).trim() );
 
-		$preview.css(
-			{
+			$preview.css(
+				{
 				'--adam-card-surface': backgroundValue(),
 				'--adam-card-text-primary': previewStyleValue( 'text_color' ) || '#ffffff',
 				'--adam-card-text-secondary': previewStyleValue( 'muted_text_color' ) || '#cccccc',
@@ -490,13 +523,6 @@
 				'--adam-frame-gradient-color-2': hasFrame ? gradientColor2 : 'transparent',
 				'--adam-frame-gradient-color-3': hasFrame ? gradientColor3 : 'transparent',
 				'--adam-frame-angle': frameGradientAngle + 'deg',
-				'--adam-title-badge-background': previewStyleValue( 'badge_background_color' ) || '#215b39',
-				'--adam-title-badge-text': previewStyleValue( 'badge_text_color' ) || '#ffffff',
-				'--adam-title-badge-border': previewStyleValue( 'badge_border_color' ) || '#86efac',
-				'--adam-title-badge-border-width': clamp( previewStyleValue( 'badge_border_width' ), 1, 4 ) + 'px',
-				'--adam-title-badge-icon': previewStyleValue( 'badge_icon_color' ) || '#2f4b3b',
-				'--adam-title-badge-icon-highlight': previewStyleValue( 'badge_icon_highlight_color' ) || '#ffffff',
-				'--adam-title-badge-icon-glow': clamp( previewStyleValue( 'badge_icon_glow' ), 0, 40 ) + 'px',
 				'--adam-card-frame-inset': '12px',
 				'--adam-card-content-padding': '28px',
 				'--adam-card-content-gap': '20px',
@@ -514,39 +540,58 @@
 				'--adam-card-background-blend': previewStyleValue( 'background_image_blend_mode' ) || 'screen',
 				'--adam-card-art-opacity': clamp( previewStyleValue( 'card_image_opacity' ), 0, 100 ) / 100,
 				'--adam-card-art-size': clamp( previewStyleValue( 'card_image_size' ), 10, 80 ) + '%',
+				}
+			);
+
+			$preview.find( '[data-adam-card-pattern]' ).attr( 'class', patternClass() );
+
+			var $artWrap = $preview.find( '[data-adam-card-art-wrap]' );
+			$artWrap.attr( 'class', artClass() ).prop( 'hidden', subtype !== 'card_style' || ( ! imageUrl && ! $preview.find( '[data-adam-card-art]' ).attr( 'src' ) ) );
+
+			if ( subtype === 'card_style' && imageUrl ) {
+				$preview.find( '[data-adam-card-art]' ).attr( 'src', imageUrl );
+				$artWrap.prop( 'hidden', false );
 			}
-		);
 
-		$preview.find( '[data-adam-card-pattern]' ).attr( 'class', patternClass() );
-
-		var $artWrap = $preview.find( '[data-adam-card-art-wrap]' );
-		$artWrap.attr( 'class', artClass() ).prop( 'hidden', subtype !== 'card_style' || ( ! imageUrl && ! $preview.find( '[data-adam-card-art]' ).attr( 'src' ) ) );
-
-		if ( subtype === 'card_style' && imageUrl ) {
-			$preview.find( '[data-adam-card-art]' ).attr( 'src', imageUrl );
-			$artWrap.prop( 'hidden', false );
-		}
-
-		if ( backgroundMode === 'image' && backgroundImageUrl ) {
-			$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', 'url(' + backgroundImageUrl + ')' );
-		} else {
-			$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', '' );
+			if ( backgroundMode === 'image' && backgroundImageUrl ) {
+				$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', 'url(' + backgroundImageUrl + ')' );
+			} else {
+				$preview.find( '[data-adam-card-backdrop]' ).css( 'background-image', '' );
+			}
 		}
 
 		var titleText = currentPreviewTitle();
-		$preview.find( '[data-adam-card-title-text]' ).text( titleText );
-		$preview.find( '[data-adam-card-title]' ).attr( 'class', 'adam-digital-card__title adam-digital-card__title--' + rarity );
+		$cardTitleBadge.find( '[data-adam-card-title-text]' ).text( titleReward ? 'SOBREVIVENTE' : titleText );
+		$previewTitleBadge.find( '[data-adam-card-title-text]' ).text( titleText );
 
-		var $previewShapes = $preview.find( '[data-adam-card-shapes]' );
-		var shapes = subtype === 'card_style' ? syncShapes() : [];
+		if ( titleReward && $previewTitleBadge.length ) {
+			$previewTitleBadge.attr( 'class', 'adam-digital-card__title adam-digital-card__title--' + rarity );
+			$previewTitleBadge.attr(
+				'style',
+				[
+					'--adam-title-badge-background:' + ( previewStyleValue( 'badge_background_color' ) || '#36523f' ),
+					'--adam-title-badge-text:' + ( previewStyleValue( 'badge_text_color' ) || '#ffffff' ),
+					'--adam-title-badge-border:' + ( previewStyleValue( 'badge_border_color' ) || '#86efac' ),
+					'--adam-title-badge-border-width:' + clamp( previewStyleValue( 'badge_border_width' ), 1, 4 ) + 'px',
+					'--adam-title-badge-icon:' + ( previewStyleValue( 'badge_icon_color' ) || '#2f4b3b' ),
+					'--adam-title-badge-icon-highlight:' + ( previewStyleValue( 'badge_icon_highlight_color' ) || '#ffffff' ),
+					'--adam-title-badge-icon-glow:' + clamp( previewStyleValue( 'badge_icon_glow' ), 0, 40 ) + 'px'
+				].join( ';' )
+			);
+		}
 
-		$previewShapes.empty();
+		if ( $preview.length ) {
+			var $previewShapes = $preview.find( '[data-adam-card-shapes]' );
+			var shapes = subtype === 'card_style' && ! titleReward ? syncShapes() : [];
 
-		shapes.forEach(
-			function ( shape ) {
-				$previewShapes.append( renderShapePreview( shape ) );
-			}
-		);
+			$previewShapes.empty();
+
+			shapes.forEach(
+				function ( shape ) {
+					$previewShapes.append( renderShapePreview( shape ) );
+				}
+			);
+		}
 
 		syncValueLabels();
 		toggleDesignerSections();

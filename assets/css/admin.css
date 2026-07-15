@@ -1264,6 +1264,30 @@
 	zoom: 0.78;
 }
 
+.adam-reward-editor__title-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 220px;
+	padding: 28px;
+	border: 1px solid #dce7dd;
+	border-radius: 22px;
+	background:
+		radial-gradient(circle at top, rgba(47, 107, 59, 0.08), transparent 36%),
+		linear-gradient(180deg, #fbfdfb, #eef6f0);
+}
+
+.adam-title-badge-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+
+.adam-title-badge-preview .adam-digital-card__title {
+	font-size: 1rem;
+}
+
 .adam-reward-editor__actions {
 	margin-top: 20px;
 }
@@ -1664,6 +1688,11 @@
 	.adam-reward-editor__preview-stage {
 		min-height: 360px;
 		padding: 12px;
+	}
+
+	.adam-reward-editor__title-preview {
+		min-height: 180px;
+		padding: 18px;
 	}
 
 	.adam-reward-editor__preview-scale {
