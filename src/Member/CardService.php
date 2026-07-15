@@ -192,6 +192,8 @@ final class CardService {
 		$card_presentation = $this->card_presentation( $member );
 		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
 		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
+		$print_js          = ADAM_MEMBERSHIP_PATH . 'assets/js/member-card-print.js';
+		$html_to_image_js  = ADAM_MEMBERSHIP_PATH . 'assets/vendor/html-to-image/package/dist/html-to-image.js';
 
 		status_header( 200 );
 		nocache_headers();
@@ -208,8 +210,10 @@ final class CardService {
 		<body class="adam-print-route">
 			<main class="adam-member-area adam-member-dashboard">
 				<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
+					<p class="adam-print-error" data-adam-print-error hidden></p>
 					<div class="adam-print-actions">
-						<button type="button" class="adam-card-link adam-print-trigger"><?php esc_html_e( 'Imprimir agora', 'adam-membership' ); ?></button>
+						<button type="button" class="adam-card-link adam-print-trigger" data-adam-print-trigger><?php esc_html_e( 'Gerar imagem e imprimir', 'adam-membership' ); ?></button>
+						<button type="button" class="adam-text-link adam-print-retry" data-adam-print-retry><?php esc_html_e( 'Tentar novamente', 'adam-membership' ); ?></button>
 					</div>
 					<div class="adam-card-print-page">
 						<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -217,64 +221,13 @@ final class CardService {
 				</section>
 			</main>
 			<script>
-				(function () {
-					const card = document.querySelector('.adam-card-print-page .adam-digital-card');
-					const trigger = document.querySelector('.adam-print-trigger');
-
-					if (!card) {
-						return;
-					}
-
-					const waitForImages = (root) => {
-						const images = Array.from(root.querySelectorAll('img'));
-
-						return Promise.all(images.map((image) => new Promise((resolve) => {
-							if (image.complete) {
-								resolve();
-								return;
-							}
-
-							image.addEventListener('load', resolve, { once: true });
-							image.addEventListener('error', resolve, { once: true });
-						})));
-					};
-
-					const measurePrintScale = () => {
-						const rect = card.getBoundingClientRect();
-
-						if (!rect.width || !rect.height) {
-							return;
-						}
-
-						const targetWidth = 85.6 * (96 / 25.4);
-						const targetHeight = 53.98 * (96 / 25.4);
-						const scale = Math.min(targetWidth / rect.width, targetHeight / rect.height);
-
-						document.documentElement.style.setProperty('--adam-print-scale', String(scale));
-						document.documentElement.style.setProperty('--adam-print-card-width', rect.width + 'px');
-						document.documentElement.style.setProperty('--adam-print-card-height', rect.height + 'px');
-					};
-
-					const prepareAndPrint = async () => {
-						await document.fonts.ready;
-						await waitForImages(card);
-						await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-						measurePrintScale();
-						window.print();
-					};
-
-					if (trigger) {
-						trigger.addEventListener('click', () => {
-							measurePrintScale();
-							window.print();
-						});
-					}
-
-					window.addEventListener('load', () => {
-						void prepareAndPrint();
-					}, { once: true });
-				}());
+				window.adamCardPrintConfig = {
+					errorMessage: <?php echo wp_json_encode( __( 'Nao foi possivel gerar a imagem do cartao. Verifica a consola do navegador e tenta novamente.', 'adam-membership' ) ); ?>,
+					imageAlt: <?php echo wp_json_encode( __( 'Cartao ADAM', 'adam-membership' ) ); ?>
+				};
 			</script>
+			<script src="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/vendor/html-to-image/package/dist/html-to-image.js' ); ?>?ver=<?php echo esc_attr( file_exists( $html_to_image_js ) ? (string) filemtime( $html_to_image_js ) : ADAM_MEMBERSHIP_VERSION ); ?>"></script>
+			<script src="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/js/member-card-print.js' ); ?>?ver=<?php echo esc_attr( file_exists( $print_js ) ? (string) filemtime( $print_js ) : ADAM_MEMBERSHIP_VERSION ); ?>"></script>
 		</body>
 		</html>
 		<?php
