@@ -79,6 +79,75 @@
 		);
 	};
 
+	const sanitizeCaptureClone = (captureCard) => {
+		captureCard.style.transform = 'none';
+		captureCard.style.maxWidth = 'none';
+		captureCard.style.margin = '0';
+
+		captureCard.querySelectorAll('.adam-digital-card__backdrop').forEach((element) => {
+			element.style.mixBlendMode = 'normal';
+			element.style.opacity = '0.16';
+		});
+
+		captureCard.querySelectorAll('.adam-digital-card__pattern').forEach((element) => {
+			element.style.transform = 'none';
+			element.style.backgroundBlendMode = 'normal';
+		});
+
+		captureCard.querySelectorAll('.adam-digital-card__art img').forEach((element) => {
+			element.style.filter = 'none';
+		});
+
+		captureCard.querySelectorAll('.adam-digital-card__details div').forEach((element) => {
+			element.style.backdropFilter = 'none';
+		});
+
+		captureCard.querySelectorAll('.adam-digital-card__title-mark').forEach((element) => {
+			element.style.boxShadow = 'none';
+			element.style.background =
+				'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.92), rgba(255,255,255,0.3) 34%, rgba(47,75,59,1))';
+		});
+
+		captureCard
+			.querySelectorAll('.adam-digital-card__frame-layer--outer, .adam-digital-card__frame-layer--inner')
+			.forEach((element) => {
+				element.style.webkitMask = 'none';
+				element.style.mask = 'none';
+				element.style.webkitMaskComposite = 'source-over';
+				element.style.maskComposite = 'add';
+			});
+	};
+
+	const buildCaptureRoot = async (card) => {
+		const cardRect = card.getBoundingClientRect();
+		const captureRoot = document.createElement('div');
+		const captureCard = card.cloneNode(true);
+
+		captureRoot.className = 'adam-card-print-capture-root';
+		captureRoot.setAttribute('aria-hidden', 'true');
+		captureRoot.style.position = 'fixed';
+		captureRoot.style.left = '-20000px';
+		captureRoot.style.top = '0';
+		captureRoot.style.width = cardRect.width + 'px';
+		captureRoot.style.height = cardRect.height + 'px';
+		captureRoot.style.pointerEvents = 'none';
+		captureRoot.style.opacity = '1';
+		captureRoot.style.zIndex = '-1';
+		captureRoot.style.overflow = 'hidden';
+
+		captureCard.style.width = cardRect.width + 'px';
+		captureCard.style.height = cardRect.height + 'px';
+		captureCard.style.minHeight = cardRect.height + 'px';
+
+		captureRoot.appendChild(captureCard);
+		document.body.appendChild(captureRoot);
+
+		sanitizeCaptureClone(captureCard);
+		await waitForCardImages(captureCard);
+
+		return { captureRoot, captureCard, cardRect };
+	};
+
 	const loadImageSource = (source, label) =>
 		new Promise((resolve, reject) => {
 			const image = new Image();
@@ -90,10 +159,16 @@
 		});
 
 	const validateDataUrl = (dataUrl) => {
-		console.log('Generated card data URL:', {
+		const diagnostic = {
 			type: typeof dataUrl,
 			length: dataUrl?.length,
 			prefix: dataUrl?.slice(0, 50),
+		};
+
+		console.log('Generated card data URL:', {
+			type: diagnostic.type,
+			length: diagnostic.length,
+			prefix: diagnostic.prefix,
 		});
 
 		if (
@@ -101,7 +176,15 @@
 			!dataUrl.startsWith('data:image/png') ||
 			dataUrl.length < 1000
 		) {
-			throw new Error('html-to-image returned an invalid PNG data URL');
+			throw new Error(
+				'html-to-image returned an invalid PNG data URL (' +
+					diagnostic.type +
+					', ' +
+					(diagnostic.length ?? 0) +
+					', ' +
+					(diagnostic.prefix ?? 'no-prefix') +
+					')'
+			);
 		}
 	};
 
@@ -166,12 +249,22 @@
 		await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
 		console.log('Starting ADAM card PNG capture');
+		const { captureRoot, captureCard, cardRect } = await buildCaptureRoot(card);
 
-		return window.htmlToImage.toPng(card, {
-			pixelRatio: 3,
-			cacheBust: true,
-			backgroundColor: null,
-		});
+		try {
+			return await window.htmlToImage.toPng(captureCard, {
+				pixelRatio: 3,
+				cacheBust: true,
+				backgroundColor: null,
+				width: Math.round(cardRect.width),
+				height: Math.round(cardRect.height),
+				canvasWidth: Math.round(cardRect.width),
+				canvasHeight: Math.round(cardRect.height),
+				skipAutoScale: true,
+			});
+		} finally {
+			captureRoot.remove();
+		}
 	};
 
 	const run = async () => {
