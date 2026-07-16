@@ -1169,6 +1169,7 @@ body {
 	inset: 12px;
 	border-radius: 22px;
 	pointer-events: none;
+	z-index: 0;
 }
 
 .adam-pdf-layer--backdrop,
@@ -1191,6 +1192,7 @@ body {
 	border-radius: 999px;
 	background: rgba(255, 255, 255, 0.10);
 	filter: blur(2px);
+	z-index: 1;
 }
 
 .adam-pdf-card__logo,
@@ -1216,6 +1218,7 @@ body {
 .adam-digital-card__title span,
 .adam-digital-card__title-mark {
 	position: absolute;
+	z-index: 2;
 }
 
 .adam-pdf-card__logo {
@@ -1248,8 +1251,8 @@ body {
 .adam-pdf-card__org strong {
 	display: block;
 	margin-top: 4px;
-	font-size: 30px;
-	line-height: 1.16;
+	font-size: 19px;
+	line-height: 1.22;
 	font-weight: 800;
 }
 
@@ -1269,9 +1272,9 @@ body {
 .adam-pdf-card__status {
 	top: 42px;
 	right: 38px;
-	padding: 10px 22px;
+	padding: 8px 18px;
 	border-radius: 999px;
-	font-size: 18px;
+	font-size: 14px;
 	font-weight: 800;
 	text-transform: uppercase;
 }
@@ -1322,12 +1325,12 @@ body {
 	width: 100%;
 	transform: translate(-50%, -50%);
 	text-align: center;
-	font-size: 54px;
+	font-size: 40px;
 	font-weight: 900;
 }
 
 .adam-pdf-card__name-label {
-	top: 146px;
+	top: 150px;
 	left: 196px;
 	font-size: 12px;
 	font-weight: 800;
@@ -1337,7 +1340,7 @@ body {
 }
 
 .adam-pdf-card__title-label {
-	top: 171px;
+	top: 186px;
 	left: 196px;
 	padding: 8px 16px;
 	border-radius: 999px;
@@ -1350,7 +1353,7 @@ body {
 }
 
 .adam-pdf-card__title-wrap {
-	top: 214px;
+	top: 228px;
 	left: 196px;
 	width: 240px;
 	height: 52px;
@@ -1389,10 +1392,10 @@ body {
 }
 
 .adam-pdf-card__name {
-	top: 284px;
+	top: 308px;
 	left: 196px;
-	width: 589px;
-	font-size: 48px;
+	width: 575px;
+	font-size: 52px;
 	line-height: 1.05;
 	font-weight: 900;
 	color: #ffffff;
@@ -1400,7 +1403,7 @@ body {
 }
 
 .adam-pdf-card__member-chip {
-	top: 384px;
+	top: 396px;
 	left: 196px;
 	padding: 7px 12px;
 	border-radius: 999px;
@@ -1459,7 +1462,7 @@ body {
 	top: 13px;
 	left: 14px;
 	right: 14px;
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 1px;
@@ -1498,15 +1501,15 @@ body {
 }
 
 .adam-pdf-frame {
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
+	inset: 0;
 	pointer-events: none;
+	z-index: 4;
 }
 
 .adam-pdf-frame__edge {
 	display: block;
+	font-size: 0;
+	line-height: 0;
 }
 
 ';
@@ -1557,10 +1560,10 @@ body {
 					<?php endif; ?>
 				</div>
 
-				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></div>
 
 				<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
-					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Título ativo', 'adam-membership' ); ?></div>
 					<div class="adam-pdf-card__title-wrap">
 						<?php
 						echo wp_kses_post(
@@ -1584,7 +1587,7 @@ body {
 
 				<div class="adam-pdf-card__qr">
 					<img src="<?php echo esc_attr( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--number" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
@@ -1594,17 +1597,17 @@ body {
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--joined" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
 					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--expiry" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
 					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__footer" style="color: <?php echo esc_attr( $text_secondary ); ?>;">
 					<span class="adam-pdf-card__footer-left"><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 					<span class="adam-pdf-card__footer-clear"></span>
 				</div>
 			</div>
@@ -1874,7 +1877,7 @@ body {
 			return '';
 		}
 
-		$outer_radius = 6.8;
+		$outer_radius = 28;
 		$top_style    = '';
 		$right_style  = '';
 		$bottom_style = '';
@@ -1909,10 +1912,10 @@ body {
 		ob_start();
 		?>
 		<div class="adam-pdf-frame" aria-hidden="true">
-			<span class="adam-pdf-frame__edge" style="top:0;left:0;right:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $top_style ); ?>"></span>
-			<span class="adam-pdf-frame__edge" style="top:0;right:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $right_style ); ?>"></span>
-			<span class="adam-pdf-frame__edge" style="left:0;right:0;bottom:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $bottom_style ); ?>"></span>
-			<span class="adam-pdf-frame__edge" style="top:0;left:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $left_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="top:0;left:0;right:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;<?php echo esc_attr( $top_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="top:0;right:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;<?php echo esc_attr( $right_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="left:0;right:0;bottom:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;<?php echo esc_attr( $bottom_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="top:0;left:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>px;<?php echo esc_attr( $left_style ); ?>"></span>
 		</div>
 		<?php
 
