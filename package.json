@@ -1,0 +1,23 @@
+{
+  "name": "adam-members",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gwazyjustcause/adam-members.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Gwazyjustcause/adam-members/issues"
+  },
+  "homepage": "https://github.com/Gwazyjustcause/adam-members#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1"
+  }
+}
