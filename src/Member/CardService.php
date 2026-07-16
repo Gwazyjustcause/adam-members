@@ -11,6 +11,8 @@ namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\Logger;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use AdamMembership\Reward\Reward;
 use AdamMembership\Reward\RewardService;
 use WP_Error;
@@ -21,27 +23,26 @@ use WP_User_Query;
  */
 final class CardService {
 	private const TOKEN_META = 'adam_membership_card_token';
-	private const PRINT_QUERY_VAR = 'adam_card_print';
-	private const IMAGE_QUERY_VAR = 'adam_card_image';
+	private const PDF_QUERY_VAR = 'adam_card_pdf';
 	private const QR_QUERY_VAR = 'adam_card_qr';
+	private const PDF_WIDTH_MM = 85.60;
+	private const PDF_HEIGHT_MM = 53.98;
 
 	private MemberRepository $members;
 	private SettingsRepository $settings;
 	private Logger $logger;
 	private CardCosmeticsService $cosmetics;
 	private RewardService $rewards;
-	private CardImageRenderer $image_renderer;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics, RewardService $rewards, CardImageRenderer $image_renderer ) {
-		$this->members         = $members;
-		$this->settings        = $settings;
-		$this->logger          = $logger;
-		$this->cosmetics       = $cosmetics;
-		$this->rewards         = $rewards;
-		$this->image_renderer  = $image_renderer;
+	public function __construct( MemberRepository $members, SettingsRepository $settings, Logger $logger, CardCosmeticsService $cosmetics, RewardService $rewards ) {
+		$this->members   = $members;
+		$this->settings  = $settings;
+		$this->logger    = $logger;
+		$this->cosmetics = $cosmetics;
+		$this->rewards   = $rewards;
 	}
 
 	/**
@@ -119,45 +120,23 @@ final class CardService {
 	 *
 	 * @param Member $member Member.
 	 */
-	public function print_url( Member $member ): string {
+	public function pdf_url( Member $member ): string {
 		return add_query_arg(
 			array(
-				self::PRINT_QUERY_VAR => '1',
+				self::PDF_QUERY_VAR => '1',
 			),
 			home_url( '/' )
 		);
 	}
 
 	/**
-	 * Get the dedicated server-rendered PNG URL for the logged-in member card.
-	 */
-	public function image_url( bool $download = false ): string {
-		$args = array(
-			self::IMAGE_QUERY_VAR => '1',
-		);
-
-		if ( $download ) {
-			$args['download'] = '1';
-		}
-
-		return add_query_arg( $args, home_url( '/' ) );
-	}
-
-	/**
 	 * Render the public card validation page when requested.
 	 */
 	public function maybe_render_validation_page(): void {
-		$image_request = isset( $_GET[ self::IMAGE_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::IMAGE_QUERY_VAR ] ) ) : '';
+		$pdf_request = isset( $_GET[ self::PDF_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::PDF_QUERY_VAR ] ) ) : '';
 
-		if ( '' !== $image_request ) {
-			$this->render_card_image();
-			exit;
-		}
-
-		$print_request = isset( $_GET[ self::PRINT_QUERY_VAR ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::PRINT_QUERY_VAR ] ) ) : '';
-
-		if ( '' !== $print_request ) {
-			$this->render_print_page();
+		if ( '' !== $pdf_request ) {
+			$this->render_card_pdf();
 			exit;
 		}
 
@@ -188,9 +167,9 @@ final class CardService {
 	}
 
 	/**
-	 * Render the dedicated print page for the current member.
+	 * Render the server-generated member card PDF.
 	 */
-	private function render_print_page(): void {
+	private function render_card_pdf(): void {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
 		}
@@ -203,86 +182,55 @@ final class CardService {
 			wp_die( esc_html__( 'Nao foi encontrado um socio associado a esta conta.', 'adam-membership' ) );
 		}
 
-		$card_data         = $this->card_data( $member );
-		$card_presentation = $this->card_presentation( $member );
-		$member_area_css   = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
-		$print_css         = ADAM_MEMBERSHIP_PATH . 'assets/css/member-card-print.css';
+		try {
+			$card_data         = $this->pdf_card_data( $member );
+			$card_presentation = $this->pdf_card_presentation( $member );
+			$html              = $this->pdf_document_html( $card_data, $card_presentation );
+			$options           = new Options();
+			$options->set( 'isRemoteEnabled', false );
+			$options->set( 'isPhpEnabled', false );
+			$options->set( 'defaultFont', 'DejaVu Sans' );
 
-		status_header( 200 );
-		nocache_headers();
-	 
-		?>
-		<!doctype html>
-		<html <?php language_attributes(); ?>>
-		<head>
-			<meta charset="<?php bloginfo( 'charset' ); ?>">
-			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title><?php esc_html_e( 'Imprimir Cartao ADAM', 'adam-membership' ); ?></title>
-			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-area.css' ); ?>?ver=<?php echo esc_attr( file_exists( $member_area_css ) ? (string) filemtime( $member_area_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
-			<link rel="stylesheet" href="<?php echo esc_url( ADAM_MEMBERSHIP_URL . 'assets/css/member-card-print.css' ); ?>?ver=<?php echo esc_attr( file_exists( $print_css ) ? (string) filemtime( $print_css ) : ADAM_MEMBERSHIP_VERSION ); ?>">
-		</head>
-		<body class="adam-print-route">
-			<main class="adam-member-area adam-member-dashboard adam-card-print-page">
-				<div class="adam-print-actions">
-					<button type="button" class="adam-card-link" onclick="window.print();"><?php esc_html_e( 'Imprimir agora', 'adam-membership' ); ?></button>
-				</div>
-				<div class="adam-card-print-card">
-					<?php echo $this->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				</div>
-			</main>
-		</body>
-		</html>
-		<?php
-	}
-
-	/**
-	 * Render the server-generated PNG card for the logged-in member.
-	 */
-	private function render_card_image(): void {
-		if ( ! is_user_logged_in() ) {
-			status_header( 401 );
-			nocache_headers();
-			exit;
-		}
-
-		$member = $this->members->find( get_current_user_id() );
-
-		if ( null === $member ) {
-			status_header( 404 );
-			nocache_headers();
-			exit;
-		}
-
-		$card_data         = $this->card_data( $member );
-		$card_presentation = $this->card_presentation( $member );
-		$png               = $this->image_renderer->cached_png( $member, $card_data, $card_presentation );
-
-		if ( is_wp_error( $png ) ) {
-			status_header( 503 );
-			nocache_headers();
-			header( 'Content-Type: text/plain; charset=UTF-8' );
-			echo esc_html( $png->get_error_message() );
-			exit;
-		}
-
-		$contents = file_get_contents( $png['path'] );
-
-		if ( ! is_string( $contents ) || '' === $contents ) {
+			$dompdf = new Dompdf( $options );
+			$dompdf->setPaper(
+				array(
+					0,
+					0,
+					$this->millimeters_to_points( self::PDF_WIDTH_MM ),
+					$this->millimeters_to_points( self::PDF_HEIGHT_MM ),
+				)
+			);
+			$dompdf->loadHtml( $html, 'UTF-8' );
+			$dompdf->render();
+			$pdf = $dompdf->output();
+		} catch ( \Throwable $exception ) {
 			status_header( 500 );
 			nocache_headers();
-			exit;
+			wp_die(
+				esc_html(
+					sprintf(
+						/* translators: %s: PDF generation error. */
+						__( 'Nao foi possivel gerar o cartao PDF: %s', 'adam-membership' ),
+						$exception->getMessage()
+					)
+				)
+			);
+		}
+
+		$member_number = sanitize_file_name( (string) $member->field( 'numero_socio' ) );
+		$filename      = 'cartao-adam-' . ( '' !== $member_number ? $member_number : (string) $member->user_id() ) . '.pdf';
+
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
 		}
 
 		status_header( 200 );
 		nocache_headers();
-		header( 'Content-Type: image/png' );
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 		header( 'Cache-Control: private, no-store, max-age=0' );
-
-		if ( isset( $_GET['download'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['download'] ) ) ) {
-			header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $png['filename'] ) . '"' );
-		}
-
-		echo $contents;
+		header( 'Content-Length: ' . strlen( $pdf ) );
+		echo $pdf;
 		exit;
 	}
 
@@ -413,6 +361,66 @@ final class CardService {
 	}
 
 	/**
+	 * Build PDF-safe card data with embedded assets.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function pdf_card_data( Member $member ): array {
+		$card_data                     = $this->card_data( $member );
+		$card_data['association_logo'] = $this->url_to_data_uri( (string) $card_data['association_logo'] );
+		$card_data['photo_url']        = $this->url_to_data_uri( (string) $card_data['photo_url'] );
+		$card_data['qr_image_url']     = $this->url_to_data_uri( (string) $card_data['qr_image_url'] );
+
+		if ( '' === (string) $card_data['qr_image_url'] ) {
+			$card_data['qr_image_url'] = $this->preview_qr_data_uri();
+		}
+
+		return $card_data;
+	}
+
+	/**
+	 * Build PDF-safe card presentation with embedded image assets.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function pdf_card_presentation( Member $member ): array {
+		$presentation = $this->card_presentation( $member );
+		$style        = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
+
+		if ( isset( $style['background_image_url'] ) ) {
+			$style['background_image_url'] = $this->url_to_data_uri( (string) $style['background_image_url'] );
+		}
+
+		if ( isset( $style['image_url'] ) ) {
+			$style['image_url'] = $this->url_to_data_uri( (string) $style['image_url'] );
+		}
+
+		$presentation['custom_style']    = $style;
+		$presentation['allow_data_uris'] = true;
+
+		return $presentation;
+	}
+
+	/**
+	 * Build the minimal Dompdf document for a member card.
+	 *
+	 * @param array<string, mixed> $card_data Card payload.
+	 * @param array<string, mixed> $presentation Presentation payload.
+	 */
+	private function pdf_document_html( array $card_data, array $presentation ): string {
+		$stylesheet = file_get_contents( ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css' );
+		$stylesheet = is_string( $stylesheet ) ? $stylesheet : '';
+		$card_html  = $this->render_card( $card_data, $presentation );
+
+		return '<!doctype html><html><head><meta charset="utf-8"><style>'
+			. $stylesheet
+			. $this->pdf_inline_css()
+			. '</style></head><body class="adam-card-pdf-document"><main class="adam-card-pdf-page">'
+			. $card_html
+			. '</main></body></html>';
+	}
+
+	/**
 	 * Build preview card presentation for a reward being edited.
 	 *
 	 * @return array<string, mixed>
@@ -451,15 +459,16 @@ final class CardService {
 	 */
 	public function render_card( array $card_data, array $presentation = array() ): string {
 		$resolved = $this->resolve_card_presentation( $presentation );
+		$allow_data_uris = ! empty( $presentation['allow_data_uris'] );
 
 		ob_start();
 		?>
 		<article class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( $resolved['base_class_name'] ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
-				<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_url( $resolved['background_image_url'] ) . ');"' : ''; ?> data-adam-card-backdrop></div>
+				<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_attr( $this->asset_url_for_markup( $resolved['background_image_url'], $allow_data_uris ) ) . ');"' : ''; ?> data-adam-card-backdrop></div>
 				<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
 				<div class="adam-digital-card__art adam-digital-card__art--<?php echo esc_attr( $resolved['image_position'] ); ?> adam-digital-card__art--layer-<?php echo esc_attr( $resolved['image_layer'] ); ?>"<?php echo '' === $resolved['art_image_url'] ? ' hidden' : ''; ?> data-adam-card-art-wrap>
-					<img src="<?php echo esc_url( $resolved['art_image_url'] ); ?>" alt="" data-adam-card-art>
+					<img src="<?php echo esc_attr( $this->asset_url_for_markup( $resolved['art_image_url'], $allow_data_uris ) ); ?>" alt="" data-adam-card-art>
 				</div>
 				<div class="adam-digital-card__shapes" data-adam-card-shapes>
 					<?php foreach ( $resolved['shapes'] as $shape ) : ?>
@@ -467,7 +476,7 @@ final class CardService {
 					<?php endforeach; ?>
 				</div>
 				<header class="adam-digital-card__header">
-					<img class="adam-digital-card__logo" src="<?php echo esc_url( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
+					<img class="adam-digital-card__logo" src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['association_logo'], $allow_data_uris ) ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
 					<div>
 						<span><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
@@ -486,7 +495,7 @@ final class CardService {
 				<div class="adam-digital-card__body">
 					<div class="adam-digital-card__photo">
 						<?php if ( '' !== (string) $card_data['photo_url'] ) : ?>
-							<img src="<?php echo esc_url( (string) $card_data['photo_url'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
+							<img src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['photo_url'], $allow_data_uris ) ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
 						<?php else : ?>
 							<span><?php echo esc_html( (string) $card_data['initials'] ); ?></span>
 						<?php endif; ?>
@@ -516,7 +525,7 @@ final class CardService {
 					</div>
 
 					<div class="adam-digital-card__qr">
-						<img src="<?php echo esc_url( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+						<img src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['qr_image_url'], $allow_data_uris ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
 						<span><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></span>
 					</div>
 				</div>
@@ -577,6 +586,7 @@ final class CardService {
 	 */
 	private function resolve_card_presentation( array $presentation ): array {
 		$style            = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
+		$allow_data_uris  = ! empty( $presentation['allow_data_uris'] );
 		$classes          = array_map( 'sanitize_html_class', (array) ( $presentation['classes'] ?? array( 'adam-digital-card' ) ) );
 		$card_subtype     = sanitize_key( (string) ( $style['card_subtype'] ?? 'background' ) );
 		$background_mode  = sanitize_key( (string) ( $style['background_mode'] ?? 'gradient' ) );
@@ -584,8 +594,8 @@ final class CardService {
 		$image_position   = sanitize_html_class( (string) ( $style['card_image_position'] ?? 'top-right' ) );
 		$image_layer      = sanitize_html_class( (string) ( $style['card_image_layer'] ?? 'overlay' ) );
 		$frame_style      = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
-		$art_image_url    = 'card_style' === $card_subtype ? esc_url_raw( (string) ( $style['image_url'] ?? '' ) ) : '';
-		$background_image = 'image' === $background_mode ? esc_url_raw( (string) ( $style['background_image_url'] ?? '' ) ) : '';
+		$art_image_url    = 'card_style' === $card_subtype ? $this->sanitize_asset_url( (string) ( $style['image_url'] ?? '' ), $allow_data_uris ) : '';
+		$background_image = 'image' === $background_mode ? $this->sanitize_asset_url( (string) ( $style['background_image_url'] ?? '' ), $allow_data_uris ) : '';
 		$frame_thickness  = max( 0, min( 16, (int) ( $style['frame_thickness'] ?? $style['border_width'] ?? 0 ) ) );
 
 		$classes[] = 'adam-digital-card--preview-pattern-' . $pattern;
@@ -969,6 +979,259 @@ final class CardService {
 SVG;
 
 		return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode( $svg );
+	}
+
+	/**
+	 * Convert an asset URL into a data URI for PDF rendering.
+	 */
+	private function url_to_data_uri( string $url ): string {
+		$url = trim( $url );
+
+		if ( '' === $url ) {
+			return '';
+		}
+
+		if ( str_starts_with( $url, 'data:' ) ) {
+			return $url;
+		}
+
+		$binary = $this->asset_binary_from_url( $url );
+
+		if ( '' === $binary ) {
+			return '';
+		}
+
+		return 'data:' . $this->mime_from_binary( $binary ) . ';base64,' . base64_encode( $binary );
+	}
+
+	/**
+	 * Load binary asset data from a local path or URL.
+	 */
+	private function asset_binary_from_url( string $url ): string {
+		$path = $this->local_path_from_url( $url );
+
+		if ( '' !== $path && file_exists( $path ) ) {
+			$binary = file_get_contents( $path );
+
+			return is_string( $binary ) ? $binary : '';
+		}
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 10,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return '';
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+
+		return is_string( $body ) ? $body : '';
+	}
+
+	/**
+	 * Resolve a local filesystem path for a known WordPress URL.
+	 */
+	private function local_path_from_url( string $url ): string {
+		$uploads = wp_upload_dir();
+		$baseurl = (string) ( $uploads['baseurl'] ?? '' );
+		$basedir = (string) ( $uploads['basedir'] ?? '' );
+
+		if ( '' !== $baseurl && str_starts_with( $url, $baseurl ) ) {
+			return $basedir . str_replace( $baseurl, '', $url );
+		}
+
+		$plugin_base_url = trailingslashit( ADAM_MEMBERSHIP_URL );
+
+		if ( str_starts_with( $url, $plugin_base_url ) ) {
+			$relative = ltrim( str_replace( $plugin_base_url, '', $url ), '/' );
+			$path     = ADAM_MEMBERSHIP_PATH . str_replace( '/', DIRECTORY_SEPARATOR, $relative );
+
+			return file_exists( $path ) ? $path : '';
+		}
+
+		$home = trailingslashit( home_url( '/' ) );
+
+		if ( str_starts_with( $url, $home ) ) {
+			$relative = ltrim( str_replace( $home, '', $url ), '/' );
+			$path     = ABSPATH . str_replace( '/', DIRECTORY_SEPARATOR, $relative );
+
+			return file_exists( $path ) ? $path : '';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Infer MIME type from image bytes.
+	 */
+	private function mime_from_binary( string $binary ): string {
+		$finfo = function_exists( 'finfo_open' ) ? finfo_open( FILEINFO_MIME_TYPE ) : false;
+
+		if ( false !== $finfo ) {
+			$mime = finfo_buffer( $finfo, $binary );
+			finfo_close( $finfo );
+
+			if ( is_string( $mime ) && '' !== $mime ) {
+				return $mime;
+			}
+		}
+
+		return 'image/png';
+	}
+
+	/**
+	 * Sanitize asset URLs while optionally preserving data URIs for PDF rendering.
+	 */
+	private function sanitize_asset_url( string $url, bool $allow_data_uris = false ): string {
+		$url = trim( $url );
+
+		if ( '' === $url ) {
+			return '';
+		}
+
+		if ( $allow_data_uris && str_starts_with( $url, 'data:' ) ) {
+			return $url;
+		}
+
+		return esc_url_raw( $url );
+	}
+
+	/**
+	 * Escape asset URLs for shared markup output.
+	 */
+	private function asset_url_for_markup( string $url, bool $allow_data_uris = false ): string {
+		if ( $allow_data_uris && str_starts_with( $url, 'data:' ) ) {
+			return $url;
+		}
+
+		return esc_url( $url );
+	}
+
+	/**
+	 * Build the PDF-specific inline CSS wrapper around the shared card CSS.
+	 */
+	private function pdf_inline_css(): string {
+		return '
+@page {
+	size: 85.6mm 53.98mm;
+	margin: 0;
+}
+
+html,
+body {
+	width: 85.6mm;
+	height: 53.98mm;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	background: #ffffff;
+}
+
+body.adam-card-pdf-document {
+	-webkit-print-color-adjust: exact;
+	print-color-adjust: exact;
+}
+
+.adam-card-pdf-page {
+	width: 85.6mm;
+	height: 53.98mm;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+.adam-digital-card-mobile,
+.adam-card-heading,
+.adam-card-actions,
+.adam-card-link,
+.adam-text-link,
+.adam-print-actions,
+.adam-member-area,
+.adam-member-dashboard,
+.adam-digital-card-section {
+	display: none !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card,
+.adam-card-pdf-page > .adam-digital-card *,
+.adam-card-pdf-page > .adam-digital-card::before,
+.adam-card-pdf-page > .adam-digital-card::after {
+	-webkit-print-color-adjust: exact !important;
+	print-color-adjust: exact !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card {
+	display: grid !important;
+	width: 85.6mm !important;
+	height: 53.98mm !important;
+	min-height: 53.98mm !important;
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 36px 38px 34px !important;
+	gap: 20px !important;
+	grid-template-rows: auto auto auto auto !important;
+	border-radius: 28px !important;
+	box-shadow: none !important;
+	overflow: hidden !important;
+	text-align: left !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__header {
+	display: flex !important;
+	flex-direction: row !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	gap: 22px !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__body {
+	display: grid !important;
+	grid-template-columns: 138px minmax(0, 1fr) 168px !important;
+	align-items: center !important;
+	gap: 20px !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__identity {
+	justify-content: flex-start !important;
+	text-align: left !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__details {
+	display: grid !important;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	gap: 12px !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__qr {
+	width: auto !important;
+	justify-self: end !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__footer {
+	display: flex !important;
+	flex-direction: row !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	gap: 22px !important;
+	padding: 14px 14px 12px !important;
+}
+
+.adam-card-pdf-page > .adam-digital-card .adam-digital-card__qr img {
+	width: 142px !important;
+	height: 142px !important;
+}
+';
+	}
+
+	/**
+	 * Convert millimetres to PDF points.
+	 */
+	private function millimeters_to_points( float $millimeters ): float {
+		return $millimeters * 72 / 25.4;
 	}
 
 	/**

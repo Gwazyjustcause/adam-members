@@ -589,7 +589,7 @@ final class MemberArea {
 		$expiry_date        = (string) $card_data['expiry_date'];
 		$validation_url     = (string) $card_data['validation_url'];
 		$qr_image_url       = (string) $card_data['qr_image_url'];
-		$print_url          = $this->cards->print_url( $member );
+		$pdf_url            = $this->cards->pdf_url( $member );
 		$card_presentation  = $this->cards->card_presentation( $member );
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
@@ -598,7 +598,7 @@ final class MemberArea {
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-card-actions">
-					<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $print_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Imprimir cartão', 'adam-membership' ); ?></a>
+					<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $pdf_url ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PDF', 'adam-membership' ); ?></a>
 					<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 				</div>
 			</div>
@@ -629,7 +629,7 @@ final class MemberArea {
 					</div>
 					<div class="adam-digital-card-mobile__actions">
 						<a class="adam-card-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
-						<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $print_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Imprimir / descarregar cartao', 'adam-membership' ); ?></a>
+						<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $pdf_url ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PDF', 'adam-membership' ); ?></a>
 						<a class="adam-text-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 					</div>
 				</div>
