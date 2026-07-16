@@ -138,6 +138,64 @@ final class MemberArea {
 			array(),
 			file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : ADAM_MEMBERSHIP_VERSION
 		);
+
+		if ( ! $this->should_enqueue_download_assets() ) {
+			return;
+		}
+
+		$html2canvas_path = ADAM_MEMBERSHIP_PATH . 'assets/vendor/html2canvas/html2canvas.min.js';
+		$download_path    = ADAM_MEMBERSHIP_PATH . 'assets/js/member-card-download.js';
+
+		wp_enqueue_script(
+			'html2canvas',
+			ADAM_MEMBERSHIP_URL . 'assets/vendor/html2canvas/html2canvas.min.js',
+			array(),
+			file_exists( $html2canvas_path ) ? (string) filemtime( $html2canvas_path ) : ADAM_MEMBERSHIP_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
+			'adam-member-card-download',
+			ADAM_MEMBERSHIP_URL . 'assets/js/member-card-download.js',
+			array( 'html2canvas' ),
+			file_exists( $download_path ) ? (string) filemtime( $download_path ) : ADAM_MEMBERSHIP_VERSION,
+			true
+		);
+
+		wp_add_inline_script(
+			'adam-member-card-download',
+			'window.adamMemberCardDownload = ' . wp_json_encode(
+				array(
+					'messages' => array(
+						'preparing'        => __( 'A preparar PNG...', 'adam-membership' ),
+						'defaultLabel'     => __( 'Descarregar cartão PNG', 'adam-membership' ),
+						'errorNoLibrary'   => __( 'A biblioteca de captura não está disponível.', 'adam-membership' ),
+						'errorNoCard'      => __( 'Não foi possível encontrar o cartão digital visível.', 'adam-membership' ),
+						'errorHiddenCard'  => __( 'O cartão digital tem de estar visível para descarregar o PNG.', 'adam-membership' ),
+						'errorCrossOrigin' => __( 'Existe uma imagem externa no cartão que impede a captura do PNG.', 'adam-membership' ),
+						'errorCapture'     => __( 'Não foi possível gerar o PNG do cartão.', 'adam-membership' ),
+					),
+				)
+			) . ';',
+			'before'
+		);
+	}
+
+	/**
+	 * Determine whether the member-card download assets should be enqueued.
+	 */
+	private function should_enqueue_download_assets(): bool {
+		if ( ! is_singular() ) {
+			return false;
+		}
+
+		$post = get_post();
+
+		if ( ! $post instanceof \WP_Post ) {
+			return false;
+		}
+
+		return has_shortcode( (string) $post->post_content, 'adam_member_area' );
 	}
 
 	/**
@@ -589,8 +647,8 @@ final class MemberArea {
 		$expiry_date        = (string) $card_data['expiry_date'];
 		$validation_url     = (string) $card_data['validation_url'];
 		$qr_image_url       = (string) $card_data['qr_image_url'];
-		$pdf_url            = $this->cards->pdf_url( $member );
 		$card_presentation  = $this->cards->card_presentation( $member );
+		$download_filename  = 'cartao-adam-' . sanitize_file_name( '' !== $member_number_text ? $member_number_text : (string) $member->user_id() ) . '.png';
 		?>
 		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -598,7 +656,7 @@ final class MemberArea {
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-card-actions">
-					<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $pdf_url ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PDF', 'adam-membership' ); ?></a>
+					<a class="adam-card-link adam-card-download-button" href="#" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></a>
 					<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 				</div>
 			</div>
@@ -629,7 +687,7 @@ final class MemberArea {
 					</div>
 					<div class="adam-digital-card-mobile__actions">
 						<a class="adam-card-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
-						<a class="adam-card-link adam-card-print-button" href="<?php echo esc_url( $pdf_url ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PDF', 'adam-membership' ); ?></a>
+						<a class="adam-card-link adam-card-download-button" href="#" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></a>
 						<a class="adam-text-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
 					</div>
 				</div>
