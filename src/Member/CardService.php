@@ -1985,7 +1985,13 @@ body {
 	 * Convert inline SVG markup into a data URI for Dompdf-safe backgrounds.
 	 */
 	private function svg_data_uri( string $svg ): string {
-		return 'data:image/svg+xml;utf8,' . rawurlencode( preg_replace( '/\s+/', ' ', trim( $svg ) ) );
+		$normalized = preg_replace( '/\s+/', ' ', trim( $svg ) );
+
+		if ( ! is_string( $normalized ) || '' === $normalized ) {
+			return '';
+		}
+
+		return 'data:image/svg+xml;base64,' . base64_encode( $normalized );
 	}
 
 	/**
