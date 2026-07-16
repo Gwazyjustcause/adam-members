@@ -473,7 +473,7 @@ final class CardService {
 				<header class="adam-digital-card__header">
 					<img class="adam-digital-card__logo" src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['association_logo'], $allow_data_uris ) ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
 					<div>
-						<span><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'Associação Desportiva', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
 						<div class="adam-digital-card__badges">
 							<?php if ( '' !== (string) ( $presentation['founder_badge'] ?? '' ) ) : ?>
@@ -497,10 +497,10 @@ final class CardService {
 					</div>
 
 					<div class="adam-digital-card__identity">
-						<span><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></span>
 						<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
 							<div class="adam-digital-card__rank">
-								<small><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></small>
+								<small><?php esc_html_e( 'Título ativo', 'adam-membership' ); ?></small>
 								<?php
 								echo wp_kses_post(
 									$this->render_title_badge(
@@ -521,28 +521,28 @@ final class CardService {
 
 					<div class="adam-digital-card__qr">
 						<img src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['qr_image_url'], $allow_data_uris ) ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-						<span><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></span>
 					</div>
 				</div>
 
 				<div class="adam-digital-card__details" aria-label="<?php esc_attr_e( 'Membership details', 'adam-membership' ); ?>">
 					<div>
-						<span><?php esc_html_e( 'N.º de socio', 'adam-membership' ); ?></span>
+						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
 						<strong><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></strong>
 					</div>
 					<div>
-						<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+						<span><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></strong>
 					</div>
 					<div>
-						<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
+						<span><?php esc_html_e( 'Válido até', 'adam-membership' ); ?></span>
+						<strong><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></strong>
 					</div>
 				</div>
 
 				<footer class="adam-digital-card__footer">
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-					<span><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+					<span><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
 				<div class="adam-digital-card__frame" aria-hidden="true">
 					<div class="adam-digital-card__frame-layer adam-digital-card__frame-layer--outer"></div>
@@ -1222,20 +1222,20 @@ body {
 }
 
 .adam-pdf-card__logo {
-	top: 36px;
+	top: 28px;
 	left: 38px;
 	width: 132px;
-	height: 84px;
-	padding: 14px 16px;
+	height: 68px;
+	padding: 10px 16px;
 	border-radius: 16px;
 	background: #ffffff;
 	object-fit: contain;
 }
 
 .adam-pdf-card__org {
-	top: 36px;
+	top: 34px;
 	left: 192px;
-	width: 600px;
+	width: 695px;
 	line-height: 1.22;
 }
 
@@ -1251,7 +1251,7 @@ body {
 .adam-pdf-card__org strong {
 	display: block;
 	margin-top: 4px;
-	font-size: 19px;
+	font-size: 20px;
 	line-height: 1.22;
 	font-weight: 800;
 }
@@ -1270,8 +1270,8 @@ body {
 }
 
 .adam-pdf-card__status {
-	top: 42px;
-	right: 38px;
+	top: 45px;
+	right: 31px;
 	padding: 8px 18px;
 	border-radius: 999px;
 	font-size: 14px;
@@ -1301,7 +1301,7 @@ body {
 }
 
 .adam-pdf-card__photo {
-	top: 140px;
+	top: 150px;
 	left: 38px;
 	width: 138px;
 	height: 184px;
@@ -1330,7 +1330,7 @@ body {
 }
 
 .adam-pdf-card__name-label {
-	top: 150px;
+	top: 116px;
 	left: 196px;
 	font-size: 12px;
 	font-weight: 800;
@@ -1340,9 +1340,9 @@ body {
 }
 
 .adam-pdf-card__title-label {
-	top: 186px;
+	top: 146px;
 	left: 196px;
-	padding: 8px 16px;
+	padding: 10px 16px;
 	border-radius: 999px;
 	background: rgba(255, 255, 255, 0.14);
 	border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1353,16 +1353,16 @@ body {
 }
 
 .adam-pdf-card__title-wrap {
-	top: 228px;
+	top: 194px;
 	left: 196px;
-	width: 240px;
+	width: 158px;
 	height: 52px;
 }
 
 .adam-digital-card__title {
 	display: block;
-	width: auto;
-	max-width: 100%;
+	width: 158px;
+	max-width: 158px;
 	padding: 10px 18px 10px 42px;
 	border-radius: 16px;
 	background: var(--adam-title-badge-background, rgba(255, 255, 255, 0.16));
@@ -1392,9 +1392,9 @@ body {
 }
 
 .adam-pdf-card__name {
-	top: 308px;
+	top: 256px;
 	left: 196px;
-	width: 575px;
+	width: 596px;
 	font-size: 52px;
 	line-height: 1.05;
 	font-weight: 900;
@@ -1403,7 +1403,7 @@ body {
 }
 
 .adam-pdf-card__member-chip {
-	top: 396px;
+	top: 326px;
 	left: 196px;
 	padding: 7px 12px;
 	border-radius: 999px;
@@ -1415,10 +1415,10 @@ body {
 }
 
 .adam-pdf-card__qr {
-	top: 140px;
-	right: 38px;
+	top: 144px;
+	right: 31px;
 	width: 168px;
-	height: 184px;
+	height: 196px;
 	padding: 13px;
 	border-radius: 20px;
 	background: #ffffff;
@@ -1428,15 +1428,15 @@ body {
 .adam-pdf-card__qr img {
 	top: 13px;
 	left: 13px;
-	width: 138px;
-	height: 138px;
+	width: 142px;
+	height: 142px;
 	object-fit: contain;
 }
 
 .adam-pdf-card__qr-label {
 	left: 0;
 	right: 0;
-	bottom: 14px;
+	bottom: 16px;
 	font-size: 12px;
 	font-weight: 800;
 	text-transform: uppercase;
@@ -1445,9 +1445,9 @@ body {
 }
 
 .adam-pdf-card__detail {
-	top: 454px;
-	width: 304px;
-	height: 73px;
+	top: 389px;
+	width: 306px;
+	height: 84px;
 	padding: 14px;
 	border-radius: 16px;
 	background: rgba(255, 255, 255, 0.10);
@@ -1455,8 +1455,8 @@ body {
 }
 
 .adam-pdf-card__detail--number { left: 38px; }
-.adam-pdf-card__detail--joined { left: 354px; }
-.adam-pdf-card__detail--expiry { left: 669px; }
+.adam-pdf-card__detail--joined { left: 356px; }
+.adam-pdf-card__detail--expiry { left: 674px; }
 
 .adam-pdf-card__detail-label {
 	top: 13px;
@@ -1480,8 +1480,8 @@ body {
 
 .adam-pdf-card__footer {
 	left: 38px;
-	right: 38px;
-	bottom: 32px;
+	right: 31px;
+	top: 492px;
 	font-size: 12px;
 	font-weight: 800;
 	text-transform: uppercase;
@@ -1542,7 +1542,7 @@ body {
 				<img class="adam-pdf-card__logo" src="<?php echo esc_attr( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
 
 				<div class="adam-pdf-card__org" style="color: <?php echo esc_attr( $text_primary ); ?>;">
-					<span style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+					<span style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'AssociaÃ§Ã£o Desportiva', 'adam-membership' ); ?></span>
 					<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
 				</div>
 
@@ -1560,10 +1560,10 @@ body {
 					<?php endif; ?>
 				</div>
 
-				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do sÃ³cio', 'adam-membership' ); ?></div>
 
 				<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
-					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Título ativo', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'TÃ­tulo ativo', 'adam-membership' ); ?></div>
 					<div class="adam-pdf-card__title-wrap">
 						<?php
 						echo wp_kses_post(
@@ -1587,27 +1587,27 @@ body {
 
 				<div class="adam-pdf-card__qr">
 					<img src="<?php echo esc_attr( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartÃ£o', 'adam-membership' ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--number" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
-					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'N.Âº de socio', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'N.Ã‚Âº de socio', 'adam-membership' ); ?></div>
 					<div class="adam-pdf-card__detail-value"><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--joined" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
-					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'IndisponÃ­vel', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--expiry" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
-					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Válido até', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'IndisponÃ­vel', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__footer" style="color: <?php echo esc_attr( $text_secondary ); ?>;">
 					<span class="adam-pdf-card__footer-left"><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
+					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'CartÃ£o digital ADAM', 'adam-membership' ); ?></span>
 					<span class="adam-pdf-card__footer-clear"></span>
 				</div>
 			</div>
@@ -1659,7 +1659,7 @@ body {
 				<img class="adam-pdf-card__logo" src="<?php echo esc_attr( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
 
 				<div class="adam-pdf-card__org" style="color: <?php echo esc_attr( $text_primary ); ?>;">
-					<span style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+					<span style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Associação Desportiva', 'adam-membership' ); ?></span>
 					<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
 				</div>
 
@@ -1677,10 +1677,10 @@ body {
 					<?php endif; ?>
 				</div>
 
-				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do sócio', 'adam-membership' ); ?></div>
 
 				<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
-					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Título ativo', 'adam-membership' ); ?></div>
 					<div class="adam-pdf-card__title-wrap">
 						<?php
 						echo wp_kses_post(
@@ -1704,7 +1704,7 @@ body {
 
 				<div class="adam-pdf-card__qr">
 					<img src="<?php echo esc_attr( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></div>
+					<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartão', 'adam-membership' ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--number" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
@@ -1714,17 +1714,17 @@ body {
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--joined" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
 					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Data de adesão', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__detail adam-pdf-card__detail--expiry" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
 					<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Válido até', 'adam-membership' ); ?></div>
-					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+					<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponível', 'adam-membership' ) ); ?></div>
 				</div>
 
 				<div class="adam-pdf-card__footer" style="color: <?php echo esc_attr( $text_secondary ); ?>;">
 					<span class="adam-pdf-card__footer-left"><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
-					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+					<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 					<span class="adam-pdf-card__footer-clear"></span>
 				</div>
 
@@ -1791,37 +1791,57 @@ body {
 		$spacing    = max( 8, min( 40, (int) ( $style['pattern_spacing'] ?? 24 ) ) );
 		$density    = max( 1, min( 6, (int) ( $style['pattern_density'] ?? 2 ) ) );
 		$rotation   = max( 0, min( 360, (int) ( $style['pattern_rotation'] ?? 0 ) ) );
-		$image_css  = '';
-		$size_css   = '';
+		$svg        = '';
 
 		switch ( $pattern ) {
 			case 'dots':
-				$image_css = sprintf( 'radial-gradient(%1$s %2$spx, transparent %2$spx)', $color, (string) $density );
-				$size_css  = sprintf( '%1$spx %2$spx', (string) $scale, (string) $scale );
+				$svg = sprintf(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%1$d" viewBox="0 0 %1$d %1$d"><rect width="%1$d" height="%1$d" fill="%2$s"/><circle cx="%3$d" cy="%3$d" r="%4$d" fill="%5$s"/></svg>',
+					$scale,
+					'transparent' === $base ? 'none' : $base,
+					(int) floor( $scale / 2 ),
+					max( 1, $density ),
+					$color
+				);
 				break;
 			case 'diagonal':
-				$image_css = sprintf( 'repeating-linear-gradient(135deg, %1$s 0, %1$s %2$spx, transparent %2$spx, transparent %3$spx)', $color, (string) $density, (string) $spacing );
-				$size_css  = 'auto';
+				$svg = sprintf(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%1$d" viewBox="0 0 %1$d %1$d"><rect width="%1$d" height="%1$d" fill="%2$s"/><g stroke="%3$s" stroke-width="%4$d" opacity="1"><path d="M-%5$d %1$d L%1$d -%5$d"/><path d="M0 %1$d L%1$d 0"/><path d="M%5$d %1$d L%1$d %5$d"/></g></svg>',
+					$spacing,
+					'transparent' === $base ? 'none' : $base,
+					$color,
+					$density,
+					$spacing
+				);
 				break;
 			case 'carbon':
-				$image_css = sprintf( 'repeating-linear-gradient(45deg, %1$s 0, %1$s %2$spx, transparent %2$spx, transparent %3$spx)', $color, (string) $density, (string) $spacing );
-				$size_css  = 'auto';
+				$svg = sprintf(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%1$d" viewBox="0 0 %1$d %1$d"><rect width="%1$d" height="%1$d" fill="%2$s"/><g opacity="1"><polygon points="0,%3$d %3$d,0 %1$d,0 %1$d,%3$d %3$d,%1$d 0,%1$d" fill="%4$s"/><polygon points="%3$d,0 %1$d,0 %1$d,%3$d %3$d,%3$d" fill="%5$s"/><polygon points="0,%3$d %3$d,%3$d %3$d,%1$d 0,%1$d" fill="%5$s"/></g></svg>',
+					$scale,
+					'transparent' === $base ? 'none' : $base,
+					(int) floor( $scale / 2 ),
+					$color,
+					$this->sanitize_pdf_color( (string) ( $style['pattern_background_color'] ?? '#0b3d27' ), '#0b3d27' )
+				);
 				break;
 			default:
-				$image_css = sprintf(
-					'linear-gradient(%1$s %2$spx, transparent %2$spx), linear-gradient(90deg, %1$s %2$spx, transparent %2$spx)',
+				$svg = sprintf(
+					'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%1$d" viewBox="0 0 %1$d %1$d"><rect width="%1$d" height="%1$d" fill="%2$s"/><g stroke="%3$s" stroke-width="%4$d"><path d="M0 0H%1$d"/><path d="M0 0V%1$d"/></g></svg>',
+					$scale,
+					'transparent' === $base ? 'none' : $base,
 					$color,
-					(string) $density
+					$density
 				);
-				$size_css = sprintf( '%1$spx %2$spx', (string) $scale, (string) $scale );
 				break;
 		}
 
+		$image_css = $this->svg_data_uri( $svg );
+
 		return sprintf(
-			'background-color:%1$s;background-image:%2$s;background-size:%3$s;opacity:%4$s;transform:rotate(%5$sdeg) scale(1.1);transform-origin:center center;',
+			'background-color:%1$s;background-image:url(%2$s);background-size:%3$spx %3$spx;background-repeat:repeat;opacity:%4$s;transform:rotate(%5$sdeg) scale(1.1);transform-origin:center center;',
 			$base,
 			$image_css,
-			$size_css,
+			(string) $scale,
 			(string) $opacity,
 			(string) $rotation
 		);
@@ -1887,20 +1907,17 @@ body {
 			$color_1 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_1'] ?? '#ff0000' ), '#ff0000' );
 			$color_2 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_2'] ?? '#ffd700' ), '#ffd700' );
 			$color_3 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_3'] ?? '#146aff' ), '#146aff' );
-			$angle   = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
-			$grad_a  = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) $angle, $color_1, $color_2, $color_3 );
-			$grad_b  = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) ( ( $angle + 90 ) % 360 ), $color_1, $color_2, $color_3 );
-			$top_style = 'background:' . $grad_a . ';';
-			$bottom_style = 'background:' . $grad_a . ';';
-			$left_style = 'background:' . $grad_b . ';';
-			$right_style = 'background:' . $grad_b . ';';
+			$top_style = 'background:' . $color_1 . ';';
+			$right_style = 'background:' . $color_2 . ';';
+			$bottom_style = 'background:' . $color_3 . ';';
+			$left_style = 'background:' . $color_2 . ';';
 		} elseif ( 'metallic' === $preset ) {
 			$base      = $this->sanitize_pdf_color( (string) ( $style['frame_color'] ?? '#5f6268' ), '#5f6268' );
 			$highlight = $this->sanitize_pdf_color( (string) ( $style['frame_highlight_color'] ?? '#d8dce3' ), '#d8dce3' );
-			$top_style = 'background:linear-gradient(180deg, ' . $highlight . ' 0%, ' . $base . ' 48%, ' . $highlight . ' 100%);';
-			$bottom_style = $top_style;
-			$left_style = 'background:linear-gradient(90deg, ' . $highlight . ' 0%, ' . $base . ' 48%, ' . $highlight . ' 100%);';
-			$right_style = $left_style;
+			$top_style = 'background:' . $highlight . ';';
+			$bottom_style = 'background:' . $highlight . ';';
+			$left_style = 'background:' . $base . ';';
+			$right_style = 'background:' . $base . ';';
 		} else {
 			$color = $this->sanitize_pdf_color( (string) ( $style['frame_color'] ?? '#ffffff' ), '#ffffff' );
 			$top_style = 'background:' . $color . ';';
@@ -1962,6 +1979,13 @@ body {
 		}
 
 		return $fallback;
+	}
+
+	/**
+	 * Convert inline SVG markup into a data URI for Dompdf-safe backgrounds.
+	 */
+	private function svg_data_uri( string $svg ): string {
+		return 'data:image/svg+xml;utf8,' . rawurlencode( preg_replace( '/\s+/', ' ', trim( $svg ) ) );
 	}
 
 	/**
