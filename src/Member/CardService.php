@@ -402,22 +402,17 @@ final class CardService {
 	}
 
 	/**
-	 * Build the minimal Dompdf document for a member card.
+	 * Build the fixed-layout Dompdf document for a member card.
 	 *
 	 * @param array<string, mixed> $card_data Card payload.
 	 * @param array<string, mixed> $presentation Presentation payload.
 	 */
 	private function pdf_document_html( array $card_data, array $presentation ): string {
-		$stylesheet = file_get_contents( ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css' );
-		$stylesheet = is_string( $stylesheet ) ? $stylesheet : '';
-		$card_html  = $this->render_card( $card_data, $presentation );
-
 		return '<!doctype html><html><head><meta charset="utf-8"><style>'
-			. $stylesheet
-			. $this->pdf_inline_css()
-			. '</style></head><body class="adam-card-pdf-document"><main class="adam-card-pdf-page">'
-			. $card_html
-			. '</main></body></html>';
+			. $this->pdf_card_css()
+			. '</style></head><body>'
+			. $this->pdf_card_markup( $card_data, $presentation )
+			. '</body></html>';
 	}
 
 	/**
@@ -1112,9 +1107,9 @@ SVG;
 	}
 
 	/**
-	 * Build the PDF-specific inline CSS wrapper around the shared card CSS.
+	 * Build the dedicated fixed-layout CSS used by Dompdf.
 	 */
-	private function pdf_inline_css(): string {
+	private function pdf_card_css(): string {
 		return '
 @page {
 	size: 85.6mm 53.98mm;
@@ -1129,102 +1124,709 @@ body {
 	padding: 0;
 	overflow: hidden;
 	background: #ffffff;
+	font-family: DejaVu Sans, sans-serif;
 }
 
-body.adam-card-pdf-document {
+body {
+	position: relative;
 	-webkit-print-color-adjust: exact;
 	print-color-adjust: exact;
 }
 
-.adam-card-pdf-page {
+.adam-pdf-card {
+	position: relative;
 	width: 85.6mm;
 	height: 53.98mm;
-	margin: 0;
-	padding: 0;
 	overflow: hidden;
+	border-radius: 6.8mm;
+	color: #ffffff;
+	background: #143826;
 }
 
-.adam-digital-card-mobile,
-.adam-card-heading,
-.adam-card-actions,
-.adam-card-link,
-.adam-text-link,
-.adam-print-actions,
-.adam-member-area,
-.adam-member-dashboard,
-.adam-digital-card-section {
-	display: none !important;
+.adam-pdf-card *,
+.adam-pdf-card *:before,
+.adam-pdf-card *:after {
+	box-sizing: border-box;
 }
 
-.adam-card-pdf-page > .adam-digital-card,
-.adam-card-pdf-page > .adam-digital-card *,
-.adam-card-pdf-page > .adam-digital-card::before,
-.adam-card-pdf-page > .adam-digital-card::after {
-	-webkit-print-color-adjust: exact !important;
-	print-color-adjust: exact !important;
+.adam-pdf-layer,
+.adam-pdf-frame,
+.adam-pdf-frame__edge,
+.adam-pdf-card__logo,
+.adam-pdf-card__org,
+.adam-pdf-card__founder,
+.adam-pdf-card__status,
+.adam-pdf-card__photo,
+.adam-pdf-card__photo img,
+.adam-pdf-card__photo span,
+.adam-pdf-card__name-label,
+.adam-pdf-card__title-label,
+.adam-pdf-card__title-wrap,
+.adam-pdf-card__name,
+.adam-pdf-card__member-chip,
+.adam-pdf-card__qr,
+.adam-pdf-card__qr img,
+.adam-pdf-card__qr-label,
+.adam-pdf-card__detail,
+.adam-pdf-card__detail-label,
+.adam-pdf-card__detail-value,
+.adam-pdf-card__footer,
+.adam-digital-card__title,
+.adam-digital-card__title span,
+.adam-digital-card__title-mark {
+	position: absolute;
 }
 
-.adam-card-pdf-page > .adam-digital-card {
-	display: grid !important;
-	width: 85.6mm !important;
-	height: 53.98mm !important;
-	min-height: 53.98mm !important;
-	max-width: none !important;
-	margin: 0 !important;
-	padding: 36px 38px 34px !important;
-	gap: 20px !important;
-	grid-template-rows: auto auto auto auto !important;
-	border-radius: 28px !important;
-	box-shadow: none !important;
-	overflow: hidden !important;
-	text-align: left !important;
+.adam-pdf-layer--backdrop,
+.adam-pdf-layer--pattern,
+.adam-pdf-layer--art {
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__header {
-	display: flex !important;
-	flex-direction: row !important;
-	align-items: center !important;
-	justify-content: space-between !important;
-	gap: 22px !important;
+.adam-pdf-layer--backdrop {
+	background-repeat: no-repeat;
+	background-position: center center;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__body {
-	display: grid !important;
-	grid-template-columns: 138px minmax(0, 1fr) 168px !important;
-	align-items: center !important;
-	gap: 20px !important;
+.adam-pdf-layer--pattern,
+.adam-pdf-layer--art {
+	background-repeat: no-repeat;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__identity {
-	justify-content: flex-start !important;
-	text-align: left !important;
+.adam-pdf-card__logo {
+	top: 4.5mm;
+	left: 4.7mm;
+	width: 16.8mm;
+	height: 10.6mm;
+	padding: 1.2mm;
+	border-radius: 3.2mm;
+	background: #ffffff;
+	object-fit: contain;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__details {
-	display: grid !important;
-	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-	gap: 12px !important;
+.adam-pdf-card__org {
+	top: 5.2mm;
+	left: 23.1mm;
+	width: 42.8mm;
+	line-height: 1.15;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__qr {
-	width: auto !important;
-	justify-self: end !important;
+.adam-pdf-card__org span {
+	display: block;
+	font-size: 2.2mm;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08mm;
+	opacity: 0.84;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__footer {
-	display: flex !important;
-	flex-direction: row !important;
-	align-items: center !important;
-	justify-content: space-between !important;
-	gap: 22px !important;
-	padding: 14px 14px 12px !important;
+.adam-pdf-card__org strong {
+	display: block;
+	margin-top: 1.2mm;
+	font-size: 4.1mm;
+	line-height: 1.16;
+	font-weight: 800;
 }
 
-.adam-card-pdf-page > .adam-digital-card .adam-digital-card__qr img {
-	width: 142px !important;
-	height: 142px !important;
+.adam-pdf-card__founder {
+	top: 14.4mm;
+	left: 23.1mm;
+	max-width: 27mm;
+	padding: 1.1mm 2.3mm;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+	border: 0.3mm solid rgba(255, 255, 255, 0.18);
+	font-size: 1.9mm;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.adam-pdf-card__status {
+	top: 5.5mm;
+	right: 4.9mm;
+	padding: 1.5mm 3.5mm 1.6mm;
+	border-radius: 999px;
+	font-size: 2.6mm;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.adam-pdf-card__status--active {
+	background: #dcfce7;
+	color: #14532d;
+}
+
+.adam-pdf-card__status--expired,
+.adam-pdf-card__status--rejected {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.adam-pdf-card__status--pending {
+	background: #fef3c7;
+	color: #92400e;
+}
+
+.adam-pdf-card__status--unknown {
+	background: rgba(255, 255, 255, 0.16);
+	color: #ffffff;
+}
+
+.adam-pdf-card__photo {
+	top: 17.6mm;
+	left: 4.9mm;
+	width: 14.8mm;
+	height: 21.1mm;
+	border-radius: 3.5mm;
+	overflow: hidden;
+	border: 0.45mm solid rgba(255, 255, 255, 0.82);
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+}
+
+.adam-pdf-card__photo img {
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.adam-pdf-card__photo span {
+	top: 50%;
+	left: 50%;
+	width: 100%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	font-size: 8mm;
+	font-weight: 900;
+}
+
+.adam-pdf-card__name-label {
+	top: 18.1mm;
+	left: 23.6mm;
+	font-size: 2.4mm;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.08mm;
+	opacity: 0.82;
+}
+
+.adam-pdf-card__title-label {
+	top: 20.7mm;
+	left: 23.7mm;
+	padding: 1.2mm 2.6mm;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+	border: 0.3mm solid rgba(255, 255, 255, 0.16);
+	font-size: 2.2mm;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.06mm;
+}
+
+.adam-pdf-card__title-wrap {
+	top: 25.1mm;
+	left: 23.7mm;
+	width: 20.6mm;
+	height: 6.8mm;
+}
+
+.adam-digital-card__title {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	padding: 1.3mm 2.8mm 1.3mm 6.2mm;
+	border-radius: 2.6mm;
+	background: var(--adam-title-badge-background, rgba(255, 255, 255, 0.16));
+	color: var(--adam-title-badge-text, #ffffff);
+	border: var(--adam-title-badge-border-width, 0.3mm) solid var(--adam-title-badge-border, rgba(255, 255, 255, 0.3));
+	font-size: 2.45mm;
+	font-weight: 800;
+	line-height: 1;
+	font-style: normal;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.adam-digital-card__title span {
+	position: static;
+}
+
+.adam-digital-card__title-mark {
+	top: 50%;
+	left: 2.1mm;
+	width: 2.8mm;
+	height: 2.8mm;
+	margin-top: -1.4mm;
+	border-radius: 999px;
+	background: radial-gradient(circle at 35% 35%, var(--adam-title-badge-icon-highlight, #ffffff) 0, var(--adam-title-badge-icon-highlight, #ffffff) 22%, var(--adam-title-badge-icon, #2f4b3b) 58%, var(--adam-title-badge-icon, #2f4b3b) 100%);
+	box-shadow: 0 0 1.5mm var(--adam-title-badge-icon-glow, rgba(255, 255, 255, 0.25));
+}
+
+.adam-pdf-card__name {
+	top: 32.1mm;
+	left: 23.7mm;
+	width: 34mm;
+	font-size: 8.8mm;
+	line-height: 0.98;
+	font-weight: 900;
+	color: #ffffff;
+}
+
+.adam-pdf-card__member-chip {
+	top: 43.1mm;
+	left: 23.7mm;
+	padding: 1.3mm 2.8mm;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+	border: 0.28mm solid rgba(255, 255, 255, 0.16);
+	font-size: 2.9mm;
+	font-weight: 800;
+}
+
+.adam-pdf-card__qr {
+	top: 16.8mm;
+	right: 4.8mm;
+	width: 18.8mm;
+	height: 21.6mm;
+	padding: 1.5mm;
+	border-radius: 3.3mm;
+	background: #ffffff;
+	text-align: center;
+}
+
+.adam-pdf-card__qr img {
+	top: 1.5mm;
+	left: 1.5mm;
+	width: 15.8mm;
+	height: 15.8mm;
+	object-fit: contain;
+}
+
+.adam-pdf-card__qr-label {
+	left: 0;
+	right: 0;
+	bottom: 2.1mm;
+	font-size: 2.3mm;
+	font-weight: 800;
+	text-transform: uppercase;
+	color: #1f3d2b;
+}
+
+.adam-pdf-card__detail {
+	top: 46.4mm;
+	width: 23.9mm;
+	height: 9.4mm;
+	padding: 1.8mm 2.1mm;
+	border-radius: 2.6mm;
+	background: rgba(255, 255, 255, 0.10);
+	border: 0.28mm solid rgba(255, 255, 255, 0.14);
+}
+
+.adam-pdf-card__detail--number { left: 4.8mm; }
+.adam-pdf-card__detail--joined { left: 30.7mm; }
+.adam-pdf-card__detail--expiry { left: 56.6mm; }
+
+.adam-pdf-card__detail-label {
+	top: 1.4mm;
+	left: 2.1mm;
+	right: 2.1mm;
+	font-size: 2.1mm;
+	font-weight: 800;
+	text-transform: uppercase;
+	opacity: 0.78;
+}
+
+.adam-pdf-card__detail-value {
+	left: 2.1mm;
+	right: 2.1mm;
+	bottom: 1.5mm;
+	font-size: 3.05mm;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.adam-pdf-card__footer {
+	left: 4.8mm;
+	right: 4.8mm;
+	bottom: 2.7mm;
+	font-size: 2.35mm;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.05mm;
+}
+
+.adam-pdf-card__footer-left {
+	float: left;
+}
+
+.adam-pdf-card__footer-right {
+	float: right;
+}
+
+.adam-pdf-card__footer-clear {
+	clear: both;
+}
+
+.adam-pdf-frame {
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+}
+
+.adam-pdf-frame__edge {
+	display: block;
 }
 ';
+	}
+
+	/**
+	 * Build the dedicated fixed-layout card markup used by Dompdf.
+	 *
+	 * @param array<string, mixed> $card_data Card payload.
+	 * @param array<string, mixed> $presentation Presentation payload.
+	 */
+	private function pdf_card_markup( array $card_data, array $presentation ): string {
+		$style             = isset( $presentation['custom_style'] ) && is_array( $presentation['custom_style'] ) ? $presentation['custom_style'] : array();
+		$background        = $this->preview_background_value( $style );
+		$backdrop_style    = $this->pdf_background_image_style( $style );
+		$pattern_style     = $this->pdf_pattern_style( $style );
+		$art_style         = $this->pdf_art_style( $style );
+		$title_badge_style = is_array( $presentation['active_title_badge_style'] ?? null ) ? (array) $presentation['active_title_badge_style'] : array();
+		$status_class      = 'adam-pdf-card__status adam-pdf-card__status--' . $this->pdf_status_variant( (string) $card_data['status'] );
+		$name_color        = $this->sanitize_pdf_color( (string) ( $style['member_name_color'] ?? $style['text_color'] ?? '#ffffff' ), '#ffffff' );
+		$name_weight       = max( 700, min( 900, (int) ( $style['member_name_weight'] ?? 900 ) ) );
+		$text_primary      = $this->sanitize_pdf_color( (string) ( $style['text_color'] ?? '#ffffff' ), '#ffffff' );
+		$text_secondary    = $this->sanitize_pdf_color( (string) ( $style['muted_text_color'] ?? 'rgba(255,255,255,0.78)' ), 'rgba(255,255,255,0.78)' );
+		$panel_background  = $this->sanitize_pdf_color( (string) ( $style['panel_background_color'] ?? 'rgba(255,255,255,0.10)' ), 'rgba(255,255,255,0.10)' );
+		$panel_border      = $this->sanitize_pdf_color( (string) ( $style['panel_border_color'] ?? 'rgba(255,255,255,0.14)' ), 'rgba(255,255,255,0.14)' );
+		$chip_background   = $this->sanitize_pdf_color( (string) ( $style['chip_background_color'] ?? 'rgba(255,255,255,0.16)' ), 'rgba(255,255,255,0.16)' );
+		$chip_border       = $this->sanitize_pdf_color( (string) ( $style['chip_border_color'] ?? 'rgba(255,255,255,0.16)' ), 'rgba(255,255,255,0.16)' );
+		$photo_border      = $this->sanitize_pdf_color( (string) ( $style['photo_border_color'] ?? 'rgba(255,255,255,0.82)' ), 'rgba(255,255,255,0.82)' );
+
+		ob_start();
+		?>
+		<div class="adam-pdf-card" style="background: <?php echo esc_attr( $background ); ?>; color: <?php echo esc_attr( $text_primary ); ?>;">
+			<?php if ( '' !== $backdrop_style ) : ?>
+				<div class="adam-pdf-layer adam-pdf-layer--backdrop" style="<?php echo esc_attr( $backdrop_style ); ?>"></div>
+			<?php endif; ?>
+			<?php if ( '' !== $pattern_style ) : ?>
+				<div class="adam-pdf-layer adam-pdf-layer--pattern" style="<?php echo esc_attr( $pattern_style ); ?>"></div>
+			<?php endif; ?>
+			<?php if ( '' !== $art_style ) : ?>
+				<div class="adam-pdf-layer adam-pdf-layer--art" style="<?php echo esc_attr( $art_style ); ?>"></div>
+			<?php endif; ?>
+
+			<img class="adam-pdf-card__logo" src="<?php echo esc_attr( (string) $card_data['association_logo'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
+
+			<div class="adam-pdf-card__org" style="color: <?php echo esc_attr( $text_primary ); ?>;">
+				<span style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Associacao Desportiva', 'adam-membership' ); ?></span>
+				<strong><?php echo esc_html( (string) $card_data['association_name'] ); ?></strong>
+			</div>
+
+			<?php if ( '' !== (string) ( $presentation['founder_badge'] ?? '' ) ) : ?>
+				<div class="adam-pdf-card__founder"><?php echo esc_html( (string) $presentation['founder_badge'] ); ?></div>
+			<?php endif; ?>
+
+			<div class="<?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( (string) $card_data['status'] ); ?></div>
+
+			<div class="adam-pdf-card__photo" style="border-color: <?php echo esc_attr( $photo_border ); ?>;">
+				<?php if ( '' !== (string) $card_data['photo_url'] ) : ?>
+					<img src="<?php echo esc_attr( (string) $card_data['photo_url'] ); ?>" alt="<?php echo esc_attr( (string) $card_data['member_name'] ); ?>">
+				<?php else : ?>
+					<span><?php echo esc_html( (string) $card_data['initials'] ); ?></span>
+				<?php endif; ?>
+			</div>
+
+			<div class="adam-pdf-card__name-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Nome do socio', 'adam-membership' ); ?></div>
+
+			<?php if ( is_array( $presentation['active_title'] ?? null ) && '' !== (string) ( $presentation['active_title']['name'] ?? '' ) ) : ?>
+				<div class="adam-pdf-card__title-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Titulo ativo', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__title-wrap">
+					<?php
+					echo wp_kses_post(
+						$this->render_title_badge(
+							(string) $presentation['active_title']['name'],
+							(string) ( $presentation['active_title']['rarity'] ?? 'common' ),
+							$title_badge_style
+						)
+					);
+					?>
+				</div>
+			<?php endif; ?>
+
+			<div class="adam-pdf-card__name" style="color: <?php echo esc_attr( $name_color ); ?>; font-weight: <?php echo esc_attr( (string) $name_weight ); ?>;">
+				<?php echo esc_html( (string) $card_data['member_name'] ); ?>
+			</div>
+
+			<div class="adam-pdf-card__member-chip" style="background: <?php echo esc_attr( $chip_background ); ?>; border-color: <?php echo esc_attr( $chip_border ); ?>;">
+				<?php echo esc_html( (string) $card_data['member_number_ui'] ); ?>
+			</div>
+
+			<div class="adam-pdf-card__qr">
+				<img src="<?php echo esc_attr( (string) $card_data['qr_image_url'] ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
+				<div class="adam-pdf-card__qr-label"><?php esc_html_e( 'Validar cartao', 'adam-membership' ); ?></div>
+			</div>
+
+			<div class="adam-pdf-card__detail adam-pdf-card__detail--number" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
+				<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'N.Âº de socio', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__detail-value"><?php echo esc_html( (string) $card_data['member_number_ui'] ); ?></div>
+			</div>
+
+			<div class="adam-pdf-card__detail adam-pdf-card__detail--joined" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
+				<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['joined_date'] ? (string) $card_data['joined_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+			</div>
+
+			<div class="adam-pdf-card__detail adam-pdf-card__detail--expiry" style="background: <?php echo esc_attr( $panel_background ); ?>; border-color: <?php echo esc_attr( $panel_border ); ?>;">
+				<div class="adam-pdf-card__detail-label" style="color: <?php echo esc_attr( $text_secondary ); ?>;"><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></div>
+				<div class="adam-pdf-card__detail-value"><?php echo esc_html( '' !== (string) $card_data['expiry_date'] ? (string) $card_data['expiry_date'] : __( 'Indisponivel', 'adam-membership' ) ); ?></div>
+			</div>
+
+			<div class="adam-pdf-card__footer" style="color: <?php echo esc_attr( $text_secondary ); ?>;">
+				<span class="adam-pdf-card__footer-left"><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
+				<span class="adam-pdf-card__footer-right"><?php esc_html_e( 'Cartao digital ADAM', 'adam-membership' ); ?></span>
+				<span class="adam-pdf-card__footer-clear"></span>
+			</div>
+
+			<?php echo $this->pdf_frame_markup( $style ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Build the optional PDF backdrop image style.
+	 *
+	 * @param array<string, mixed> $style Style payload.
+	 */
+	private function pdf_background_image_style( array $style ): string {
+		$image_url = (string) ( $style['background_image_url'] ?? '' );
+
+		if ( '' === $image_url ) {
+			return '';
+		}
+
+		$opacity  = max( 0, min( 100, (int) ( $style['background_image_opacity'] ?? 18 ) ) ) / 100;
+		$position = sanitize_key( (string) ( $style['background_image_position'] ?? 'center' ) );
+		$size     = max( 10, min( 180, (int) ( $style['background_image_size'] ?? 100 ) ) );
+		$blend    = sanitize_key( (string) ( $style['background_image_blend_mode'] ?? 'screen' ) );
+		$css_position = match ( $position ) {
+			'top-left' => 'left top',
+			'top-right' => 'right top',
+			'bottom-left' => 'left bottom',
+			'bottom-right' => 'right bottom',
+			'left' => 'left center',
+			'right' => 'right center',
+			default => 'center center',
+		};
+
+		return sprintf(
+			'background-image:url(%1$s);background-position:%2$s;background-size:%3$s%% auto;opacity:%4$s;mix-blend-mode:%5$s;',
+			$image_url,
+			$css_position,
+			(string) $size,
+			(string) $opacity,
+			in_array( $blend, array( 'multiply', 'screen', 'overlay', 'soft-light', 'normal' ), true ) ? $blend : 'screen'
+		);
+	}
+
+	/**
+	 * Build the optional PDF pattern style.
+	 *
+	 * @param array<string, mixed> $style Style payload.
+	 */
+	private function pdf_pattern_style( array $style ): string {
+		$pattern = sanitize_key( (string) ( $style['pattern'] ?? '' ) );
+
+		if ( '' === $pattern || 'none' === $pattern ) {
+			return '';
+		}
+
+		$color      = $this->sanitize_pdf_color( (string) ( $style['pattern_color'] ?? '#86efac' ), '#86efac' );
+		$base       = $this->sanitize_pdf_color( (string) ( $style['pattern_background_color'] ?? 'transparent' ), 'transparent' );
+		$opacity    = max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? 16 ) ) ) / 100;
+		$scale      = max( 8, min( 40, (int) ( $style['pattern_scale'] ?? 24 ) ) );
+		$spacing    = max( 8, min( 40, (int) ( $style['pattern_spacing'] ?? 24 ) ) );
+		$density    = max( 1, min( 6, (int) ( $style['pattern_density'] ?? 2 ) ) );
+		$rotation   = max( 0, min( 360, (int) ( $style['pattern_rotation'] ?? 0 ) ) );
+		$image_css  = '';
+		$size_css   = '';
+
+		switch ( $pattern ) {
+			case 'dots':
+				$image_css = sprintf( 'radial-gradient(%1$s %2$spx, transparent %2$spx)', $color, (string) $density );
+				$size_css  = sprintf( '%1$spx %2$spx', (string) $scale, (string) $scale );
+				break;
+			case 'diagonal':
+				$image_css = sprintf( 'repeating-linear-gradient(135deg, %1$s 0, %1$s %2$spx, transparent %2$spx, transparent %3$spx)', $color, (string) $density, (string) $spacing );
+				$size_css  = 'auto';
+				break;
+			case 'carbon':
+				$image_css = sprintf( 'repeating-linear-gradient(45deg, %1$s 0, %1$s %2$spx, transparent %2$spx, transparent %3$spx)', $color, (string) $density, (string) $spacing );
+				$size_css  = 'auto';
+				break;
+			default:
+				$image_css = sprintf(
+					'linear-gradient(%1$s %2$spx, transparent %2$spx), linear-gradient(90deg, %1$s %2$spx, transparent %2$spx)',
+					$color,
+					(string) $density
+				);
+				$size_css = sprintf( '%1$spx %2$spx', (string) $scale, (string) $scale );
+				break;
+		}
+
+		return sprintf(
+			'background-color:%1$s;background-image:%2$s;background-size:%3$s;opacity:%4$s;transform:rotate(%5$sdeg) scale(1.1);transform-origin:center center;',
+			$base,
+			$image_css,
+			$size_css,
+			(string) $opacity,
+			(string) $rotation
+		);
+	}
+
+	/**
+	 * Build the optional PDF decorative art style.
+	 *
+	 * @param array<string, mixed> $style Style payload.
+	 */
+	private function pdf_art_style( array $style ): string {
+		$image_url = (string) ( $style['image_url'] ?? '' );
+
+		if ( '' === $image_url ) {
+			return '';
+		}
+
+		$opacity  = max( 0, min( 100, (int) ( $style['card_image_opacity'] ?? 22 ) ) ) / 100;
+		$size     = max( 10, min( 100, (int) ( $style['card_image_size'] ?? 36 ) ) );
+		$position = sanitize_key( (string) ( $style['card_image_position'] ?? 'top-right' ) );
+		$blend    = sanitize_key( (string) ( $style['background_image_blend_mode'] ?? 'screen' ) );
+		$css_position = match ( $position ) {
+			'top-left' => 'left top',
+			'top-right' => 'right top',
+			'bottom-left' => 'left bottom',
+			'bottom-right' => 'right bottom',
+			'left' => 'left center',
+			'right' => 'right center',
+			default => 'center center',
+		};
+
+		return sprintf(
+			'background-image:url(%1$s);background-position:%2$s;background-size:%3$s%% auto;opacity:%4$s;mix-blend-mode:%5$s;',
+			$image_url,
+			$css_position,
+			(string) $size,
+			(string) $opacity,
+			in_array( $blend, array( 'multiply', 'screen', 'overlay', 'soft-light', 'normal' ), true ) ? $blend : 'screen'
+		);
+	}
+
+	/**
+	 * Render the fixed-layout frame markup for the PDF template.
+	 *
+	 * @param array<string, mixed> $style Style payload.
+	 */
+	private function pdf_frame_markup( array $style ): string {
+		$enabled   = ! empty( $style['frame_enabled'] ) || (int) ( $style['frame_thickness'] ?? 0 ) > 0;
+		$preset    = $this->normalize_frame_preset( $style['frame_style'] ?? 'none' );
+		$thickness = max( 0, min( 16, (int) ( $style['frame_thickness'] ?? 0 ) ) );
+
+		if ( ! $enabled || 'none' === $preset || $thickness <= 0 ) {
+			return '';
+		}
+
+		$outer_radius = 6.8;
+		$top_style    = '';
+		$right_style  = '';
+		$bottom_style = '';
+		$left_style   = '';
+
+		if ( 'gradient' === $preset ) {
+			$color_1 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_1'] ?? '#ff0000' ), '#ff0000' );
+			$color_2 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_2'] ?? '#ffd700' ), '#ffd700' );
+			$color_3 = $this->sanitize_pdf_color( (string) ( $style['frame_gradient_color_3'] ?? '#146aff' ), '#146aff' );
+			$angle   = max( 0, min( 360, (int) ( $style['frame_gradient_angle'] ?? 135 ) ) );
+			$grad_a  = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) $angle, $color_1, $color_2, $color_3 );
+			$grad_b  = sprintf( 'linear-gradient(%1$sdeg, %2$s 0%%, %3$s 50%%, %4$s 100%%)', (string) ( ( $angle + 90 ) % 360 ), $color_1, $color_2, $color_3 );
+			$top_style = 'background:' . $grad_a . ';';
+			$bottom_style = 'background:' . $grad_a . ';';
+			$left_style = 'background:' . $grad_b . ';';
+			$right_style = 'background:' . $grad_b . ';';
+		} elseif ( 'metallic' === $preset ) {
+			$base      = $this->sanitize_pdf_color( (string) ( $style['frame_color'] ?? '#5f6268' ), '#5f6268' );
+			$highlight = $this->sanitize_pdf_color( (string) ( $style['frame_highlight_color'] ?? '#d8dce3' ), '#d8dce3' );
+			$top_style = 'background:linear-gradient(180deg, ' . $highlight . ' 0%, ' . $base . ' 48%, ' . $highlight . ' 100%);';
+			$bottom_style = $top_style;
+			$left_style = 'background:linear-gradient(90deg, ' . $highlight . ' 0%, ' . $base . ' 48%, ' . $highlight . ' 100%);';
+			$right_style = $left_style;
+		} else {
+			$color = $this->sanitize_pdf_color( (string) ( $style['frame_color'] ?? '#ffffff' ), '#ffffff' );
+			$top_style = 'background:' . $color . ';';
+			$right_style = $top_style;
+			$bottom_style = $top_style;
+			$left_style = $top_style;
+		}
+
+		ob_start();
+		?>
+		<div class="adam-pdf-frame" aria-hidden="true">
+			<span class="adam-pdf-frame__edge" style="top:0;left:0;right:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $top_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="top:0;right:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $right_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="left:0;right:0;bottom:0;height:<?php echo esc_attr( (string) $thickness ); ?>px;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-right-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $bottom_style ); ?>"></span>
+			<span class="adam-pdf-frame__edge" style="top:0;left:0;bottom:0;width:<?php echo esc_attr( (string) $thickness ); ?>px;border-top-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;border-bottom-left-radius:<?php echo esc_attr( (string) $outer_radius ); ?>mm;<?php echo esc_attr( $left_style ); ?>"></span>
+		</div>
+		<?php
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Map member status to the compact PDF badge variants.
+	 */
+	private function pdf_status_variant( string $status ): string {
+		$status_class = $this->status_class( $status );
+
+		if ( str_contains( $status_class, 'active' ) ) {
+			return 'active';
+		}
+
+		if ( str_contains( $status_class, 'expired' ) || str_contains( $status_class, 'rejected' ) ) {
+			return 'expired';
+		}
+
+		if ( str_contains( $status_class, 'pending' ) || str_contains( $status_class, 'warning' ) ) {
+			return 'pending';
+		}
+
+		return 'unknown';
+	}
+
+	/**
+	 * Sanitize PDF colors while allowing rgba values used by the shared card config.
+	 */
+	private function sanitize_pdf_color( string $color, string $fallback ): string {
+		$color = trim( $color );
+
+		if ( preg_match( '/^#[0-9a-fA-F]{6}$/', $color ) ) {
+			return $color;
+		}
+
+		if ( preg_match( '/^#[0-9a-fA-F]{3}$/', $color ) ) {
+			return $color;
+		}
+
+		if ( preg_match( '/^rgba?\([0-9\.\,\s]+\)$/', $color ) ) {
+			return $color;
+		}
+
+		return $fallback;
 	}
 
 	/**
