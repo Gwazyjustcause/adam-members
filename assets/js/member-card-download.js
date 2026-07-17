@@ -115,6 +115,79 @@
 		} );
 	}
 
+	function parseRgbColor( value ) {
+		var match = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/i.exec( value || '' );
+
+		if ( ! match ) {
+			return null;
+		}
+
+		return {
+			r: Math.max( 0, Math.min( 255, parseFloat( match[1] ) ) ),
+			g: Math.max( 0, Math.min( 255, parseFloat( match[2] ) ) ),
+			b: Math.max( 0, Math.min( 255, parseFloat( match[3] ) ) ),
+			a: null === match[4] || 'undefined' === typeof match[4] ? 1 : Math.max( 0, Math.min( 1, parseFloat( match[4] ) ) )
+		};
+	}
+
+	function mixRgbColor( color, target, amount ) {
+		return {
+			r: color.r + ( target.r - color.r ) * amount,
+			g: color.g + ( target.g - color.g ) * amount,
+			b: color.b + ( target.b - color.b ) * amount,
+			a: color.a
+		};
+	}
+
+	function formatRgbColor( color ) {
+		return 'rgba(' +
+			Math.round( color.r ) + ', ' +
+			Math.round( color.g ) + ', ' +
+			Math.round( color.b ) + ', ' +
+			color.a +
+		')';
+	}
+
+	function cloneTitleBadgesForCapture( sourceCard, clonedDocument ) {
+		if ( ! sourceCard || ! clonedDocument ) {
+			return;
+		}
+
+		var sourceBadges = sourceCard.querySelectorAll( '.adam-digital-card__title' );
+		var clonedBadges = clonedDocument.querySelectorAll( '.adam-digital-card__title' );
+
+		Array.prototype.forEach.call( clonedBadges, function ( clonedBadge, index ) {
+			var sourceBadge = sourceBadges[ index ];
+
+			if ( ! sourceBadge ) {
+				return;
+			}
+
+			var sourceStyle = window.getComputedStyle( sourceBadge );
+			var baseColor = parseRgbColor( sourceStyle.backgroundColor );
+			var backgroundValue = sourceStyle.backgroundColor;
+
+			if ( baseColor ) {
+				var topColor = formatRgbColor( mixRgbColor( baseColor, { r: 255, g: 255, b: 255 }, 0.12 ) );
+				var bottomColor = formatRgbColor( mixRgbColor( baseColor, { r: 0, g: 0, b: 0 }, 0.12 ) );
+
+				backgroundValue = 'linear-gradient(180deg, ' + topColor + ' 0%, ' + sourceStyle.backgroundColor + ' 56%, ' + bottomColor + ' 100%)';
+			}
+
+			clonedBadge.style.setProperty( 'display', 'flex', 'important' );
+			clonedBadge.style.setProperty( 'align-items', 'center', 'important' );
+			clonedBadge.style.setProperty( 'gap', sourceStyle.gap || '10px', 'important' );
+			clonedBadge.style.setProperty( 'width', 'max-content', 'important' );
+			clonedBadge.style.setProperty( 'max-width', '100%', 'important' );
+			clonedBadge.style.setProperty( 'background', backgroundValue, 'important' );
+			clonedBadge.style.setProperty( 'background-image', 'none', 'important' );
+			clonedBadge.style.setProperty( 'box-shadow', 'none', 'important' );
+			clonedBadge.style.setProperty( 'backdrop-filter', 'none', 'important' );
+			clonedBadge.style.setProperty( 'mix-blend-mode', 'normal', 'important' );
+			clonedBadge.style.setProperty( 'isolation', 'auto', 'important' );
+		} );
+	}
+
 	function downloadBlob( blob, filename ) {
 		var blobUrl = window.URL.createObjectURL( blob );
 		var link = document.createElement( 'a' );
@@ -191,7 +264,10 @@
 				useCORS: true,
 				allowTaint: false,
 				logging: false,
-				imageTimeout: 15000
+				imageTimeout: 15000,
+				onclone: function ( clonedDocument ) {
+					cloneTitleBadgesForCapture( card, clonedDocument );
+				}
 			} );
 
 			var blob = await canvasToBlob( canvas );
