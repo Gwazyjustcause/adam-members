@@ -164,14 +164,16 @@
 			}
 
 			var sourceStyle = window.getComputedStyle( sourceBadge );
-			var baseColor = parseRgbColor( sourceStyle.backgroundColor );
-			var backgroundValue = sourceStyle.backgroundColor;
+			var badgeBackgroundVar = sourceStyle.getPropertyValue( '--adam-title-badge-background' ) || '';
+			var baseBackground = badgeBackgroundVar.trim() || sourceStyle.backgroundColor;
+			var baseColor = parseRgbColor( baseBackground );
+			var backgroundImage = 'none';
 
 			if ( baseColor ) {
 				var topColor = formatRgbColor( mixRgbColor( baseColor, { r: 255, g: 255, b: 255 }, 0.12 ) );
 				var bottomColor = formatRgbColor( mixRgbColor( baseColor, { r: 0, g: 0, b: 0 }, 0.12 ) );
 
-				backgroundValue = 'linear-gradient(180deg, ' + topColor + ' 0%, ' + sourceStyle.backgroundColor + ' 56%, ' + bottomColor + ' 100%)';
+				backgroundImage = 'linear-gradient(180deg, ' + topColor + ' 0%, ' + baseBackground + ' 56%, ' + bottomColor + ' 100%)';
 			}
 
 			clonedBadge.style.setProperty( 'display', 'flex', 'important' );
@@ -179,9 +181,9 @@
 			clonedBadge.style.setProperty( 'gap', sourceStyle.gap || '10px', 'important' );
 			clonedBadge.style.setProperty( 'width', 'max-content', 'important' );
 			clonedBadge.style.setProperty( 'max-width', '100%', 'important' );
-			clonedBadge.style.setProperty( 'background', backgroundValue, 'important' );
-			clonedBadge.style.setProperty( 'background-image', 'none', 'important' );
-			clonedBadge.style.setProperty( 'box-shadow', 'none', 'important' );
+			clonedBadge.style.setProperty( 'background-color', baseBackground, 'important' );
+			clonedBadge.style.setProperty( 'background-image', backgroundImage, 'important' );
+			clonedBadge.style.setProperty( 'box-shadow', '0 2px 6px rgba(0, 0, 0, 0.18)', 'important' );
 			clonedBadge.style.setProperty( 'backdrop-filter', 'none', 'important' );
 			clonedBadge.style.setProperty( 'mix-blend-mode', 'normal', 'important' );
 			clonedBadge.style.setProperty( 'isolation', 'auto', 'important' );
