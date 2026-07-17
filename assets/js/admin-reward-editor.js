@@ -564,6 +564,21 @@
 		$cardTitleBadge.find( '[data-adam-card-title-text]' ).text( titleReward ? 'SOBREVIVENTE' : titleText );
 		$previewTitleBadge.find( '[data-adam-card-title-text]' ).text( titleText );
 
+		function syncBadgeSymbol( $badge, symbolValue ) {
+			var $symbol = $badge.find( '.adam-title-badge__symbol' );
+
+			if ( symbolValue ) {
+				if ( ! $symbol.length ) {
+					$symbol = $( '<span class="adam-title-badge__symbol" aria-hidden="true"></span>' );
+					$badge.prepend( $symbol );
+				}
+
+				$symbol.text( symbolValue );
+			} else {
+				$symbol.remove();
+			}
+		}
+
 		if ( titleReward && $previewTitleBadge.length ) {
 			$previewTitleBadge.attr( 'class', 'adam-digital-card__title adam-digital-card__title--' + rarity );
 			$previewTitleBadge.attr(
@@ -572,12 +587,13 @@
 					'--adam-title-badge-background:' + ( previewStyleValue( 'badge_background_color' ) || '#36523f' ),
 					'--adam-title-badge-text:' + ( previewStyleValue( 'badge_text_color' ) || '#ffffff' ),
 					'--adam-title-badge-border:' + ( previewStyleValue( 'badge_border_color' ) || '#86efac' ),
-					'--adam-title-badge-border-width:' + clamp( previewStyleValue( 'badge_border_width' ), 1, 4 ) + 'px',
-					'--adam-title-badge-icon:' + ( previewStyleValue( 'badge_icon_color' ) || '#2f4b3b' ),
-					'--adam-title-badge-icon-highlight:' + ( previewStyleValue( 'badge_icon_highlight_color' ) || '#ffffff' ),
-					'--adam-title-badge-icon-glow:' + clamp( previewStyleValue( 'badge_icon_glow' ), 0, 40 ) + 'px'
+					'--adam-title-badge-border-width:' + clamp( previewStyleValue( 'badge_border_width' ), 1, 4 ) + 'px'
 				].join( ';' )
 			);
+
+			var symbolValue = String( previewStyleValue( 'badge_symbol' ) || '' );
+			syncBadgeSymbol( $previewTitleBadge, symbolValue );
+			syncBadgeSymbol( $cardTitleBadge, symbolValue );
 		}
 
 		if ( $preview.length ) {

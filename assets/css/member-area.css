@@ -344,9 +344,6 @@
 	--adam-title-badge-text: var(--adam-card-text-primary);
 	--adam-title-badge-border: rgba(255, 255, 255, 0.18);
 	--adam-title-badge-border-width: 1px;
-	--adam-title-badge-icon: rgba(0, 0, 0, 0.22);
-	--adam-title-badge-icon-highlight: rgba(255, 255, 255, 0.92);
-	--adam-title-badge-icon-glow: 0px;
 	position: relative;
 	display: grid;
 	grid-template-rows: auto auto auto auto;
@@ -785,25 +782,19 @@
 	text-transform: uppercase;
 }
 
-.adam-digital-card__title-mark,
-.adam-member-rank-card__plate-mark {
-	position: relative;
+.adam-title-badge__symbol {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	flex: 0 0 22px;
-	width: 22px;
-	height: 22px;
-	border-radius: 999px;
-	background: radial-gradient(circle at 30% 30%, var(--adam-title-badge-icon-highlight), var(--adam-title-badge-icon-mid) 34%, var(--adam-title-badge-icon));
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 0 var(--adam-title-badge-icon-glow) var(--adam-title-badge-icon-glow-color), 0 6px 12px rgba(0, 0, 0, 0.22);
+	flex: 0 0 1.3em;
+	width: 1.3em;
+	min-width: 1.3em;
+	font-size: 1rem;
+	line-height: 1;
 }
 
-.adam-digital-card__title-mark::before,
-.adam-member-rank-card__plate-mark::before {
-	content: "\2605";
-	color: var(--adam-title-badge-text);
-	font-size: 0.78rem;
+.adam-title-badge__label {
+	display: inline-block;
 	line-height: 1;
 }
 

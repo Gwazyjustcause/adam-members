@@ -383,9 +383,13 @@ final class RewardController {
 									<label><span><?php esc_html_e( 'Texto do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][text_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['text_color'] ?? $resolved_style['text_color'] ) ); ?>" data-adam-style="badge_text_color"></label>
 									<label><span><?php esc_html_e( 'Contorno do badge', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][border_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['border_color'] ?? '#86efac' ) ); ?>" data-adam-style="badge_border_color"></label>
 									<label><span><?php esc_html_e( 'Espessura do contorno', 'adam-membership' ); ?></span><input type="range" min="1" max="4" step="1" name="visual_style[title_badge][border_width]" value="<?php echo esc_attr( (string) ( $title_badge_style['border_width'] ?? 1 ) ); ?>" data-adam-style="badge_border_width"><small data-adam-value-for="badge_border_width"><?php echo esc_html( (string) ( $title_badge_style['border_width'] ?? 1 ) ); ?>px</small></label>
-									<label><span><?php esc_html_e( 'Cor do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][icon_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_color'] ?? '#2f4b3b' ) ); ?>" data-adam-style="badge_icon_color"></label>
-									<label><span><?php esc_html_e( 'Cor do brilho do icone', 'adam-membership' ); ?></span><input class="adam-color-picker" type="text" name="visual_style[title_badge][icon_highlight_color]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_highlight_color'] ?? '#ffffff' ) ); ?>" data-adam-style="badge_icon_highlight_color"></label>
-									<label><span><?php esc_html_e( 'Intensidade do brilho', 'adam-membership' ); ?></span><input type="range" min="0" max="40" name="visual_style[title_badge][icon_glow]" value="<?php echo esc_attr( (string) ( $title_badge_style['icon_glow'] ?? 10 ) ); ?>" data-adam-style="badge_icon_glow"><small data-adam-value-for="badge_icon_glow"><?php echo esc_html( (string) ( $title_badge_style['icon_glow'] ?? 10 ) ); ?>px</small></label>
+									<label><span><?php esc_html_e( 'Símbolo do título', 'adam-membership' ); ?></span>
+										<select name="visual_style[title_badge][symbol]" data-adam-style="badge_symbol">
+											<?php foreach ( $this->rewards->title_badge_symbol_options() as $symbol_value => $symbol_label ) : ?>
+												<?php $this->render_select_option( $symbol_value, $symbol_label, (string) ( $title_badge_style['symbol'] ?? '' ) ); ?>
+											<?php endforeach; ?>
+										</select>
+									</label>
 								</div>
 							</section>
 

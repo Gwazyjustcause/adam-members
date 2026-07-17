@@ -436,9 +436,7 @@ final class CardCosmeticsService {
 			'text_color',
 			'border_color',
 			'border_width',
-			'icon_color',
-			'icon_highlight_color',
-			'icon_glow',
+			'symbol',
 		);
 	}
 

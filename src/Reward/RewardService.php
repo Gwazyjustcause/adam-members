@@ -1511,6 +1511,7 @@ final class RewardService {
 			$style['badge_text_color'],
 			$style['badge_border_color'],
 			$style['badge_border_width'],
+			$style['badge_symbol'],
 			$style['badge_icon_color'],
 			$style['badge_icon_highlight_color'],
 			$style['badge_icon_glow'],
@@ -1539,9 +1540,7 @@ final class RewardService {
 			'text_color'           => $this->sanitize_color_value( $style['text_color'] ?? $style['badge_text_color'] ?? $default_badge['text_color'] ?? '#ffffff' ),
 			'border_color'         => $this->sanitize_color_value( $style['border_color'] ?? $style['badge_border_color'] ?? $default_badge['border_color'] ?? '#86efac' ),
 			'border_width'         => max( 1, min( 4, (int) ( $style['border_width'] ?? $style['badge_border_width'] ?? $default_badge['border_width'] ?? 1 ) ) ),
-			'icon_color'           => $this->sanitize_color_value( $style['icon_color'] ?? $style['badge_icon_color'] ?? $default_badge['icon_color'] ?? '#2f4b3b' ),
-			'icon_highlight_color' => $this->sanitize_color_value( $style['icon_highlight_color'] ?? $style['badge_icon_highlight_color'] ?? $default_badge['icon_highlight_color'] ?? '#ffffff' ),
-			'icon_glow'            => max( 0, min( 40, (int) ( $style['icon_glow'] ?? $style['badge_icon_glow'] ?? $default_badge['icon_glow'] ?? 10 ) ) ),
+			'symbol'               => $this->sanitize_title_badge_symbol( $style['symbol'] ?? $style['badge_symbol'] ?? $default_badge['symbol'] ?? '' ),
 		);
 	}
 
@@ -1555,9 +1554,7 @@ final class RewardService {
 			'badge_text_color'            => 'text_color',
 			'badge_border_color'          => 'border_color',
 			'badge_border_width'          => 'border_width',
-			'badge_icon_color'            => 'icon_color',
-			'badge_icon_highlight_color'  => 'icon_highlight_color',
-			'badge_icon_glow'             => 'icon_glow',
+			'badge_symbol'                => 'symbol',
 		);
 		$badge   = array();
 
@@ -1580,10 +1577,36 @@ final class RewardService {
 			'text_color'           => (string) ( $palette['text_color'] ?? '#ffffff' ),
 			'border_color'         => (string) ( $palette['accent_color'] ?? '#86efac' ),
 			'border_width'         => 1,
-			'icon_color'           => '#2f4b3b',
-			'icon_highlight_color' => '#ffffff',
-			'icon_glow'            => 10,
+			'symbol'               => '',
 		);
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	public function title_badge_symbol_options(): array {
+		return array(
+			''   => __( 'Sem símbolo', 'adam-membership' ),
+			'⭐' => '⭐',
+			'🏆' => '🏆',
+			'🛡️' => '🛡️',
+			'🎯' => '🎯',
+			'⚔️' => '⚔️',
+			'👑' => '👑',
+			'🔥' => '🔥',
+			'💀' => '💀',
+			'🧭' => '🧭',
+			'🎖️' => '🎖️',
+			'🥇' => '🥇',
+			'🌟' => '🌟',
+		);
+	}
+
+	private function sanitize_title_badge_symbol( mixed $symbol ): string {
+		$symbol = trim( (string) $symbol );
+		$options = $this->title_badge_symbol_options();
+
+		return array_key_exists( $symbol, $options ) ? $symbol : '';
 	}
 
 	/**

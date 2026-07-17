@@ -532,6 +532,7 @@ final class CardService {
 	 * @param array<string, string> $attributes
 	 */
 	public function render_title_badge( string $title, string $rarity = 'common', array $style = array(), array $attributes = array() ): string {
+		$normalized_style = $this->normalize_title_badge_style( $style );
 		$classes = array(
 			'adam-digital-card__title',
 			'adam-digital-card__title--' . sanitize_html_class( $rarity ),
@@ -541,15 +542,25 @@ final class CardService {
 			array_merge(
 				$attributes,
 				array(
-					'style' => $this->title_badge_inline_style( $style ),
+					'style' => $this->title_badge_inline_style( $normalized_style ),
 				)
 			)
 		);
 
+		$symbol_markup = '';
+
+		if ( '' !== $normalized_style['symbol'] ) {
+			$symbol_markup = sprintf(
+				'<span class="adam-title-badge__symbol" aria-hidden="true">%s</span>',
+				esc_html( $normalized_style['symbol'] )
+			);
+		}
+
 		return sprintf(
-			'<em class="%1$s"%2$s><span class="adam-digital-card__title-mark" aria-hidden="true"></span><span data-adam-card-title-text>%3$s</span></em>',
+			'<em class="%1$s"%2$s>%3$s<span class="adam-title-badge__label" data-adam-card-title-text>%4$s</span></em>',
 			esc_attr( implode( ' ', $classes ) ),
 			'' !== $attributes_string ? ' ' . $attributes_string : '',
+			$symbol_markup,
 			esc_html( $title )
 		);
 	}
@@ -581,9 +592,6 @@ final class CardService {
 			'--adam-title-badge-text'           => $this->sanitize_badge_color( $style['text_color'] ?? '#ffffff' ),
 			'--adam-title-badge-border'         => $this->sanitize_badge_color( $style['border_color'] ?? '#86efac' ),
 			'--adam-title-badge-border-width'   => max( 1, min( 4, (int) ( $style['border_width'] ?? 1 ) ) ) . 'px',
-			'--adam-title-badge-icon'           => $this->sanitize_badge_color( $style['icon_color'] ?? '#2f4b3b' ),
-			'--adam-title-badge-icon-highlight' => $this->sanitize_badge_color( $style['icon_highlight_color'] ?? '#ffffff' ),
-			'--adam-title-badge-icon-glow'      => max( 0, min( 40, (int) ( $style['icon_glow'] ?? 10 ) ) ) . 'px',
 		);
 
 		$parts = array();
@@ -607,10 +615,15 @@ final class CardService {
 			'text_color'           => $source['text_color'] ?? $source['badge_text_color'] ?? '#ffffff',
 			'border_color'         => $source['border_color'] ?? $source['badge_border_color'] ?? '#86efac',
 			'border_width'         => $source['border_width'] ?? $source['badge_border_width'] ?? 1,
-			'icon_color'           => $source['icon_color'] ?? $source['badge_icon_color'] ?? '#2f4b3b',
-			'icon_highlight_color' => $source['icon_highlight_color'] ?? $source['badge_icon_highlight_color'] ?? '#ffffff',
-			'icon_glow'            => $source['icon_glow'] ?? $source['badge_icon_glow'] ?? 10,
+			'symbol'               => $this->sanitize_title_badge_symbol( $source['symbol'] ?? $source['badge_symbol'] ?? '' ),
 		);
+	}
+
+	private function sanitize_title_badge_symbol( mixed $symbol ): string {
+		$symbol = trim( (string) $symbol );
+		$allowed = array( '⭐', '🏆', '🛡️', '🎯', '⚔️', '👑', '🔥', '💀', '🧭', '🎖️', '🥇', '🌟' );
+
+		return in_array( $symbol, $allowed, true ) ? $symbol : '';
 	}
 
 	private function sanitize_badge_color( mixed $color ): string {

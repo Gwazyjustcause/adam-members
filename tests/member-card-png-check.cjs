@@ -4,12 +4,16 @@ const { chromium } = require('@playwright/test');
 
 const AUTH_FILE = path.join(__dirname, '..', 'playwright', '.auth', 'adam-user.json');
 const OUTPUT_DIR = path.join(__dirname, '..', 'playwright', 'artifacts', 'member-card-png-check');
-const SCREENSHOT_FILE = path.join(OUTPUT_DIR, 'card-screenshot.png');
-const DOWNLOAD_FILE = path.join(OUTPUT_DIR, 'card-download.png');
 const CARD_CSS_FILE = path.join(__dirname, '..', 'assets', 'css', 'member-area.css');
 const CARD_JS_FILE = path.join(__dirname, '..', 'assets', 'js', 'member-card-download.js');
+const SYMBOL_CASES = [
+	{ key: 'star', label: '⭐', symbol: '⭐' },
+	{ key: 'trophy', label: '🏆', symbol: '🏆' },
+	{ key: 'shield', label: '🛡️', symbol: '🛡️' },
+	{ key: 'none', label: 'Sem símbolo', symbol: '' },
+];
 
-async function ensureDir(dir) {
+function ensureDir(dir) {
 	fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -20,10 +24,10 @@ async function compareImages(page, screenshotBuffer, downloadBuffer) {
 	return page.evaluate(async ({ screenshotDataUrl, downloadDataUrl }) => {
 		function loadImage(src) {
 			return new Promise((resolve, reject) => {
-				const img = new Image();
-				img.onload = () => resolve(img);
-				img.onerror = () => reject(new Error('Failed to load image for comparison'));
-				img.src = src;
+				const image = new Image();
+				image.onload = () => resolve(image);
+				image.onerror = () => reject(new Error('Failed to load image for comparison'));
+				image.src = src;
 			});
 		}
 
@@ -86,8 +90,49 @@ async function compareImages(page, screenshotBuffer, downloadBuffer) {
 	}, { screenshotDataUrl, downloadDataUrl });
 }
 
+async function applyBadgeSymbol(page, symbol) {
+	return page.evaluate((nextSymbol) => {
+		const badge = document.querySelector('.adam-digital-card [data-adam-card-title], .adam-digital-card .adam-digital-card__title');
+
+		if (!badge) {
+			throw new Error('Title badge not found on live member card');
+		}
+
+		let label = badge.querySelector('.adam-title-badge__label');
+
+		if (!label) {
+			label = badge.querySelector('[data-adam-card-title-text]');
+		}
+
+		if (!label) {
+			throw new Error('Title badge label not found');
+		}
+
+		let symbolNode = badge.querySelector('.adam-title-badge__symbol');
+
+		if (nextSymbol) {
+			if (!symbolNode) {
+				symbolNode = document.createElement('span');
+				symbolNode.className = 'adam-title-badge__symbol';
+				symbolNode.setAttribute('aria-hidden', 'true');
+				badge.insertBefore(symbolNode, label);
+			}
+
+			symbolNode.textContent = nextSymbol;
+		} else if (symbolNode) {
+			symbolNode.remove();
+		}
+
+		return {
+			symbolVisible: !!badge.querySelector('.adam-title-badge__symbol'),
+			symbolText: badge.querySelector('.adam-title-badge__symbol') ? badge.querySelector('.adam-title-badge__symbol').textContent : '',
+			badgeText: label.textContent || '',
+		};
+	}, symbol);
+}
+
 async function run() {
-	await ensureDir(OUTPUT_DIR);
+	ensureDir(OUTPUT_DIR);
 
 	if (!fs.existsSync(AUTH_FILE)) {
 		throw new Error('Missing Playwright auth state: ' + AUTH_FILE);
@@ -106,7 +151,9 @@ async function run() {
 	try {
 		await page.goto('https://airsoftmondego.pt/socio/', { waitUntil: 'networkidle' });
 		await page.waitForSelector('.adam-digital-card', { state: 'visible', timeout: 30000 });
+
 		const acceptCookies = page.getByRole('button', { name: 'Aceitar tudo' });
+
 		if (await acceptCookies.count()) {
 			await acceptCookies.first().click().catch(() => {});
 		}
@@ -129,9 +176,11 @@ async function run() {
 
 			function pick(style, keys) {
 				const output = {};
+
 				keys.forEach((key) => {
 					output[key] = style ? style.getPropertyValue(key) || style[key] || '' : '';
 				});
+
 				return output;
 			}
 
@@ -189,33 +238,45 @@ async function run() {
 		});
 
 		const card = page.locator('.adam-digital-card').first();
-		const screenshotBuffer = await card.screenshot({ path: SCREENSHOT_FILE });
+		const caseResults = [];
 
-		const button = page.getByRole('link', { name: 'Descarregar cartão PNG' }).first();
-		const [download] = await Promise.all([
-			page.waitForEvent('download', { timeout: 30000 }),
-			page.evaluate(() => {
-				const trigger = document.querySelector('[data-adam-card-download="png"]');
+		for (const symbolCase of SYMBOL_CASES) {
+			const screenshotFile = path.join(OUTPUT_DIR, 'card-screenshot-' + symbolCase.key + '.png');
+			const downloadFile = path.join(OUTPUT_DIR, 'card-download-' + symbolCase.key + '.png');
+			const domState = await applyBadgeSymbol(page, symbolCase.symbol);
+			const screenshotBuffer = await card.screenshot({ path: screenshotFile });
 
-				if (!trigger || !window.adamMemberCardDownloadApi) {
-					throw new Error('PNG download API or trigger not found');
-				}
+			const [download] = await Promise.all([
+				page.waitForEvent('download', { timeout: 30000 }),
+				page.evaluate(() => {
+					const trigger = document.querySelector('[data-adam-card-download="png"]');
 
-				return window.adamMemberCardDownloadApi.downloadFromButton(trigger);
-			}),
-		]);
+					if (!trigger || !window.adamMemberCardDownloadApi) {
+						throw new Error('PNG download API or trigger not found');
+					}
 
-		await download.saveAs(DOWNLOAD_FILE);
-		const downloadBuffer = fs.readFileSync(DOWNLOAD_FILE);
+					return window.adamMemberCardDownloadApi.downloadFromButton(trigger);
+				}),
+			]);
 
-		const comparison = await compareImages(page, screenshotBuffer, downloadBuffer);
+			await download.saveAs(downloadFile);
+			const downloadBuffer = fs.readFileSync(downloadFile);
+			const comparison = await compareImages(page, screenshotBuffer, downloadBuffer);
+
+			caseResults.push({
+				case: symbolCase.label,
+				key: symbolCase.key,
+				domState,
+				screenshotFile,
+				downloadFile,
+				comparison,
+			});
+		}
 
 		console.log(JSON.stringify({
 			url: page.url(),
 			diagnostics,
-			screenshotFile: SCREENSHOT_FILE,
-			downloadFile: DOWNLOAD_FILE,
-			comparison,
+			cases: caseResults,
 		}, null, 2));
 	} finally {
 		await context.close();
