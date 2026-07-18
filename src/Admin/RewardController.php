@@ -607,7 +607,6 @@ final class RewardController {
 		$options = array(
 			'none'     => __( 'Sem padrao', 'adam-membership' ),
 			'grid'     => __( 'Grelha', 'adam-membership' ),
-			'carbon'   => __( 'Carbono', 'adam-membership' ),
 			'diagonal' => __( 'Diagonal', 'adam-membership' ),
 			'dots'     => __( 'Pontos', 'adam-membership' ),
 		);

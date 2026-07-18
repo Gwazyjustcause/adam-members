@@ -321,6 +321,7 @@ final class CardService {
 						<?php $this->render_shape( (array) $shape ); ?>
 					<?php endforeach; ?>
 				</div>
+				<div class="adam-digital-card__content">
 				<header class="adam-digital-card__header">
 					<img class="adam-digital-card__logo" src="<?php echo esc_attr( $this->asset_url_for_markup( (string) $card_data['association_logo'], $allow_data_uris ) ); ?>" alt="<?php echo esc_attr( (string) $card_data['association_name'] ); ?>">
 					<div>
@@ -395,6 +396,7 @@ final class CardService {
 					<span><?php esc_html_e( 'airsoftmondego.pt', 'adam-membership' ); ?></span>
 					<span><?php esc_html_e( 'Cartão digital ADAM', 'adam-membership' ); ?></span>
 				</footer>
+				</div>
 				<div class="adam-digital-card__frame" aria-hidden="true">
 					<div class="adam-digital-card__frame-layer adam-digital-card__frame-layer--outer"></div>
 					<div class="adam-digital-card__frame-layer adam-digital-card__frame-layer--inner"></div>

@@ -829,7 +829,7 @@ final class RewardService {
 		$pattern = 'grid';
 
 		if ( str_contains( strtolower( $category ), 'cartao' ) ) {
-			$pattern = Reward::RARITY_COMMON === $rarity ? 'diagonal' : 'carbon';
+			$pattern = Reward::RARITY_COMMON === $rarity ? 'diagonal' : 'dots';
 		}
 
 		if ( str_contains( strtolower( $category ), 'titulos' ) ) {
@@ -916,7 +916,7 @@ final class RewardService {
 					'gradient_stop_secondary'     => 46,
 					'gradient_stop_tertiary'      => 100,
 					'gradient_opacity'            => 100,
-					'pattern'                     => 'carbon',
+					'pattern'                     => 'diagonal',
 					'pattern_color'               => '#2ecc71',
 					'pattern_opacity'             => 30,
 					'pattern_scale'               => 18,
@@ -1289,7 +1289,11 @@ final class RewardService {
 			$gradient_origin = (string) $defaults['gradient_origin'];
 		}
 
-		if ( ! in_array( $pattern, array( 'none', 'grid', 'carbon', 'diagonal', 'dots' ), true ) ) {
+		if ( 'carbon' === $pattern ) {
+			$pattern = 'none';
+		}
+
+		if ( ! in_array( $pattern, array( 'none', 'grid', 'diagonal', 'dots' ), true ) ) {
 			$pattern = (string) $defaults['pattern'];
 		}
 

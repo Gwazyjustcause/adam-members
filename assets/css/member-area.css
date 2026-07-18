@@ -346,9 +346,6 @@
 	--adam-title-badge-border: rgba(255, 255, 255, 0.18);
 	--adam-title-badge-border-width: 1px;
 	position: relative;
-	display: grid;
-	grid-template-rows: auto auto auto auto;
-	gap: var(--adam-card-content-gap);
 	box-sizing: border-box;
 	min-height: 360px;
 	padding: var(--adam-card-content-padding) 38px 34px;
@@ -362,6 +359,15 @@
 	overflow: hidden;
 	box-shadow: none;
 	isolation: isolate;
+}
+
+.adam-digital-card__content {
+	position: relative;
+	z-index: 2;
+	display: grid;
+	grid-template-rows: auto auto auto auto;
+	gap: var(--adam-card-content-gap);
+	min-height: 100%;
 }
 
 
@@ -448,31 +454,6 @@
 	background-size:
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
-}
-
-.adam-digital-card__pattern--carbon {
-	background-image:
-		repeating-linear-gradient(
-			0deg,
-			transparent 0 calc(((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) - ((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08))),
-			var(--adam-card-pattern-color-strong) calc(((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) - ((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08))) calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2),
-			transparent calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0 calc(((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) - ((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08))),
-			var(--adam-card-pattern-color-soft) calc(((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) - ((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08))) calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2),
-			transparent calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		);
-	background-size:
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)),
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
-	background-position:
-		0 0,
-		calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2)
-		calc((var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing)) / 2);
 }
 
 .adam-digital-card__pattern--diagonal {
@@ -571,7 +552,7 @@
 .adam-digital-card__details,
 .adam-digital-card__footer {
 	position: relative;
-	z-index: 1;
+	z-index: 0;
 }
 
 .adam-digital-card__header {
@@ -1593,22 +1574,6 @@
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
 }
 
-.adam-reward-card__pattern--carbon {
-	background-image:
-		repeating-linear-gradient(
-			0deg,
-			transparent 0 calc(((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) - ((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08))),
-			var(--adam-reward-card-pattern-color-strong, rgba(255, 255, 255, 0.18)) calc(((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) - ((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08))) calc((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2),
-			transparent calc((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0 calc(((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) - ((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08))),
-			var(--adam-reward-card-pattern-color-soft, rgba(255, 255, 255, 0.08)) calc(((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) - ((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08))) calc((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2),
-			transparent calc((var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px)) / 2) calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
-		);
-}
-
 .adam-reward-card__pattern--diagonal {
 	background-image:
 		repeating-linear-gradient(
@@ -1867,31 +1832,6 @@
 	background-size:
 		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing))
 		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing));
-}
-
-.adam-reward-card__pattern--carbon {
-	background-image:
-		repeating-linear-gradient(
-			0deg,
-			transparent 0 calc(((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) - ((var(--adam-reward-card-pattern-density) * 1px) + (var(--adam-reward-card-pattern-size) * 0.08))),
-			var(--adam-reward-card-pattern-color-strong) calc(((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) - ((var(--adam-reward-card-pattern-density) * 1px) + (var(--adam-reward-card-pattern-size) * 0.08))) calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2),
-			transparent calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing))
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0 calc(((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) - ((var(--adam-reward-card-pattern-density) * 1px) + (var(--adam-reward-card-pattern-size) * 0.08))),
-			var(--adam-reward-card-pattern-color-soft) calc(((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) - ((var(--adam-reward-card-pattern-density) * 1px) + (var(--adam-reward-card-pattern-size) * 0.08))) calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2),
-			transparent calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2) calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing))
-		);
-	background-size:
-		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing))
-		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)),
-		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing))
-		calc(var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing));
-	background-position:
-		0 0,
-		calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2)
-		calc((var(--adam-reward-card-pattern-size) + var(--adam-reward-card-pattern-spacing)) / 2);
 }
 
 .adam-reward-card__pattern--diagonal {
@@ -2983,7 +2923,7 @@
 		grid-column: 1 / -1;
 	}
 
-	.adam-digital-card {
+	.adam-digital-card__content {
 		grid-template-columns: 1fr;
 	}
 

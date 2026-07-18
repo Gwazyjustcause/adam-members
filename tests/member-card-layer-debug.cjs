@@ -61,26 +61,6 @@ const PATTERN_CASES = [
 		spacing: 44,
 		opacity: 24,
 	},
-	{
-		key: 'carbon-tight',
-		pattern: 'carbon',
-		color: '#9ca3af',
-		scale: 14,
-		density: 4,
-		rotation: 0,
-		spacing: 16,
-		opacity: 44,
-	},
-	{
-		key: 'carbon-wide',
-		pattern: 'carbon',
-		color: '#86efac',
-		scale: 28,
-		density: 2,
-		rotation: 78,
-		spacing: 32,
-		opacity: 22,
-	},
 ];
 
 function ensureDir(dir) {
