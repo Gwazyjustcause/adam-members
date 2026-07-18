@@ -437,13 +437,16 @@
 	opacity: var(--adam-card-pattern-opacity);
 	top: 50%;
 	left: 50%;
-	width: calc((100% - (var(--adam-card-frame-inset) * 2)) * 1.5);
-	height: calc((100% - (var(--adam-card-frame-inset) * 2)) * 1.5);
+	width: 200%;
+	height: 200%;
 	inset: auto;
-	border-radius: 0;
 	background-color: transparent;
+	background-size: auto;
 	background-position: center;
 	background-repeat: repeat;
+	--adam-card-pattern-step: calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
+	--adam-card-pattern-line-width: clamp(1px, calc((var(--adam-card-pattern-size) * 0.08) + (var(--adam-card-pattern-density) * 1px)), calc(var(--adam-card-pattern-step) - 1px));
+	--adam-card-pattern-dot-radius: clamp(1px, calc((var(--adam-card-pattern-size) * 0.14) + (var(--adam-card-pattern-density) * 0.8px)), calc((var(--adam-card-pattern-step) / 2) - 1px));
 	transform: translate(-50%, -50%) rotate(var(--adam-card-pattern-rotation));
 	transform-origin: center;
 }
@@ -452,41 +455,34 @@
 	background-image:
 		repeating-linear-gradient(
 			0deg,
-			var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)),
-			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+			var(--adam-card-pattern-color) 0 var(--adam-card-pattern-line-width),
+			transparent var(--adam-card-pattern-line-width) var(--adam-card-pattern-step)
 		),
 		repeating-linear-gradient(
 			90deg,
-			var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)),
-			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+			var(--adam-card-pattern-color) 0 var(--adam-card-pattern-line-width),
+			transparent var(--adam-card-pattern-line-width) var(--adam-card-pattern-step)
 		);
-	background-size:
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
 }
 
 .adam-digital-card__pattern--diagonal {
-	background-image:
-		repeating-linear-gradient(
-			0deg,
-			var(--adam-card-pattern-color-strong) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.09)),
-			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.09)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		);
-	background-size:
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
+	background-image: repeating-linear-gradient(
+		135deg,
+		var(--adam-card-pattern-color) 0 var(--adam-card-pattern-line-width),
+		transparent var(--adam-card-pattern-line-width) var(--adam-card-pattern-step)
+	);
 }
 
 .adam-digital-card__pattern--dots {
 	background-image: radial-gradient(
 		circle at center,
-		var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)),
-		transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06) + 1px),
+		var(--adam-card-pattern-color) 0 var(--adam-card-pattern-dot-radius),
+		transparent calc(var(--adam-card-pattern-dot-radius) + 1px),
 		transparent 100%
 	);
 	background-size:
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
-		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
+		var(--adam-card-pattern-step)
+		var(--adam-card-pattern-step);
 }
 
 .adam-digital-card__pattern--none {
