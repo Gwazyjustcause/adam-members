@@ -356,7 +356,6 @@ final class CardCosmeticsService {
 			'gradient_opacity',
 			'pattern',
 			'pattern_color',
-			'pattern_background_color',
 			'pattern_opacity',
 			'pattern_scale',
 			'pattern_density',

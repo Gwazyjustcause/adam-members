@@ -338,6 +338,40 @@
 		return 'adam-digital-card__pattern adam-digital-card__pattern--' + pattern;
 	}
 
+	function colorWithAlpha(color, alpha) {
+		if (typeof color !== 'string') {
+			return color;
+		}
+
+		var value = color.trim();
+		var hex3 = value.match(/^#([a-f\d]{3})$/i);
+		var hex6 = value.match(/^#([a-f\d]{6})$/i);
+		var rgb = value.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+		var resolvedAlpha = Math.max(0, Math.min(1, alpha));
+
+		if (hex3) {
+			return 'rgba(' +
+				parseInt(hex3[1].charAt(0) + hex3[1].charAt(0), 16) + ',' +
+				parseInt(hex3[1].charAt(1) + hex3[1].charAt(1), 16) + ',' +
+				parseInt(hex3[1].charAt(2) + hex3[1].charAt(2), 16) + ',' +
+				resolvedAlpha + ')';
+		}
+
+		if (hex6) {
+			return 'rgba(' +
+				parseInt(hex6[1].substring(0, 2), 16) + ',' +
+				parseInt(hex6[1].substring(2, 4), 16) + ',' +
+				parseInt(hex6[1].substring(4, 6), 16) + ',' +
+				resolvedAlpha + ')';
+		}
+
+		if (rgb) {
+			return 'rgba(' + rgb[1] + ',' + rgb[2] + ',' + rgb[3] + ',' + resolvedAlpha + ')';
+		}
+
+		return value;
+	}
+
 	function artClass() {
 		var imagePosition = previewStyleValue( 'card_image_position' ) || 'top-right';
 		var imageLayer = previewStyleValue( 'card_image_layer' ) || 'overlay';
@@ -528,7 +562,8 @@
 				'--adam-card-content-gap': '20px',
 				'--adam-card-photo-border': 'rgba(255,255,255,0.82)',
 				'--adam-card-pattern-color': previewStyleValue( 'pattern_color' ) || '#86efac',
-				'--adam-card-pattern-base': previewStyleValue( 'pattern_background_color' ) || '#143826',
+				'--adam-card-pattern-color-strong': colorWithAlpha( previewStyleValue( 'pattern_color' ) || '#86efac', 0.82 ),
+				'--adam-card-pattern-color-soft': colorWithAlpha( previewStyleValue( 'pattern_color' ) || '#86efac', 0.42 ),
 				'--adam-card-pattern-opacity': clamp( previewStyleValue( 'pattern_opacity' ), 0, 100 ) / 100,
 				'--adam-card-pattern-size': clamp( previewStyleValue( 'pattern_scale' ), 6, 120 ) + 'px',
 				'--adam-card-pattern-spacing': clamp( previewStyleValue( 'pattern_spacing' ), 6, 120 ) + 'px',

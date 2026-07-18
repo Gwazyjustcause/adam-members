@@ -873,7 +873,6 @@ final class RewardService {
 				'background_image_blend_mode' => 'screen',
 				'pattern'                     => $pattern,
 				'pattern_color'               => $palette['accent_color'],
-				'pattern_background_color'    => $palette['background_color'],
 				'pattern_opacity'             => Reward::RARITY_COMMON === $rarity ? 10 : 18,
 				'pattern_scale'               => 24,
 				'pattern_density'             => 2,
@@ -919,7 +918,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'carbon',
 					'pattern_color'               => '#2ecc71',
-					'pattern_background_color'    => '#08140f',
 					'pattern_opacity'             => 30,
 					'pattern_scale'               => 18,
 					'pattern_density'             => 3,
@@ -941,7 +939,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'diagonal',
 					'pattern_color'               => '#f6d365',
-					'pattern_background_color'    => '#5a3a09',
 					'pattern_opacity'             => 18,
 					'pattern_scale'               => 28,
 					'pattern_density'             => 2,
@@ -963,7 +960,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'diagonal',
 					'pattern_color'               => '#5e8a49',
-					'pattern_background_color'    => '#122217',
 					'pattern_opacity'             => 16,
 					'pattern_scale'               => 30,
 					'pattern_density'             => 3,
@@ -985,7 +981,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'dots',
 					'pattern_color'               => '#7b8f4b',
-					'pattern_background_color'    => '#212b17',
 					'pattern_opacity'             => 22,
 					'pattern_scale'               => 22,
 					'pattern_density'             => 4,
@@ -1007,7 +1002,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'grid',
 					'pattern_color'               => '#e6d0a5',
-					'pattern_background_color'    => '#7b6443',
 					'pattern_opacity'             => 12,
 					'pattern_scale'               => 30,
 					'pattern_density'             => 2,
@@ -1029,7 +1023,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'grid',
 					'pattern_color'               => '#8b98ab',
-					'pattern_background_color'    => '#151d27',
 					'pattern_opacity'             => 14,
 					'pattern_scale'               => 26,
 					'pattern_density'             => 2,
@@ -1051,7 +1044,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'grid',
 					'pattern_color'               => '#c7f9d4',
-					'pattern_background_color'    => '#12351f',
 					'pattern_opacity'             => 14,
 					'pattern_scale'               => 24,
 					'pattern_density'             => 2,
@@ -1073,7 +1065,6 @@ final class RewardService {
 					'gradient_opacity'            => 100,
 					'pattern'                     => 'dots',
 					'pattern_color'               => '#f6d365',
-					'pattern_background_color'    => '#17391f',
 					'pattern_opacity'             => 18,
 					'pattern_scale'               => 18,
 					'pattern_density'             => 3,
@@ -1282,6 +1273,8 @@ final class RewardService {
 	 * @return array<string, mixed>
 	 */
 	private function sanitize_background_style_config( array $style, array $defaults ): array {
+		unset( $style['pattern_background_color'] );
+
 		$background_mode        = isset( $style['background_mode'] ) ? sanitize_key( (string) $style['background_mode'] ) : (string) $defaults['background_mode'];
 		$gradient_origin        = isset( $style['gradient_origin'] ) ? sanitize_key( (string) $style['gradient_origin'] ) : (string) $defaults['gradient_origin'];
 		$pattern                = isset( $style['pattern'] ) ? sanitize_key( (string) $style['pattern'] ) : (string) $defaults['pattern'];
@@ -1326,7 +1319,6 @@ final class RewardService {
 			'background_image_blend_mode' => $background_image_blend,
 			'pattern'                     => $pattern,
 			'pattern_color'               => $this->sanitize_color_value( $style['pattern_color'] ?? $defaults['pattern_color'] ),
-			'pattern_background_color'    => $this->sanitize_color_value( $style['pattern_background_color'] ?? $defaults['pattern_background_color'] ),
 			'pattern_opacity'             => max( 0, min( 100, (int) ( $style['pattern_opacity'] ?? $defaults['pattern_opacity'] ) ) ),
 			'pattern_scale'               => max( 6, min( 120, (int) ( $style['pattern_scale'] ?? $defaults['pattern_scale'] ) ) ),
 			'pattern_density'             => max( 1, min( 12, (int) ( $style['pattern_density'] ?? $defaults['pattern_density'] ) ) ),
@@ -1728,7 +1720,8 @@ final class RewardService {
 			'--adam-reward-card-gradient-opacity'    => (string) ( (int) $style['gradient_opacity'] / 100 ),
 			'--adam-reward-card-pattern-opacity'     => (string) ( (int) $style['pattern_opacity'] / 100 ),
 			'--adam-reward-card-pattern-color'       => (string) $style['pattern_color'],
-			'--adam-reward-card-pattern-base'        => (string) $style['pattern_background_color'],
+			'--adam-reward-card-pattern-color-strong'=> $this->color_with_alpha( (string) $style['pattern_color'], 0.82 ),
+			'--adam-reward-card-pattern-color-soft'  => $this->color_with_alpha( (string) $style['pattern_color'], 0.42 ),
 			'--adam-reward-card-pattern-size'        => (string) (int) $style['pattern_scale'] . 'px',
 			'--adam-reward-card-pattern-spacing'     => (string) (int) $style['pattern_spacing'] . 'px',
 			'--adam-reward-card-pattern-density'     => (string) (int) $style['pattern_density'],
@@ -1792,6 +1785,43 @@ final class RewardService {
 		}
 
 		return '#ffffff';
+	}
+
+	/**
+	 * Convert a supported colour value to RGBA with a custom alpha.
+	 */
+	private function color_with_alpha( string $color, float $alpha ): string {
+		$alpha = max( 0, min( 1, $alpha ) );
+
+		if ( preg_match( '/^#([a-f0-9]{3})$/i', $color, $matches ) ) {
+			$hex = $matches[1];
+			$red = hexdec( str_repeat( $hex[0], 2 ) );
+			$green = hexdec( str_repeat( $hex[1], 2 ) );
+			$blue = hexdec( str_repeat( $hex[2], 2 ) );
+
+			return sprintf( 'rgba(%1$d, %2$d, %3$d, %4$s)', $red, $green, $blue, (string) $alpha );
+		}
+
+		if ( preg_match( '/^#([a-f0-9]{6})$/i', $color, $matches ) ) {
+			$hex = $matches[1];
+			$red = hexdec( substr( $hex, 0, 2 ) );
+			$green = hexdec( substr( $hex, 2, 2 ) );
+			$blue = hexdec( substr( $hex, 4, 2 ) );
+
+			return sprintf( 'rgba(%1$d, %2$d, %3$d, %4$s)', $red, $green, $blue, (string) $alpha );
+		}
+
+		if ( preg_match( '/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i', $color, $matches ) ) {
+			return sprintf(
+				'rgba(%1$d, %2$d, %3$d, %4$s)',
+				(int) $matches[1],
+				(int) $matches[2],
+				(int) $matches[3],
+				(string) $alpha
+			);
+		}
+
+		return $color;
 	}
 
 	/**
