@@ -450,8 +450,16 @@
 
 .adam-digital-card__pattern--grid {
 	background-image:
-		linear-gradient(var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05))),
-		linear-gradient(90deg, var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)));
+		repeating-linear-gradient(
+			0deg,
+			var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)),
+			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+		),
+		repeating-linear-gradient(
+			90deg,
+			var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)),
+			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+		);
 	background-size:
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
@@ -470,7 +478,12 @@
 }
 
 .adam-digital-card__pattern--dots {
-	background-image: radial-gradient(circle, var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)));
+	background-image: radial-gradient(
+		circle at center,
+		var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)),
+		transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06) + 1px),
+		transparent 100%
+	);
 	background-size:
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
 		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
