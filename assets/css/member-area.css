@@ -359,6 +359,7 @@
 	overflow: hidden;
 	box-shadow: none;
 	isolation: isolate;
+	clip-path: inset(0 round var(--adam-card-radius));
 }
 
 .adam-digital-card__content {
