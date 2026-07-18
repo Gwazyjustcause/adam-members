@@ -2366,9 +2366,9 @@ final class AdminController {
 				</label>
 
 				<label>
-					<span><?php esc_html_e( 'Moldura do cartão', 'adam-membership' ); ?></span>
+					<span><?php esc_html_e( 'Acabamento do cartão', 'adam-membership' ); ?></span>
 					<select name="active_card_frame">
-						<option value=""><?php esc_html_e( 'Sem moldura especial', 'adam-membership' ); ?></option>
+						<option value=""><?php esc_html_e( 'Sem acabamento especial', 'adam-membership' ); ?></option>
 						<?php foreach ( $cosmetic_options['frames'] ?? array() as $cosmetic ) : ?>
 							<?php $this->render_member_cosmetic_option( $cosmetic, (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
 						<?php endforeach; ?>

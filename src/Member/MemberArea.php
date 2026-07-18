@@ -778,9 +778,9 @@ final class MemberArea {
 				</label>
 
 				<label>
-					<span><?php esc_html_e( 'Moldura do cartao', 'adam-membership' ); ?></span>
+					<span><?php esc_html_e( 'Acabamento do cartao', 'adam-membership' ); ?></span>
 					<select name="active_card_frame">
-						<?php $this->render_cosmetic_option( '', __( 'Sem moldura especial', 'adam-membership' ), (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
+						<?php $this->render_cosmetic_option( '', __( 'Sem acabamento especial', 'adam-membership' ), (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
 						<?php foreach ( $cosmetic_options['frames'] ?? array() as $cosmetic ) : ?>
 							<?php $this->render_cosmetic_option( (string) $cosmetic['key'], $this->cosmetic_option_label( $cosmetic ), (string) ( $card_presentation['selected_values']['frame'] ?? '' ) ); ?>
 						<?php endforeach; ?>
