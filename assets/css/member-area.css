@@ -446,10 +446,10 @@
 	background-repeat: repeat;
 	transform: translate(-50%, -50%) rotate(var(--adam-card-pattern-rotation));
 	transform-origin: center;
-	--adam-card-pattern-gap: calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
-	--adam-card-pattern-line-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)), calc(var(--adam-card-pattern-gap) - 1px));
-	--adam-card-pattern-diagonal-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.09)), calc(var(--adam-card-pattern-gap) - 1px));
-	--adam-card-pattern-dot-size: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)), calc((var(--adam-card-pattern-gap) / 2) - 1px));
+	--adam-card-pattern-gap: max(var(--adam-card-pattern-spacing), 6px);
+	--adam-card-pattern-line-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08)), calc(var(--adam-card-pattern-gap) - 1px));
+	--adam-card-pattern-diagonal-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.12)), calc(var(--adam-card-pattern-gap) - 1px));
+	--adam-card-pattern-dot-size: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.1)), calc((var(--adam-card-pattern-gap) / 2) - 1px));
 }
 
 .adam-digital-card__pattern--grid {
@@ -1582,10 +1582,10 @@
 	background-repeat: repeat;
 	transform: translate(-50%, -50%) rotate(var(--adam-reward-card-pattern-rotation, 45deg));
 	transform-origin: center;
-	--adam-reward-card-pattern-gap: calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
-	--adam-reward-card-pattern-line-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), calc(var(--adam-reward-card-pattern-gap) - 1px));
-	--adam-reward-card-pattern-diagonal-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)), calc(var(--adam-reward-card-pattern-gap) - 1px));
-	--adam-reward-card-pattern-dot-size: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), calc((var(--adam-reward-card-pattern-gap) / 2) - 1px));
+	--adam-reward-card-pattern-gap: max(var(--adam-reward-card-pattern-spacing, 24px), 6px);
+	--adam-reward-card-pattern-line-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08)), calc(var(--adam-reward-card-pattern-gap) - 1px));
+	--adam-reward-card-pattern-diagonal-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.12)), calc(var(--adam-reward-card-pattern-gap) - 1px));
+	--adam-reward-card-pattern-dot-size: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.1)), calc((var(--adam-reward-card-pattern-gap) / 2) - 1px));
 }
 
 .adam-reward-card__pattern--grid {
