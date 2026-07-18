@@ -437,8 +437,8 @@
 	opacity: var(--adam-card-pattern-opacity);
 	top: 50%;
 	left: 50%;
-	width: 150%;
-	height: 150%;
+	width: calc((100% - (var(--adam-card-frame-inset) * 2)) * 1.5);
+	height: calc((100% - (var(--adam-card-frame-inset) * 2)) * 1.5);
 	inset: auto;
 	border-radius: 0;
 	background-color: transparent;
