@@ -442,56 +442,38 @@
 	inset: auto;
 	border-radius: 0;
 	background-color: transparent;
-	background-position: 0 0;
+	background-position: center;
 	background-repeat: repeat;
 	transform: translate(-50%, -50%) rotate(var(--adam-card-pattern-rotation));
 	transform-origin: center;
-	--adam-card-pattern-gap: max(var(--adam-card-pattern-spacing), 6px);
-	--adam-card-pattern-line-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.08)), calc(var(--adam-card-pattern-gap) - 1px));
-	--adam-card-pattern-diagonal-width: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.12)), calc(var(--adam-card-pattern-gap) - 1px));
-	--adam-card-pattern-dot-size: min(calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.1)), calc((var(--adam-card-pattern-gap) / 2) - 1px));
 }
 
 .adam-digital-card__pattern--grid {
 	background-image:
-		repeating-linear-gradient(
-			0deg,
-			transparent 0,
-			transparent calc(var(--adam-card-pattern-gap) - var(--adam-card-pattern-line-width)),
-			var(--adam-card-pattern-color) calc(var(--adam-card-pattern-gap) - var(--adam-card-pattern-line-width)),
-			var(--adam-card-pattern-color) var(--adam-card-pattern-gap)
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0,
-			transparent calc(var(--adam-card-pattern-gap) - var(--adam-card-pattern-line-width)),
-			var(--adam-card-pattern-color) calc(var(--adam-card-pattern-gap) - var(--adam-card-pattern-line-width)),
-			var(--adam-card-pattern-color) var(--adam-card-pattern-gap)
-		);
-	background-size: auto;
-	background-position: 0 0, 0 0;
-	background-repeat: repeat, repeat;
+		linear-gradient(var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05))),
+		linear-gradient(90deg, var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.05)));
+	background-size:
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
 }
 
 .adam-digital-card__pattern--diagonal {
 	background-image:
 		repeating-linear-gradient(
 			0deg,
-			var(--adam-card-pattern-color-strong) 0 var(--adam-card-pattern-diagonal-width),
-			transparent var(--adam-card-pattern-diagonal-width) var(--adam-card-pattern-gap)
+			var(--adam-card-pattern-color-strong) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.09)),
+			transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.09)) calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
 		);
-	background-size: auto;
-	background-position: 0 0;
-	background-repeat: repeat;
+	background-size:
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
 }
 
 .adam-digital-card__pattern--dots {
-	background-image: radial-gradient(circle, var(--adam-card-pattern-color) 0 var(--adam-card-pattern-dot-size), transparent var(--adam-card-pattern-dot-size));
+	background-image: radial-gradient(circle, var(--adam-card-pattern-color) 0 calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)), transparent calc((var(--adam-card-pattern-density) * 1px) + (var(--adam-card-pattern-size) * 0.06)));
 	background-size:
-		var(--adam-card-pattern-gap)
-		var(--adam-card-pattern-gap);
-	background-position: 0 0;
-	background-repeat: repeat;
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing))
+		calc(var(--adam-card-pattern-size) + var(--adam-card-pattern-spacing));
 }
 
 .adam-digital-card__pattern--none {
@@ -1578,56 +1560,38 @@
 	height: 150%;
 	inset: auto;
 	background-color: transparent;
-	background-position: 0 0;
+	background-position: center;
 	background-repeat: repeat;
 	transform: translate(-50%, -50%) rotate(var(--adam-reward-card-pattern-rotation, 45deg));
 	transform-origin: center;
-	--adam-reward-card-pattern-gap: max(var(--adam-reward-card-pattern-spacing, 24px), 6px);
-	--adam-reward-card-pattern-line-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.08)), calc(var(--adam-reward-card-pattern-gap) - 1px));
-	--adam-reward-card-pattern-diagonal-width: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.12)), calc(var(--adam-reward-card-pattern-gap) - 1px));
-	--adam-reward-card-pattern-dot-size: min(calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.1)), calc((var(--adam-reward-card-pattern-gap) / 2) - 1px));
 }
 
 .adam-reward-card__pattern--grid {
 	background-image:
-		repeating-linear-gradient(
-			0deg,
-			transparent 0,
-			transparent calc(var(--adam-reward-card-pattern-gap) - var(--adam-reward-card-pattern-line-width)),
-			var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) calc(var(--adam-reward-card-pattern-gap) - var(--adam-reward-card-pattern-line-width)),
-			var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) var(--adam-reward-card-pattern-gap)
-		),
-		repeating-linear-gradient(
-			90deg,
-			transparent 0,
-			transparent calc(var(--adam-reward-card-pattern-gap) - var(--adam-reward-card-pattern-line-width)),
-			var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) calc(var(--adam-reward-card-pattern-gap) - var(--adam-reward-card-pattern-line-width)),
-			var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) var(--adam-reward-card-pattern-gap)
-		);
-	background-size: auto;
-	background-position: 0 0, 0 0;
-	background-repeat: repeat, repeat;
+		linear-gradient(var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05))),
+		linear-gradient(90deg, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)));
+	background-size:
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
 }
 
 .adam-reward-card__pattern--diagonal {
 	background-image:
 		repeating-linear-gradient(
 			0deg,
-			var(--adam-reward-card-pattern-color-strong, rgba(255, 255, 255, 0.18)) 0 var(--adam-reward-card-pattern-diagonal-width),
-			transparent var(--adam-reward-card-pattern-diagonal-width) var(--adam-reward-card-pattern-gap)
+			var(--adam-reward-card-pattern-color-strong, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)),
+			transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)) calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		);
-	background-size: auto;
-	background-position: 0 0;
-	background-repeat: repeat;
+	background-size:
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
 }
 
 .adam-reward-card__pattern--dots {
-	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 var(--adam-reward-card-pattern-dot-size), transparent var(--adam-reward-card-pattern-dot-size));
+	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)));
 	background-size:
-		var(--adam-reward-card-pattern-gap)
-		var(--adam-reward-card-pattern-gap);
-	background-position: 0 0;
-	background-repeat: repeat;
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
+		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
 }
 
 .adam-reward-card__backdrop {
