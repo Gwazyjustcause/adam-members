@@ -1368,7 +1368,7 @@ final class RewardService {
 			'type'                => $type,
 			'rarity'              => $rarity,
 			'points_cost'         => max( 0, absint( $data['points_cost'] ?? 0 ) ),
-			'image_url'           => isset( $data['image_url'] ) ? esc_url_raw( (string) $data['image_url'] ) : ( $current instanceof Reward ? $current->image_url() : '' ),
+			'image_url'           => isset( $data['image_url'] ) ? esc_url_raw( (string) $data['image_url'] ) : '',
 			'availability_label'  => isset( $data['availability_label'] ) ? sanitize_text_field( (string) $data['availability_label'] ) : __( 'Disponivel', 'adam-membership' ),
 			'active'              => ! empty( $data['active'] ),
 			'catalog_visible'     => ! array_key_exists( 'catalog_visible', $data ) || ! empty( $data['catalog_visible'] ),
