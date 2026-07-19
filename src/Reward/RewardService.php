@@ -94,6 +94,10 @@ final class RewardService {
 		return $this->repository->find_reward_by_value( $reward_value );
 	}
 
+	public function find_reward( int $reward_id ): ?Reward {
+		return $this->repository->find_reward( $reward_id );
+	}
+
 	public function grant_reward_to_member( Member $member, string $reward_value, string $action_key = 'reward_granted', string $action_label = 'Recompensa atribuida automaticamente', string $description = '' ): bool {
 		$reward = $this->repository->find_reward_by_value( $reward_value );
 
