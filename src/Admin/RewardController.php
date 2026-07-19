@@ -247,6 +247,7 @@ final class RewardController {
 		$is_digital_reward  = Reward::TYPE_DIGITAL_COSMETIC === $reward_type || str_contains( $normalized_category, 'cartao' );
 		$is_title_reward    = str_contains( $normalized_category, 'titulo' ) || str_starts_with( strtolower( (string) ( null !== $reward ? $reward->reward_value() : '' ) ), 'title_' );
 		$uses_visual_editor = $is_digital_reward || $is_title_reward;
+		$editor_mode        = $this->reward_editor_mode( $reward, $reward_category, $reward_type, (string) $resolved_style['card_subtype'] );
 		$title_badge_style  = is_array( $resolved_style['title_badge'] ?? null ) ? (array) $resolved_style['title_badge'] : array();
 		$card_preview       = null !== $reward
 			? $this->cards->render_card(
@@ -340,7 +341,7 @@ final class RewardController {
 									</div>
 								</div>
 							</section>
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-background-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open<?php echo 'background' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-background-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Fundo do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Escolhe como o fundo base do cartao deve ser construido: cor solida, gradiente ou imagem com sobreposicao.', 'adam-membership' ); ?></p>
@@ -361,7 +362,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion<?php echo 'pattern' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-pattern-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Padrao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Adiciona uma camada de padrao por cima do fundo para dar textura sem comprometer a legibilidade do cartao.', 'adam-membership' ); ?></p>
@@ -377,7 +378,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls data-adam-image-controls data-adam-background-mode-group="image">
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion<?php echo 'background' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-image-controls data-adam-background-mode-group="image">
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Imagem e textura', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Usa uma imagem de fundo ou textura adicional. Esta camada so aparece quando o modo ativo e Imagem + gradiente.', 'adam-membership' ); ?></p>
@@ -391,7 +392,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-style-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion<?php echo 'artwork' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-artwork-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Elementos decorativos', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Aplica imagem decorativa, formas e sobreposicoes ao layout do cartao para criar um estilo mais distintivo.', 'adam-membership' ); ?></p>
@@ -417,7 +418,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-card-typography-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion<?php echo 'card_style' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-card-typography-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Tipografia do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Ajusta apenas a tipografia real do cartao. O badge do titulo e definido na propria recompensa de titulo.', 'adam-membership' ); ?></p>
@@ -431,7 +432,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-title-badge-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion<?php echo 'title' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-title-badge-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Badge do titulo', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Desenha o badge visual deste titulo. Esta aparencia segue sempre o titulo ativo do socio.', 'adam-membership' ); ?></p>
@@ -450,7 +451,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-style-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open<?php echo 'card_style' === $editor_mode ? '' : ' is-hidden'; ?>" data-adam-style-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Acabamento do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Configura apenas o acabamento do cartao, sem alterar o fundo, a geometria ou a estrutura do cartao.', 'adam-membership' ); ?></p>
@@ -707,6 +708,52 @@ final class RewardController {
 		foreach ( $options as $value => $label ) {
 			$this->render_select_option( $value, $label, $current );
 		}
+	}
+
+	private function reward_editor_mode( ?Reward $reward, string $category, string $type, string $card_subtype ): string {
+		$reward_value = strtolower( (string) ( $reward?->reward_value() ?? '' ) );
+		$name         = strtolower( remove_accents( (string) ( $reward?->name() ?? '' ) ) );
+		$category_key = strtolower( remove_accents( $category ) );
+		$subtype      = 'frame' === $card_subtype ? 'card_style' : sanitize_key( $card_subtype );
+
+		if ( str_contains( $category_key, 'titulo' ) || str_starts_with( $reward_value, 'title_' ) ) {
+			return 'title';
+		}
+
+		if ( Reward::TYPE_DIGITAL_COSMETIC !== $type && ! str_contains( $category_key, 'cartao' ) ) {
+			return 'none';
+		}
+
+		if (
+			str_contains( $reward_value, 'pattern' ) ||
+			str_contains( $category_key, 'padrao' ) ||
+			str_contains( $name, 'padrao' )
+		) {
+			return 'pattern';
+		}
+
+		if (
+			str_contains( $reward_value, 'art' ) ||
+			str_contains( $reward_value, 'image' ) ||
+			str_contains( $reward_value, 'imagem' ) ||
+			str_contains( $category_key, 'arte' ) ||
+			str_contains( $category_key, 'imagem' )
+		) {
+			return 'artwork';
+		}
+
+		if (
+			'card_style' === $subtype ||
+			str_contains( $reward_value, 'frame' ) ||
+			str_contains( $reward_value, 'style' ) ||
+			str_contains( $name, 'moldura' ) ||
+			str_contains( $name, 'acabamento' ) ||
+			str_contains( $name, 'estilo' )
+		) {
+			return 'card_style';
+		}
+
+		return 'background';
 	}
 
 	private function render_gradient_origin_options( string $current ): void {
