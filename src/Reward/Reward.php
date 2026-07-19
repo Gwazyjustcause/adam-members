@@ -131,6 +131,22 @@ final class Reward {
 		return sanitize_text_field( (string) ( $this->data['updated_at'] ?? '' ) );
 	}
 
+	public function qr_token(): string {
+		return sanitize_text_field( (string) ( $this->data['qr_token'] ?? '' ) );
+	}
+
+	public function qr_created_at(): string {
+		return sanitize_text_field( (string) ( $this->data['qr_created_at'] ?? '' ) );
+	}
+
+	public function qr_expires_at(): string {
+		return sanitize_text_field( (string) ( $this->data['qr_expires_at'] ?? '' ) );
+	}
+
+	public function qr_created_by(): int {
+		return absint( $this->data['qr_created_by'] ?? 0 );
+	}
+
 	public function is_visible(): bool {
 		return $this->active();
 	}

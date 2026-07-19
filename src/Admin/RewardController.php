@@ -38,6 +38,7 @@ final class RewardController {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_adam_membership_save_reward', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_adam_membership_delete_reward', array( $this, 'handle_delete' ) );
+		add_action( 'admin_post_adam_membership_create_reward_qr', array( $this, 'handle_create_qr' ) );
 		add_action( 'admin_post_adam_membership_approve_reward_redemption', array( $this, 'handle_approve_redemption' ) );
 		add_action( 'admin_post_adam_membership_reject_reward_redemption', array( $this, 'handle_reject_redemption' ) );
 		add_action( 'admin_post_adam_membership_deliver_reward_redemption', array( $this, 'handle_deliver_redemption' ) );
@@ -147,6 +148,7 @@ final class RewardController {
 						<thead><tr><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Visivel na Area de Socio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $rewards as $reward ) : ?>
+								<?php $reward_qr = $this->rewards->reward_qr_payload( $reward ); ?>
 								<tr>
 									<td><strong><?php echo esc_html( $reward->name() ); ?></strong><br><small><?php echo esc_html( $reward->description() ); ?></small></td>
 									<td><?php echo esc_html( $reward->category() ); ?></td>
@@ -156,12 +158,21 @@ final class RewardController {
 									<td><?php echo esc_html( $reward->catalog_visible() ? __( 'Sim', 'adam-membership' ) : __( 'Nao', 'adam-membership' ) ); ?></td>
 									<td class="adam-admin-row-actions">
 										<a class="button button-small" href="<?php echo esc_url( $this->edit_url( $reward->id() ) ); ?>"><?php esc_html_e( 'Editar', 'adam-membership' ); ?></a>
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+											<input type="hidden" name="action" value="adam_membership_create_reward_qr">
+											<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
+											<?php wp_nonce_field( 'adam_membership_create_reward_qr_' . $reward->id() ); ?>
+											<button type="submit" class="button button-small"><?php esc_html_e( 'Criar QR Code', 'adam-membership' ); ?></button>
+										</form>
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Eliminar esta recompensa?', 'adam-membership' ) ); ?>');">
 											<input type="hidden" name="action" value="adam_membership_delete_reward">
 											<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
 											<?php wp_nonce_field( 'adam_membership_delete_reward_' . $reward->id() ); ?>
 											<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
 										</form>
+										<?php if ( is_array( $reward_qr ) && ! empty( $reward_qr['is_active'] ) ) : ?>
+											<small><?php echo esc_html( sprintf( __( 'QR ativo ate %s', 'adam-membership' ), $this->format_datetime( (string) $reward_qr['expires_at'] ) ) ); ?></small>
+										<?php endif; ?>
 									</td>
 								</tr>
 							<?php endforeach; ?>
@@ -231,6 +242,7 @@ final class RewardController {
 		$reward_rarity      = null !== $reward ? $reward->rarity() : Reward::RARITY_COMMON;
 		$reward_category    = null !== $reward ? $reward->category() : 'Cartao Digital';
 		$reward_type        = null !== $reward ? $reward->type() : Reward::TYPE_DIGITAL_COSMETIC;
+		$reward_qr          = null !== $reward ? $this->rewards->reward_qr_payload( $reward ) : null;
 		$normalized_category = strtolower( remove_accents( $reward_category ) );
 		$is_digital_reward  = Reward::TYPE_DIGITAL_COSMETIC === $reward_type || str_contains( $normalized_category, 'cartao' );
 		$is_title_reward    = str_contains( $normalized_category, 'titulo' ) || str_starts_with( strtolower( (string) ( null !== $reward ? $reward->reward_value() : '' ) ), 'title_' );
@@ -286,6 +298,32 @@ final class RewardController {
 							</label>
 						</div>
 					</section>
+
+					<?php if ( null !== $reward ) : ?>
+						<section class="adam-reward-editor__section">
+							<div class="adam-admin-edit-grid">
+								<div class="adam-admin-edit-field adam-admin-edit-field-full">
+									<span><?php esc_html_e( 'QR Code da recompensa', 'adam-membership' ); ?></span>
+									<?php if ( is_array( $reward_qr ) ) : ?>
+										<p><?php echo esc_html( ! empty( $reward_qr['is_active'] ) ? __( 'Ativo durante 48 horas a partir da criacao.', 'adam-membership' ) : __( 'O ultimo QR Code desta recompensa ja expirou.', 'adam-membership' ) ); ?></p>
+										<p><strong><?php esc_html_e( 'Expira em', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $this->format_datetime( (string) $reward_qr['expires_at'] ) ); ?></p>
+										<p><a href="<?php echo esc_url( (string) $reward_qr['claim_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $reward_qr['claim_url'] ); ?></a></p>
+										<p><img src="<?php echo esc_url( (string) $reward_qr['image_url'] ); ?>" alt="<?php esc_attr_e( 'QR Code da recompensa', 'adam-membership' ); ?>" style="max-width:220px;height:auto;"></p>
+									<?php else : ?>
+										<p><?php esc_html_e( 'Ainda nao existe um QR Code ativo para esta recompensa.', 'adam-membership' ); ?></p>
+									<?php endif; ?>
+									<div class="adam-admin-actions">
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+											<input type="hidden" name="action" value="adam_membership_create_reward_qr">
+											<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
+											<?php wp_nonce_field( 'adam_membership_create_reward_qr_' . $reward->id() ); ?>
+											<button type="submit" class="button"><?php esc_html_e( 'Criar QR Code', 'adam-membership' ); ?></button>
+										</form>
+									</div>
+								</div>
+							</div>
+						</section>
+					<?php endif; ?>
 
 					<div class="adam-admin-notice info adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? ' is-hidden' : ''; ?>" data-adam-non-digital-notice>
 						<p><?php esc_html_e( 'Os controlos visuais do cartao digital aparecem apenas em recompensas ligadas ao cartao de socio. Para outras recompensas, guarda apenas os metadados gerais.', 'adam-membership' ); ?></p>
@@ -492,6 +530,19 @@ final class RewardController {
 		check_admin_referer( 'adam_membership_delete_reward_' . $reward_id );
 		$this->rewards->delete_reward( $reward_id );
 		$this->redirect_with_notice( 'adam_message', __( 'Recompensa eliminada.', 'adam-membership' ), admin_url( 'admin.php?page=' . self::MENU_SLUG ) );
+	}
+
+	public function handle_create_qr(): void {
+		$this->ensure_can_manage();
+		$reward_id = isset( $_POST['reward_id'] ) ? absint( wp_unslash( $_POST['reward_id'] ) ) : 0;
+		check_admin_referer( 'adam_membership_create_reward_qr_' . $reward_id );
+		$result = $this->rewards->create_reward_qr( $reward_id, get_current_user_id() );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_with_notice( 'adam_error', $result->get_error_message(), $this->edit_url( $reward_id ) );
+		}
+
+		$this->redirect_with_notice( 'adam_message', __( 'QR Code criado com sucesso.', 'adam-membership' ), $this->edit_url( $reward_id ) );
 	}
 
 	public function handle_approve_redemption(): void {

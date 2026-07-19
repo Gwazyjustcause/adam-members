@@ -98,6 +98,173 @@ final class RewardService {
 		return $this->repository->find_reward( $reward_id );
 	}
 
+	public function create_reward_qr( int $reward_id, int $actor_user_id ): array|WP_Error {
+		$reward = $this->repository->find_reward( $reward_id );
+
+		if ( null === $reward ) {
+			return new WP_Error( 'adam_membership_reward_not_found', __( 'Recompensa nao encontrada.', 'adam-membership' ) );
+		}
+
+		if ( ! $reward->active() ) {
+			return new WP_Error( 'adam_membership_reward_inactive', __( 'A recompensa tem de estar ativa para gerar um QR Code.', 'adam-membership' ) );
+		}
+
+		$created_at = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
+		$expires_at = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 48 * HOUR_IN_SECONDS ) );
+		$token      = wp_generate_password( 40, false, false );
+		$updated    = $this->repository->update_reward(
+			$reward,
+			array(
+				'qr_token'      => $token,
+				'qr_created_at' => $created_at,
+				'qr_expires_at' => $expires_at,
+				'qr_created_by' => $actor_user_id,
+				'updated_at'    => $created_at,
+			)
+		);
+
+		$this->record_history(
+			0,
+			'reward_qr_created',
+			__( 'QR Code de recompensa criado', 'adam-membership' ),
+			sprintf(
+				/* translators: %s: reward name */
+				__( 'Foi criado um QR Code temporario para a recompensa %s.', 'adam-membership' ),
+				$updated->name()
+			),
+			array(
+				'reward_id'      => $updated->id(),
+				'reward_value'   => $updated->reward_value(),
+				'qr_expires_at'  => $expires_at,
+				'qr_created_by'  => $actor_user_id,
+			)
+		);
+
+		$this->logger->info(
+			'QR Code de recompensa criado.',
+			array(
+				'reward_id'     => $updated->id(),
+				'reward_value'  => $updated->reward_value(),
+				'qr_expires_at' => $expires_at,
+			)
+		);
+
+		return $this->reward_qr_payload( $updated ) ?? array();
+	}
+
+	public function reward_qr_payload( Reward $reward ): ?array {
+		$token = $reward->qr_token();
+
+		if ( '' === $token ) {
+			return null;
+		}
+
+		$payload = array(
+			'token'       => $token,
+			'claim_url'   => $this->reward_qr_claim_url( $reward ),
+			'image_url'   => $this->reward_qr_image_url( $reward ),
+			'created_at'  => $reward->qr_created_at(),
+			'expires_at'  => $reward->qr_expires_at(),
+			'is_active'   => $this->reward_qr_is_active( $reward ),
+		);
+
+		return $payload;
+	}
+
+	public function reward_qr_claim_url( Reward $reward ): string {
+		return add_query_arg(
+			array(
+				'adam_reward_qr' => $reward->qr_token(),
+			),
+			home_url( '/' )
+		);
+	}
+
+	public function reward_qr_image_url( Reward $reward ): string {
+		return add_query_arg(
+			array(
+				'size'   => '320x320',
+				'data'   => rawurlencode( $this->reward_qr_claim_url( $reward ) ),
+				'format' => 'svg',
+			),
+			'https://api.qrserver.com/v1/create-qr-code/'
+		);
+	}
+
+	public function reward_qr_is_active( Reward $reward ): bool {
+		$expires_at = $reward->qr_expires_at();
+
+		if ( '' === $reward->qr_token() || '' === $expires_at ) {
+			return false;
+		}
+
+		$expires_timestamp = strtotime( $expires_at );
+
+		return false !== $expires_timestamp && $expires_timestamp >= current_time( 'timestamp' );
+	}
+
+	public function find_reward_by_qr_token( string $token ): ?Reward {
+		$token = sanitize_text_field( $token );
+
+		if ( '' === $token ) {
+			return null;
+		}
+
+		foreach ( $this->repository->query_rewards() as $reward ) {
+			if ( hash_equals( $reward->qr_token(), $token ) ) {
+				return $reward;
+			}
+		}
+
+		return null;
+	}
+
+	public function claim_reward_via_qr( Member $member, string $token ): Reward|WP_Error {
+		$reward = $this->find_reward_by_qr_token( $token );
+
+		if ( null === $reward ) {
+			return new WP_Error( 'adam_membership_reward_qr_invalid', __( 'Este QR Code nao e valido.', 'adam-membership' ) );
+		}
+
+		if ( ! $reward->active() ) {
+			return new WP_Error( 'adam_membership_reward_qr_inactive', __( 'Esta recompensa nao esta disponivel neste momento.', 'adam-membership' ) );
+		}
+
+		if ( ! $this->reward_qr_is_active( $reward ) ) {
+			return new WP_Error( 'adam_membership_reward_qr_expired', __( 'Este QR Code ja expirou.', 'adam-membership' ) );
+		}
+
+		if ( ! $member->isActive() ) {
+			return new WP_Error( 'adam_membership_reward_qr_member_inactive', __( 'Esta recompensa esta disponivel apenas para socios ativos da ADAM.', 'adam-membership' ) );
+		}
+
+		if ( $this->member_owns_reward( $member, $reward ) ) {
+			return new WP_Error( 'adam_membership_reward_qr_owned', __( 'Ja recebeste esta recompensa.', 'adam-membership' ) );
+		}
+
+		if ( $this->member_has_pending_request( $member, $reward ) ) {
+			return new WP_Error( 'adam_membership_reward_qr_pending', __( 'Ja existe um pedido pendente para esta recompensa.', 'adam-membership' ) );
+		}
+
+		$granted = $this->grant_reward_to_member(
+			$member,
+			$reward->reward_value(),
+			'reward_qr_claimed',
+			__( 'Recompensa atribuida por QR Code', 'adam-membership' ),
+			sprintf(
+				/* translators: %s: reward name */
+				__( 'A recompensa %s foi atribuida atraves de um QR Code temporario.', 'adam-membership' ),
+				$reward->name()
+			)
+		);
+
+		if ( ! $granted ) {
+			return new WP_Error( 'adam_membership_reward_qr_failed', __( 'Nao foi possivel atribuir esta recompensa.', 'adam-membership' ) );
+		}
+
+		return $reward;
+	}
+
 	public function grant_reward_to_member( Member $member, string $reward_value, string $action_key = 'reward_granted', string $action_label = 'Recompensa atribuida automaticamente', string $description = '' ): bool {
 		$reward = $this->repository->find_reward_by_value( $reward_value );
 

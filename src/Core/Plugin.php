@@ -51,6 +51,7 @@ use AdamMembership\Points\PointsRepository;
 use AdamMembership\Points\PointsService;
 use AdamMembership\Privacy\ConsentManager;
 use AdamMembership\Reward\RewardRepository;
+use AdamMembership\Reward\RewardQrFrontend;
 use AdamMembership\Reward\RewardService;
 
 /**
@@ -173,6 +174,7 @@ final class Plugin {
 		}
 
 		( new ConsentManager( $settings ) )->register();
+		( new RewardQrFrontend( $rewards, $members ) )->register();
 		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition ) )->register();
 		( new MembershipForms( $settings, $members, $registration_service, $renewals ) )->register();
 		$account_setup->register();
