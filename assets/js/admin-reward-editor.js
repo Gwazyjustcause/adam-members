@@ -492,7 +492,7 @@
 		var mode = currentBackgroundMode();
 		var editorVisible = digital || titleReward;
 		var backgroundVisible = editorMode === 'background';
-		var patternVisible = editorMode === 'pattern';
+		var patternVisible = editorMode === 'background' || editorMode === 'pattern';
 		var styleVisible = editorMode === 'card_style';
 		var artworkVisible = editorMode === 'artwork';
 		var cardTypographyVisible = editorMode === 'card_style';
