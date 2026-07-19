@@ -65,7 +65,7 @@
 
 	function initRewardsSorting() {
 		const select = document.querySelector("[data-adam-rewards-sort]");
-		const lists = Array.from(document.querySelectorAll("[data-adam-reward-list]"));
+		const lists = Array.from(document.querySelectorAll('[data-adam-reward-list="points"]'));
 
 		if (!select || lists.length === 0) {
 			return;

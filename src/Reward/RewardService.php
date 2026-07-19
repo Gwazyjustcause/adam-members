@@ -320,7 +320,12 @@ final class RewardService {
 	 * @return array<int, Reward>
 	 */
 	public function member_catalogue( Member $member ): array {
-		$rewards = $this->active_rewards();
+		$rewards = array_values(
+			array_filter(
+				$this->active_rewards(),
+				static fn ( Reward $reward ): bool => $reward->catalog_visible()
+			)
+		);
 
 		usort(
 			$rewards,
@@ -336,7 +341,7 @@ final class RewardService {
 	public function redeem( Member $member, int $reward_id ): RewardRedemption|WP_Error {
 		$reward = $this->repository->find_reward( $reward_id );
 
-		if ( null === $reward || ! $reward->is_visible() ) {
+		if ( null === $reward || ! $reward->is_visible() || ! $reward->catalog_visible() ) {
 			return new WP_Error( 'adam_membership_reward_unavailable', __( 'Esta recompensa nao esta disponivel neste momento.', 'adam-membership' ) );
 		}
 
@@ -1199,6 +1204,7 @@ final class RewardService {
 			'image_url'           => isset( $data['image_url'] ) ? esc_url_raw( (string) $data['image_url'] ) : '',
 			'availability_label'  => isset( $data['availability_label'] ) ? sanitize_text_field( (string) $data['availability_label'] ) : __( 'Disponivel', 'adam-membership' ),
 			'active'              => ! empty( $data['active'] ),
+			'catalog_visible'     => ! array_key_exists( 'catalog_visible', $data ) || ! empty( $data['catalog_visible'] ),
 			'redeemable'          => array_key_exists( 'redeemable', $data ) ? ! empty( $data['redeemable'] ) : Reward::TYPE_MANUAL_REWARD !== $type,
 			'approval_required'   => ! empty( $data['approval_required'] ),
 			'mystery_reveal_text' => isset( $data['mystery_reveal_text'] ) ? sanitize_textarea_field( (string) $data['mystery_reveal_text'] ) : '',
@@ -1982,6 +1988,7 @@ final class RewardService {
 			'image_url'           => '',
 			'availability_label'  => '' !== $availability_label ? $availability_label : __( 'Disponivel', 'adam-membership' ),
 			'active'              => $active,
+			'catalog_visible'     => true,
 			'redeemable'          => $redeemable,
 			'approval_required'   => false,
 			'mystery_reveal_text' => '',
@@ -2049,6 +2056,7 @@ final class RewardService {
 			$current_data['visual_style'] ?? array()
 		);
 
+		$merged['catalog_visible']     = array_key_exists( 'catalog_visible', $current_data ) ? $current->catalog_visible() : true;
 		$merged['redeemable']        = array_key_exists( 'redeemable', $current_data ) ? $current->redeemable() : (bool) $prepared['redeemable'];
 		$merged['approval_required'] = array_key_exists( 'approval_required', $current_data ) ? $current->approval_required() : (bool) $prepared['approval_required'];
 

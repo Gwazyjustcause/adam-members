@@ -94,6 +94,7 @@ final class RewardRepository {
 		$category = isset( $filters['category'] ) ? sanitize_text_field( (string) $filters['category'] ) : '';
 		$type     = isset( $filters['type'] ) ? sanitize_key( (string) $filters['type'] ) : '';
 		$active   = array_key_exists( 'active', $filters ) ? (bool) $filters['active'] : null;
+		$catalog_visible = array_key_exists( 'catalog_visible', $filters ) ? (bool) $filters['catalog_visible'] : null;
 
 		$rewards = array_map(
 			static fn ( array $item ): Reward => new Reward( $item ),
@@ -103,7 +104,7 @@ final class RewardRepository {
 		$rewards = array_values(
 			array_filter(
 				$rewards,
-				static function ( Reward $reward ) use ( $search, $category, $type, $active ): bool {
+				static function ( Reward $reward ) use ( $search, $category, $type, $active, $catalog_visible ): bool {
 					if ( '' !== $category && $reward->category() !== $category ) {
 						return false;
 					}
@@ -113,6 +114,10 @@ final class RewardRepository {
 					}
 
 					if ( null !== $active && $reward->active() !== $active ) {
+						return false;
+					}
+
+					if ( null !== $catalog_visible && $reward->catalog_visible() !== $catalog_visible ) {
 						return false;
 					}
 

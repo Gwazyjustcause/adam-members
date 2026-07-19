@@ -95,6 +95,14 @@ final class Reward {
 		return ! empty( $this->data['active'] );
 	}
 
+	public function catalog_visible(): bool {
+		if ( array_key_exists( 'catalog_visible', $this->data ) ) {
+			return ! empty( $this->data['catalog_visible'] );
+		}
+
+		return true;
+	}
+
 	public function approval_required(): bool {
 		return ! empty( $this->data['approval_required'] );
 	}

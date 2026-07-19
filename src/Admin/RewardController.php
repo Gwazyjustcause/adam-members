@@ -128,6 +128,13 @@ final class RewardController {
 						<?php endforeach; ?>
 					</select>
 				</label>
+				<label><span><?php esc_html_e( 'Visivel na Area de Socio', 'adam-membership' ); ?></span>
+					<select name="catalog_visibility">
+						<?php $this->render_select_option( '', __( 'Todos', 'adam-membership' ), $filters['catalog_visibility'] ); ?>
+						<?php $this->render_select_option( 'visible', __( 'Sim', 'adam-membership' ), $filters['catalog_visibility'] ); ?>
+						<?php $this->render_select_option( 'hidden', __( 'Nao', 'adam-membership' ), $filters['catalog_visibility'] ); ?>
+					</select>
+				</label>
 				<button type="submit" class="button button-primary"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
 			</form>
 
@@ -137,7 +144,7 @@ final class RewardController {
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem recompensas.', 'adam-membership' ); ?></div>
 				<?php else : ?>
 					<table class="widefat striped adam-admin-table">
-						<thead><tr><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th></tr></thead>
+						<thead><tr><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Visivel na Area de Socio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $rewards as $reward ) : ?>
 								<tr>
@@ -146,6 +153,7 @@ final class RewardController {
 									<td><?php echo esc_html( $this->rewards->type_labels()[ $reward->type() ] ?? $reward->type() ); ?></td>
 									<td><?php echo esc_html( (string) $reward->points_cost() ); ?></td>
 									<td><?php echo esc_html( $reward->active() ? __( 'Ativa', 'adam-membership' ) : __( 'Inativa', 'adam-membership' ) ); ?></td>
+									<td><?php echo esc_html( $reward->catalog_visible() ? __( 'Sim', 'adam-membership' ) : __( 'Nao', 'adam-membership' ) ); ?></td>
 									<td class="adam-admin-row-actions">
 										<a class="button button-small" href="<?php echo esc_url( $this->edit_url( $reward->id() ) ); ?>"><?php esc_html_e( 'Editar', 'adam-membership' ); ?></a>
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Eliminar esta recompensa?', 'adam-membership' ) ); ?>');">
@@ -264,6 +272,18 @@ final class RewardController {
 							<label><span><?php esc_html_e( 'Pontos necessarios', 'adam-membership' ); ?></span><input type="number" min="0" name="points_cost" value="<?php echo esc_attr( (string) $reward_points ); ?>" data-adam-preview-points></label>
 							<label><span><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></span><input type="text" name="availability_label" value="<?php echo esc_attr( null !== $reward ? $reward->availability_label() : __( 'Disponivel', 'adam-membership' ) ); ?>"></label>
 							<label class="adam-reward-editor__conditional-field<?php echo $is_digital_reward ? '' : ' is-hidden'; ?>" data-adam-card-subtype-field><span><?php esc_html_e( 'Subtipo do cartao digital', 'adam-membership' ); ?></span><select name="visual_style[card_subtype]" data-adam-style="card_subtype"><?php $this->render_card_subtype_options( (string) $resolved_style['card_subtype'] ); ?></select></label>
+						</div>
+					</section>
+
+					<section class="adam-reward-editor__section">
+						<div class="adam-admin-edit-grid">
+							<label class="adam-admin-checkbox-field">
+								<input type="checkbox" name="catalog_visible" value="1" <?php checked( null === $reward ? true : $reward->catalog_visible() ); ?>>
+								<span>
+									<strong><?php esc_html_e( 'Mostrar esta recompensa no catalogo da Area de Socio', 'adam-membership' ); ?></strong>
+									<small><?php esc_html_e( 'Quando desativada, a recompensa continua disponivel para atribuicao manual e para membros que ja a possuam, mas nao aparece no catalogo publico da Area de Socio.', 'adam-membership' ); ?></small>
+								</span>
+							</label>
 						</div>
 					</section>
 
@@ -514,14 +534,24 @@ final class RewardController {
 	}
 
 	/**
-	 * @return array{search:string,category:string,type:string}
+	 * @return array{search:string,category:string,type:string,catalog_visibility:string,catalog_visible?:bool}
 	 */
 	private function current_reward_filters(): array {
-		return array(
-			'search'   => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
-			'category' => isset( $_GET['category'] ) ? sanitize_text_field( wp_unslash( $_GET['category'] ) ) : '',
-			'type'     => isset( $_GET['type'] ) ? sanitize_key( wp_unslash( $_GET['type'] ) ) : '',
+		$catalog_visibility = isset( $_GET['catalog_visibility'] ) ? sanitize_key( wp_unslash( $_GET['catalog_visibility'] ) ) : '';
+		$filters            = array(
+			'search'             => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
+			'category'           => isset( $_GET['category'] ) ? sanitize_text_field( wp_unslash( $_GET['category'] ) ) : '',
+			'type'               => isset( $_GET['type'] ) ? sanitize_key( wp_unslash( $_GET['type'] ) ) : '',
+			'catalog_visibility' => in_array( $catalog_visibility, array( 'visible', 'hidden' ), true ) ? $catalog_visibility : '',
 		);
+
+		if ( 'visible' === $filters['catalog_visibility'] ) {
+			$filters['catalog_visible'] = true;
+		} elseif ( 'hidden' === $filters['catalog_visibility'] ) {
+			$filters['catalog_visible'] = false;
+		}
+
+		return $filters;
 	}
 
 	/**
@@ -553,6 +583,7 @@ final class RewardController {
 			'image_url'           => isset( $_POST['image_url'] ) ? wp_unslash( $_POST['image_url'] ) : '',
 			'availability_label'  => isset( $_POST['availability_label'] ) ? wp_unslash( $_POST['availability_label'] ) : '',
 			'active'              => isset( $_POST['active'] ),
+			'catalog_visible'     => isset( $_POST['catalog_visible'] ),
 			'approval_required'   => isset( $_POST['approval_required'] ),
 			'mystery_reveal_text' => isset( $_POST['mystery_reveal_text'] ) ? wp_unslash( $_POST['mystery_reveal_text'] ) : '',
 			'reward_value'        => isset( $_POST['reward_value'] ) ? wp_unslash( $_POST['reward_value'] ) : '',
