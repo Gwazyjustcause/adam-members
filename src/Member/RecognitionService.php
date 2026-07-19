@@ -41,6 +41,8 @@ final class RecognitionService {
 		if ( $member->is_founder() ) {
 			$this->grant_founder_rewards( $member );
 		}
+
+		$this->grant_eligible_loyalty_rewards( $member );
 	}
 
 	/**
@@ -51,7 +53,7 @@ final class RecognitionService {
 			$this->grant_founder_rewards( $member );
 		}
 
-		$this->unlock_loyalty_rewards( $member );
+		$this->grant_eligible_loyalty_rewards( $member );
 	}
 
 	/**
@@ -61,6 +63,8 @@ final class RecognitionService {
 		if ( $member->is_founder() ) {
 			$this->grant_founder_rewards( $member );
 		}
+
+		$this->grant_eligible_loyalty_rewards( $member );
 	}
 
 	/**
@@ -176,8 +180,8 @@ final class RecognitionService {
 	 * @return array{completed_years:int,completed_months:int,unlocked:array<int,string>,next_tier:?array{key:string,years:int,label:string,elapsed_label:string}}
 	 */
 	public function loyalty_progress( Member $member ): array {
-		$completed_years  = 0;
-		$completed_months = 0;
+		$completed_years  = $this->get_member_loyalty_years( $member );
+		$completed_months = $this->get_member_loyalty_months( $member );
 		$next_tier        = array(
 			'key'           => '2y',
 			'years'         => 2,
@@ -185,16 +189,7 @@ final class RecognitionService {
 			'elapsed_label' => $this->elapsed_label( 0, 2 ),
 		);
 
-		$join_timestamp = $member->join_date_timestamp();
-
-		if ( $join_timestamp > 0 ) {
-			$joined = new \DateTimeImmutable( wp_date( 'Y-m-d', $join_timestamp ) );
-			$today  = new \DateTimeImmutable( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
-			$diff   = $joined->diff( $today );
-
-			$completed_years  = max( 0, (int) $diff->y );
-			$completed_months = max( 0, (int) ( $diff->y * 12 + $diff->m ) );
-
+		if ( $completed_months > 0 || $completed_years > 0 ) {
 			foreach ( $this->loyalty_tiers() as $key => $tier ) {
 				if ( $completed_years < $tier['years'] ) {
 					$next_tier = array(
@@ -220,21 +215,47 @@ final class RecognitionService {
 		);
 	}
 
-	private function unlock_loyalty_rewards( Member $member ): void {
-		if ( ! $member->isActive() ) {
-			return;
+	public function get_member_loyalty_years( Member|int $member ): int {
+		$member = $this->resolve_member( $member );
+
+		if ( ! $member instanceof Member || ! $member->isActive() ) {
+			return 0;
 		}
 
 		$join_timestamp = $member->join_date_timestamp();
 
 		if ( $join_timestamp <= 0 ) {
+			return 0;
+		}
+
+		$joined = new \DateTimeImmutable( wp_date( 'Y-m-d', $join_timestamp ) );
+		$today  = new \DateTimeImmutable( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
+		$diff   = $joined->diff( $today );
+
+		return max( 0, (int) $diff->y );
+	}
+
+	public function grant_eligible_loyalty_rewards( Member|int $member ): void {
+		$member = $this->resolve_member( $member );
+
+		if ( ! $member instanceof Member ) {
 			return;
 		}
 
-		$joined  = new \DateTimeImmutable( wp_date( 'Y-m-d', $join_timestamp ) );
-		$today   = new \DateTimeImmutable( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
-		$diff    = $joined->diff( $today );
-		$years   = max( 0, (int) $diff->y );
+		$this->unlock_loyalty_rewards( $member );
+	}
+
+	private function unlock_loyalty_rewards( Member $member ): void {
+		if ( ! $member->isActive() ) {
+			return;
+		}
+
+		$years = $this->get_member_loyalty_years( $member );
+
+		if ( $years <= 0 ) {
+			return;
+		}
+
 		$current = $member->loyalty_unlocked();
 		$changed = false;
 
@@ -332,6 +353,36 @@ final class RecognitionService {
 		}
 
 		return sprintf( '%d ano%s / %s', $years, 1 === $years ? '' : 's', $target );
+	}
+
+	private function get_member_loyalty_months( Member $member ): int {
+		if ( ! $member->isActive() ) {
+			return 0;
+		}
+
+		$join_timestamp = $member->join_date_timestamp();
+
+		if ( $join_timestamp <= 0 ) {
+			return 0;
+		}
+
+		$joined = new \DateTimeImmutable( wp_date( 'Y-m-d', $join_timestamp ) );
+		$today  = new \DateTimeImmutable( wp_date( 'Y-m-d', current_time( 'timestamp' ) ) );
+		$diff   = $joined->diff( $today );
+
+		return max( 0, (int) ( $diff->y * 12 + $diff->m ) );
+	}
+
+	private function resolve_member( Member|int|null $member ): ?Member {
+		if ( $member instanceof Member ) {
+			return $member;
+		}
+
+		if ( is_int( $member ) && $member > 0 ) {
+			return $this->members->find( $member );
+		}
+
+		return null;
 	}
 
 	/**

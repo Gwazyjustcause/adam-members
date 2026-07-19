@@ -225,6 +225,7 @@ final class MemberArea {
 
 		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
+		$this->recognition->grant_eligible_loyalty_rewards( $member );
 
 		ob_start();
 		?>
@@ -1084,8 +1085,8 @@ final class MemberArea {
 			<div class="adam-reward-card__actions">
 				<?php if ( $owned && $is_equipped ) : ?>
 					<span class="adam-text-link"><?php esc_html_e( 'Atualmente equipada na tua conta', 'adam-membership' ); ?></span>
-				<?php elseif ( $owned && $reward->is_single_claim() ) : ?>
-					<a class="adam-text-link" href="#adam-personalizacao"><?php esc_html_e( 'Gerir na personalizacao', 'adam-membership' ); ?></a>
+				<?php elseif ( $owned || $is_loyalty ) : ?>
+					<span class="adam-text-link"><?php echo esc_html( $progress_label ); ?></span>
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-text-link"><?php esc_html_e( 'Pedido em analise pela ADAM', 'adam-membership' ); ?></span>
 				<?php elseif ( ! $redeemable ) : ?>
@@ -1488,12 +1489,10 @@ final class MemberArea {
 					<?php echo esc_html( (string) $item['detail_label'] ); ?>
 				</div>
 				<div class="adam-rewards-catalogue-card__actions">
-					<?php if ( ! empty( $item['is_equipped'] ) ) : ?>
+					<?php if ( ! empty( $item['claimed'] ) || 'loyalty' === ( $item['unlock_method'] ?? '' ) ) : ?>
+						<span class="adam-text-link"><?php echo esc_html( (string) $item['status_label'] ); ?></span>
+					<?php elseif ( ! empty( $item['is_equipped'] ) ) : ?>
 						<span class="adam-text-link"><?php esc_html_e( 'Equipada na tua conta', 'adam-membership' ); ?></span>
-					<?php elseif ( ( ! empty( $item['claimed'] ) || 'loyalty' === ( $item['unlock_method'] ?? '' ) ) && ! empty( $item['is_equippable'] ) && 'Resgatada' !== ( $item['status_label'] ?? '' ) ) : ?>
-						<a class="adam-card-link adam-card-link--secondary" href="<?php echo esc_url( (string) $item['equip_url'] ); ?>"><?php esc_html_e( 'Gerir na personalizacao', 'adam-membership' ); ?></a>
-					<?php elseif ( ! empty( $item['claimed'] ) && ! empty( $item['is_equippable'] ) ) : ?>
-						<a class="adam-card-link adam-card-link--secondary" href="<?php echo esc_url( (string) $item['equip_url'] ); ?>"><?php esc_html_e( 'Gerir na personalizacao', 'adam-membership' ); ?></a>
 					<?php elseif ( ! empty( $item['pending'] ) ) : ?>
 						<span class="adam-text-link"><?php esc_html_e( 'Pedido em analise pela ADAM', 'adam-membership' ); ?></span>
 					<?php elseif ( $reward instanceof Reward && ! empty( $item['can_redeem'] ) ) : ?>
