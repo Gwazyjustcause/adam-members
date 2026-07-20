@@ -284,12 +284,7 @@ final class RewardController {
 							<label><span><?php esc_html_e( 'Pontos necessarios', 'adam-membership' ); ?></span><input type="number" min="0" name="points_cost" value="<?php echo esc_attr( (string) $reward_points ); ?>" data-adam-preview-points></label>
 							<label><span><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></span><input type="text" name="availability_label" value="<?php echo esc_attr( null !== $reward ? $reward->availability_label() : __( 'Disponivel', 'adam-membership' ) ); ?>"></label>
 							<label class="adam-reward-editor__conditional-field<?php echo $is_digital_reward ? '' : ' is-hidden'; ?>" data-adam-card-subtype-field><span><?php esc_html_e( 'Subtipo do cartao digital', 'adam-membership' ); ?></span><select name="visual_style[card_subtype]" data-adam-style="card_subtype"><?php $this->render_card_subtype_options( (string) $resolved_style['card_subtype'] ); ?></select></label>
-						</div>
-					</section>
-
-					<section class="adam-reward-editor__section">
-						<div class="adam-admin-edit-grid">
-							<label class="adam-admin-checkbox-field">
+							<label class="adam-admin-checkbox-field adam-admin-checkbox-field--catalog">
 								<input type="checkbox" name="catalog_visible" value="1" <?php checked( null === $reward ? true : $reward->catalog_visible() ); ?>>
 								<span>
 									<strong><?php esc_html_e( 'Mostrar esta recompensa no catalogo da Area de Socio', 'adam-membership' ); ?></strong>

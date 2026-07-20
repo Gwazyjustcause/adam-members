@@ -599,6 +599,51 @@
 	font-weight: 600;
 }
 
+.adam-admin-checkbox-field--catalog {
+	align-items: flex-start;
+	gap: 12px;
+	padding: 10px 12px;
+	border: 1px solid #d7e5d9;
+	border-radius: 12px;
+	background: #ffffff;
+}
+
+.adam-admin-checkbox-field--catalog input[type="checkbox"] {
+	flex: 0 0 auto;
+	margin: 2px 0 0;
+}
+
+.adam-admin-checkbox-field--catalog > span {
+	display: grid;
+	gap: 4px;
+	color: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	text-transform: none;
+}
+
+.adam-admin-edit-grid .adam-admin-checkbox-field--catalog > span strong,
+.adam-admin-edit-grid .adam-admin-checkbox-field--catalog > span small {
+	color: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	letter-spacing: normal;
+	text-transform: none;
+}
+
+.adam-admin-checkbox-field--catalog > span strong {
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.35;
+}
+
+.adam-admin-checkbox-field--catalog > span small {
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.45;
+}
+
 .adam-admin-edit-form .description {
 	margin: 0;
 	color: var(--adam-admin-muted);
@@ -953,6 +998,10 @@
 	.adam-admin-detail-grid,
 	.adam-admin-edit-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.adam-admin-checkbox-field--catalog {
+		grid-column: auto;
 	}
 
 	.adam-admin-filters,
