@@ -270,6 +270,13 @@ final class RewardController {
 			</div>
 			<?php $this->render_notices(); ?>
 			<div class="adam-admin-panel adam-reward-editor-panel">
+				<?php if ( null !== $reward ) : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" id="adam-reward-qr-form">
+						<input type="hidden" name="action" value="adam_membership_create_reward_qr">
+						<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
+						<?php wp_nonce_field( 'adam_membership_create_reward_qr_' . $reward->id() ); ?>
+					</form>
+				<?php endif; ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form adam-reward-editor" enctype="multipart/form-data">
 					<input type="hidden" name="action" value="adam_membership_save_reward">
 					<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) ( null !== $reward ? $reward->id() : 0 ) ); ?>">
@@ -308,12 +315,7 @@ final class RewardController {
 										<p><?php esc_html_e( 'Ainda nao existe um QR Code ativo para esta recompensa.', 'adam-membership' ); ?></p>
 									<?php endif; ?>
 									<div class="adam-admin-actions">
-										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
-											<input type="hidden" name="action" value="adam_membership_create_reward_qr">
-											<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
-											<?php wp_nonce_field( 'adam_membership_create_reward_qr_' . $reward->id() ); ?>
-											<button type="submit" class="button"><?php esc_html_e( 'Criar QR Code', 'adam-membership' ); ?></button>
-										</form>
+										<button type="submit" class="button" form="adam-reward-qr-form"><?php esc_html_e( 'Criar QR Code', 'adam-membership' ); ?></button>
 									</div>
 								</div>
 							</div>
