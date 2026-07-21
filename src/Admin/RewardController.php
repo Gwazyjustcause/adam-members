@@ -107,7 +107,7 @@ final class RewardController {
 			</div>
 			<?php $this->render_notices(); ?>
 			<div class="adam-admin-actions">
-				<a class="button button-primary" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Nova recompensa', 'adam-membership' ); ?></a>
+				<a class="button button-primary adam-button" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Nova recompensa', 'adam-membership' ); ?></a>
 			</div>
 
 			<form method="get" class="adam-admin-filters">
@@ -136,15 +136,15 @@ final class RewardController {
 						<?php $this->render_select_option( 'hidden', __( 'Nao', 'adam-membership' ), $filters['catalog_visibility'] ); ?>
 					</select>
 				</label>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
+				<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
 			</form>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Catalogo de recompensas', 'adam-membership' ); ?></h2>
 				<?php if ( array() === $rewards ) : ?>
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem recompensas.', 'adam-membership' ); ?></div>
 				<?php else : ?>
-					<table class="widefat striped adam-admin-table">
+					<table class="widefat striped adam-admin-table adam-table">
 						<thead><tr><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Disponibilidade', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Visivel na Area de Socio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $rewards as $reward ) : ?>
@@ -168,7 +168,7 @@ final class RewardController {
 											<input type="hidden" name="action" value="adam_membership_delete_reward">
 											<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) $reward->id() ); ?>">
 											<?php wp_nonce_field( 'adam_membership_delete_reward_' . $reward->id() ); ?>
-											<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
+											<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
 										</form>
 										<?php if ( is_array( $reward_qr ) && ! empty( $reward_qr['is_active'] ) ) : ?>
 											<small><?php echo esc_html( sprintf( __( 'QR ativo ate %s', 'adam-membership' ), $this->format_datetime( (string) $reward_qr['expires_at'] ) ) ); ?></small>
@@ -181,12 +181,12 @@ final class RewardController {
 				<?php endif; ?>
 			</div>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Pedidos de resgate', 'adam-membership' ); ?></h2>
 				<?php if ( array() === $redemptions ) : ?>
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda nao existem pedidos de resgate.', 'adam-membership' ); ?></div>
 				<?php else : ?>
-					<table class="widefat striped adam-admin-table">
+					<table class="widefat striped adam-admin-table adam-table">
 						<thead><tr><th><?php esc_html_e( 'Socio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Acoes', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $redemptions as $redemption ) : ?>
@@ -269,7 +269,7 @@ final class RewardController {
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar a lista', 'adam-membership' ); ?></a>
 			</div>
 			<?php $this->render_notices(); ?>
-			<div class="adam-admin-panel adam-reward-editor-panel">
+			<div class="adam-admin-panel adam-reward-editor-panel adam-card">
 				<?php if ( null !== $reward ) : ?>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" id="adam-reward-qr-form">
 						<input type="hidden" name="action" value="adam_membership_create_reward_qr">
@@ -282,7 +282,7 @@ final class RewardController {
 					<input type="hidden" name="reward_id" value="<?php echo esc_attr( (string) ( null !== $reward ? $reward->id() : 0 ) ); ?>">
 					<?php wp_nonce_field( 'adam_membership_save_reward' ); ?>
 
-					<section class="adam-reward-editor__section">
+					<section class="adam-reward-editor__section adam-card">
 						<div class="adam-admin-edit-grid">
 							<label><span><?php esc_html_e( 'Nome', 'adam-membership' ); ?></span><input type="text" name="name" required value="<?php echo esc_attr( $reward_name ); ?>" data-adam-preview-name></label>
 							<label><span><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></span><select name="category" data-adam-preview-category data-adam-reward-category><?php foreach ( $this->rewards->categories() as $category ) : ?><?php $this->render_select_option( $category, $category, $reward_category ); ?><?php endforeach; ?></select></label>
@@ -302,7 +302,7 @@ final class RewardController {
 					</section>
 
 					<?php if ( null !== $reward ) : ?>
-						<section class="adam-reward-editor__section">
+						<section class="adam-reward-editor__section adam-card">
 							<div class="adam-admin-edit-grid">
 								<div class="adam-admin-edit-field adam-admin-edit-field-full">
 									<span><?php esc_html_e( 'QR Code da recompensa', 'adam-membership' ); ?></span>
@@ -322,13 +322,13 @@ final class RewardController {
 						</section>
 					<?php endif; ?>
 
-					<div class="adam-admin-notice info adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? ' is-hidden' : ''; ?>" data-adam-non-digital-notice>
+					<div class="adam-admin-notice info adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? ' is-hidden' : ''; ?> adam-notice adam-notice--info" data-adam-non-digital-notice>
 						<p><?php esc_html_e( 'Os controlos visuais do cartao digital aparecem apenas em recompensas ligadas ao cartao de socio. Para outras recompensas, guarda apenas os metadados gerais.', 'adam-membership' ); ?></p>
 					</div>
 
 					<div class="adam-reward-editor__workspace adam-reward-editor__conditional-field<?php echo $uses_visual_editor ? '' : ' is-hidden'; ?>" data-adam-digital-workspace>
 						<div class="adam-reward-editor__controls">
-							<section class="adam-reward-editor__section adam-reward-editor__section--summary">
+							<section class="adam-reward-editor__section adam-reward-editor__section--summary adam-card">
 								<div class="adam-reward-editor__summary">
 									<div>
 										<p class="adam-reward-editor__eyebrow"><?php esc_html_e( 'Controlos', 'adam-membership' ); ?></p>
@@ -337,7 +337,7 @@ final class RewardController {
 									</div>
 								</div>
 							</section>
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-background-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open adam-card" data-adam-background-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Fundo do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Escolhe como o fundo base do cartao deve ser construido: cor solida, gradiente ou imagem com sobreposicao.', 'adam-membership' ); ?></p>
@@ -358,7 +358,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-background-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Padrao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Adiciona uma camada de padrao por cima do fundo para dar textura sem comprometer a legibilidade do cartao.', 'adam-membership' ); ?></p>
@@ -374,7 +374,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-background-controls data-adam-image-controls data-adam-background-mode-group="image">
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-background-controls data-adam-image-controls data-adam-background-mode-group="image">
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Imagem e textura', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Usa uma imagem de fundo ou textura adicional. Esta camada so aparece quando o modo ativo e Imagem + gradiente.', 'adam-membership' ); ?></p>
@@ -388,7 +388,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-style-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-style-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Elementos decorativos', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Aplica imagem decorativa, formas e sobreposicoes ao layout do cartao para criar um estilo mais distintivo.', 'adam-membership' ); ?></p>
@@ -414,7 +414,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-card-typography-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-card-typography-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Tipografia do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Ajusta apenas a tipografia real do cartao. O badge do titulo e definido na propria recompensa de titulo.', 'adam-membership' ); ?></p>
@@ -428,7 +428,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-title-badge-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-title-badge-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Badge do titulo', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Desenha o badge visual deste titulo. Esta aparencia segue sempre o titulo ativo do socio.', 'adam-membership' ); ?></p>
@@ -447,7 +447,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open" data-adam-style-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion is-open adam-card" data-adam-style-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="true"><?php esc_html_e( 'Acabamento do cartao', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Configura apenas o acabamento do cartao, sem alterar o fundo, a geometria ou a estrutura do cartao.', 'adam-membership' ); ?></p>
@@ -465,7 +465,7 @@ final class RewardController {
 								</div>
 							</section>
 
-							<section class="adam-reward-editor__section adam-reward-editor__section--accordion" data-adam-details-controls>
+							<section class="adam-reward-editor__section adam-reward-editor__section--accordion adam-card" data-adam-details-controls>
 								<button type="button" class="adam-reward-editor__accordion-toggle" data-adam-accordion-toggle aria-expanded="false"><?php esc_html_e( 'Detalhes da recompensa', 'adam-membership' ); ?></button>
 								<div class="adam-reward-editor__accordion-body">
 								<p class="adam-reward-editor__section-copy"><?php esc_html_e( 'Guarda os metadados gerais da recompensa sem sair do fluxo do editor visual.', 'adam-membership' ); ?></p>
@@ -478,8 +478,8 @@ final class RewardController {
 							</section>
 						</div>
 
-						<div class="adam-reward-editor__preview-panel">
-							<section class="adam-reward-editor__section adam-reward-editor__section--preview">
+						<div class="adam-reward-editor__preview-panel adam-card">
+							<section class="adam-reward-editor__section adam-reward-editor__section--preview adam-card">
 								<p class="adam-reward-editor__eyebrow"><?php esc_html_e( 'Pre-visualizacao em tempo real', 'adam-membership' ); ?></p>
 								<h2 class="<?php echo $is_title_reward ? 'is-hidden' : ''; ?>" data-adam-card-preview-panel><?php esc_html_e( 'Cartao ADAM real', 'adam-membership' ); ?></h2>
 								<h2 class="<?php echo $is_title_reward ? '' : 'is-hidden'; ?>" data-adam-title-preview-panel><?php esc_html_e( 'Badge real do titulo', 'adam-membership' ); ?></h2>
@@ -498,7 +498,7 @@ final class RewardController {
 					</div>
 
 					<div class="adam-admin-actions adam-reward-editor__actions">
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar recompensa', 'adam-membership' ); ?></button>
+						<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar recompensa', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Cancelar', 'adam-membership' ); ?></a>
 					</div>
 				</form>
@@ -644,11 +644,11 @@ final class RewardController {
 		$error   = isset( $_GET['adam_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			printf( '<div class="adam-admin-notice success"><p>%s</p></div>', esc_html( $message ) );
+			printf( '<div class="adam-admin-notice success adam-notice adam-notice--success"><p>%s</p></div>', esc_html( $message ) );
 		}
 
 		if ( '' !== $error ) {
-			printf( '<div class="adam-admin-notice error"><p>%s</p></div>', esc_html( $error ) );
+			printf( '<div class="adam-admin-notice error adam-notice adam-notice--danger"><p>%s</p></div>', esc_html( $error ) );
 		}
 	}
 
@@ -817,7 +817,7 @@ final class RewardController {
 		<div class="adam-reward-editor__shape-row" data-adam-shape-row data-shape-index="<?php echo esc_attr( (string) $index ); ?>">
 			<div class="adam-reward-editor__shape-row-head">
 				<strong><?php echo esc_html( sprintf( __( 'Forma %d', 'adam-membership' ), $index + 1 ) ); ?></strong>
-				<button type="button" class="button-link-delete" data-adam-remove-shape><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+				<button type="button" class="button-link-delete adam-button adam-button--danger" data-adam-remove-shape><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
 			</div>
 			<div class="adam-reward-editor__shape-grid">
 				<label><span><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></span><select data-shape-prop="type"><?php $this->render_select_option( 'circle', __( 'Circulo', 'adam-membership' ), (string) ( $shape['type'] ?? 'circle' ) ); ?><?php $this->render_select_option( 'square', __( 'Quadrado', 'adam-membership' ), (string) ( $shape['type'] ?? 'circle' ) ); ?><?php $this->render_select_option( 'line', __( 'Linha', 'adam-membership' ), (string) ( $shape['type'] ?? 'circle' ) ); ?></select></label>

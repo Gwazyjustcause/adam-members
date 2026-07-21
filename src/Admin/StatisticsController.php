@@ -66,7 +66,7 @@ final class StatisticsController {
 					<p><?php esc_html_e( 'Visão consolidada da evolução da ADAM, atividade dos sócios, eventos, pontos, recompensas e renovações.', 'adam-membership' ); ?></p>
 				</div>
 				<div class="adam-admin-actions">
-					<a class="button button-primary" href="<?php echo esc_url( $this->export_url( $range ) ); ?>"><?php esc_html_e( 'Exportar resumo CSV', 'adam-membership' ); ?></a>
+					<a class="button button-primary adam-button" href="<?php echo esc_url( $this->export_url( $range ) ); ?>"><?php esc_html_e( 'Exportar resumo CSV', 'adam-membership' ); ?></a>
 					<button type="button" class="button" disabled><?php esc_html_e( 'Relatório anual PDF (em breve)', 'adam-membership' ); ?></button>
 				</div>
 			</div>
@@ -74,7 +74,7 @@ final class StatisticsController {
 			<?php $this->render_filters( $range ); ?>
 			<?php $this->render_summary_cards( (array) ( $report['summary_cards'] ?? array() ) ); ?>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Sócios', 'adam-membership' ); ?></h2>
@@ -112,7 +112,7 @@ final class StatisticsController {
 				<?php $this->render_upcoming_expirations( (array) ( $report['membership']['upcoming_expirations'] ?? array() ) ); ?>
 			</section>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Eventos', 'adam-membership' ); ?></h2>
@@ -145,7 +145,7 @@ final class StatisticsController {
 				<?php $this->render_latest_checkins( (array) ( $report['events']['latest_checkins'] ?? array() ) ); ?>
 			</section>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Pontos ADAM', 'adam-membership' ); ?></h2>
@@ -174,7 +174,7 @@ final class StatisticsController {
 				<?php $this->render_points_activity( (array) ( $report['points']['recent_activity'] ?? array() ) ); ?>
 			</section>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Recompensas', 'adam-membership' ); ?></h2>
@@ -207,7 +207,7 @@ final class StatisticsController {
 				<?php $this->render_latest_redemptions( (array) ( $report['rewards']['latest_redemptions'] ?? array() ) ); ?>
 			</section>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Renovações', 'adam-membership' ); ?></h2>
@@ -234,7 +234,7 @@ final class StatisticsController {
 				</div>
 			</section>
 
-			<section class="adam-admin-panel">
+			<section class="adam-admin-panel adam-card">
 				<div class="adam-admin-dashboard-heading">
 					<div>
 						<h2><?php esc_html_e( 'Atividade recente', 'adam-membership' ); ?></h2>
@@ -314,7 +314,7 @@ final class StatisticsController {
 				<input type="date" name="date_to" value="<?php echo esc_attr( $range['date_to'] ); ?>">
 			</label>
 			<div class="adam-admin-actions">
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Atualizar estatísticas', 'adam-membership' ); ?></button>
+				<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Atualizar estatísticas', 'adam-membership' ); ?></button>
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Limpar filtros', 'adam-membership' ); ?></a>
 			</div>
 		</form>
@@ -328,7 +328,7 @@ final class StatisticsController {
 		?>
 		<div class="adam-admin-cards adam-admin-stats-cards">
 			<?php foreach ( $cards as $card ) : ?>
-				<div class="adam-admin-card">
+				<div class="adam-admin-card adam-card">
 					<span><?php echo esc_html( (string) ( $card['label'] ?? '' ) ); ?></span>
 					<strong><?php echo esc_html( number_format_i18n( (int) ( $card['value'] ?? 0 ) ) ); ?></strong>
 				</div>
@@ -342,7 +342,7 @@ final class StatisticsController {
 	 */
 	private function render_bar_chart_panel( string $title, array $rows, string $description = '' ): void {
 		?>
-		<div class="adam-admin-stats-panel">
+		<div class="adam-admin-stats-panel adam-card">
 			<h3><?php echo esc_html( $title ); ?></h3>
 			<?php if ( '' !== $description ) : ?><p class="adam-admin-panel-copy"><?php echo esc_html( $description ); ?></p><?php endif; ?>
 			<?php if ( array() === $rows ) : ?>
@@ -371,7 +371,7 @@ final class StatisticsController {
 	 */
 	private function render_line_chart_panel( string $title, array $rows, string $description = '' ): void {
 		?>
-		<div class="adam-admin-stats-panel">
+		<div class="adam-admin-stats-panel adam-card">
 			<h3><?php echo esc_html( $title ); ?></h3>
 			<?php if ( '' !== $description ) : ?><p class="adam-admin-panel-copy"><?php echo esc_html( $description ); ?></p><?php endif; ?>
 			<?php if ( array() === $rows ) : ?>
@@ -398,7 +398,7 @@ final class StatisticsController {
 		$segments   = array();
 		$legend_map = array();
 		$offset     = 0.0;
-		$colors     = array( '#2f6b3b', '#f59e0b', '#ef4444', '#64748b', '#2563eb', '#8b5cf6' );
+		$colors     = array( 'var(--adam-primary, #2f6b3b)', 'var(--adam-warning, #f59e0b)', 'var(--adam-danger, #ef4444)', 'var(--adam-text-muted, #64748b)', 'var(--adam-info, #2563eb)', 'var(--adam-info, #8b5cf6)' );
 
 		foreach ( array_values( $rows ) as $index => $row ) {
 			$value = (int) ( $row['value'] ?? 0 );
@@ -418,7 +418,7 @@ final class StatisticsController {
 			$offset += $size;
 		}
 		?>
-		<div class="adam-admin-stats-panel">
+		<div class="adam-admin-stats-panel adam-card">
 			<h3><?php echo esc_html( $title ); ?></h3>
 			<?php if ( '' !== $description ) : ?><p class="adam-admin-panel-copy"><?php echo esc_html( $description ); ?></p><?php endif; ?>
 			<?php if ( 0 === $total ) : ?>
@@ -451,7 +451,7 @@ final class StatisticsController {
 	 */
 	private function render_kpi_list_panel( string $title, array $items ): void {
 		?>
-		<div class="adam-admin-stats-panel">
+		<div class="adam-admin-stats-panel adam-card">
 			<h3><?php echo esc_html( $title ); ?></h3>
 			<div class="adam-admin-stat-list">
 				<?php foreach ( $items as $item ) : ?>
@@ -470,7 +470,7 @@ final class StatisticsController {
 	 */
 	private function render_balance_panel( array $rows ): void {
 		?>
-		<div class="adam-admin-stats-panel">
+		<div class="adam-admin-stats-panel adam-card">
 			<h3><?php esc_html_e( 'Top de sócios por saldo', 'adam-membership' ); ?></h3>
 			<?php if ( array() === $rows ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Sem pontos atribuídos até ao momento.', 'adam-membership' ); ?></div>
@@ -496,12 +496,12 @@ final class StatisticsController {
 	 */
 	private function render_upcoming_expirations( array $members ): void {
 		?>
-		<div class="adam-admin-stats-table-panel">
+		<div class="adam-admin-stats-table-panel adam-card">
 			<h3><?php esc_html_e( 'Sócios a expirar nos próximos 30 dias', 'adam-membership' ); ?></h3>
 			<?php if ( array() === $members ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Não existem quotas a expirar dentro da janela definida.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Validade da quota', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th></tr></thead>
 					<tbody>
 						<?php foreach ( $members as $member ) : ?>
@@ -524,12 +524,12 @@ final class StatisticsController {
 	 */
 	private function render_latest_checkins( array $checkins ): void {
 		?>
-		<div class="adam-admin-stats-table-panel">
+		<div class="adam-admin-stats-table-panel adam-card">
 			<h3><?php esc_html_e( 'Últimos check-ins', 'adam-membership' ); ?></h3>
 			<?php if ( array() === $checkins ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem check-ins dentro deste período.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Evento', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th></tr></thead>
 					<tbody>
 						<?php foreach ( $checkins as $checkin ) : ?>
@@ -554,12 +554,12 @@ final class StatisticsController {
 	 */
 	private function render_points_activity( array $entries ): void {
 		?>
-		<div class="adam-admin-stats-table-panel">
+		<div class="adam-admin-stats-table-panel adam-card">
 			<h3><?php esc_html_e( 'Atividade recente de pontos', 'adam-membership' ); ?></h3>
 			<?php if ( array() === $entries ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Sem atividade de pontos para este período.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Origem', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Motivo', 'adam-membership' ); ?></th></tr></thead>
 					<tbody>
 						<?php foreach ( $entries as $entry ) : ?>
@@ -584,12 +584,12 @@ final class StatisticsController {
 	 */
 	private function render_latest_redemptions( array $redemptions ): void {
 		?>
-		<div class="adam-admin-stats-table-panel">
+		<div class="adam-admin-stats-table-panel adam-card">
 			<h3><?php esc_html_e( 'Últimos resgates de recompensas', 'adam-membership' ); ?></h3>
 			<?php if ( array() === $redemptions ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Sem resgates de recompensas no período selecionado.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Recompensa', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th></tr></thead>
 					<tbody>
 						<?php foreach ( $redemptions as $redemption ) : ?>
@@ -692,7 +692,7 @@ final class StatisticsController {
 	 */
 	private function render_recent_panel( string $title, array $items, callable $title_renderer, callable $meta_renderer ): void {
 		?>
-		<div class="adam-admin-stats-panel adam-admin-stats-panel--compact">
+		<div class="adam-admin-stats-panel adam-admin-stats-panel--compact adam-card">
 			<h3><?php echo esc_html( $title ); ?></h3>
 			<?php if ( array() === $items ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Sem dados para apresentar.', 'adam-membership' ); ?></div>
@@ -733,7 +733,7 @@ final class StatisticsController {
 		$polyline = implode( ' ', $points );
 
 		return sprintf(
-			'<svg viewBox="0 0 %1$d %2$d" role="img" aria-hidden="true"><defs><linearGradient id="adamStatsStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0%%" stop-color="#2f6b3b"></stop><stop offset="100%%" stop-color="#7cc08a"></stop></linearGradient></defs><rect x="0" y="0" width="%1$d" height="%2$d" rx="18" fill="#f8fbf9"></rect><line x1="18" y1="%3$d" x2="%4$d" y2="%3$d" stroke="#d9e4dc" stroke-width="1"></line><polyline fill="none" stroke="url(#adamStatsStroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="%5$s"></polyline></svg>',
+			'<svg viewBox="0 0 %1$d %2$d" role="img" aria-hidden="true"><defs><linearGradient id="adamStatsStroke" x1="0" y1="0" x2="1" y2="1"><stop offset="0%%" stop-color="var(--adam-primary, #2f6b3b)"></stop><stop offset="100%%" stop-color="var(--adam-primary-hover, #7cc08a)"></stop></linearGradient></defs><rect x="0" y="0" width="%1$d" height="%2$d" rx="18" fill="var(--adam-surface-2, #f8fbf9)"></rect><line x1="18" y1="%3$d" x2="%4$d" y2="%3$d" stroke="var(--adam-border, #d9e4dc)" stroke-width="1"></line><polyline fill="none" stroke="url(#adamStatsStroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="%5$s"></polyline></svg>',
 			$width,
 			$height,
 			$height - 24,

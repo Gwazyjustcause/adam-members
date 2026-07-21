@@ -147,7 +147,7 @@ final class EmailChangeConfirmation {
 				<p><?php esc_html_e( 'O seu endereço de email foi alterado com sucesso.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/?email_changed=1' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/?email_changed=1' ) ); ?>">
 						<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 					</a>
 				</div>

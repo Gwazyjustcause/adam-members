@@ -87,7 +87,7 @@ final class PasswordRecovery {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_password_recovery_submit" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_password_recovery_submit" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Enviar email', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -172,7 +172,7 @@ final class PasswordRecovery {
 		$role = 'error' === $type ? 'alert' : 'status';
 
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice adam-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
 			esc_attr( $role ),
 			esc_html( $message )

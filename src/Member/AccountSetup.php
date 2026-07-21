@@ -239,7 +239,7 @@ final class AccountSetup {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_account_setup_submit" class="button button-primary adam-primary-action" <?php disabled( $is_preview ); ?>>
+						<button type="submit" name="adam_account_setup_submit" class="button button-primary adam-primary-action adam-button" <?php disabled( $is_preview ); ?>>
 							<?php esc_html_e( 'Concluir acesso', 'adam-membership' ); ?>
 						</button>
 					</div>
@@ -498,7 +498,7 @@ final class AccountSetup {
 				<p><?php esc_html_e( 'Já pode iniciar sessão na Área de Sócio com o email ou com o nome de utilizador escolhido.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
 						<?php esc_html_e( 'Ir para a Área de Sócio', 'adam-membership' ); ?>
 					</a>
 				</div>
@@ -573,7 +573,7 @@ final class AccountSetup {
 		$role = 'error' === $type ? 'alert' : 'status';
 
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice adam-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
 			esc_attr( $role ),
 			esc_html( $message )

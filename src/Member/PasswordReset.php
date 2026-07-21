@@ -154,7 +154,7 @@ final class PasswordReset {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action" <?php disabled( $is_preview ); ?>>
+						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action adam-button" <?php disabled( $is_preview ); ?>>
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -249,7 +249,7 @@ final class PasswordReset {
 				<p><?php esc_html_e( 'O link é inválido ou expirou. Peça um novo link para continuar.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
 						<?php esc_html_e( 'Pedir novo link', 'adam-membership' ); ?>
 					</a>
 					<a class="button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -277,7 +277,7 @@ final class PasswordReset {
 				<p><?php esc_html_e( 'Já pode iniciar sessão utilizando a sua nova palavra-passe.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
 						<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
 					</a>
 				</div>
@@ -332,7 +332,7 @@ final class PasswordReset {
 		$role = 'error' === $type ? 'alert' : 'status';
 
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice adam-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
 			esc_attr( $role ),
 			esc_html( $message )

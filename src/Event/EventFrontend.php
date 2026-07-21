@@ -172,7 +172,7 @@ final class EventFrontend {
 		?>
 		<section class="adam-events-page adam-event-detail-page">
 			<p class="adam-events-back"><a href="<?php echo esc_url( home_url( '/eventos/' ) ); ?>">&larr; <?php esc_html_e( 'Voltar aos eventos', 'adam-membership' ); ?></a></p>
-			<article class="adam-event-detail-card">
+			<article class="adam-event-detail-card adam-card">
 				<?php if ( '' !== $event->cover_image() ) : ?>
 					<div class="adam-event-cover"><img src="<?php echo esc_url( $event->cover_image() ); ?>" alt="<?php echo esc_attr( $event->title() ); ?>"></div>
 				<?php endif; ?>
@@ -230,9 +230,9 @@ final class EventFrontend {
 						<h2><?php esc_html_e( 'Inscrição', 'adam-membership' ); ?></h2>
 						<p><?php echo esc_html( sprintf( __( 'As inscrições são feitas através do %s.', 'adam-membership' ), $event->external_provider_name() ) ); ?></p>
 						<?php if ( '' !== $event->external_registration_url() ) : ?>
-							<p><a class="adam-events-primary" href="<?php echo esc_url( $event->external_registration_url() ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $this->external_cta_label( $event ) ); ?></a></p>
+							<p><a class="adam-events-primary adam-button" href="<?php echo esc_url( $event->external_registration_url() ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $this->external_cta_label( $event ) ); ?></a></p>
 						<?php else : ?>
-							<div class="adam-events-notice warning"><?php esc_html_e( 'A ligação externa de inscrição ainda não foi configurada para este evento.', 'adam-membership' ); ?></div>
+							<div class="adam-events-notice warning adam-notice adam-notice--warning"><?php esc_html_e( 'A ligação externa de inscrição ainda não foi configurada para este evento.', 'adam-membership' ); ?></div>
 						<?php endif; ?>
 					</div>
 				</div>
@@ -324,7 +324,7 @@ final class EventFrontend {
 				<?php endif; ?>
 
 				<?php if ( array() !== $message_lines ) : ?>
-					<div class="adam-events-notice <?php echo esc_attr( $message_class ); ?>">
+					<div class="adam-events-notice <?php echo esc_attr( $message_class ); ?> adam-notice">
 						<?php foreach ( $message_lines as $line ) : ?>
 							<p><?php echo esc_html( $line ); ?></p>
 						<?php endforeach; ?>
@@ -354,7 +354,7 @@ final class EventFrontend {
 							<?php if ( ! is_wp_error( $eligibility ) ) : ?>
 								<form method="post" class="adam-event-checkin-form">
 									<?php wp_nonce_field( 'adam_membership_event_checkin_' . $token ); ?>
-									<button type="submit" name="adam_event_checkin_submit" value="1" class="adam-events-primary"><?php esc_html_e( 'Confirmar check-in', 'adam-membership' ); ?></button>
+									<button type="submit" name="adam_event_checkin_submit" value="1" class="adam-events-primary adam-button"><?php esc_html_e( 'Confirmar check-in', 'adam-membership' ); ?></button>
 								</form>
 							<?php endif; ?>
 						<?php endif; ?>
@@ -364,7 +364,7 @@ final class EventFrontend {
 				<div class="adam-events-checkin-invite">
 					<h2><?php esc_html_e( 'Ainda não és sócio da ADAM?', 'adam-membership' ); ?></h2>
 					<p><?php esc_html_e( 'Os sócios ADAM têm acesso a vantagens exclusivas, incluindo o sistema de pontos por participação em eventos, futuras recompensas e outros benefícios da associação.', 'adam-membership' ); ?></p>
-					<p><a class="adam-events-secondary" href="https://airsoftmondego.pt" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Torna-te sócio', 'adam-membership' ); ?></a></p>
+					<p><a class="adam-events-secondary adam-button adam-button--secondary" href="https://airsoftmondego.pt" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Torna-te sócio', 'adam-membership' ); ?></a></p>
 				</div>
 			</div>
 		</section>
@@ -379,7 +379,7 @@ final class EventFrontend {
 
 		foreach ( $events as $event ) {
 			?>
-			<article class="adam-event-card">
+			<article class="adam-event-card adam-card">
 				<div class="adam-event-card-top">
 					<div>
 						<h2><a href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php echo esc_html( $event->title() ); ?></a></h2>
@@ -409,7 +409,7 @@ final class EventFrontend {
 				</div>
 				<p><?php echo esc_html( $event->short_description() ); ?></p>
 				<div class="adam-event-card-actions">
-					<a class="adam-events-primary" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php esc_html_e( 'Ver evento', 'adam-membership' ); ?></a>
+					<a class="adam-events-primary adam-button" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>"><?php esc_html_e( 'Ver evento', 'adam-membership' ); ?></a>
 				</div>
 			</article>
 			<?php
@@ -495,11 +495,11 @@ final class EventFrontend {
 		$error   = isset( $_GET['adam_event_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_event_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			return '<div class="adam-events-notice success">' . esc_html( $message ) . '</div>';
+			return '<div class="adam-events-notice success adam-notice adam-notice--success">' . esc_html( $message ) . '</div>';
 		}
 
 		if ( '' !== $error ) {
-			return '<div class="adam-events-notice error">' . esc_html( $error ) . '</div>';
+			return '<div class="adam-events-notice error adam-notice adam-notice--danger">' . esc_html( $error ) . '</div>';
 		}
 
 		return '';

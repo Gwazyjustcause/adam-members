@@ -1,12 +1,12 @@
 .adam-cookie-bar,
 .adam-cookie-preferences {
-	--adam-cookie-green-900: #173f24;
-	--adam-cookie-green-700: #2f6b3b;
-	--adam-cookie-green-100: #e8f4ea;
-	--adam-cookie-border: rgba(23, 63, 36, 0.14);
-	--adam-cookie-surface: rgba(255, 255, 255, 0.98);
-	--adam-cookie-muted: #4d5b69;
-	--adam-cookie-shadow: 0 18px 42px rgba(16, 32, 51, 0.18);
+	--adam-cookie-green-900: var(--adam-primary, #173f24);
+	--adam-cookie-green-700: var(--adam-primary, #2f6b3b);
+	--adam-cookie-green-100: var(--adam-success-bg, #e8f4ea);
+	--adam-cookie-border: var(--adam-shadow-color, rgba(23, 63, 36, 0.14));
+	--adam-cookie-surface: var(--adam-surface, rgba(255, 255, 255, 0.98));
+	--adam-cookie-muted: var(--adam-text-muted, #4d5b69);
+	--adam-cookie-shadow: 0 18px 42px var(--adam-shadow-color, rgba(16, 32, 51, 0.18));
 }
 
 .adam-cookie-bar,
@@ -101,15 +101,15 @@
 	border: 0;
 	border-radius: 999px;
 	background: var(--adam-cookie-green-700);
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	font-size: 0.94rem;
 	font-weight: 800;
 	cursor: pointer;
 }
 
 .adam-cookie-button.is-secondary {
-	background: #e6ece8;
-	color: #102033;
+	background: var(--adam-surface-2, #e6ece8);
+	color: var(--adam-text, #102033);
 }
 
 .adam-cookie-button.is-ghost {
@@ -132,8 +132,8 @@
 	padding: 16px;
 	border: 1px solid var(--adam-cookie-border);
 	border-radius: 18px;
-	background: #ffffff;
-	box-shadow: 0 16px 36px rgba(16, 32, 51, 0.16);
+	background: var(--adam-surface, #ffffff);
+	box-shadow: 0 16px 36px var(--adam-shadow-color, rgba(16, 32, 51, 0.16));
 }
 
 .adam-cookie-modal__header {
@@ -160,8 +160,8 @@
 	height: 36px;
 	border: 1px solid var(--adam-cookie-border);
 	border-radius: 999px;
-	background: #ffffff;
-	color: #102033;
+	background: var(--adam-surface, #ffffff);
+	color: var(--adam-text, #102033);
 	font-size: 1.2rem;
 	cursor: pointer;
 }
@@ -179,11 +179,11 @@
 	padding: 14px;
 	border: 1px solid var(--adam-cookie-border);
 	border-radius: 14px;
-	background: linear-gradient(180deg, #ffffff, #f8fbf9);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f8fbf9));
 }
 
 .adam-cookie-option.is-required {
-	background: linear-gradient(180deg, #f6fbf7, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f6fbf7), var(--adam-surface, #ffffff));
 }
 
 .adam-cookie-option h3 {
@@ -236,17 +236,17 @@
 .adam-cookie-footer-link__button:focus-visible,
 .adam-cookie-icon-button:focus-visible,
 .adam-cookie-option input[type="checkbox"]:focus-visible {
-	outline: 3px solid rgba(63, 143, 77, 0.32);
+	outline: 3px solid var(--adam-focus-ring, rgba(63, 143, 77, 0.32));
 	outline-offset: 3px;
 }
 
 .adam-events-media-notice {
 	margin-top: 22px;
 	padding: 18px;
-	border: 1px solid rgba(191, 125, 0, 0.26);
+	border: 1px solid var(--adam-overlay, rgba(191, 125, 0, 0.26));
 	border-radius: 18px;
-	background: linear-gradient(180deg, #fff9eb, #fffef8);
-	color: #5d4a17;
+	background: linear-gradient(180deg, var(--adam-warning-bg, #fff9eb), var(--adam-warning-bg, #fffef8));
+	color: var(--adam-text, #5d4a17);
 }
 
 .adam-events-media-notice h2 {

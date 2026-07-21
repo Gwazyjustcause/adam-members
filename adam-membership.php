@@ -3,7 +3,7 @@
  * Plugin Name: ADAM Membership
  * Plugin URI:  https://github.com/Gwazyjustcause/adam-members
  * Description: Membership management for ADAM (Associacao Desportiva de Airsoft do Mondego).
- * Version:     0.1.0
+ * Version:     0.2.0
  * Author:      ADAM
  * Text Domain: adam-membership
  * Domain Path: /languages
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ADAM_MEMBERSHIP_VERSION', '0.1.0' );
+define( 'ADAM_MEMBERSHIP_VERSION', '0.2.0' );
 define( 'ADAM_MEMBERSHIP_FILE', __FILE__ );
 define( 'ADAM_MEMBERSHIP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ADAM_MEMBERSHIP_URL', plugin_dir_url( __FILE__ ) );

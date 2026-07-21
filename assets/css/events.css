@@ -1,5 +1,5 @@
 .adam-events-shell {
-	background: #f4f6f2;
+	background: var(--adam-surface-2, #f4f6f2);
 	padding: 32px 0 64px;
 }
 
@@ -7,15 +7,15 @@
 	max-width: 1180px;
 	margin: 0 auto;
 	padding: 0 20px;
-	color: #102033;
+	color: var(--adam-text, #102033);
 }
 
 .adam-events-hero,
 .adam-event-detail-card {
-	background: #fff;
-	border: 1px solid #d9e4dc;
+	background: var(--adam-surface, #fff);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 10px;
-	box-shadow: 0 12px 28px rgba(23, 63, 36, 0.08);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(23, 63, 36, 0.08));
 }
 
 .adam-events-hero {
@@ -29,7 +29,7 @@
 
 .adam-events-eyebrow {
 	margin: 0 0 8px;
-	color: #2f6b3b;
+	color: var(--adam-text, #2f6b3b);
 	font-size: 12px;
 	font-weight: 700;
 	text-transform: uppercase;
@@ -39,29 +39,29 @@
 .adam-events-hero h1,
 .adam-event-detail-content h1 {
 	margin: 0 0 10px;
-	color: #173f24;
+	color: var(--adam-text, #173f24);
 }
 
 .adam-events-toggle {
 	display: inline-flex;
-	border: 1px solid #d9e4dc;
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 999px;
 	padding: 4px;
-	background: #f8faf8;
+	background: var(--adam-surface, #f8faf8);
 }
 
 .adam-events-toggle-button,
 .adam-events-toggle-button:visited {
 	padding: 10px 16px;
 	border-radius: 999px;
-	color: #4b5563;
+	color: var(--adam-text, #4b5563);
 	text-decoration: none;
 	font-weight: 700;
 }
 
 .adam-events-toggle-button.is-active {
-	background: #2f6b3b;
-	color: #fff;
+	background: var(--adam-primary, #2f6b3b);
+	color: var(--adam-text-inverse, #fff);
 }
 
 .adam-events-list {
@@ -72,10 +72,10 @@
 .adam-event-card,
 .adam-events-calendar-wrap,
 .adam-events-empty {
-	background: #fff;
-	border: 1px solid #d9e4dc;
+	background: var(--adam-surface, #fff);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 10px;
-	box-shadow: 0 10px 24px rgba(23, 63, 36, 0.06);
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(23, 63, 36, 0.06));
 }
 
 .adam-event-card {
@@ -110,8 +110,8 @@
 	min-height: 26px;
 	padding: 4px 10px;
 	border-radius: 999px;
-	background: #e5e7eb;
-	color: #374151;
+	background: var(--adam-surface-2, #e5e7eb);
+	color: var(--adam-text, #374151);
 	font-size: 12px;
 	font-weight: 800;
 }
@@ -119,37 +119,37 @@
 .adam-event-badge.access-members_only,
 .adam-event-badge.registration-confirmed,
 .adam-event-badge.status-published {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-event-badge.access-member_priority,
 .adam-event-badge.registration-pending {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-event-badge.event-paid {
-	background: #ede9fe;
-	color: #6d28d9;
+	background: var(--adam-info-bg, #ede9fe);
+	color: var(--adam-info, #6d28d9);
 }
 
 .adam-event-badge.event-free {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-event-badge.status-cancelled,
 .adam-event-badge.registration-rejected,
 .adam-event-badge.registration-cancelled {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-event-badge.registration-waiting_list,
 .adam-event-badge.status-completed {
-	background: #e2e8f0;
-	color: #334155;
+	background: var(--adam-surface-2, #e2e8f0);
+	color: var(--adam-text, #334155);
 }
 
 .adam-event-list-meta {
@@ -157,7 +157,7 @@
 	flex-wrap: wrap;
 	gap: 10px 16px;
 	margin: 14px 0;
-	color: #475569;
+	color: var(--adam-text, #475569);
 	font-size: 14px;
 }
 
@@ -168,18 +168,18 @@
 	justify-content: center;
 	min-height: 42px;
 	padding: 0 18px;
-	border: 1px solid #2f6b3b;
+	border: 1px solid var(--adam-primary, #2f6b3b);
 	border-radius: 8px;
-	background: #2f6b3b;
-	color: #fff;
+	background: var(--adam-primary, #2f6b3b);
+	color: var(--adam-text-inverse, #fff);
 	font-weight: 700;
 	text-decoration: none;
 	cursor: pointer;
 }
 
 .adam-events-secondary {
-	background: #fff;
-	color: #2f6b3b;
+	background: var(--adam-surface, #fff);
+	color: var(--adam-text, #2f6b3b);
 }
 
 .adam-events-calendar-wrap,
@@ -203,8 +203,8 @@
 	min-height: 120px;
 	padding: 12px;
 	border-radius: 8px;
-	border: 1px solid #e2e8f0;
-	background: #f8faf8;
+	border: 1px solid var(--adam-border, #e2e8f0);
+	background: var(--adam-surface, #f8faf8);
 }
 
 .adam-events-calendar-head {
@@ -212,7 +212,7 @@
 	background: transparent;
 	border: 0;
 	font-weight: 700;
-	color: #64748b;
+	color: var(--adam-text-muted, #64748b);
 }
 
 .adam-events-calendar-day.is-empty {
@@ -225,8 +225,8 @@
 	margin-top: 8px;
 	padding: 8px;
 	border-radius: 8px;
-	background: #fff;
-	color: #173f24;
+	background: var(--adam-surface, #fff);
+	color: var(--adam-text, #173f24);
 	text-decoration: none;
 	font-size: 13px;
 	font-weight: 700;
@@ -235,7 +235,7 @@
 .adam-events-calendar-item small {
 	display: block;
 	margin-top: 4px;
-	color: #64748b;
+	color: var(--adam-text-muted, #64748b);
 	font-size: 11px;
 	font-weight: 600;
 }
@@ -263,15 +263,15 @@
 .adam-event-meta-item,
 .adam-event-registration-box {
 	padding: 16px;
-	border: 1px solid #d9e4dc;
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 8px;
-	background: #f8faf8;
+	background: var(--adam-surface, #f8faf8);
 }
 
 .adam-event-meta-item span {
 	display: block;
 	margin-bottom: 8px;
-	color: #64748b;
+	color: var(--adam-text-muted, #64748b);
 	font-size: 12px;
 	font-weight: 700;
 	text-transform: uppercase;
@@ -282,16 +282,16 @@
 	margin-bottom: 6px;
 	font-size: 13px;
 	font-weight: 700;
-	color: #173f24;
+	color: var(--adam-text, #173f24);
 }
 
 .adam-event-registration-form input {
 	width: 100%;
 	min-height: 42px;
 	padding: 0 12px;
-	border: 1px solid #cbd5e1;
+	border: 1px solid var(--adam-border, #cbd5e1);
 	border-radius: 8px;
-	background: #fff;
+	background: var(--adam-surface, #fff);
 }
 
 .adam-events-notice {
@@ -302,23 +302,23 @@
 }
 
 .adam-events-notice.success {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-events-notice.error {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-events-notice.warning {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-events-notice.info {
-	background: #e0f2fe;
-	color: #0f4c81;
+	background: var(--adam-info-bg, #e0f2fe);
+	color: var(--adam-info, #0f4c81);
 }
 
 .adam-events-empty {
@@ -334,10 +334,10 @@
 	max-width: 820px;
 	margin: 0 auto;
 	padding: 28px;
-	background: #fff;
-	border: 1px solid #d9e4dc;
+	background: var(--adam-surface, #fff);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 10px;
-	box-shadow: 0 12px 28px rgba(23, 63, 36, 0.08);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(23, 63, 36, 0.08));
 }
 
 .adam-events-checkin-intro {
@@ -345,13 +345,13 @@
 	margin-bottom: 20px;
 	font-size: 1rem;
 	line-height: 1.6;
-	color: #475569;
+	color: var(--adam-text, #475569);
 }
 
 .adam-events-checkin-invite {
 	margin-top: 26px;
 	padding-top: 22px;
-	border-top: 1px solid #e2e8f0;
+	border-top: 1px solid var(--adam-border, #e2e8f0);
 }
 
 .adam-events-checkin-invite h2 {

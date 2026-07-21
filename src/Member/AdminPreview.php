@@ -27,7 +27,7 @@ final class AdminPreview {
 	 */
 	public static function notice_markup(): string {
 		return sprintf(
-			'<div class="notice notice-warning adam-member-notice adam-member-preview-notice" role="status"><p><strong>%1$s</strong><br>%2$s</p></div>',
+			'<div class="notice notice-warning adam-member-notice adam-member-preview-notice adam-notice adam-notice--warning" role="status"><p><strong>%1$s</strong><br>%2$s</p></div>',
 			esc_html__( 'Modo de Pré-visualização (Administrador)', 'adam-membership' ),
 			esc_html__( 'Esta página está a ser apresentada sem validação do token. Nenhuma ação executada nesta página será processada.', 'adam-membership' )
 		);
@@ -38,7 +38,7 @@ final class AdminPreview {
 	 */
 	public static function submission_notice(): string {
 		return sprintf(
-			'<div class="notice notice-info adam-member-notice adam-member-preview-notice" role="status"><p>%s</p></div>',
+			'<div class="notice notice-info adam-member-notice adam-member-preview-notice adam-notice adam-notice--info" role="status"><p>%s</p></div>',
 			esc_html__( 'Pré-visualização ativa: a submissão foi ignorada porque esta página está a ser apresentada apenas para inspeção administrativa.', 'adam-membership' )
 		);
 	}

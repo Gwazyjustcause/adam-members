@@ -84,7 +84,7 @@ final class DocumentController {
 			</div>
 			<?php $this->render_notices(); ?>
 			<div class="adam-admin-actions">
-				<a class="button button-primary" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Novo documento', 'adam-membership' ); ?></a>
+				<a class="button button-primary adam-button" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Novo documento', 'adam-membership' ); ?></a>
 			</div>
 			<form method="get" class="adam-admin-filters">
 				<input type="hidden" name="page" value="<?php echo esc_attr( self::MENU_SLUG ); ?>">
@@ -110,14 +110,14 @@ final class DocumentController {
 						<?php endforeach; ?>
 					</select>
 				</label>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
+				<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
 				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Limpar', 'adam-membership' ); ?></a>
 			</form>
 
 			<?php if ( array() === $documents ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem documentos.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
@@ -159,7 +159,7 @@ final class DocumentController {
 										<input type="hidden" name="action" value="adam_membership_delete_document">
 										<input type="hidden" name="document_id" value="<?php echo esc_attr( (string) $document->id() ); ?>">
 										<?php wp_nonce_field( 'adam_membership_delete_document_' . $document->id() ); ?>
-										<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
+										<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
 									</form>
 								</td>
 							</tr>
@@ -185,7 +185,7 @@ final class DocumentController {
 				<h1><?php echo esc_html( $title ); ?></h1>
 			</div>
 			<?php $this->render_notices(); ?>
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form" enctype="multipart/form-data">
 					<input type="hidden" name="action" value="adam_membership_save_document">
 					<input type="hidden" name="document_id" value="<?php echo esc_attr( (string) ( null !== $document ? $document->id() : 0 ) ); ?>">
@@ -237,13 +237,13 @@ final class DocumentController {
 					</label>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="important" value="1" <?php checked( null !== $document ? $document->important() : false ); ?>> <?php esc_html_e( 'Marcar como importante', 'adam-membership' ); ?></label>
 					<div class="adam-admin-actions">
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar documento', 'adam-membership' ); ?></button>
+						<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar documento', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
 					</div>
 				</form>
 			</div>
 			<?php if ( null !== $document ) : ?>
-				<div class="adam-admin-panel">
+				<div class="adam-admin-panel adam-card">
 					<h2><?php esc_html_e( 'Ligação protegida', 'adam-membership' ); ?></h2>
 					<p><?php esc_html_e( 'Use este URL no botão de um aviso para ligar diretamente a este documento com controlo de acesso.', 'adam-membership' ); ?></p>
 					<input type="url" class="large-text" readonly value="<?php echo esc_attr( $this->documents->download_url( $document ) ); ?>">
@@ -361,11 +361,11 @@ final class DocumentController {
 		$error   = isset( $_GET['adam_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			printf( '<div class="adam-admin-notice success"><p>%s</p></div>', esc_html( $message ) );
+			printf( '<div class="adam-admin-notice success adam-notice adam-notice--success"><p>%s</p></div>', esc_html( $message ) );
 		}
 
 		if ( '' !== $error ) {
-			printf( '<div class="adam-admin-notice error"><p>%s</p></div>', esc_html( $error ) );
+			printf( '<div class="adam-admin-notice error adam-notice adam-notice--danger"><p>%s</p></div>', esc_html( $error ) );
 		}
 	}
 

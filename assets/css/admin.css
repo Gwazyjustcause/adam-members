@@ -1,10 +1,10 @@
 .adam-admin-wrap {
-	--adam-admin-green: #2f6b3b;
-	--adam-admin-green-dark: #173f24;
-	--adam-admin-green-light: #e8f4ea;
-	--adam-admin-border: #d9e4dc;
-	--adam-admin-muted: #64748b;
-	--adam-admin-ink: #102033;
+	--adam-admin-green: var(--adam-primary, #2f6b3b);
+	--adam-admin-green-dark: var(--adam-primary, #173f24);
+	--adam-admin-green-light: var(--adam-success-bg, #e8f4ea);
+	--adam-admin-border: var(--adam-border, #d9e4dc);
+	--adam-admin-muted: var(--adam-text-muted, #64748b);
+	--adam-admin-ink: var(--adam-text, #102033);
 	color: var(--adam-admin-ink);
 }
 
@@ -37,8 +37,8 @@
 .adam-admin-empty {
 	border: 1px solid var(--adam-admin-border);
 	border-radius: 10px;
-	background: #fff;
-	box-shadow: 0 8px 24px rgba(23, 63, 36, 0.06);
+	background: var(--adam-surface, #fff);
+	box-shadow: 0 8px 24px var(--adam-shadow-color, rgba(23, 63, 36, 0.06));
 }
 
 .adam-admin-card {
@@ -109,9 +109,9 @@
 	display: grid;
 	gap: 12px;
 	padding: 18px;
-	border: 1px solid #e5edf0;
+	border: 1px solid var(--adam-border, #e5edf0);
 	border-radius: 10px;
-	background: linear-gradient(180deg, #ffffff, #f8fbf9);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f8fbf9));
 }
 
 .adam-admin-shortcut-card__top,
@@ -150,7 +150,7 @@
 	gap: 6px;
 	margin: 0;
 	padding: 12px 0 0;
-	border-top: 1px solid #e5edf0;
+	border-top: 1px solid var(--adam-border, #e5edf0);
 	color: var(--adam-admin-muted);
 	list-style: none;
 }
@@ -175,7 +175,7 @@
 .adam-admin-widget-item {
 	justify-content: space-between;
 	padding: 14px 0;
-	border-bottom: 1px solid #edf3ee;
+	border-bottom: 1px solid var(--adam-border, #edf3ee);
 	align-items: flex-start;
 }
 
@@ -251,7 +251,7 @@
 	padding: 12px;
 	border: 1px solid var(--adam-admin-border);
 	border-radius: 8px;
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 }
 
 .adam-admin-rejection-form label {
@@ -280,7 +280,7 @@
 	padding: 16px;
 	border: 1px solid var(--adam-admin-border);
 	border-radius: 10px;
-	background: #fff;
+	background: var(--adam-surface, #fff);
 }
 
 .adam-admin-filters label {
@@ -301,7 +301,7 @@
 .adam-admin-edit-form input,
 .adam-admin-edit-form select {
 	min-height: 34px;
-	border-color: #cbd5e1;
+	border-color: var(--adam-border, #cbd5e1);
 	border-radius: 6px;
 }
 
@@ -330,7 +330,7 @@
 
 .adam-admin-documents-row > td {
 	padding: 16px !important;
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 }
 
 .adam-admin-documents-row .adam-admin-panel {
@@ -374,8 +374,8 @@
 	min-height: 26px;
 	padding: 4px 10px;
 	border-radius: 999px;
-	background: #e5e7eb;
-	color: #374151;
+	background: var(--adam-surface-2, #e5e7eb);
+	color: var(--adam-text, #374151);
 	font-size: 12px;
 	font-weight: 800;
 }
@@ -384,16 +384,16 @@
 .adam-admin-badge.aprovada,
 .adam-admin-badge.status-active,
 .adam-admin-badge.quota-active {
-	background: #dcfce7;
-	color: #14532d;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-text, #14532d);
 }
 
 .adam-admin-badge.pendente,
 .adam-admin-badge.status-pending,
 .adam-admin-badge.status-renewal-pending,
 .adam-admin-badge.quota-expiring_soon {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-admin-badge.expirado,
@@ -401,16 +401,16 @@
 .adam-admin-badge.status-expired,
 .adam-admin-badge.registration-status-rejected,
 .adam-admin-badge.registration-status-cancelled {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-admin-badge.event-status-completed,
 .adam-admin-badge.entregue,
 .adam-admin-badge.document-status-archived,
 .adam-admin-badge.registration-status-waiting_list {
-	background: #e2e8f0;
-	color: #334155;
+	background: var(--adam-surface-2, #e2e8f0);
+	color: var(--adam-text, #334155);
 }
 
 .adam-admin-badge.rejeitado,
@@ -419,64 +419,64 @@
 .adam-admin-badge.status-rejected,
 .adam-admin-badge.status-expired,
 .adam-admin-badge.quota-expired {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-admin-badge.renovacao-em-analise,
 .adam-admin-badge.reward-status-pending {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-admin-badge.reward-status-approved {
-	background: #dcfce7;
-	color: #14532d;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-text, #14532d);
 }
 
 .adam-admin-badge.reward-status-delivered {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-admin-badge.announcement-info,
 .adam-admin-badge.announcement-status-published {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-admin-badge.announcement-important,
 .adam-admin-badge.announcement-status-scheduled {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-admin-badge.announcement-urgent,
 .adam-admin-badge.announcement-status-expired,
 .adam-admin-badge.announcement-status-archived {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-admin-badge.document-status-published,
 .adam-admin-badge.document-important {
-	background: #dcfce7;
-	color: #14532d;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-text, #14532d);
 }
 
 .adam-admin-badge.document-status-draft {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-admin-badge.document-status-archived {
-	background: #e5e7eb;
-	color: #374151;
+	background: var(--adam-surface-2, #e5e7eb);
+	color: var(--adam-text, #374151);
 }
 
 .adam-admin-badge.document-normal {
-	background: #f1f5f9;
-	color: #475569;
+	background: var(--adam-surface-2, #f1f5f9);
+	color: var(--adam-text, #475569);
 }
 
 .adam-admin-table small {
@@ -528,11 +528,11 @@
 .adam-admin-safety-notice {
 	margin-bottom: 20px;
 	padding: 14px 16px;
-	border: 1px solid #fde68a;
-	border-left: 4px solid #d97706;
+	border: 1px solid var(--adam-warning, #fde68a);
+	border-left: 4px solid var(--adam-warning, #d97706);
 	border-radius: 8px;
-	background: #fffbeb;
-	color: #78350f;
+	background: var(--adam-warning-bg, #fffbeb);
+	color: var(--adam-warning, #78350f);
 }
 
 .adam-admin-safety-notice strong {
@@ -556,9 +556,9 @@
 
 .adam-admin-detail-item {
 	padding: 14px;
-	border: 1px solid #e5edf0;
+	border: 1px solid var(--adam-border, #e5edf0);
 	border-radius: 8px;
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 }
 
 .adam-admin-detail-item span {
@@ -636,7 +636,7 @@
 
 .adam-admin-edit-form textarea {
 	min-height: 110px;
-	border-color: #cbd5e1;
+	border-color: var(--adam-border, #cbd5e1);
 	border-radius: 6px;
 }
 
@@ -651,9 +651,9 @@
 	align-items: flex-start;
 	gap: 12px;
 	padding: 10px 12px;
-	border: 1px solid #d7e5d9;
+	border: 1px solid var(--adam-border, #d7e5d9);
 	border-radius: 12px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 }
 
 .adam-admin-checkbox-field--catalog input[type="checkbox"] {
@@ -717,9 +717,9 @@
 
 .adam-admin-history-item {
 	padding: 18px;
-	border: 1px solid #e5edf0;
+	border: 1px solid var(--adam-border, #e5edf0);
 	border-radius: 10px;
-	background: linear-gradient(180deg, #fff, #f8fbf9);
+	background: linear-gradient(180deg, var(--adam-surface, #fff), var(--adam-surface, #f8fbf9));
 }
 
 .adam-admin-history-item__header,
@@ -784,25 +784,25 @@
 }
 
 .adam-admin-history-actor.actor-admin {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-admin-history-actor.actor-member {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-admin-history-actor.actor-system {
-	background: #ede9fe;
-	color: #6d28d9;
+	background: var(--adam-info-bg, #ede9fe);
+	color: var(--adam-info, #6d28d9);
 }
 
 .adam-admin-notice {
 	margin: 12px 0 18px;
 	padding: 12px 14px;
 	border-radius: 8px;
-	background: #fff;
+	background: var(--adam-surface, #fff);
 	font-weight: 700;
 }
 
@@ -812,14 +812,14 @@
 
 .adam-admin-notice.success {
 	border-left: 4px solid var(--adam-admin-green);
-	background: #f4faf5;
+	background: var(--adam-surface-2, #f4faf5);
 	color: var(--adam-admin-green-dark);
 }
 
 .adam-admin-notice.error {
-	border-left: 4px solid #dc2626;
-	background: #fef2f2;
-	color: #991b1b;
+	border-left: 4px solid var(--adam-danger, #dc2626);
+	background: var(--adam-danger-bg, #fef2f2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-admin-stats-titlebar {
@@ -855,9 +855,9 @@
 .adam-admin-stats-panel,
 .adam-admin-stats-table-panel {
 	padding: 18px;
-	border: 1px solid #e5edf0;
+	border: 1px solid var(--adam-border, #e5edf0);
 	border-radius: 12px;
-	background: linear-gradient(180deg, #ffffff, #f8fbf9);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f8fbf9));
 }
 
 .adam-admin-stats-panel h3,
@@ -899,14 +899,14 @@
 	position: relative;
 	height: 10px;
 	border-radius: 999px;
-	background: #e5edf0;
+	background: var(--adam-surface-2, #e5edf0);
 	overflow: hidden;
 }
 
 .adam-admin-bar-chart__fill {
 	height: 100%;
 	border-radius: 999px;
-	background: linear-gradient(90deg, var(--adam-admin-green), #7cc08a);
+	background: linear-gradient(90deg, var(--adam-admin-green), var(--adam-primary, #7cc08a));
 }
 
 .adam-admin-line-chart svg {
@@ -947,7 +947,7 @@
 	display: grid;
 	place-items: center;
 	border-radius: 50%;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	text-align: center;
 	box-shadow: inset 0 0 0 1px var(--adam-admin-border);
 }
@@ -996,7 +996,7 @@
 	justify-content: space-between;
 	gap: 12px;
 	padding-bottom: 12px;
-	border-bottom: 1px solid #edf3ee;
+	border-bottom: 1px solid var(--adam-border, #edf3ee);
 }
 
 .adam-admin-stat-list__item:last-child,
@@ -1117,8 +1117,8 @@
 .adam-reward-editor-panel {
 	padding: 24px;
 	background:
-		radial-gradient(circle at top left, rgba(47, 107, 59, 0.08), transparent 32%),
-		linear-gradient(180deg, #fbfdfb, #f5faf6);
+		radial-gradient(circle at top left, var(--adam-primary-soft, rgba(47, 107, 59, 0.08)), transparent 32%),
+		linear-gradient(180deg, var(--adam-surface, #fbfdfb), var(--adam-surface, #f5faf6));
 }
 
 .adam-reward-editor,
@@ -1144,10 +1144,10 @@
 
 .adam-reward-editor__section {
 	padding: 18px 18px 16px;
-	border: 1px solid #deebe0;
+	border: 1px solid var(--adam-border, #deebe0);
 	border-radius: 18px;
-	background: rgba(255, 255, 255, 0.94);
-	box-shadow: 0 20px 40px rgba(16, 46, 27, 0.06);
+	background: var(--adam-surface, rgba(255, 255, 255, 0.94));
+	box-shadow: 0 20px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.06));
 }
 
 .adam-reward-editor__section h2 {
@@ -1222,7 +1222,7 @@
 .adam-reward-editor__field-grid label > span,
 .adam-reward-editor__shape-grid label > span,
 .adam-reward-editor__media-field > span {
-	color: #57725c;
+	color: var(--adam-text-muted, #57725c);
 	font-size: 11px;
 	font-weight: 800;
 	text-transform: uppercase;
@@ -1231,7 +1231,7 @@
 
 .adam-reward-editor__subheading {
 	margin: 18px 0 12px;
-	color: #1f3c27;
+	color: var(--adam-text, #1f3c27);
 	font-size: 13px;
 	font-weight: 800;
 	letter-spacing: 0.02em;
@@ -1255,10 +1255,10 @@
 	width: 100%;
 	min-height: 44px;
 	padding: 10px 12px;
-	border: 1px solid #d7e5d9;
+	border: 1px solid var(--adam-border, #d7e5d9);
 	border-radius: 12px;
-	background: #ffffff;
-	box-shadow: inset 0 1px 2px rgba(16, 46, 27, 0.03);
+	background: var(--adam-surface, #ffffff);
+	box-shadow: inset 0 1px 2px var(--adam-shadow-color, rgba(16, 46, 27, 0.03));
 }
 
 .adam-reward-editor__slider-field {
@@ -1275,7 +1275,7 @@
 .adam-reward-editor__slider-field small {
 	order: -1;
 	margin-left: auto;
-	color: #2f6b3b;
+	color: var(--adam-text, #2f6b3b);
 	font-size: 12px;
 	font-weight: 800;
 }
@@ -1301,9 +1301,9 @@
 	align-items: center;
 	min-width: 116px;
 	padding: 10px 12px;
-	border: 1px solid #d7e5d9;
+	border: 1px solid var(--adam-border, #d7e5d9);
 	border-radius: 999px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
@@ -1312,16 +1312,16 @@
 }
 
 .adam-reward-editor__radio-option:has(input:checked) {
-	border-color: #2f6b3b;
-	background: rgba(47, 107, 59, 0.08);
-	box-shadow: 0 0 0 3px rgba(47, 107, 59, 0.08);
+	border-color: var(--adam-primary, #2f6b3b);
+	background: var(--adam-primary-soft, rgba(47, 107, 59, 0.08));
+	box-shadow: 0 0 0 3px var(--adam-shadow-color, rgba(47, 107, 59, 0.08));
 }
 
 .adam-reward-editor__shape-row {
 	padding: 14px;
-	border: 1px solid #e5edf0;
+	border: 1px solid var(--adam-border, #e5edf0);
 	border-radius: 14px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 }
 
 .adam-reward-editor__shape-row-head {
@@ -1342,12 +1342,12 @@
 	align-items: flex-start;
 	min-height: 560px;
 	padding: 24px;
-	border: 1px solid #dce7dd;
+	border: 1px solid var(--adam-border, #dce7dd);
 	border-radius: 22px;
 	overflow: auto;
 	background:
-		radial-gradient(circle at top, rgba(47, 107, 59, 0.10), transparent 36%),
-		linear-gradient(180deg, #fbfdfb, #eef6f0);
+		radial-gradient(circle at top, var(--adam-primary-soft, rgba(47, 107, 59, 0.10)), transparent 36%),
+		linear-gradient(180deg, var(--adam-surface, #fbfdfb), var(--adam-surface-2, #eef6f0));
 }
 
 .adam-reward-editor__preview-scale {
@@ -1367,11 +1367,11 @@
 	justify-content: center;
 	min-height: 220px;
 	padding: 28px;
-	border: 1px solid #dce7dd;
+	border: 1px solid var(--adam-border, #dce7dd);
 	border-radius: 22px;
 	background:
-		radial-gradient(circle at top, rgba(47, 107, 59, 0.08), transparent 36%),
-		linear-gradient(180deg, #fbfdfb, #eef6f0);
+		radial-gradient(circle at top, var(--adam-primary-soft, rgba(47, 107, 59, 0.08)), transparent 36%),
+		linear-gradient(180deg, var(--adam-surface, #fbfdfb), var(--adam-surface-2, #eef6f0));
 }
 
 .adam-title-badge-preview {
@@ -1406,7 +1406,7 @@
 
 .adam-reward-editor__eyebrow {
 	margin: 0 0 4px;
-	color: #2f6b3b;
+	color: var(--adam-text, #2f6b3b);
 	font-size: 11px;
 	font-weight: 800;
 	letter-spacing: 0.08em;
@@ -1448,9 +1448,9 @@
 	align-items: center;
 	gap: 10px;
 	padding: 4px;
-	border: 1px solid #d7e5d9;
+	border: 1px solid var(--adam-border, #d7e5d9);
 	border-radius: 14px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 }
 
 .adam-reward-editor__color-swatch {
@@ -1471,11 +1471,11 @@
 }
 
 .adam-reward-card--editor-preview {
-	--adam-reward-card-background: linear-gradient(135deg, #143826, #215b39);
-	--adam-reward-card-text: #f8fafc;
-	--adam-reward-card-muted: rgba(226, 232, 240, 0.78);
-	--adam-reward-card-accent: #86efac;
-	--adam-reward-card-border: #9ca3af;
+	--adam-reward-card-background: linear-gradient(135deg, var(--adam-primary, #143826), var(--adam-primary, #215b39));
+	--adam-reward-card-text: var(--adam-text-inverse, #f8fafc);
+	--adam-reward-card-muted: var(--adam-highlight, rgba(226, 232, 240, 0.78));
+	--adam-reward-card-accent: var(--adam-focus-ring, #86efac);
+	--adam-reward-card-border: var(--adam-info, #9ca3af);
 	--adam-reward-card-border-width: 2px;
 	--adam-reward-card-radius: 18px;
 	--adam-reward-card-pattern-opacity: 0.18;
@@ -1490,7 +1490,7 @@
 	border: var(--adam-reward-card-border-width) solid var(--adam-reward-card-border);
 	border-radius: var(--adam-reward-card-radius);
 	background: var(--adam-reward-card-background);
-	box-shadow: 0 24px 46px rgba(16, 46, 27, 0.18);
+	box-shadow: 0 24px 46px var(--adam-shadow-color, rgba(16, 46, 27, 0.18));
 	color: var(--adam-reward-card-text);
 	overflow: hidden;
 	isolation: isolate;
@@ -1522,8 +1522,8 @@
 
 .adam-reward-card__pattern--grid {
 	background-image:
-		linear-gradient(var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05))),
-		linear-gradient(90deg, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)));
+		linear-gradient(var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05))),
+		linear-gradient(90deg, var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)));
 	background-size:
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
@@ -1533,7 +1533,7 @@
 	background-image:
 		repeating-linear-gradient(
 			0deg,
-			var(--adam-reward-card-pattern-color-strong, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)),
+			var(--adam-reward-card-pattern-color-strong, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)),
 			transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)) calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		);
 	background-size:
@@ -1542,7 +1542,7 @@
 }
 
 .adam-reward-card__pattern--dots {
-	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)));
+	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)));
 	background-size:
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
@@ -1568,7 +1568,7 @@
 	max-width: 140px;
 	max-height: 140px;
 	object-fit: contain;
-	filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
+	filter: drop-shadow(0 10px 16px var(--adam-shadow-color, rgba(0, 0, 0, 0.18)));
 }
 
 .adam-reward-card__art--top-left {
@@ -1662,8 +1662,8 @@
 	gap: 4px;
 	padding: 12px 14px;
 	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.12);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.12));
+	border: 1px solid var(--adam-highlight, rgba(255, 255, 255, 0.12));
 }
 
 .adam-reward-card__stats span {
@@ -1684,33 +1684,33 @@
 }
 
 .adam-reward-rarity--common {
-	background: rgba(226, 232, 240, 0.18);
-	color: #f8fafc;
+	background: var(--adam-highlight, rgba(226, 232, 240, 0.18));
+	color: var(--adam-text-inverse, #f8fafc);
 }
 
 .adam-reward-rarity--uncommon {
-	background: rgba(134, 239, 172, 0.18);
-	color: #dcfce7;
+	background: var(--adam-primary-soft, rgba(134, 239, 172, 0.18));
+	color: var(--adam-text-inverse, #dcfce7);
 }
 
 .adam-reward-rarity--rare {
-	background: rgba(147, 197, 253, 0.18);
-	color: #dbeafe;
+	background: var(--adam-overlay, rgba(147, 197, 253, 0.18));
+	color: var(--adam-text-inverse, #dbeafe);
 }
 
 .adam-reward-rarity--epic {
-	background: rgba(196, 181, 253, 0.18);
-	color: #ede9fe;
+	background: var(--adam-overlay, rgba(196, 181, 253, 0.18));
+	color: var(--adam-text-inverse, #ede9fe);
 }
 
 .adam-reward-rarity--legendary {
-	background: rgba(253, 224, 71, 0.2);
-	color: #fef3c7;
+	background: var(--adam-overlay, rgba(253, 224, 71, 0.2));
+	color: var(--adam-text-inverse, #fef3c7);
 }
 
 .adam-reward-rarity--limited_edition {
-	background: rgba(252, 165, 165, 0.18);
-	color: #fee2e2;
+	background: var(--adam-overlay, rgba(252, 165, 165, 0.18));
+	color: var(--adam-text-inverse, #fee2e2);
 }
 
 .adam-announcement-category {
@@ -1718,7 +1718,7 @@
 	align-items: center;
 	padding: 8px 12px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.1);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.1));
 	color: var(--adam-reward-card-text);
 	font-size: 0.84rem;
 	font-weight: 700;
@@ -1727,49 +1727,49 @@
 .adam-reward-card--badge-outline .adam-reward-rarity,
 .adam-reward-card--badge-outline .adam-announcement-category {
 	background: transparent;
-	border: 1px solid rgba(255, 255, 255, 0.28);
+	border: 1px solid var(--adam-highlight, rgba(255, 255, 255, 0.28));
 }
 
 .adam-reward-card--badge-solid .adam-reward-rarity,
 .adam-reward-card--badge-solid .adam-announcement-category {
 	background: var(--adam-reward-card-accent);
-	color: #0f2618;
+	color: var(--adam-text, #0f2618);
 }
 
 .adam-reward-card--badge-glow .adam-reward-rarity,
 .adam-reward-card--badge-glow .adam-announcement-category {
-	box-shadow: 0 0 18px rgba(255, 255, 255, 0.16);
+	box-shadow: 0 0 18px var(--adam-shadow-color, rgba(255, 255, 255, 0.16));
 }
 
 .adam-reward-card--effect-common,
 .adam-reward-card--effect-subtle {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16));
 }
 
 .adam-reward-card--effect-uncommon,
 .adam-reward-card--effect-glow {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 30px rgba(74, 222, 128, 0.14);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16)), 0 0 30px var(--adam-shadow-color, rgba(74, 222, 128, 0.14));
 }
 
 .adam-reward-card--effect-rare {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 32px rgba(96, 165, 250, 0.16);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16)), 0 0 32px var(--adam-shadow-color, rgba(96, 165, 250, 0.16));
 }
 
 .adam-reward-card--effect-epic {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 34px rgba(168, 85, 247, 0.18);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16)), 0 0 34px var(--adam-shadow-color, rgba(168, 85, 247, 0.18));
 }
 
 .adam-reward-card--effect-legendary,
 .adam-reward-card--effect-metallic {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 36px rgba(250, 204, 21, 0.18);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16)), 0 0 36px var(--adam-shadow-color, rgba(250, 204, 21, 0.18));
 }
 
 .adam-reward-card--effect-limited_edition {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.16), 0 0 34px rgba(248, 113, 113, 0.18);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.16)), 0 0 34px var(--adam-shadow-color, rgba(248, 113, 113, 0.18));
 }
 
 .adam-reward-card--effect-none {
-	box-shadow: 0 22px 40px rgba(16, 46, 27, 0.12);
+	box-shadow: 0 22px 40px var(--adam-shadow-color, rgba(16, 46, 27, 0.12));
 }
 
 @media (max-width: 1200px) {
@@ -1839,9 +1839,9 @@
 .adam-reward-card--editor-preview {
 	--adam-reward-card-gradient-origin: center;
 	--adam-reward-card-gradient-opacity: 1;
-	--adam-reward-card-pattern-color: rgba(255, 255, 255, 0.18);
-	--adam-reward-card-pattern-color-strong: rgba(255, 255, 255, 0.18);
-	--adam-reward-card-pattern-color-soft: rgba(255, 255, 255, 0.08);
+	--adam-reward-card-pattern-color: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-reward-card-pattern-color-strong: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-reward-card-pattern-color-soft: var(--adam-highlight, rgba(255, 255, 255, 0.08));
 	--adam-reward-card-pattern-size: 24px;
 	--adam-reward-card-pattern-spacing: 24px;
 	--adam-reward-card-pattern-density: 2;
@@ -1854,7 +1854,7 @@
 	--adam-reward-card-frame-glow: 12px;
 	--adam-reward-card-frame-shadow: 12px;
 	--adam-reward-card-frame-inner-width: 1px;
-	--adam-reward-card-frame-inner-color: rgba(255, 255, 255, 0.22);
+	--adam-reward-card-frame-inner-color: var(--adam-highlight, rgba(255, 255, 255, 0.22));
 	--adam-reward-card-frame-corner: 0px;
 	--adam-reward-card-frame-inset: 12px;
 	--adam-reward-card-content-padding: 22px;
@@ -1875,7 +1875,7 @@
 	--adam-reward-card-description-width: 66%;
 	border-color: color-mix(in srgb, var(--adam-reward-card-border) calc(var(--adam-reward-card-frame-opacity) * 100%), transparent);
 	box-shadow:
-		0 24px 46px rgba(16, 46, 27, 0.18),
+		0 24px 46px var(--adam-shadow-color, rgba(16, 46, 27, 0.18)),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 24%, transparent),
 		inset 0 0 0 var(--adam-reward-card-frame-inner-width) var(--adam-reward-card-frame-inner-color);
 }
@@ -1960,7 +1960,7 @@
 	font-size: var(--adam-reward-card-title-size);
 	font-weight: var(--adam-reward-card-title-weight);
 	text-align: var(--adam-reward-card-title-align);
-	text-shadow: 0 0 var(--adam-reward-card-title-shadow) rgba(0, 0, 0, 0.45);
+	text-shadow: 0 0 var(--adam-reward-card-title-shadow) var(--adam-shadow-color, rgba(0, 0, 0, 0.45));
 	max-width: var(--adam-reward-card-title-width);
 }
 
@@ -1969,38 +1969,38 @@
 	font-size: var(--adam-reward-card-description-size);
 	font-weight: var(--adam-reward-card-description-weight);
 	text-align: var(--adam-reward-card-description-align);
-	text-shadow: 0 0 var(--adam-reward-card-description-shadow) rgba(0, 0, 0, 0.4);
+	text-shadow: 0 0 var(--adam-reward-card-description-shadow) var(--adam-shadow-color, rgba(0, 0, 0, 0.4));
 	max-width: var(--adam-reward-card-description-width);
 }
 
 .adam-reward-card--frame-double {
 	box-shadow:
-		0 24px 46px rgba(16, 46, 27, 0.18),
+		0 24px 46px var(--adam-shadow-color, rgba(16, 46, 27, 0.18)),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) color-mix(in srgb, var(--adam-reward-card-border) 36%, transparent),
-		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) rgba(255, 255, 255, 0.08);
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) var(--adam-shadow-color, rgba(255, 255, 255, 0.08));
 }
 
 .adam-reward-card--frame-metallic {
 	box-shadow:
-		0 24px 46px rgba(16, 46, 27, 0.18),
-		inset 0 2px 0 rgba(255, 255, 255, 0.36),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+		0 24px 46px var(--adam-shadow-color, rgba(16, 46, 27, 0.18)),
+		inset 0 2px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.36)),
+		inset 0 -2px 0 var(--adam-shadow-color, rgba(0, 0, 0, 0.22)),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 1px) color-mix(in srgb, var(--adam-reward-card-border) 42%, transparent),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 28%, transparent);
 }
 
 .adam-reward-card--frame-segmented {
 	box-shadow:
-		0 24px 46px rgba(16, 46, 27, 0.18),
-		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) rgba(255, 255, 255, 0.06),
+		0 24px 46px var(--adam-shadow-color, rgba(16, 46, 27, 0.18)),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) var(--adam-shadow-color, rgba(255, 255, 255, 0.06)),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-accent) 30%, transparent);
 	background-image:
 		repeating-linear-gradient(
 			135deg,
 			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 0 18px,
-			rgba(255, 255, 255, 0.18) 18px 24px,
+			var(--adam-highlight, rgba(255, 255, 255, 0.18)) 18px 24px,
 			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 24px 42px,
-			rgba(0, 0, 0, 0.22) 42px 48px
+			var(--adam-shadow-color, rgba(0, 0, 0, 0.22)) 42px 48px
 		);
 }
 

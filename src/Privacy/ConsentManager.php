@@ -141,7 +141,7 @@ final class ConsentManager {
 						</p>
 					</div>
 					<div class="adam-cookie-banner__actions">
-						<button type="button" class="adam-cookie-button is-secondary" data-adam-cookie-action="reject"><?php esc_html_e( 'Rejeitar não essenciais', 'adam-membership' ); ?></button>
+						<button type="button" class="adam-cookie-button is-secondary adam-button adam-button--secondary" data-adam-cookie-action="reject"><?php esc_html_e( 'Rejeitar não essenciais', 'adam-membership' ); ?></button>
 						<button type="button" class="adam-cookie-button is-ghost" data-adam-cookie-action="customize" aria-expanded="false" aria-controls="adam-cookie-preferences"><?php esc_html_e( 'Personalizar', 'adam-membership' ); ?></button>
 						<button type="button" class="adam-cookie-button" data-adam-cookie-action="accept"><?php esc_html_e( 'Aceitar tudo', 'adam-membership' ); ?></button>
 					</div>
@@ -149,15 +149,15 @@ final class ConsentManager {
 			</div>
 
 			<div class="adam-cookie-preferences adam-cookie-modal" data-adam-cookie-modal hidden>
-				<div class="adam-cookie-modal__dialog" id="adam-cookie-preferences" role="dialog" aria-modal="false" aria-labelledby="adam-cookie-modal-title">
-					<div class="adam-cookie-modal__header">
+				<div class="adam-cookie-modal__dialog adam-modal" id="adam-cookie-preferences" role="dialog" aria-modal="false" aria-labelledby="adam-cookie-modal-title">
+					<div class="adam-cookie-modal__header adam-modal__header">
 						<div>
 							<p class="adam-cookie-modal__eyebrow"><?php esc_html_e( 'Cookies ADAM', 'adam-membership' ); ?></p>
 							<h2 id="adam-cookie-modal-title"><?php esc_html_e( 'Escolhe as tuas preferências', 'adam-membership' ); ?></h2>
 						</div>
 						<button type="button" class="adam-cookie-icon-button" data-adam-cookie-close aria-label="<?php esc_attr_e( 'Fechar preferências de cookies', 'adam-membership' ); ?>">×</button>
 					</div>
-					<div class="adam-cookie-modal__body">
+					<div class="adam-cookie-modal__body adam-modal__body">
 						<div class="adam-cookie-option is-required">
 							<div>
 								<h3><?php esc_html_e( 'Estritamente necessários', 'adam-membership' ); ?></h3>
@@ -187,8 +187,8 @@ final class ConsentManager {
 							<input type="checkbox" data-adam-cookie-category="marketing" <?php checked( ! empty( $state['marketing'] ) ); ?>>
 						</label>
 					</div>
-					<div class="adam-cookie-modal__footer">
-						<button type="button" class="adam-cookie-button is-secondary" data-adam-cookie-action="reject"><?php esc_html_e( 'Rejeitar não essenciais', 'adam-membership' ); ?></button>
+					<div class="adam-cookie-modal__footer adam-modal__footer">
+						<button type="button" class="adam-cookie-button is-secondary adam-button adam-button--secondary" data-adam-cookie-action="reject"><?php esc_html_e( 'Rejeitar não essenciais', 'adam-membership' ); ?></button>
 						<button type="button" class="adam-cookie-button" data-adam-cookie-action="save"><?php esc_html_e( 'Guardar preferências', 'adam-membership' ); ?></button>
 					</div>
 				</div>

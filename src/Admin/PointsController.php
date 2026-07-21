@@ -66,26 +66,26 @@ final class PointsController {
 			<?php $this->render_notices(); ?>
 
 			<div class="adam-admin-cards">
-				<div class="adam-admin-card">
+				<div class="adam-admin-card adam-card">
 					<span><?php esc_html_e( 'Total de pontos atribuídos', 'adam-membership' ); ?></span>
 					<strong><?php echo esc_html( number_format_i18n( $stats['total_points_awarded'] ) ); ?></strong>
 				</div>
-				<div class="adam-admin-card">
+				<div class="adam-admin-card adam-card">
 					<span><?php esc_html_e( 'Eventos com pontos atribuídos', 'adam-membership' ); ?></span>
 					<strong><?php echo esc_html( number_format_i18n( $stats['total_events_that_awarded_points'] ) ); ?></strong>
 				</div>
-				<div class="adam-admin-card">
+				<div class="adam-admin-card adam-card">
 					<span><?php esc_html_e( 'Movimentos recentes', 'adam-membership' ); ?></span>
 					<strong><?php echo esc_html( number_format_i18n( count( $stats['recent_activity'] ) ) ); ?></strong>
 				</div>
 			</div>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Sócios com mais pontos', 'adam-membership' ); ?></h2>
 				<?php if ( array() === $stats['top_members'] ) : ?>
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem pontos atribuídos.', 'adam-membership' ); ?></div>
 				<?php else : ?>
-					<table class="widefat striped adam-admin-table">
+					<table class="widefat striped adam-admin-table adam-table">
 						<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Saldo atual', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Total acumulado', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $stats['top_members'] as $row ) : ?>
@@ -102,19 +102,19 @@ final class PointsController {
 				<?php endif; ?>
 			</div>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Pesquisar sócio', 'adam-membership' ); ?></h2>
 				<form method="get" class="adam-admin-filters">
 					<input type="hidden" name="page" value="<?php echo esc_attr( self::MENU_SLUG ); ?>">
 					<label><span><?php esc_html_e( 'Nome ou n.º de sócio', 'adam-membership' ); ?></span><input type="search" name="member_search" value="<?php echo esc_attr( $search_term ); ?>" placeholder="<?php esc_attr_e( 'Pesquisar sócio', 'adam-membership' ); ?>"></label>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></button>
+					<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></button>
 				</form>
 
 				<?php if ( '' !== $search_term ) : ?>
 					<?php if ( array() === $search_results ) : ?>
 						<div class="adam-admin-empty"><?php esc_html_e( 'Nenhum sócio encontrado para esta pesquisa.', 'adam-membership' ); ?></div>
 					<?php else : ?>
-						<table class="widefat striped adam-admin-table">
+						<table class="widefat striped adam-admin-table adam-table">
 							<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Saldo', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th></tr></thead>
 							<tbody>
 								<?php foreach ( $search_results as $member ) : ?>
@@ -133,11 +133,11 @@ final class PointsController {
 			</div>
 
 			<?php if ( null !== $selected_member ) : ?>
-				<div class="adam-admin-panel">
+				<div class="adam-admin-panel adam-card">
 					<h2><?php echo esc_html( sprintf( __( 'Pontos do sócio: %s', 'adam-membership' ), $selected_member->full_name() ) ); ?></h2>
 					<div class="adam-admin-cards">
-						<div class="adam-admin-card"><span><?php esc_html_e( 'Saldo atual', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $this->points->current_balance( $selected_member ) ) ); ?></strong></div>
-						<div class="adam-admin-card"><span><?php esc_html_e( 'Total acumulado', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $this->points->total_earned( $selected_member ) ) ); ?></strong></div>
+						<div class="adam-admin-card adam-card"><span><?php esc_html_e( 'Saldo atual', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $this->points->current_balance( $selected_member ) ) ); ?></strong></div>
+						<div class="adam-admin-card adam-card"><span><?php esc_html_e( 'Total acumulado', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $this->points->total_earned( $selected_member ) ) ); ?></strong></div>
 					</div>
 
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form">
@@ -149,16 +149,16 @@ final class PointsController {
 							<label><span><?php esc_html_e( 'Ajuste de pontos', 'adam-membership' ); ?></span><input type="number" name="points" required step="1" value=""></label>
 							<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Motivo', 'adam-membership' ); ?></span><input type="text" name="reason" required value=""></label>
 						</div>
-						<div class="adam-admin-actions"><button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar ajuste', 'adam-membership' ); ?></button></div>
+						<div class="adam-admin-actions"><button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar ajuste', 'adam-membership' ); ?></button></div>
 					</form>
 				</div>
 
-				<div class="adam-admin-panel">
+				<div class="adam-admin-panel adam-card">
 					<h2><?php esc_html_e( 'Histórico completo de pontos', 'adam-membership' ); ?></h2>
 					<?php if ( array() === $member_history ) : ?>
 						<div class="adam-admin-empty"><?php esc_html_e( 'Este sócio ainda não tem movimentos de pontos.', 'adam-membership' ); ?></div>
 					<?php else : ?>
-						<table class="widefat striped adam-admin-table">
+						<table class="widefat striped adam-admin-table adam-table">
 							<thead><tr><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Origem', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Motivo', 'adam-membership' ); ?></th></tr></thead>
 							<tbody><?php foreach ( $member_history as $entry ) : ?><?php $this->render_history_row( $entry ); ?><?php endforeach; ?></tbody>
 						</table>
@@ -166,24 +166,24 @@ final class PointsController {
 				</div>
 			<?php endif; ?>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Atividade recente', 'adam-membership' ); ?></h2>
 				<?php if ( array() === $stats['recent_activity'] ) : ?>
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem movimentos recentes.', 'adam-membership' ); ?></div>
 				<?php else : ?>
-					<table class="widefat striped adam-admin-table">
+					<table class="widefat striped adam-admin-table adam-table">
 						<thead><tr><th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Origem', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Motivo', 'adam-membership' ); ?></th></tr></thead>
 						<tbody><?php foreach ( $stats['recent_activity'] as $entry ) : ?><?php $this->render_activity_row( $entry ); ?><?php endforeach; ?></tbody>
 					</table>
 				<?php endif; ?>
 			</div>
 
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Visão por evento', 'adam-membership' ); ?></h2>
 				<?php if ( array() === $event_overview ) : ?>
 					<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem eventos configurados.', 'adam-membership' ); ?></div>
 				<?php else : ?>
-					<table class="widefat striped adam-admin-table">
+					<table class="widefat striped adam-admin-table adam-table">
 						<thead><tr><th><?php esc_html_e( 'Evento', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Pontos configurados', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Sócios com pontos', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Total atribuído', 'adam-membership' ); ?></th></tr></thead>
 						<tbody>
 							<?php foreach ( $event_overview as $row ) : ?>
@@ -258,11 +258,11 @@ final class PointsController {
 		$error   = isset( $_GET['adam_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			printf( '<div class="adam-admin-notice success"><p>%s</p></div>', esc_html( $message ) );
+			printf( '<div class="adam-admin-notice success adam-notice adam-notice--success"><p>%s</p></div>', esc_html( $message ) );
 		}
 
 		if ( '' !== $error ) {
-			printf( '<div class="adam-admin-notice error"><p>%s</p></div>', esc_html( $error ) );
+			printf( '<div class="adam-admin-notice error adam-notice adam-notice--danger"><p>%s</p></div>', esc_html( $error ) );
 		}
 	}
 

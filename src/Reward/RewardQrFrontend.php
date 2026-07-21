@@ -91,7 +91,7 @@ final class RewardQrFrontend {
 		get_header();
 		?>
 		<main class="adam-reward-claim-page">
-			<section class="adam-reward-claim-card">
+			<section class="adam-reward-claim-card adam-card">
 				<p class="adam-reward-claim-card__eyebrow"><?php esc_html_e( 'ADAM Rewards', 'adam-membership' ); ?></p>
 				<h1><?php esc_html_e( 'Resgate por QR Code', 'adam-membership' ); ?></h1>
 
@@ -104,7 +104,7 @@ final class RewardQrFrontend {
 					</div>
 				<?php endif; ?>
 
-				<div class="adam-reward-claim-card__notice adam-reward-claim-card__notice--<?php echo esc_attr( $notice_type ); ?>">
+				<div class="adam-reward-claim-card__notice adam-reward-claim-card__notice--<?php echo esc_attr( $notice_type ); ?> adam-notice">
 					<?php foreach ( $notice_lines as $line ) : ?>
 						<p><?php echo esc_html( $line ); ?></p>
 					<?php endforeach; ?>

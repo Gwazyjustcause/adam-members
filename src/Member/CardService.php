@@ -1026,20 +1026,20 @@ SVG;
 			<title><?php esc_html_e( 'ADAM Member Validation', 'adam-membership' ); ?></title>
 			<?php wp_head(); ?>
 			<style>
-				body { margin: 0; background: linear-gradient(135deg, #f4faf5, #e8f4ea); color: #102033; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+				body { margin: 0; background: linear-gradient(135deg, var(--adam-bg, #f4faf5), var(--adam-surface-2, #e8f4ea)); color: var(--adam-text, #102033); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 				.adam-card-validation { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
-				.adam-card-validation__panel { width: min(580px, 100%); padding: 34px; border: 1px solid #d9e4dc; border-radius: 26px; background: #fff; box-shadow: 0 22px 56px rgba(23, 63, 36, 0.16); text-align: center; }
+				.adam-card-validation__panel { width: min(580px, 100%); padding: 34px; border: 1px solid var(--adam-border, #d9e4dc); border-radius: 26px; background: var(--adam-surface, #fff); box-shadow: var(--adam-shadow-lg, 0 22px 56px rgba(23, 63, 36, 0.16)); text-align: center; }
 				.adam-card-validation__logo { max-width: 150px; height: auto; margin-bottom: 18px; }
-				.adam-card-validation h1 { margin: 0 0 10px; color: #173f24; font-size: clamp(2rem, 6vw, 3rem); line-height: 1; }
-				.adam-card-validation p { margin: 0; color: #5d6b7c; }
+				.adam-card-validation h1 { margin: 0 0 10px; color: var(--adam-text, #173f24); font-size: clamp(2rem, 6vw, 3rem); line-height: 1; }
+				.adam-card-validation p { margin: 0; color: var(--adam-text-muted, #5d6b7c); }
 				.adam-card-validation__status { display: inline-flex; margin: 18px 0 22px; padding: 9px 16px; border-radius: 999px; font-weight: 800; }
-				.adam-card-validation__status.valid { background: #dcfce7; color: #14532d; }
-				.adam-card-validation__status.invalid { background: #fee2e2; color: #991b1b; }
+				.adam-card-validation__status.valid { background: var(--adam-success-bg, #dcfce7); color: var(--adam-success, #14532d); }
+				.adam-card-validation__status.invalid { background: var(--adam-danger-bg, #fee2e2); color: var(--adam-danger, #991b1b); }
 				.adam-card-validation__data { display: grid; gap: 10px; margin-top: 18px; text-align: left; }
-				.adam-card-validation__row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid #edf3ee; }
-				.adam-card-validation__row span { color: #5d6b7c; font-weight: 700; }
+				.adam-card-validation__row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--adam-border, #edf3ee); }
+				.adam-card-validation__row span { color: var(--adam-text-muted, #5d6b7c); font-weight: 700; }
 				.adam-card-validation__row strong { text-align: right; }
-				.adam-card-validation__checked { margin-top: 20px; padding-top: 18px; border-top: 1px solid #edf3ee; font-size: 0.92rem; }
+				.adam-card-validation__checked { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--adam-border, #edf3ee); font-size: 0.92rem; }
 			</style>
 		</head>
 		<body>

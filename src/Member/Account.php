@@ -140,7 +140,7 @@ final class Account {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_change_password" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_change_password" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -188,7 +188,7 @@ final class Account {
 			<section class="adam-card adam-form-card" aria-labelledby="adam-change-email-title">
 				<h3 id="adam-change-email-title"><?php esc_html_e( 'Confirmar novo endereco', 'adam-membership' ); ?></h3>
 
-				<div class="adam-member-notice notice notice-info" role="status">
+				<div class="adam-member-notice notice notice-info adam-notice adam-notice--info" role="status">
 					<p><?php esc_html_e( 'O email atual continuara ativo ate a confirmacao estar concluida.', 'adam-membership' ); ?></p>
 				</div>
 
@@ -218,7 +218,7 @@ final class Account {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_change_email" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_change_email" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Enviar confirmacao', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -361,7 +361,7 @@ final class Account {
 				<p><?php esc_html_e( 'Esta pagina destina-se apenas a associados que ja possuem uma conta na ADAM.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
 						<?php esc_html_e( 'Iniciar sessao', 'adam-membership' ); ?>
 					</a>
 					<a class="button" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
@@ -419,7 +419,7 @@ final class Account {
 		$role = 'error' === $type ? 'alert' : 'status';
 
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice adam-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
 			esc_attr( $role ),
 			esc_html( $message )

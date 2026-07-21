@@ -1,16 +1,13 @@
 .adam-member-area {
-	--adam-green-900: #173f24;
-	--adam-green-800: #24502f;
-	--adam-green-700: #2f6b3b;
-	--adam-green-600: #3f8f4d;
-	--adam-green-100: #e8f4ea;
-	--adam-green-50: #f4faf5;
-	--adam-ink: #102033;
-	--adam-muted: #5d6b7c;
-	--adam-border: #d9e4dc;
-	--adam-card: #ffffff;
-	--adam-shadow: 0 18px 42px rgba(23, 63, 36, 0.10);
-	--adam-shadow-hover: 0 22px 52px rgba(23, 63, 36, 0.16);
+	--adam-green-900: var(--adam-primary, #173f24);
+	--adam-green-800: var(--adam-primary, #24502f);
+	--adam-green-700: var(--adam-primary, #2f6b3b);
+	--adam-green-600: var(--adam-primary, #3f8f4d);
+	--adam-green-100: var(--adam-success-bg, #e8f4ea);
+	--adam-green-50: var(--adam-success-bg, #f4faf5);
+	--adam-ink: var(--adam-text, #102033);
+	--adam-muted: var(--adam-text-muted, #5d6b7c);
+	--adam-card: var(--adam-surface, #ffffff);
 	max-width: 1120px;
 	margin: clamp(64px, 7vw, 104px) auto clamp(72px, 8vw, 116px);
 	padding: 0 22px;
@@ -57,12 +54,12 @@
 	justify-content: space-between;
 	gap: 28px;
 	padding: 34px 38px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 22px;
 	background:
-		linear-gradient(135deg, rgba(47, 107, 59, 0.13), rgba(244, 250, 245, 0.92)),
+		linear-gradient(135deg, var(--adam-primary-soft, rgba(47, 107, 59, 0.13)), var(--adam-highlight, rgba(244, 250, 245, 0.92))),
 		var(--adam-card);
-	box-shadow: var(--adam-shadow);
+	box-shadow: var(--adam-shadow, 0 18px 42px var(--adam-shadow-color, rgba(23, 63, 36, 0.10)));
 }
 
 .adam-member-hero h2,
@@ -101,7 +98,7 @@
 .adam-hero-status span:not(.adam-badge) {
 	font-size: 1.05rem;
 	font-weight: 800;
-	color: #172033;
+	color: var(--adam-text, #172033);
 }
 
 .adam-dashboard-grid {
@@ -118,10 +115,10 @@
 	height: 100%;
 	margin: 0;
 	padding: 28px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 18px;
 	background: var(--adam-card);
-	box-shadow: 0 14px 34px rgba(23, 63, 36, 0.08);
+	box-shadow: 0 14px 34px var(--adam-shadow-color, rgba(23, 63, 36, 0.08));
 	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -130,7 +127,7 @@
 	font-size: 1.25rem;
 	line-height: 1.25;
 	font-weight: 800;
-	color: #122034;
+	color: var(--adam-text, #122034);
 	letter-spacing: 0;
 }
 
@@ -245,9 +242,9 @@
 .adam-digital-card-mobile__meta div,
 .adam-digital-card-mobile__qr {
 	padding: 14px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 16px;
-	background: linear-gradient(180deg, #ffffff, #f7fbf8);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f7fbf8));
 }
 
 .adam-digital-card-mobile__meta strong {
@@ -293,21 +290,21 @@
 	padding: 8px 14px;
 	border-radius: 999px;
 	background: var(--adam-green-700);
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	font-family: inherit;
 	font-size: 0.94rem;
 	font-weight: 800;
 	line-height: 1.2;
 	cursor: pointer;
-	box-shadow: 0 10px 24px rgba(47, 107, 59, 0.20);
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(47, 107, 59, 0.20));
 	transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .adam-card-link:hover {
 	background: var(--adam-green-800);
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	transform: translateY(-1px);
-	box-shadow: 0 14px 30px rgba(47, 107, 59, 0.26);
+	box-shadow: 0 14px 30px var(--adam-shadow-color, rgba(47, 107, 59, 0.26));
 }
 
 .adam-digital-card {
@@ -316,9 +313,9 @@
 	--adam-card-frame-inset: 12px;
 	--adam-card-content-padding: 36px;
 	--adam-card-content-gap: 20px;
-	--adam-card-pattern-color: rgba(255, 255, 255, 0.18);
-	--adam-card-pattern-color-strong: rgba(255, 255, 255, 0.18);
-	--adam-card-pattern-color-soft: rgba(255, 255, 255, 0.08);
+	--adam-card-pattern-color: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-card-pattern-color-strong: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-card-pattern-color-soft: var(--adam-highlight, rgba(255, 255, 255, 0.08));
 	--adam-card-pattern-opacity: 0;
 	--adam-card-pattern-size: 24px;
 	--adam-card-pattern-spacing: 24px;
@@ -337,13 +334,13 @@
 	--adam-frame-gradient-color-2: transparent;
 	--adam-frame-gradient-color-3: transparent;
 	--adam-frame-angle: 135deg;
-	--adam-card-text-primary: #ffffff;
-	--adam-card-text-secondary: rgba(255, 255, 255, 0.82);
+	--adam-card-text-primary: var(--adam-text-inverse, #ffffff);
+	--adam-card-text-secondary: var(--adam-text-inverse, rgba(255, 255, 255, 0.82));
 	--adam-card-member-name-color: var(--adam-card-text-primary);
 	--adam-card-member-name-weight: 900;
-	--adam-title-badge-background: rgba(255, 255, 255, 0.14);
+	--adam-title-badge-background: var(--adam-highlight, rgba(255, 255, 255, 0.14));
 	--adam-title-badge-text: var(--adam-card-text-primary);
-	--adam-title-badge-border: rgba(255, 255, 255, 0.18);
+	--adam-title-badge-border: var(--adam-highlight, rgba(255, 255, 255, 0.18));
 	--adam-title-badge-border-width: 1px;
 	position: relative;
 	box-sizing: border-box;
@@ -352,10 +349,10 @@
 	border: 0;
 	border-radius: var(--adam-card-radius);
 	background:
-		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
-		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
+		radial-gradient(circle at 86% 12%, var(--adam-highlight, rgba(255, 255, 255, 0.22)), transparent 26%),
+		linear-gradient(135deg, var(--adam-shadow-color, rgba(23, 63, 36, 0.98)), var(--adam-shadow-color, rgba(31, 87, 45, 0.96)) 48%, var(--adam-shadow-color, rgba(16, 32, 51, 0.94))),
 		var(--adam-green-900);
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	overflow: hidden;
 	box-shadow: none;
 	isolation: isolate;
@@ -380,7 +377,7 @@
 	width: 360px;
 	height: 360px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.10);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.10));
 	filter: blur(2px);
 	z-index: -1;
 }
@@ -500,7 +497,7 @@
 	max-width: var(--adam-card-art-size);
 	max-height: 72%;
 	object-fit: contain;
-	filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
+	filter: drop-shadow(0 10px 16px var(--adam-shadow-color, rgba(0, 0, 0, 0.18)));
 }
 
 .adam-digital-card__art--top-left {
@@ -581,8 +578,8 @@
 	padding: 14px 16px;
 	box-sizing: border-box;
 	border-radius: 16px;
-	background: #ffffff;
-	box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+	background: var(--adam-surface, #ffffff);
+	box-shadow: 0 14px 30px var(--adam-shadow-color, rgba(0, 0, 0, 0.18));
 	object-fit: contain;
 	object-position: center;
 }
@@ -597,7 +594,7 @@
 .adam-digital-card__details span,
 .adam-digital-card__footer span {
 	display: block;
-	color: rgba(255, 255, 255, 0.82);
+	color: var(--adam-text-inverse, rgba(255, 255, 255, 0.82));
 	font-size: 0.75rem;
 	font-weight: 800;
 	letter-spacing: 0.08em;
@@ -617,16 +614,16 @@
 	margin-top: 8px;
 	padding: 6px 10px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.14);
-	color: #fff;
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.14));
+	color: var(--adam-text-inverse, #fff);
 	font-size: 0.76rem;
 	font-weight: 800;
 }
 
 .adam-digital-card .adam-badge {
-	background: rgba(220, 252, 231, 0.96);
-	color: #14532d;
-	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+	background: var(--adam-primary-soft, rgba(220, 252, 231, 0.96));
+	color: var(--adam-text, #14532d);
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(0, 0, 0, 0.12));
 }
 
 .adam-digital-card__body {
@@ -641,10 +638,10 @@
 	place-items: center;
 	width: 138px;
 	aspect-ratio: 3 / 4;
-	border: 4px solid rgba(255, 255, 255, 0.82);
+	border: 4px solid var(--adam-border, rgba(255, 255, 255, 0.82));
 	border-radius: 20px;
-	background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
-	box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+	background: linear-gradient(145deg, var(--adam-highlight, rgba(255, 255, 255, 0.22)), var(--adam-highlight, rgba(255, 255, 255, 0.08)));
+	box-shadow: 0 18px 36px var(--adam-shadow-color, rgba(0, 0, 0, 0.18));
 	overflow: hidden;
 }
 
@@ -661,31 +658,31 @@
 	height: 100%;
 	font-size: 2.4rem;
 	font-weight: 900;
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	letter-spacing: 0;
 }
 
 .adam-digital-card {
 	--adam-card-surface:
-		radial-gradient(circle at 86% 12%, rgba(255, 255, 255, 0.22), transparent 26%),
-		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94)),
+		radial-gradient(circle at 86% 12%, var(--adam-highlight, rgba(255, 255, 255, 0.22)), transparent 26%),
+		linear-gradient(135deg, var(--adam-shadow-color, rgba(23, 63, 36, 0.98)), var(--adam-shadow-color, rgba(31, 87, 45, 0.96)) 48%, var(--adam-shadow-color, rgba(16, 32, 51, 0.94))),
 		var(--adam-green-900);
-	--adam-card-border: rgba(255, 255, 255, 0.22);
+	--adam-card-border: var(--adam-highlight, rgba(255, 255, 255, 0.22));
 	--adam-card-shadow: none;
-	--adam-card-panel-border: rgba(255, 255, 255, 0.16);
-	--adam-card-panel-bg: rgba(255, 255, 255, 0.10);
-	--adam-card-photo-border: rgba(255, 255, 255, 0.82);
-	--adam-card-photo-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
-	--adam-card-photo-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
-	--adam-card-logo-surface: #ffffff;
-	--adam-card-qr-surface: #ffffff;
+	--adam-card-panel-border: var(--adam-highlight, rgba(255, 255, 255, 0.16));
+	--adam-card-panel-bg: var(--adam-highlight, rgba(255, 255, 255, 0.10));
+	--adam-card-photo-border: var(--adam-border, rgba(255, 255, 255, 0.82));
+	--adam-card-photo-surface: linear-gradient(145deg, var(--adam-highlight, rgba(255, 255, 255, 0.22)), var(--adam-highlight, rgba(255, 255, 255, 0.08)));
+	--adam-card-photo-shadow: 0 18px 36px var(--adam-shadow-color, rgba(0, 0, 0, 0.18));
+	--adam-card-logo-surface: var(--adam-surface, #ffffff);
+	--adam-card-qr-surface: var(--adam-surface, #ffffff);
 	--adam-card-qr-ink: var(--adam-green-900);
 	--adam-frame-width: 0px;
 	--adam-frame-visibility: 0;
 	--adam-frame-color: transparent;
-	--adam-card-shine: rgba(255, 255, 255, 0.10);
-	--adam-card-chip-surface: rgba(255, 255, 255, 0.16);
-	--adam-card-chip-border: rgba(255, 255, 255, 0.16);
+	--adam-card-shine: var(--adam-highlight, rgba(255, 255, 255, 0.10));
+	--adam-card-chip-surface: var(--adam-highlight, rgba(255, 255, 255, 0.16));
+	--adam-card-chip-border: var(--adam-highlight, rgba(255, 255, 255, 0.16));
 	background:
 		var(--adam-card-frame-top, none) top / 100% var(--adam-frame-width, 0px) no-repeat,
 		var(--adam-card-frame-right, none) right / var(--adam-frame-width, 0px) 100% no-repeat,
@@ -740,15 +737,15 @@
 }
 
 .adam-digital-card__founder {
-	background: rgba(255, 245, 200, 0.18);
-	color: #fff4bf;
-	border: 1px solid rgba(255, 230, 150, 0.22);
+	background: var(--adam-overlay, rgba(255, 245, 200, 0.18));
+	color: var(--adam-text-inverse, #fff4bf);
+	border: 1px solid var(--adam-overlay, rgba(255, 230, 150, 0.22));
 }
 
 .adam-digital-card__loyalty {
-	background: rgba(191, 219, 254, 0.18);
-	color: #dbeafe;
-	border: 1px solid rgba(191, 219, 254, 0.26);
+	background: var(--adam-overlay, rgba(191, 219, 254, 0.18));
+	color: var(--adam-text-inverse, #dbeafe);
+	border: 1px solid var(--adam-overlay, rgba(191, 219, 254, 0.26));
 }
 
 .adam-digital-card__photo {
@@ -768,7 +765,7 @@
 	border: var(--adam-title-badge-border-width) solid var(--adam-title-badge-border);
 	border-radius: 16px;
 	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.18)), var(--adam-highlight, rgba(255, 255, 255, 0.02))),
 		var(--adam-title-badge-background);
 	color: var(--adam-title-badge-text);
 	font-size: 0.92rem;
@@ -776,10 +773,10 @@
 	font-weight: 900;
 	letter-spacing: 0.08em;
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.22),
-		inset 0 10px 16px rgba(255, 255, 255, 0.04),
-		inset 0 -6px 14px rgba(0, 0, 0, 0.18),
-		0 14px 24px rgba(7, 12, 20, 0.22);
+		inset 0 1px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.22)),
+		inset 0 10px 16px var(--adam-shadow-color, rgba(255, 255, 255, 0.04)),
+		inset 0 -6px 14px var(--adam-shadow-color, rgba(0, 0, 0, 0.18)),
+		0 14px 24px var(--adam-shadow-color, rgba(7, 12, 20, 0.22));
 	text-align: left;
 	text-shadow: none;
 	text-transform: uppercase;
@@ -845,9 +842,9 @@
 	gap: 18px;
 	margin-top: 18px;
 	padding: 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 16px;
-	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f7fbf8), var(--adam-surface, #ffffff));
 }
 
 .adam-card-customizer__heading {
@@ -884,208 +881,208 @@
 	width: 100%;
 	min-height: 44px;
 	padding: 10px 12px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 12px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	color: var(--adam-ink);
 	font: inherit;
 }
 
 .adam-digital-card--theme-woodland {
 	--adam-card-surface:
-		radial-gradient(circle at 16% 22%, rgba(182, 208, 140, 0.16), transparent 18%),
-		linear-gradient(135deg, rgba(22, 44, 26, 0.96), rgba(57, 82, 46, 0.92) 35%, rgba(92, 110, 62, 0.9) 70%, rgba(27, 42, 31, 0.98)),
-		repeating-linear-gradient(125deg, rgba(22, 44, 26, 0.18) 0 18px, rgba(119, 141, 88, 0.12) 18px 34px, rgba(53, 72, 38, 0.16) 34px 52px),
-		linear-gradient(180deg, transparent, rgba(9, 17, 13, 0.26));
+		radial-gradient(circle at 16% 22%, var(--adam-primary-soft, rgba(182, 208, 140, 0.16)), transparent 18%),
+		linear-gradient(135deg, var(--adam-shadow-color, rgba(22, 44, 26, 0.96)), var(--adam-primary-soft, rgba(57, 82, 46, 0.92)) 35%, var(--adam-primary-soft, rgba(92, 110, 62, 0.9)) 70%, var(--adam-shadow-color, rgba(27, 42, 31, 0.98))),
+		repeating-linear-gradient(125deg, var(--adam-shadow-color, rgba(22, 44, 26, 0.18)) 0 18px, var(--adam-primary-soft, rgba(119, 141, 88, 0.12)) 18px 34px, var(--adam-shadow-color, rgba(53, 72, 38, 0.16)) 34px 52px),
+		linear-gradient(180deg, transparent, var(--adam-shadow-color, rgba(9, 17, 13, 0.26)));
 }
 
 .adam-digital-card--theme-desert {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 16%, rgba(255, 247, 221, 0.55), transparent 26%),
-		linear-gradient(135deg, #8c6b3f, #c09a5d 40%, #d8c08d 76%, #8e6d43),
-		repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 16px, rgba(113, 76, 30, 0.05) 16px 32px);
-	--adam-card-text-primary: #2f2418;
-	--adam-card-text-secondary: rgba(47, 36, 24, 0.75);
-	--adam-card-member-name-color: #2f2418;
-	--adam-card-ink: #2f2418;
-	--adam-card-muted: rgba(47, 36, 24, 0.75);
-	--adam-card-panel-border: rgba(64, 45, 20, 0.12);
-	--adam-card-panel-bg: rgba(255, 250, 239, 0.24);
-	--adam-card-photo-border: rgba(255, 247, 221, 0.9);
-	--adam-title-badge-background: rgba(255, 248, 230, 0.32);
-	--adam-title-badge-text: #2f2418;
-	--adam-title-badge-border: rgba(82, 61, 28, 0.18);
-	--adam-title-badge-icon: rgba(82, 61, 28, 0.82);
-	--adam-card-title-surface: rgba(255, 248, 230, 0.32);
-	--adam-card-title-border: rgba(82, 61, 28, 0.18);
-	--adam-card-chip-surface: rgba(255, 251, 239, 0.36);
-	--adam-card-chip-border: rgba(82, 61, 28, 0.16);
+		radial-gradient(circle at 80% 16%, var(--adam-highlight, rgba(255, 247, 221, 0.55)), transparent 26%),
+		linear-gradient(135deg, var(--adam-warning, #8c6b3f), var(--adam-warning, #c09a5d) 40%, var(--adam-warning, #d8c08d) 76%, var(--adam-warning, #8e6d43)),
+		repeating-linear-gradient(135deg, var(--adam-highlight, rgba(255, 255, 255, 0.05)) 0 16px, var(--adam-overlay, rgba(113, 76, 30, 0.05)) 16px 32px);
+	--adam-card-text-primary: var(--adam-text, #2f2418);
+	--adam-card-text-secondary: var(--adam-shadow-color, rgba(47, 36, 24, 0.75));
+	--adam-card-member-name-color: var(--adam-text, #2f2418);
+	--adam-card-ink: var(--adam-text, #2f2418);
+	--adam-card-muted: var(--adam-shadow-color, rgba(47, 36, 24, 0.75));
+	--adam-card-panel-border: var(--adam-shadow-color, rgba(64, 45, 20, 0.12));
+	--adam-card-panel-bg: var(--adam-highlight, rgba(255, 250, 239, 0.24));
+	--adam-card-photo-border: var(--adam-highlight, rgba(255, 247, 221, 0.9));
+	--adam-title-badge-background: var(--adam-highlight, rgba(255, 248, 230, 0.32));
+	--adam-title-badge-text: var(--adam-text, #2f2418);
+	--adam-title-badge-border: var(--adam-shadow-color, rgba(82, 61, 28, 0.18));
+	--adam-title-badge-icon: var(--adam-shadow-color, rgba(82, 61, 28, 0.82));
+	--adam-card-title-surface: var(--adam-highlight, rgba(255, 248, 230, 0.32));
+	--adam-card-title-border: var(--adam-shadow-color, rgba(82, 61, 28, 0.18));
+	--adam-card-chip-surface: var(--adam-highlight, rgba(255, 251, 239, 0.36));
+	--adam-card-chip-border: var(--adam-shadow-color, rgba(82, 61, 28, 0.16));
 }
 
 .adam-digital-card--theme-urban {
 	--adam-card-surface:
-		linear-gradient(135deg, #2b3440, #4c5b69 48%, #1c2530),
-		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 12px, rgba(0, 0, 0, 0.04) 12px 24px),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.12));
+		linear-gradient(135deg, var(--adam-surface, #2b3440), var(--adam-surface, #4c5b69) 48%, var(--adam-info, #1c2530)),
+		repeating-linear-gradient(90deg, var(--adam-highlight, rgba(255, 255, 255, 0.04)) 0 12px, var(--adam-shadow-color, rgba(0, 0, 0, 0.04)) 12px 24px),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.04)), var(--adam-shadow-color, rgba(0, 0, 0, 0.12)));
 }
 
 .adam-digital-card--theme-carbon-fiber {
 	--adam-card-surface:
-		linear-gradient(135deg, #101418, #2a3139 45%, #11161b),
-		repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08) 0 6px, rgba(0, 0, 0, 0.08) 6px 12px),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.24));
+		linear-gradient(135deg, var(--adam-surface, #101418), var(--adam-surface, #2a3139) 45%, var(--adam-info, #11161b)),
+		repeating-linear-gradient(45deg, var(--adam-highlight, rgba(255, 255, 255, 0.08)) 0 6px, var(--adam-shadow-color, rgba(0, 0, 0, 0.08)) 6px 12px),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.02)), var(--adam-shadow-color, rgba(0, 0, 0, 0.24)));
 }
 
 .adam-digital-card--theme-flecktarn {
 	--adam-card-surface:
-		radial-gradient(circle at 22% 34%, rgba(117, 92, 54, 0.7) 0 11%, transparent 12%),
-		radial-gradient(circle at 62% 54%, rgba(71, 89, 48, 0.7) 0 12%, transparent 13%),
-		radial-gradient(circle at 42% 72%, rgba(37, 45, 29, 0.78) 0 10%, transparent 11%),
-		linear-gradient(135deg, #4d5f3a, #7a734f 48%, #2f3d28);
+		radial-gradient(circle at 22% 34%, var(--adam-overlay, rgba(117, 92, 54, 0.7)) 0 11%, transparent 12%),
+		radial-gradient(circle at 62% 54%, var(--adam-primary-soft, rgba(71, 89, 48, 0.7)) 0 12%, transparent 13%),
+		radial-gradient(circle at 42% 72%, var(--adam-shadow-color, rgba(37, 45, 29, 0.78)) 0 10%, transparent 11%),
+		linear-gradient(135deg, var(--adam-primary, #4d5f3a), var(--adam-surface, #7a734f) 48%, var(--adam-surface, #2f3d28));
 }
 
 .adam-digital-card--theme-digital-green {
 	--adam-card-surface:
-		linear-gradient(135deg, #0d3121, #1f5f44 45%, #153f31),
-		repeating-linear-gradient(90deg, rgba(123, 186, 151, 0.12) 0 14px, rgba(255, 255, 255, 0.03) 14px 28px),
-		repeating-linear-gradient(0deg, rgba(12, 29, 18, 0.15) 0 10px, transparent 10px 20px);
+		linear-gradient(135deg, var(--adam-primary, #0d3121), var(--adam-primary, #1f5f44) 45%, var(--adam-primary, #153f31)),
+		repeating-linear-gradient(90deg, var(--adam-primary-soft, rgba(123, 186, 151, 0.12)) 0 14px, var(--adam-highlight, rgba(255, 255, 255, 0.03)) 14px 28px),
+		repeating-linear-gradient(0deg, var(--adam-shadow-color, rgba(12, 29, 18, 0.15)) 0 10px, transparent 10px 20px);
 }
 
 .adam-digital-card--theme-blue-steel {
 	--adam-card-surface:
-		linear-gradient(135deg, #11263b, #486b8f 48%, #192d44),
-		linear-gradient(45deg, rgba(255, 255, 255, 0.12), transparent 45%),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.16));
+		linear-gradient(135deg, var(--adam-info, #11263b), var(--adam-info, #486b8f) 48%, var(--adam-info, #192d44)),
+		linear-gradient(45deg, var(--adam-highlight, rgba(255, 255, 255, 0.12)), transparent 45%),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.04)), var(--adam-shadow-color, rgba(0, 0, 0, 0.16)));
 }
 
 .adam-digital-card--theme-midnight-black {
 	--adam-card-surface:
-		radial-gradient(circle at 84% 18%, rgba(96, 165, 250, 0.18), transparent 20%),
-		linear-gradient(135deg, #05070a, #12161d 48%, #090b0f);
+		radial-gradient(circle at 84% 18%, var(--adam-overlay, rgba(96, 165, 250, 0.18)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info, #05070a), var(--adam-info, #12161d) 48%, var(--adam-info, #090b0f));
 }
 
 .adam-digital-card--theme-arctic-white {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.82), transparent 20%),
-		linear-gradient(135deg, #eef6ff, #dce9f6 48%, #b9cad8);
-	--adam-card-text-primary: #0f1f33;
-	--adam-card-text-secondary: rgba(15, 31, 51, 0.76);
-	--adam-card-member-name-color: #0f1f33;
-	--adam-card-ink: #0f1f33;
-	--adam-card-muted: rgba(15, 31, 51, 0.76);
-	--adam-card-panel-border: rgba(15, 31, 51, 0.12);
-	--adam-card-panel-bg: rgba(255, 255, 255, 0.3);
-	--adam-card-photo-border: rgba(255, 255, 255, 0.98);
-	--adam-title-badge-background: rgba(255, 255, 255, 0.46);
-	--adam-title-badge-text: #0f1f33;
-	--adam-title-badge-border: rgba(15, 31, 51, 0.12);
-	--adam-title-badge-icon: rgba(15, 31, 51, 0.82);
-	--adam-card-title-surface: rgba(255, 255, 255, 0.46);
-	--adam-card-title-border: rgba(15, 31, 51, 0.12);
-	--adam-card-chip-surface: rgba(255, 255, 255, 0.44);
-	--adam-card-chip-border: rgba(15, 31, 51, 0.12);
+		radial-gradient(circle at 80% 14%, var(--adam-surface, rgba(255, 255, 255, 0.82)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info-bg, #eef6ff), var(--adam-surface-2, #dce9f6) 48%, var(--adam-info-bg, #b9cad8));
+	--adam-card-text-primary: var(--adam-text, #0f1f33);
+	--adam-card-text-secondary: var(--adam-shadow-color, rgba(15, 31, 51, 0.76));
+	--adam-card-member-name-color: var(--adam-text, #0f1f33);
+	--adam-card-ink: var(--adam-text, #0f1f33);
+	--adam-card-muted: var(--adam-shadow-color, rgba(15, 31, 51, 0.76));
+	--adam-card-panel-border: var(--adam-shadow-color, rgba(15, 31, 51, 0.12));
+	--adam-card-panel-bg: var(--adam-highlight, rgba(255, 255, 255, 0.3));
+	--adam-card-photo-border: var(--adam-border, rgba(255, 255, 255, 0.98));
+	--adam-title-badge-background: var(--adam-highlight, rgba(255, 255, 255, 0.46));
+	--adam-title-badge-text: var(--adam-text, #0f1f33);
+	--adam-title-badge-border: var(--adam-shadow-color, rgba(15, 31, 51, 0.12));
+	--adam-title-badge-icon: var(--adam-shadow-color, rgba(15, 31, 51, 0.82));
+	--adam-card-title-surface: var(--adam-highlight, rgba(255, 255, 255, 0.46));
+	--adam-card-title-border: var(--adam-shadow-color, rgba(15, 31, 51, 0.12));
+	--adam-card-chip-surface: var(--adam-highlight, rgba(255, 255, 255, 0.44));
+	--adam-card-chip-border: var(--adam-shadow-color, rgba(15, 31, 51, 0.12));
 }
 
 .adam-digital-card--theme-crimson-strike {
 	--adam-card-surface:
-		radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.16), transparent 18%),
-		linear-gradient(135deg, #55111b, #a61d2d 46%, #2c0912);
+		radial-gradient(circle at 22% 20%, var(--adam-highlight, rgba(255, 255, 255, 0.16)), transparent 18%),
+		linear-gradient(135deg, var(--adam-danger, #55111b), var(--adam-danger, #a61d2d) 46%, var(--adam-danger, #2c0912));
 }
 
 .adam-digital-card--theme-purple-nebula {
 	--adam-card-surface:
-		radial-gradient(circle at 22% 28%, rgba(216, 180, 254, 0.22), transparent 18%),
-		radial-gradient(circle at 76% 24%, rgba(196, 181, 253, 0.2), transparent 16%),
-		linear-gradient(135deg, #2f1447, #5f2490 52%, #12061f);
+		radial-gradient(circle at 22% 28%, var(--adam-overlay, rgba(216, 180, 254, 0.22)), transparent 18%),
+		radial-gradient(circle at 76% 24%, var(--adam-overlay, rgba(196, 181, 253, 0.2)), transparent 16%),
+		linear-gradient(135deg, var(--adam-info, #2f1447), var(--adam-info, #5f2490) 52%, var(--adam-info, #12061f));
 }
 
 .adam-digital-card--theme-gold {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 12%, rgba(255, 244, 184, 0.34), transparent 24%),
-		linear-gradient(135deg, #7f5a0f, #cda33a 48%, #8a6310),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(0, 0, 0, 0.14));
+		radial-gradient(circle at 80% 12%, var(--adam-overlay, rgba(255, 244, 184, 0.34)), transparent 24%),
+		linear-gradient(135deg, var(--adam-warning, #7f5a0f), var(--adam-warning, #cda33a) 48%, var(--adam-warning, #8a6310)),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.14)), var(--adam-shadow-color, rgba(0, 0, 0, 0.14)));
 }
 
 .adam-digital-card--theme-emerald {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 14%, rgba(220, 252, 231, 0.18), transparent 22%),
-		linear-gradient(135deg, #0b3f34, #0f766e 48%, #07322b);
+		radial-gradient(circle at 80% 14%, var(--adam-primary-soft, rgba(220, 252, 231, 0.18)), transparent 22%),
+		linear-gradient(135deg, var(--adam-info, #0b3f34), var(--adam-info, #0f766e) 48%, var(--adam-info, #07322b));
 }
 
 .adam-digital-card--theme-sapphire {
 	--adam-card-surface:
-		radial-gradient(circle at 76% 12%, rgba(191, 219, 254, 0.2), transparent 22%),
-		linear-gradient(135deg, #102c64, #1d4ed8 48%, #0b1f45);
+		radial-gradient(circle at 76% 12%, var(--adam-overlay, rgba(191, 219, 254, 0.2)), transparent 22%),
+		linear-gradient(135deg, var(--adam-info, #102c64), var(--adam-info, #1d4ed8) 48%, var(--adam-info, #0b1f45));
 }
 
 .adam-digital-card--theme-ruby {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 14%, rgba(254, 202, 202, 0.18), transparent 20%),
-		linear-gradient(135deg, #6b0f1a, #b91c1c 48%, #3f0912);
+		radial-gradient(circle at 80% 14%, var(--adam-overlay, rgba(254, 202, 202, 0.18)), transparent 20%),
+		linear-gradient(135deg, var(--adam-danger, #6b0f1a), var(--adam-danger, #b91c1c) 48%, var(--adam-danger, #3f0912));
 }
 
 .adam-digital-card--theme-obsidian {
 	--adam-card-surface:
-		radial-gradient(circle at 84% 18%, rgba(255, 255, 255, 0.08), transparent 20%),
-		linear-gradient(135deg, #020305, #151a20 46%, #05070a),
-		linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.3));
+		radial-gradient(circle at 84% 18%, var(--adam-highlight, rgba(255, 255, 255, 0.08)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info, #020305), var(--adam-surface, #151a20) 46%, var(--adam-info, #05070a)),
+		linear-gradient(180deg, var(--adam-highlight, rgba(255, 255, 255, 0.02)), var(--adam-shadow-color, rgba(0, 0, 0, 0.3)));
 }
 
 .adam-digital-card--theme-phoenix {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 18%, rgba(253, 224, 71, 0.26), transparent 20%),
-		linear-gradient(135deg, #5f1d00, #d9480f 40%, #f59e0b 72%, #7c2d12);
+		radial-gradient(circle at 80% 18%, var(--adam-overlay, rgba(253, 224, 71, 0.26)), transparent 20%),
+		linear-gradient(135deg, var(--adam-warning, #5f1d00), var(--adam-danger, #d9480f) 40%, var(--adam-warning, #f59e0b) 72%, var(--adam-danger, #7c2d12));
 }
 
 .adam-digital-card--theme-platinum {
 	--adam-card-surface:
-		radial-gradient(circle at 78% 14%, rgba(255, 255, 255, 0.35), transparent 24%),
-		linear-gradient(135deg, #6b7280, #d1d5db 48%, #8c95a3);
-	--adam-card-text-primary: #172033;
-	--adam-card-text-secondary: rgba(23, 32, 51, 0.76);
-	--adam-card-member-name-color: #172033;
-	--adam-card-ink: #172033;
-	--adam-card-muted: rgba(23, 32, 51, 0.76);
-	--adam-card-panel-border: rgba(23, 32, 51, 0.14);
-	--adam-card-panel-bg: rgba(255, 255, 255, 0.28);
-	--adam-title-badge-background: rgba(255, 255, 255, 0.4);
-	--adam-title-badge-text: #172033;
-	--adam-title-badge-border: rgba(23, 32, 51, 0.12);
-	--adam-title-badge-icon: rgba(23, 32, 51, 0.82);
-	--adam-card-title-surface: rgba(255, 255, 255, 0.4);
-	--adam-card-title-border: rgba(23, 32, 51, 0.12);
-	--adam-card-chip-surface: rgba(255, 255, 255, 0.42);
-	--adam-card-chip-border: rgba(23, 32, 51, 0.12);
+		radial-gradient(circle at 78% 14%, var(--adam-highlight, rgba(255, 255, 255, 0.35)), transparent 24%),
+		linear-gradient(135deg, var(--adam-surface, #6b7280), var(--adam-surface-2, #d1d5db) 48%, var(--adam-surface-2, #8c95a3));
+	--adam-card-text-primary: var(--adam-text, #172033);
+	--adam-card-text-secondary: var(--adam-shadow-color, rgba(23, 32, 51, 0.76));
+	--adam-card-member-name-color: var(--adam-text, #172033);
+	--adam-card-ink: var(--adam-text, #172033);
+	--adam-card-muted: var(--adam-shadow-color, rgba(23, 32, 51, 0.76));
+	--adam-card-panel-border: var(--adam-shadow-color, rgba(23, 32, 51, 0.14));
+	--adam-card-panel-bg: var(--adam-highlight, rgba(255, 255, 255, 0.28));
+	--adam-title-badge-background: var(--adam-highlight, rgba(255, 255, 255, 0.4));
+	--adam-title-badge-text: var(--adam-text, #172033);
+	--adam-title-badge-border: var(--adam-shadow-color, rgba(23, 32, 51, 0.12));
+	--adam-title-badge-icon: var(--adam-shadow-color, rgba(23, 32, 51, 0.82));
+	--adam-card-title-surface: var(--adam-highlight, rgba(255, 255, 255, 0.4));
+	--adam-card-title-border: var(--adam-shadow-color, rgba(23, 32, 51, 0.12));
+	--adam-card-chip-surface: var(--adam-highlight, rgba(255, 255, 255, 0.42));
+	--adam-card-chip-border: var(--adam-shadow-color, rgba(23, 32, 51, 0.12));
 }
 
 .adam-digital-card--theme-founder {
 	--adam-card-surface:
-		radial-gradient(circle at 82% 14%, rgba(255, 244, 184, 0.28), transparent 20%),
-		linear-gradient(135deg, #113b2f, #1f6a56 40%, #d7aa31 76%, #0a2219);
+		radial-gradient(circle at 82% 14%, var(--adam-overlay, rgba(255, 244, 184, 0.28)), transparent 20%),
+		linear-gradient(135deg, var(--adam-primary, #113b2f), var(--adam-primary, #1f6a56) 40%, var(--adam-warning, #d7aa31) 76%, var(--adam-primary, #0a2219));
 }
 
 .adam-digital-card--theme-legendary-loyalty {
 	--adam-card-surface:
-		radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.2), transparent 20%),
-		linear-gradient(135deg, #24103f, #5b21b6 42%, #d97706 76%, #140822);
+		radial-gradient(circle at 78% 12%, var(--adam-highlight, rgba(255, 255, 255, 0.2)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info, #24103f), var(--adam-info, #5b21b6) 42%, var(--adam-warning, #d97706) 76%, var(--adam-info, #140822));
 }
 
 .adam-digital-card--theme-christmas-edition {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 14%, rgba(255, 255, 255, 0.18), transparent 20%),
-		linear-gradient(135deg, #0f5132, #15803d 42%, #b91c1c 78%);
+		radial-gradient(circle at 80% 14%, var(--adam-highlight, rgba(255, 255, 255, 0.18)), transparent 20%),
+		linear-gradient(135deg, var(--adam-primary, #0f5132), var(--adam-primary, #15803d) 42%, var(--adam-danger, #b91c1c) 78%);
 }
 
 .adam-digital-card--theme-halloween-edition {
 	--adam-card-surface:
-		radial-gradient(circle at 82% 14%, rgba(255, 184, 0, 0.2), transparent 20%),
-		linear-gradient(135deg, #140c22, #4c1d95 38%, #f97316 74%, #1f1114);
+		radial-gradient(circle at 82% 14%, var(--adam-overlay, rgba(255, 184, 0, 0.2)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info, #140c22), var(--adam-info, #4c1d95) 38%, var(--adam-warning, #f97316) 74%, var(--adam-danger, #1f1114));
 }
 
 .adam-digital-card--theme-anniversary-edition {
 	--adam-card-surface:
-		radial-gradient(circle at 80% 14%, rgba(250, 204, 21, 0.24), transparent 20%),
-		linear-gradient(135deg, #123f3a, #0f766e 38%, #f59e0b 74%, #102033);
+		radial-gradient(circle at 80% 14%, var(--adam-overlay, rgba(250, 204, 21, 0.24)), transparent 20%),
+		linear-gradient(135deg, var(--adam-info, #123f3a), var(--adam-info, #0f766e) 38%, var(--adam-warning, #f59e0b) 74%, var(--adam-info, #102033));
 }
 
 .adam-points-summary {
@@ -1097,9 +1094,9 @@
 
 .adam-points-stat {
 	padding: 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
-	background: linear-gradient(180deg, #f8fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f8fbf8), var(--adam-surface, #ffffff));
 }
 
 .adam-points-stat span {
@@ -1142,26 +1139,26 @@
 	gap: 6px;
 	margin-bottom: 18px;
 	padding: 16px 18px;
-	border: 1px solid #f3d48a;
+	border: 1px solid var(--adam-warning, #f3d48a);
 	border-radius: 14px;
-	background: linear-gradient(180deg, #fff8e8, #fffdf7);
+	background: linear-gradient(180deg, var(--adam-warning-bg, #fff8e8), var(--adam-warning-bg, #fffdf7));
 }
 
 .adam-founder-panel strong {
-	color: #8a5a00;
+	color: var(--adam-warning, #8a5a00);
 	font-size: 1rem;
 }
 
 .adam-founder-panel span {
-	color: #6d5a2d;
+	color: var(--adam-text, #6d5a2d);
 	font-weight: 700;
 }
 
 .adam-reward-recent {
 	padding: 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
-	background: linear-gradient(180deg, #f8fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f8fbf8), var(--adam-surface, #ffffff));
 }
 
 .adam-reward-recent > span {
@@ -1212,37 +1209,37 @@
 	display: grid;
 	gap: 10px;
 	padding: 15px;
-	border: 1px solid rgba(18, 73, 38, 0.12);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.12));
 	border-radius: 16px;
 	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 248, 0.96)),
-		#ffffff;
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07);
+		linear-gradient(180deg, var(--adam-surface, rgba(255, 255, 255, 0.96)), var(--adam-highlight, rgba(247, 250, 248, 0.96))),
+		var(--adam-surface, #ffffff);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07));
 }
 
 .adam-reward-card--common {
-	border-top: 4px solid #94a3b8;
+	border-top: 4px solid var(--adam-border, #94a3b8);
 }
 
 .adam-reward-card--uncommon {
-	border-top: 4px solid #16a34a;
+	border-top: 4px solid var(--adam-primary, #16a34a);
 }
 
 .adam-reward-card--rare {
-	border-top: 4px solid #2563eb;
+	border-top: 4px solid var(--adam-info, #2563eb);
 }
 
 .adam-reward-card--epic {
-	border-top: 4px solid #7c3aed;
+	border-top: 4px solid var(--adam-info, #7c3aed);
 }
 
 .adam-reward-card--legendary {
-	border-top: 4px solid #d97706;
+	border-top: 4px solid var(--adam-warning, #d97706);
 }
 
 .adam-reward-card--limited_edition {
-	border-top: 4px solid #dc2626;
-	box-shadow: 0 14px 28px rgba(220, 38, 38, 0.12);
+	border-top: 4px solid var(--adam-danger, #dc2626);
+	box-shadow: 0 14px 28px var(--adam-shadow-color, rgba(220, 38, 38, 0.12));
 }
 
 .adam-reward-card__media {
@@ -1252,9 +1249,9 @@
 	width: 100%;
 	min-height: 104px;
 	padding: 12px;
-	border: 1px solid rgba(18, 73, 38, 0.08);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.08));
 	border-radius: 14px;
-	background: linear-gradient(135deg, #eef6ef, #ffffff);
+	background: linear-gradient(135deg, var(--adam-surface-2, #eef6ef), var(--adam-surface, #ffffff));
 	overflow: hidden;
 }
 
@@ -1266,10 +1263,10 @@
 
 .adam-reward-preview-card {
 	--adam-card-surface:
-		radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.18), transparent 24%),
-		linear-gradient(135deg, rgba(23, 63, 36, 0.98), rgba(31, 87, 45, 0.96) 48%, rgba(16, 32, 51, 0.94));
-	--adam-card-frame-accent: rgba(255, 255, 255, 0.18);
-	--adam-card-frame-shadow: 0 10px 24px rgba(16, 32, 51, 0.18);
+		radial-gradient(circle at 82% 18%, var(--adam-highlight, rgba(255, 255, 255, 0.18)), transparent 24%),
+		linear-gradient(135deg, var(--adam-shadow-color, rgba(23, 63, 36, 0.98)), var(--adam-shadow-color, rgba(31, 87, 45, 0.96)) 48%, var(--adam-shadow-color, rgba(16, 32, 51, 0.94)));
+	--adam-card-frame-accent: var(--adam-focus-ring, rgba(255, 255, 255, 0.18));
+	--adam-card-frame-shadow: 0 10px 24px var(--adam-shadow-color, rgba(16, 32, 51, 0.18));
 	position: relative;
 	display: grid;
 	gap: 10px;
@@ -1278,8 +1275,8 @@
 	padding: 14px;
 	border-radius: 16px;
 	background: var(--adam-card-surface);
-	color: #ffffff;
-	box-shadow: 0 12px 24px rgba(16, 32, 51, 0.14);
+	color: var(--adam-text-inverse, #ffffff);
+	box-shadow: 0 12px 24px var(--adam-shadow-color, rgba(16, 32, 51, 0.14));
 	overflow: hidden;
 }
 
@@ -1296,7 +1293,7 @@
 	inset: 6px;
 	border: 2px solid var(--adam-card-frame-accent);
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.14),
+		inset 0 1px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.14)),
 		var(--adam-card-frame-shadow);
 }
 
@@ -1306,7 +1303,7 @@
 	width: 80px;
 	height: 80px;
 	border-radius: 999px;
-	background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 68%);
+	background: radial-gradient(circle, var(--adam-highlight, rgba(255, 255, 255, 0.16)), transparent 68%);
 }
 
 .adam-reward-preview-card__header,
@@ -1328,7 +1325,7 @@
 .adam-reward-preview-card__header small {
 	padding: 4px 8px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.14);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.14));
 	font-size: 0.66rem;
 	font-weight: 800;
 }
@@ -1338,8 +1335,8 @@
 	width: 38px;
 	height: 38px;
 	border-radius: 12px;
-	background: linear-gradient(145deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+	background: linear-gradient(145deg, var(--adam-highlight, rgba(255, 255, 255, 0.24)), var(--adam-highlight, rgba(255, 255, 255, 0.08)));
+	box-shadow: inset 0 1px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.18));
 }
 
 .adam-reward-preview-card__lines {
@@ -1352,7 +1349,7 @@
 	display: block;
 	height: 8px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.18);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.18));
 }
 
 .adam-reward-preview-card__lines span:first-child {
@@ -1365,8 +1362,8 @@
 
 .adam-reward-preview-card--frame-base {
 	--adam-card-surface:
-		radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.14), transparent 24%),
-		linear-gradient(135deg, #173f24, #1f572d 48%, #102033);
+		radial-gradient(circle at 82% 18%, var(--adam-highlight, rgba(255, 255, 255, 0.14)), transparent 24%),
+		linear-gradient(135deg, var(--adam-primary, #173f24), var(--adam-primary, #1f572d) 48%, var(--adam-info, #102033));
 }
 
 .adam-reward-preview-badge {
@@ -1382,10 +1379,10 @@
 	width: 64px;
 	height: 64px;
 	border-radius: 18px;
-	background: linear-gradient(135deg, #f2f8f4, #ffffff);
+	background: linear-gradient(135deg, var(--adam-surface-2, #f2f8f4), var(--adam-surface, #ffffff));
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.8),
-		0 10px 20px rgba(16, 46, 27, 0.08);
+		inset 0 1px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.8)),
+		0 10px 20px var(--adam-shadow-color, rgba(16, 46, 27, 0.08));
 }
 
 .adam-reward-preview-icon span {
@@ -1398,7 +1395,7 @@
 .adam-reward-preview-icon--epic,
 .adam-reward-preview-icon--legendary,
 .adam-reward-preview-icon--limited_edition {
-	background: linear-gradient(135deg, #eef4ff, #ffffff);
+	background: linear-gradient(135deg, var(--adam-info-bg, #eef4ff), var(--adam-surface, #ffffff));
 }
 
 .adam-reward-card__meta,
@@ -1419,7 +1416,7 @@
 
 .adam-reward-card__body h4 {
 	margin: 0;
-	color: #102033;
+	color: var(--adam-text, #102033);
 	font-size: 1rem;
 	line-height: 1.2;
 	font-weight: 900;
@@ -1464,7 +1461,7 @@
 	width: 100%;
 	height: 10px;
 	border-radius: 999px;
-	background: #e5ece7;
+	background: var(--adam-surface-2, #e5ece7);
 	overflow: hidden;
 }
 
@@ -1485,47 +1482,47 @@
 }
 
 .adam-reward-card__actions .adam-card-link[disabled] {
-	background: #cbd5d1;
+	background: var(--adam-surface-2, #cbd5d1);
 	box-shadow: none;
 	cursor: not-allowed;
 }
 
 .adam-reward-rarity--common {
-	background: #e2e8f0;
-	color: #334155;
+	background: var(--adam-surface-2, #e2e8f0);
+	color: var(--adam-text, #334155);
 }
 
 .adam-reward-rarity--uncommon {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-reward-rarity--rare {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-reward-rarity--epic {
-	background: #ede9fe;
-	color: #6d28d9;
+	background: var(--adam-info-bg, #ede9fe);
+	color: var(--adam-info, #6d28d9);
 }
 
 .adam-reward-rarity--legendary {
-	background: #fef3c7;
-	color: #b45309;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #b45309);
 }
 
 .adam-reward-rarity--limited_edition {
-	background: #fee2e2;
-	color: #b91c1c;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #b91c1c);
 }
 
 .adam-reward-card {
-	--adam-reward-card-background: linear-gradient(135deg, #ffffff, #f7faf8);
-	--adam-reward-card-text: #102033;
-	--adam-reward-card-muted: rgba(58, 77, 71, 0.82);
-	--adam-reward-card-accent: #2f6b3b;
-	--adam-reward-card-border: rgba(18, 73, 38, 0.12);
+	--adam-reward-card-background: linear-gradient(135deg, var(--adam-surface, #ffffff), var(--adam-surface, #f7faf8));
+	--adam-reward-card-text: var(--adam-text, #102033);
+	--adam-reward-card-muted: var(--adam-shadow-color, rgba(58, 77, 71, 0.82));
+	--adam-reward-card-accent: var(--adam-focus-ring, #2f6b3b);
+	--adam-reward-card-border: var(--adam-shadow-color, rgba(18, 73, 38, 0.12));
 	--adam-reward-card-border-width: 1px;
 	--adam-reward-card-radius: 16px;
 	--adam-reward-card-pattern-opacity: 0.08;
@@ -1577,8 +1574,8 @@
 
 .adam-reward-card__pattern--grid {
 	background-image:
-		linear-gradient(var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05))),
-		linear-gradient(90deg, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)));
+		linear-gradient(var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05))),
+		linear-gradient(90deg, var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.05)));
 	background-size:
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
@@ -1588,7 +1585,7 @@
 	background-image:
 		repeating-linear-gradient(
 			0deg,
-			var(--adam-reward-card-pattern-color-strong, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)),
+			var(--adam-reward-card-pattern-color-strong, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)),
 			transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.09)) calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		);
 	background-size:
@@ -1597,7 +1594,7 @@
 }
 
 .adam-reward-card__pattern--dots {
-	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, rgba(255, 255, 255, 0.18)) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)));
+	background-image: radial-gradient(circle, var(--adam-reward-card-pattern-color, var(--adam-highlight, rgba(255, 255, 255, 0.18))) 0 calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)), transparent calc((var(--adam-reward-card-pattern-density, 2) * 1px) + (var(--adam-reward-card-pattern-size, 24px) * 0.06)));
 	background-size:
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px))
 		calc(var(--adam-reward-card-pattern-size, 24px) + var(--adam-reward-card-pattern-spacing, 24px));
@@ -1623,7 +1620,7 @@
 	max-width: 72px;
 	max-height: 72px;
 	object-fit: contain;
-	filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.14));
+	filter: drop-shadow(0 10px 18px var(--adam-shadow-color, rgba(0, 0, 0, 0.14)));
 }
 
 .adam-reward-card__art--top-left {
@@ -1697,8 +1694,8 @@
 .adam-reward-card__stats div {
 	padding: 10px 12px;
 	border-radius: 12px;
-	background: rgba(255, 255, 255, 0.12);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.12));
+	border: 1px solid var(--adam-highlight, rgba(255, 255, 255, 0.12));
 }
 
 .adam-reward-card__stats span,
@@ -1707,77 +1704,77 @@
 }
 
 .adam-reward-progress__track {
-	background: rgba(255, 255, 255, 0.18);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.18));
 }
 
 .adam-reward-progress__track span {
-	background: linear-gradient(90deg, var(--adam-reward-card-accent), rgba(255, 255, 255, 0.88));
+	background: linear-gradient(90deg, var(--adam-reward-card-accent), var(--adam-surface, rgba(255, 255, 255, 0.88)));
 }
 
 .adam-reward-card__actions .adam-card-link[disabled] {
-	background: rgba(255, 255, 255, 0.24);
-	color: rgba(255, 255, 255, 0.82);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.24));
+	color: var(--adam-text-inverse, rgba(255, 255, 255, 0.82));
 }
 
 .adam-reward-card .adam-announcement-category {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.12));
 	color: var(--adam-reward-card-text);
 }
 
 .adam-reward-card--badge-outline .adam-reward-rarity,
 .adam-reward-card--badge-outline .adam-announcement-category {
 	background: transparent;
-	border: 1px solid rgba(255, 255, 255, 0.28);
+	border: 1px solid var(--adam-highlight, rgba(255, 255, 255, 0.28));
 }
 
 .adam-reward-card--badge-solid .adam-reward-rarity,
 .adam-reward-card--badge-solid .adam-announcement-category {
 	background: var(--adam-reward-card-accent);
-	color: #0f2618;
+	color: var(--adam-text, #0f2618);
 }
 
 .adam-reward-card--badge-glow .adam-reward-rarity,
 .adam-reward-card--badge-glow .adam-announcement-category {
-	box-shadow: 0 0 18px rgba(255, 255, 255, 0.16);
+	box-shadow: 0 0 18px var(--adam-shadow-color, rgba(255, 255, 255, 0.16));
 }
 
 .adam-reward-card--effect-common,
 .adam-reward-card--effect-subtle {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07));
 }
 
 .adam-reward-card--effect-uncommon,
 .adam-reward-card--effect-glow {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07), 0 0 22px rgba(74, 222, 128, 0.12);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)), 0 0 22px var(--adam-shadow-color, rgba(74, 222, 128, 0.12));
 }
 
 .adam-reward-card--effect-rare {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07), 0 0 24px rgba(96, 165, 250, 0.14);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)), 0 0 24px var(--adam-shadow-color, rgba(96, 165, 250, 0.14));
 }
 
 .adam-reward-card--effect-epic {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07), 0 0 26px rgba(168, 85, 247, 0.16);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)), 0 0 26px var(--adam-shadow-color, rgba(168, 85, 247, 0.16));
 }
 
 .adam-reward-card--effect-legendary,
 .adam-reward-card--effect-metallic {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07), 0 0 28px rgba(250, 204, 21, 0.16);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)), 0 0 28px var(--adam-shadow-color, rgba(250, 204, 21, 0.16));
 }
 
 .adam-reward-card--effect-limited_edition {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07), 0 0 26px rgba(248, 113, 113, 0.16);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)), 0 0 26px var(--adam-shadow-color, rgba(248, 113, 113, 0.16));
 }
 
 .adam-reward-card--effect-none {
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07));
 }
 
 .adam-reward-card {
 	--adam-reward-card-gradient-origin: center;
 	--adam-reward-card-gradient-opacity: 1;
-	--adam-reward-card-pattern-color: rgba(255, 255, 255, 0.18);
-	--adam-reward-card-pattern-color-strong: rgba(255, 255, 255, 0.18);
-	--adam-reward-card-pattern-color-soft: rgba(255, 255, 255, 0.08);
+	--adam-reward-card-pattern-color: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-reward-card-pattern-color-strong: var(--adam-highlight, rgba(255, 255, 255, 0.18));
+	--adam-reward-card-pattern-color-soft: var(--adam-highlight, rgba(255, 255, 255, 0.08));
 	--adam-reward-card-pattern-size: 24px;
 	--adam-reward-card-pattern-spacing: 24px;
 	--adam-reward-card-pattern-density: 2;
@@ -1790,7 +1787,7 @@
 	--adam-reward-card-frame-glow: 12px;
 	--adam-reward-card-frame-shadow: 12px;
 	--adam-reward-card-frame-inner-width: 1px;
-	--adam-reward-card-frame-inner-color: rgba(255, 255, 255, 0.22);
+	--adam-reward-card-frame-inner-color: var(--adam-highlight, rgba(255, 255, 255, 0.22));
 	--adam-reward-card-frame-corner: 0px;
 	--adam-reward-card-frame-inset: 12px;
 	--adam-reward-card-content-padding: 22px;
@@ -1810,7 +1807,7 @@
 	--adam-reward-card-description-shadow: 0px;
 	--adam-reward-card-description-width: 66%;
 	box-shadow:
-		0 12px 28px rgba(16, 46, 27, 0.07),
+		0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 24%, transparent),
 		inset 0 0 0 var(--adam-reward-card-frame-inner-width) var(--adam-reward-card-frame-inner-color);
 }
@@ -1887,7 +1884,7 @@
 	font-size: var(--adam-reward-card-title-size);
 	font-weight: var(--adam-reward-card-title-weight);
 	text-align: var(--adam-reward-card-title-align);
-	text-shadow: 0 0 var(--adam-reward-card-title-shadow) rgba(0, 0, 0, 0.45);
+	text-shadow: 0 0 var(--adam-reward-card-title-shadow) var(--adam-shadow-color, rgba(0, 0, 0, 0.45));
 	max-width: var(--adam-reward-card-title-width);
 }
 
@@ -1896,38 +1893,38 @@
 	font-size: var(--adam-reward-card-description-size);
 	font-weight: var(--adam-reward-card-description-weight);
 	text-align: var(--adam-reward-card-description-align);
-	text-shadow: 0 0 var(--adam-reward-card-description-shadow) rgba(0, 0, 0, 0.4);
+	text-shadow: 0 0 var(--adam-reward-card-description-shadow) var(--adam-shadow-color, rgba(0, 0, 0, 0.4));
 	max-width: var(--adam-reward-card-description-width);
 }
 
 .adam-reward-card--frame-double {
 	box-shadow:
-		0 12px 28px rgba(16, 46, 27, 0.07),
+		0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) color-mix(in srgb, var(--adam-reward-card-border) 36%, transparent),
-		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) rgba(255, 255, 255, 0.08);
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 6px) var(--adam-shadow-color, rgba(255, 255, 255, 0.08));
 }
 
 .adam-reward-card--frame-metallic {
 	box-shadow:
-		0 12px 28px rgba(16, 46, 27, 0.07),
-		inset 0 2px 0 rgba(255, 255, 255, 0.36),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+		0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)),
+		inset 0 2px 0 var(--adam-shadow-color, rgba(255, 255, 255, 0.36)),
+		inset 0 -2px 0 var(--adam-shadow-color, rgba(0, 0, 0, 0.22)),
 		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 1px) color-mix(in srgb, var(--adam-reward-card-border) 42%, transparent),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-border) 28%, transparent);
 }
 
 .adam-reward-card--frame-segmented {
 	box-shadow:
-		0 12px 28px rgba(16, 46, 27, 0.07),
-		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) rgba(255, 255, 255, 0.06),
+		0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07)),
+		inset 0 0 0 calc(var(--adam-reward-card-border-width) + 2px) var(--adam-shadow-color, rgba(255, 255, 255, 0.06)),
 		0 0 var(--adam-reward-card-frame-glow) color-mix(in srgb, var(--adam-reward-card-accent) 30%, transparent);
 	background-image:
 		repeating-linear-gradient(
 			135deg,
 			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 0 18px,
-			rgba(255, 255, 255, 0.18) 18px 24px,
+			var(--adam-highlight, rgba(255, 255, 255, 0.18)) 18px 24px,
 			color-mix(in srgb, var(--adam-reward-card-border) 92%, transparent) 24px 42px,
-			rgba(0, 0, 0, 0.22) 42px 48px
+			var(--adam-shadow-color, rgba(0, 0, 0, 0.22)) 42px 48px
 		);
 }
 
@@ -1980,9 +1977,9 @@
 .adam-reward-history__item {
 	justify-content: space-between;
 	padding: 16px 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
-	background: #fbfdfb;
+	background: var(--adam-surface, #fbfdfb);
 }
 
 .adam-reward-history__main {
@@ -2008,9 +2005,9 @@
 	align-items: center;
 	gap: 14px;
 	padding: 16px 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
-	background: #fbfdfb;
+	background: var(--adam-surface, #fbfdfb);
 }
 
 .adam-points-entry__score {
@@ -2025,13 +2022,13 @@
 }
 
 .adam-points-entry__score.is-positive {
-	background: #dcfce7;
-	color: #14532d;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-text, #14532d);
 }
 
 .adam-points-entry__score.is-negative {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-points-entry__body {
@@ -2058,7 +2055,7 @@
 
 .adam-empty-inline {
 	padding: 18px;
-	border: 1px dashed var(--adam-border);
+	border: 1px dashed var(--adam-border, #d9e4dc);
 	border-radius: 14px;
 	text-align: center;
 }
@@ -2083,8 +2080,8 @@
 	min-height: 34px;
 	padding: 7px 12px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.16);
-	color: #ffffff;
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.16));
+	color: var(--adam-text-inverse, #ffffff);
 	font-size: 1rem;
 	font-weight: 900;
 	letter-spacing: 0.04em;
@@ -2099,16 +2096,16 @@
 
 .adam-digital-card__details div {
 	padding: 14px;
-	border: 1px solid rgba(255, 255, 255, 0.16);
+	border: 1px solid var(--adam-highlight, rgba(255, 255, 255, 0.16));
 	border-radius: 16px;
-	background: rgba(255, 255, 255, 0.10);
+	background: var(--adam-highlight, rgba(255, 255, 255, 0.10));
 	backdrop-filter: blur(10px);
 }
 
 .adam-digital-card__details strong {
 	display: block;
 	margin-top: 6px;
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	font-size: 1.05rem;
 	font-weight: 900;
 }
@@ -2120,9 +2117,9 @@
 	gap: 8px;
 	padding: 13px;
 	border-radius: 20px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	color: var(--adam-green-900);
-	box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+	box-shadow: 0 18px 36px var(--adam-shadow-color, rgba(0, 0, 0, 0.22));
 }
 
 .adam-digital-card__qr img {
@@ -2148,7 +2145,7 @@
 }
 
 .adam-digital-card__footer a {
-	color: #ffffff;
+	color: var(--adam-text-inverse, #ffffff);
 	font-weight: 800;
 	text-decoration: underline;
 	text-underline-offset: 4px;
@@ -2171,25 +2168,25 @@
 }
 
 .adam-badge.active {
-	background: #dcfce7;
-	color: #14532d;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-text, #14532d);
 }
 
 .adam-badge.pending,
 .adam-badge.warning {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-badge.rejected,
 .adam-badge.expired {
-	background: #fee2e2;
-	color: #991b1b;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-badge.unknown {
-	background: #e5e7eb;
-	color: #374151;
+	background: var(--adam-surface-2, #e5e7eb);
+	color: var(--adam-text, #374151);
 }
 
 .adam-data-list {
@@ -2203,7 +2200,7 @@
 	justify-content: space-between;
 	gap: 18px;
 	padding: 15px 0;
-	border-bottom: 1px solid #edf3ee;
+	border-bottom: 1px solid var(--adam-border, #edf3ee);
 }
 
 .adam-data-item:last-child {
@@ -2269,10 +2266,10 @@
 	gap: 18px;
 	min-height: 76px;
 	padding: 16px 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-left: 4px solid var(--adam-green-600);
 	border-radius: 14px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	color: var(--adam-ink);
 	transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2296,7 +2293,7 @@
 .adam-action-card:hover,
 .adam-action-card:focus {
 	border-color: var(--adam-green-600);
-	box-shadow: 0 14px 28px rgba(23, 63, 36, 0.12);
+	box-shadow: 0 14px 28px var(--adam-shadow-color, rgba(23, 63, 36, 0.12));
 	color: var(--adam-ink);
 	transform: translateY(-2px);
 	outline: none;
@@ -2307,7 +2304,7 @@
 	margin-bottom: 0;
 	font-size: 1rem;
 	font-weight: 800;
-	color: #102033;
+	color: var(--adam-text, #102033);
 }
 
 .adam-member-notice,
@@ -2315,8 +2312,8 @@
 	margin: 0;
 	padding: 16px 18px;
 	border-radius: 14px;
-	background: #ffffff;
-	box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+	background: var(--adam-surface, #ffffff);
+	box-shadow: 0 10px 26px var(--adam-shadow-color, rgba(15, 23, 42, 0.05));
 }
 
 .adam-member-area .notice p {
@@ -2331,14 +2328,14 @@
 }
 
 .adam-member-area .notice-error {
-	border-left: 5px solid #dc2626;
-	background: #fef2f2;
-	color: #991b1b;
+	border-left: 5px solid var(--adam-danger, #dc2626);
+	background: var(--adam-danger-bg, #fef2f2);
+	color: var(--adam-danger, #991b1b);
 }
 
 .adam-member-area .notice-info {
 	border-left: 5px solid var(--adam-green-600);
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 	color: var(--adam-ink);
 }
 
@@ -2358,15 +2355,15 @@
 	display: grid;
 	gap: 12px;
 	padding: 18px;
-	border: 1px solid rgba(18, 73, 38, 0.12);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.12));
 	border-radius: 18px;
-	background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 245, 0.98));
-	box-shadow: 0 10px 24px rgba(16, 46, 27, 0.06);
+	background: linear-gradient(180deg, var(--adam-surface, rgba(255, 255, 255, 0.96)), var(--adam-highlight, rgba(244, 248, 245, 0.98)));
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(16, 46, 27, 0.06));
 }
 
 .adam-announcement-card.is-unread {
-	border-color: rgba(29, 123, 54, 0.28);
-	box-shadow: 0 16px 28px rgba(29, 123, 54, 0.12);
+	border-color: var(--adam-primary-soft, rgba(29, 123, 54, 0.28));
+	box-shadow: 0 16px 28px var(--adam-shadow-color, rgba(29, 123, 54, 0.12));
 }
 
 .adam-announcement-card.is-pinned {
@@ -2381,7 +2378,7 @@
 	bottom: 0;
 	width: 4px;
 	border-radius: 18px 0 0 18px;
-	background: #1f9d45;
+	background: var(--adam-primary, #1f9d45);
 }
 
 .adam-announcement-card__meta,
@@ -2395,7 +2392,7 @@
 }
 
 .adam-announcement-category {
-	color: #2f6b3b;
+	color: var(--adam-text, #2f6b3b);
 	font-size: 12px;
 	font-weight: 800;
 	text-transform: uppercase;
@@ -2405,35 +2402,35 @@
 .adam-announcement-card h4,
 .adam-announcement-detail h3 {
 	margin: 0;
-	color: #102033;
+	color: var(--adam-text, #102033);
 }
 
 .adam-announcement-card p,
 .adam-announcement-detail__content {
 	margin: 0;
-	color: #44515c;
+	color: var(--adam-text, #44515c);
 	line-height: 1.7;
 }
 
 .adam-announcement-card__footer,
 .adam-announcement-detail__meta {
-	color: #6b7280;
+	color: var(--adam-text-muted, #6b7280);
 	font-size: 13px;
 }
 
 .adam-announcement-priority--info {
-	background: #dbeafe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #dbeafe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-announcement-priority--important {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-announcement-priority--urgent {
-	background: #fee2e2;
-	color: #b91c1c;
+	background: var(--adam-danger-bg, #fee2e2);
+	color: var(--adam-danger, #b91c1c);
 }
 
 .adam-action-card--inline {
@@ -2450,9 +2447,9 @@
 	gap: 14px;
 	margin-bottom: 22px;
 	padding: 16px;
-	border: 1px solid #e1ebe4;
+	border: 1px solid var(--adam-border, #e1ebe4);
 	border-radius: 16px;
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 }
 
 .adam-documents-section .adam-document-filters label {
@@ -2474,9 +2471,9 @@
 	width: 100%;
 	min-height: 44px;
 	padding: 10px 12px;
-	border: 1px solid #cfd8e3;
+	border: 1px solid var(--adam-border, #cfd8e3);
 	border-radius: 12px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	color: var(--adam-ink);
 	font-weight: 700;
 }
@@ -2491,9 +2488,9 @@
 
 .adam-document-empty {
 	padding: 22px;
-	border: 1px dashed var(--adam-border);
+	border: 1px dashed var(--adam-border, #d9e4dc);
 	border-radius: 16px;
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 	color: var(--adam-muted);
 	font-weight: 700;
 	text-align: center;
@@ -2511,10 +2508,10 @@
 	gap: 16px;
 	min-width: 0;
 	padding: 18px;
-	border: 1px solid rgba(18, 73, 38, 0.12);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.12));
 	border-radius: 18px;
-	background: linear-gradient(180deg, #ffffff, #f8fbf9);
-	box-shadow: 0 10px 24px rgba(16, 46, 27, 0.06);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f8fbf9));
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(16, 46, 27, 0.06));
 }
 
 .adam-document-card__icon {
@@ -2546,7 +2543,7 @@
 
 .adam-document-card h4 {
 	margin: 0;
-	color: #102033;
+	color: var(--adam-text, #102033);
 	font-size: 1.06rem;
 	line-height: 1.25;
 	font-weight: 900;
@@ -2555,12 +2552,12 @@
 }
 
 .adam-document-card p {
-	color: #44515c;
+	color: var(--adam-text, #44515c);
 	line-height: 1.62;
 }
 
 .adam-document-card__details {
-	color: #6b7280;
+	color: var(--adam-text-muted, #6b7280);
 	font-size: 13px;
 	font-weight: 700;
 }
@@ -2568,8 +2565,8 @@
 .adam-document-important {
 	min-height: 28px;
 	padding: 5px 10px;
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 	font-size: 0.74rem;
 }
 
@@ -2588,7 +2585,7 @@
 
 .adam-login-copy p:not(.adam-eyebrow) {
 	max-width: 560px;
-	color: #526070;
+	color: var(--adam-text-muted, #526070);
 }
 
 .adam-login-form {
@@ -2631,7 +2628,7 @@
 	margin-bottom: 8px;
 	font-size: 0.93rem;
 	font-weight: 800;
-	color: #344256;
+	color: var(--adam-text, #344256);
 }
 
 .adam-member-area .adam-card input:not([type="checkbox"]):not([type="radio"]),
@@ -2640,14 +2637,14 @@
 	max-width: 100%;
 	min-height: 46px;
 	padding: 12px 14px;
-	border: 1px solid #cfd8e3;
+	border: 1px solid var(--adam-border, #cfd8e3);
 	border-radius: 12px;
 	font-size: 1rem;
 	font-weight: 600;
 }
 
 .adam-member-area .adam-card input[readonly] {
-	background: #f8fafc;
+	background: var(--adam-surface, #f8fafc);
 	color: var(--adam-muted);
 	cursor: default;
 }
@@ -2655,7 +2652,7 @@
 .adam-member-area .adam-card input:focus,
 .adam-member-area .adam-card select:focus {
 	border-color: var(--adam-green-600);
-	box-shadow: 0 0 0 3px rgba(63, 143, 77, 0.16);
+	box-shadow: 0 0 0 3px var(--adam-shadow-color, rgba(63, 143, 77, 0.16));
 	outline: none;
 }
 
@@ -2669,7 +2666,7 @@
 	cursor: pointer;
 	font-size: 0.95rem;
 	font-weight: 700;
-	color: #344256;
+	color: var(--adam-text, #344256);
 	line-height: 1.4;
 }
 
@@ -2765,8 +2762,8 @@
 .adam-password-strength {
 	margin: 26px 0;
 	padding: 24px;
-	background: #f8fafc;
-	border: 1px solid #dbe3ea;
+	background: var(--adam-surface, #f8fafc);
+	border: 1px solid var(--adam-border, #dbe3ea);
 	border-radius: 14px;
 }
 
@@ -2774,7 +2771,7 @@
 	margin: 0 0 18px;
 	font-size: 18px;
 	font-weight: 800;
-	color: #172033;
+	color: var(--adam-text, #172033);
 }
 
 .adam-strength-bar {
@@ -2791,7 +2788,7 @@
 	height: 10px !important;
 	min-height: 10px !important;
 	max-height: 10px;
-	background: #d1d5db;
+	background: var(--adam-surface-2, #d1d5db);
 	border-radius: 999px;
 	transition: background 0.2s ease;
 }
@@ -2804,14 +2801,14 @@
 	margin: 0 0 20px;
 	font-size: 16px;
 	font-weight: 800;
-	color: #374151;
+	color: var(--adam-text, #374151);
 }
 
 .adam-password-rules p {
 	margin: 0 0 14px;
 	font-size: 15px;
 	font-weight: 800;
-	color: #111827;
+	color: var(--adam-text, #111827);
 }
 
 .adam-password-rules ul {
@@ -2828,7 +2825,7 @@
 	font-size: 15px;
 	font-weight: 600;
 	line-height: 1.5;
-	color: #6b7280;
+	color: var(--adam-text-muted, #6b7280);
 	transition: all 0.2s ease;
 }
 
@@ -2862,18 +2859,18 @@
 	padding: 0;
 	border: 0;
 	background: transparent;
-	color: #6b7280;
+	color: var(--adam-text-muted, #6b7280);
 	cursor: pointer;
 	transform: translateY(-50%);
 }
 
 .adam-card .adam-password-toggle:hover {
-	color: #16a34a;
+	color: var(--adam-primary, #16a34a);
 	transform: translateY(-50%);
 }
 
 .adam-card .adam-password-toggle:focus {
-	box-shadow: 0 0 0 3px rgba(63, 143, 77, 0.18);
+	box-shadow: 0 0 0 3px var(--adam-shadow-color, rgba(63, 143, 77, 0.18));
 	outline: none;
 }
 
@@ -2908,7 +2905,7 @@
 .adam-member-area a:focus-visible,
 .adam-member-area button:focus-visible,
 .adam-member-area input:focus-visible {
-	outline: 3px solid rgba(63, 143, 77, 0.28);
+	outline: 3px solid var(--adam-focus-ring, rgba(63, 143, 77, 0.28));
 	outline-offset: 3px;
 }
 
@@ -3236,9 +3233,9 @@
 .adam-rewards-catalogue-summary__card,
 .adam-rewards-catalogue-card__meta-item {
 	padding: 18px;
-	border: 1px solid var(--adam-border);
+	border: 1px solid var(--adam-border, #d9e4dc);
 	border-radius: 14px;
-	background: linear-gradient(180deg, #f8fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f8fbf8), var(--adam-surface, #ffffff));
 }
 
 .adam-rewards-catalogue-summary__card > span,
@@ -3280,7 +3277,7 @@
 .adam-rewards-catalogue-section + .adam-rewards-catalogue-section {
 	margin-top: 28px;
 	padding-top: 28px;
-	border-top: 1px solid rgba(18, 73, 38, 0.08);
+	border-top: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.08));
 }
 
 .adam-rewards-catalogue-section__header {
@@ -3304,9 +3301,9 @@
 }
 
 .adam-rewards-catalogue-card {
-	--adam-reward-rarity-color: #94a3b8;
-	--adam-reward-rarity-soft: rgba(148, 163, 184, 0.12);
-	--adam-reward-rarity-border: rgba(148, 163, 184, 0.34);
+	--adam-reward-rarity-color: var(--adam-surface-2, #94a3b8);
+	--adam-reward-rarity-soft: var(--adam-shadow-color, rgba(148, 163, 184, 0.12));
+	--adam-reward-rarity-border: var(--adam-shadow-color, rgba(148, 163, 184, 0.34));
 	display: grid;
 	gap: 16px;
 	padding: 18px;
@@ -3315,50 +3312,50 @@
 	border-left-width: 4px;
 	border-radius: 16px;
 	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 248, 0.98)),
+		linear-gradient(180deg, var(--adam-surface, rgba(255, 255, 255, 0.98)), var(--adam-highlight, rgba(248, 251, 248, 0.98))),
 		var(--adam-reward-rarity-soft);
-	box-shadow: 0 12px 28px rgba(16, 46, 27, 0.07);
+	box-shadow: 0 12px 28px var(--adam-shadow-color, rgba(16, 46, 27, 0.07));
 }
 
 .adam-rewards-catalogue-card--common {
-	--adam-reward-rarity-color: #94a3b8;
-	--adam-reward-rarity-soft: rgba(148, 163, 184, 0.10);
-	--adam-reward-rarity-border: rgba(148, 163, 184, 0.28);
+	--adam-reward-rarity-color: var(--adam-surface-2, #94a3b8);
+	--adam-reward-rarity-soft: var(--adam-shadow-color, rgba(148, 163, 184, 0.10));
+	--adam-reward-rarity-border: var(--adam-shadow-color, rgba(148, 163, 184, 0.28));
 }
 
 .adam-rewards-catalogue-card--uncommon {
-	--adam-reward-rarity-color: #16a34a;
-	--adam-reward-rarity-soft: rgba(22, 163, 74, 0.10);
-	--adam-reward-rarity-border: rgba(22, 163, 74, 0.28);
+	--adam-reward-rarity-color: var(--adam-primary, #16a34a);
+	--adam-reward-rarity-soft: var(--adam-primary-soft, rgba(22, 163, 74, 0.10));
+	--adam-reward-rarity-border: var(--adam-primary-soft, rgba(22, 163, 74, 0.28));
 }
 
 .adam-rewards-catalogue-card--rare {
-	--adam-reward-rarity-color: #2563eb;
-	--adam-reward-rarity-soft: rgba(37, 99, 235, 0.10);
-	--adam-reward-rarity-border: rgba(37, 99, 235, 0.28);
+	--adam-reward-rarity-color: var(--adam-info, #2563eb);
+	--adam-reward-rarity-soft: var(--adam-overlay, rgba(37, 99, 235, 0.10));
+	--adam-reward-rarity-border: var(--adam-overlay, rgba(37, 99, 235, 0.28));
 }
 
 .adam-rewards-catalogue-card--epic {
-	--adam-reward-rarity-color: #7c3aed;
-	--adam-reward-rarity-soft: rgba(124, 58, 237, 0.10);
-	--adam-reward-rarity-border: rgba(124, 58, 237, 0.28);
+	--adam-reward-rarity-color: var(--adam-info, #7c3aed);
+	--adam-reward-rarity-soft: var(--adam-overlay, rgba(124, 58, 237, 0.10));
+	--adam-reward-rarity-border: var(--adam-overlay, rgba(124, 58, 237, 0.28));
 }
 
 .adam-rewards-catalogue-card--legendary {
-	--adam-reward-rarity-color: #d97706;
-	--adam-reward-rarity-soft: rgba(217, 119, 6, 0.10);
-	--adam-reward-rarity-border: rgba(217, 119, 6, 0.30);
+	--adam-reward-rarity-color: var(--adam-warning, #d97706);
+	--adam-reward-rarity-soft: var(--adam-overlay, rgba(217, 119, 6, 0.10));
+	--adam-reward-rarity-border: var(--adam-overlay, rgba(217, 119, 6, 0.30));
 }
 
 .adam-rewards-catalogue-card--limited_edition {
-	--adam-reward-rarity-color: #dc2626;
-	--adam-reward-rarity-soft: rgba(220, 38, 38, 0.10);
-	--adam-reward-rarity-border: rgba(220, 38, 38, 0.30);
+	--adam-reward-rarity-color: var(--adam-danger, #dc2626);
+	--adam-reward-rarity-soft: var(--adam-overlay, rgba(220, 38, 38, 0.10));
+	--adam-reward-rarity-border: var(--adam-overlay, rgba(220, 38, 38, 0.30));
 }
 
 .adam-rewards-catalogue-card.is-claimed {
 	background:
-		linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 248, 0.98)),
+		linear-gradient(180deg, var(--adam-surface, rgba(255, 255, 255, 0.98)), var(--adam-highlight, rgba(247, 250, 248, 0.98))),
 		var(--adam-reward-rarity-soft);
 }
 
@@ -3394,29 +3391,29 @@
 }
 
 .adam-rewards-catalogue-card__type {
-	border: 1px solid rgba(18, 73, 38, 0.12);
-	background: rgba(248, 251, 248, 0.9);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 73, 38, 0.12));
+	background: var(--adam-highlight, rgba(248, 251, 248, 0.9));
 	color: var(--adam-green-900);
 }
 
 .adam-rewards-catalogue-card__status.active {
-	background: #dcfce7;
-	color: #166534;
+	background: var(--adam-success-bg, #dcfce7);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-rewards-catalogue-card__status.pending {
-	background: #fef3c7;
-	color: #92400e;
+	background: var(--adam-warning-bg, #fef3c7);
+	color: var(--adam-warning, #92400e);
 }
 
 .adam-rewards-catalogue-card__status.warning {
-	background: #ecfccb;
-	color: #365314;
+	background: var(--adam-success-bg, #ecfccb);
+	color: var(--adam-text, #365314);
 }
 
 .adam-rewards-catalogue-card__status.unknown {
-	background: #e2e8f0;
-	color: #334155;
+	background: var(--adam-surface-2, #e2e8f0);
+	color: var(--adam-text, #334155);
 }
 
 .adam-rewards-catalogue-card__meta-grid {
@@ -3447,7 +3444,7 @@
 }
 
 .adam-rewards-catalogue-card__actions .adam-card-link[disabled] {
-	background: #cbd5d1;
+	background: var(--adam-surface-2, #cbd5d1);
 	box-shadow: none;
 	cursor: not-allowed;
 }

@@ -5,10 +5,10 @@
 }
 
 .adam-reward-claim-card {
-	background: #fff;
-	border: 1px solid rgba(18, 77, 38, 0.12);
+	background: var(--adam-surface, #fff);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 77, 38, 0.12));
 	border-radius: 18px;
-	box-shadow: 0 24px 60px rgba(18, 77, 38, 0.08);
+	box-shadow: 0 24px 60px var(--adam-shadow-color, rgba(18, 77, 38, 0.08));
 	padding: 32px;
 }
 
@@ -18,29 +18,29 @@
 	font-weight: 700;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	color: #124d26;
+	color: var(--adam-text, #124d26);
 }
 
 .adam-reward-claim-card h1 {
 	margin: 0 0 16px;
 	font-size: 32px;
 	line-height: 1.1;
-	color: #16331f;
+	color: var(--adam-text, #16331f);
 }
 
 .adam-reward-claim-card__reward {
 	margin-bottom: 20px;
 	padding: 18px 20px;
 	border-radius: 16px;
-	background: #f5faf6;
-	border: 1px solid rgba(18, 77, 38, 0.1);
+	background: var(--adam-surface, #f5faf6);
+	border: 1px solid var(--adam-shadow-color, rgba(18, 77, 38, 0.1));
 }
 
 .adam-reward-claim-card__reward strong {
 	display: block;
 	margin-bottom: 6px;
 	font-size: 20px;
-	color: #16331f;
+	color: var(--adam-text, #16331f);
 }
 
 .adam-reward-claim-card__reward p,
@@ -55,27 +55,27 @@
 }
 
 .adam-reward-claim-card__notice--success {
-	background: #eefaf2;
-	border: 1px solid rgba(28, 140, 72, 0.16);
-	color: #0f5e2f;
+	background: var(--adam-surface-2, #eefaf2);
+	border: 1px solid var(--adam-primary-soft, rgba(28, 140, 72, 0.16));
+	color: var(--adam-text, #0f5e2f);
 }
 
 .adam-reward-claim-card__notice--warning {
-	background: #fff8ea;
-	border: 1px solid rgba(184, 116, 0, 0.18);
-	color: #6f4700;
+	background: var(--adam-warning-bg, #fff8ea);
+	border: 1px solid var(--adam-overlay, rgba(184, 116, 0, 0.18));
+	color: var(--adam-text, #6f4700);
 }
 
 .adam-reward-claim-card__notice--error {
-	background: #fff0f0;
-	border: 1px solid rgba(183, 61, 61, 0.18);
-	color: #852727;
+	background: var(--adam-danger-bg, #fff0f0);
+	border: 1px solid var(--adam-overlay, rgba(183, 61, 61, 0.18));
+	color: var(--adam-danger, #852727);
 }
 
 .adam-reward-claim-card__notice--info {
-	background: #f3f8ff;
-	border: 1px solid rgba(33, 87, 173, 0.14);
-	color: #1f4f98;
+	background: var(--adam-info-bg, #f3f8ff);
+	border: 1px solid var(--adam-overlay, rgba(33, 87, 173, 0.14));
+	color: var(--adam-info, #1f4f98);
 }
 
 .adam-reward-claim-card__login .login-username,
@@ -89,7 +89,7 @@
 	display: block;
 	margin-bottom: 8px;
 	font-weight: 600;
-	color: #16331f;
+	color: var(--adam-text, #16331f);
 }
 
 .adam-reward-claim-card__login input[type="text"],
@@ -97,8 +97,8 @@
 	width: 100%;
 	padding: 12px 14px;
 	border-radius: 12px;
-	border: 1px solid rgba(18, 77, 38, 0.18);
-	background: #fff;
+	border: 1px solid var(--adam-shadow-color, rgba(18, 77, 38, 0.18));
+	background: var(--adam-surface, #fff);
 }
 
 .adam-reward-claim-card__button,
@@ -108,9 +108,9 @@
 	justify-content: center;
 	padding: 12px 18px;
 	border-radius: 999px;
-	background: #1c7841;
+	background: var(--adam-primary, #1c7841);
 	border: none;
-	color: #fff;
+	color: var(--adam-text-inverse, #fff);
 	font-weight: 700;
 	text-decoration: none;
 	cursor: pointer;
@@ -118,8 +118,8 @@
 
 .adam-reward-claim-card__button:hover,
 .adam-reward-claim-card__login input[type="submit"]:hover {
-	background: #176436;
-	color: #fff;
+	background: var(--adam-primary, #176436);
+	color: var(--adam-text-inverse, #fff);
 }
 
 @media (max-width: 640px) {

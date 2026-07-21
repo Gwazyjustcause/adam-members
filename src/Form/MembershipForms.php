@@ -124,11 +124,11 @@ final class MembershipForms {
 				<div class="adam-form-section">
 					<h4><?php esc_html_e( "J\u{00E1} pertence a outra associa\u{00E7}\u{00E3}o de airsoft?", 'adam-membership' ); ?></h4>
 					<div class="adam-choice-grid">
-						<label class="adam-choice-card">
+						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>>
 							<span><?php echo esc_html( sprintf( __( "N\u{00E3}o, a ADAM ser\u{00E1} a minha associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
 						</label>
-						<label class="adam-choice-card">
+						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['membership_mode'] ?? '' ) ); ?>>
 							<span><?php echo esc_html( sprintf( __( "Sim, j\u{00E1} perten\u{00E7}o a outra associa\u{00E7}\u{00E3}o de airsoft \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
 						</label>
@@ -232,11 +232,11 @@ final class MembershipForms {
 				<div class="adam-form-section">
 					<h4><?php esc_html_e( 'Como pretende renovar este ano?', 'adam-membership' ); ?></h4>
 					<div class="adam-choice-grid">
-						<label class="adam-choice-card">
+						<label class="adam-choice-card adam-card">
 							<input type="radio" name="renewal_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? 'adam_primary' ) ); ?>>
 							<span><?php echo esc_html( sprintf( __( "A ADAM ser\u{00E1} a minha associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
 						</label>
-						<label class="adam-choice-card">
+						<label class="adam-choice-card adam-card">
 							<input type="radio" name="renewal_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['renewal_mode'] ?? '' ) ); ?>>
 							<span><?php echo esc_html( sprintf( __( "Continuo associado atrav\u{00E9}s de outra associa\u{00E7}\u{00E3}o de airsoft \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
 						</label>
@@ -619,7 +619,7 @@ final class MembershipForms {
 			? ( 'external_association' === (string) ( $values['membership_mode'] ?? '' ) ? 'external_association' : 'adam_primary' )
 			: ( $allow_external_switch && 'external_association' === (string) ( $values['renewal_mode'] ?? '' ) ? 'external_association' : 'adam_primary' );
 		?>
-		<section class="adam-payment-panel" data-adam-payment-panel>
+		<section class="adam-payment-panel adam-card" data-adam-payment-panel>
 			<div class="adam-payment-panel__header">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Pagamento da Quota', 'adam-membership' ); ?></p>

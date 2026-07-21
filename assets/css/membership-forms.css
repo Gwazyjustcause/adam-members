@@ -40,7 +40,7 @@
 .adam-form-summary span,
 .adam-payment-panel__fee span,
 .adam-payment-panel__grid span {
-	color: var(--adam-muted, #5d6b7c);
+	color: var(--adam-muted, var(--adam-text-muted, #5d6b7c));
 	font-size: 0.82rem;
 	font-weight: 800;
 	letter-spacing: 0.04em;
@@ -59,18 +59,18 @@
 	width: 100%;
 	min-height: 46px;
 	padding: 12px 14px;
-	border: 1px solid var(--adam-border, #d9e4dc);
+	border: 1px solid var(--adam-border, var(--adam-border, #d9e4dc));
 	border-radius: 14px;
-	background: #ffffff;
-	box-shadow: inset 0 1px 2px rgba(16, 32, 51, 0.03);
-	color: var(--adam-ink, #102033);
+	background: var(--adam-surface, #ffffff);
+	box-shadow: inset 0 1px 2px var(--adam-shadow-color, rgba(16, 32, 51, 0.03));
+	color: var(--adam-ink, var(--adam-text, #102033));
 	font: inherit;
 	transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .adam-form-field input[type="file"] {
 	padding: 10px 12px;
-	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f7fbf8), var(--adam-surface, #ffffff));
 	cursor: pointer;
 }
 
@@ -88,13 +88,13 @@
 .adam-form-field select:focus,
 .adam-form-field textarea:focus {
 	outline: none;
-	border-color: var(--adam-green-600, #3f7a47);
-	box-shadow: 0 0 0 4px rgba(63, 122, 71, 0.12);
+	border-color: var(--adam-green-600, var(--adam-primary, #3f7a47));
+	box-shadow: 0 0 0 4px var(--adam-shadow-color, rgba(63, 122, 71, 0.12));
 }
 
 .adam-form-field small,
 .adam-payment-panel__notes {
-	color: var(--adam-muted, #5d6b7c);
+	color: var(--adam-muted, var(--adam-text-muted, #5d6b7c));
 	line-height: 1.5;
 }
 
@@ -102,9 +102,9 @@
 .adam-payment-panel,
 .adam-form-summary {
 	padding: 18px;
-	border: 1px solid var(--adam-border, #d9e4dc);
+	border: 1px solid var(--adam-border, var(--adam-border, #d9e4dc));
 	border-radius: 18px;
-	background: linear-gradient(180deg, #f7fbf8, #ffffff);
+	background: linear-gradient(180deg, var(--adam-surface, #f7fbf8), var(--adam-surface, #ffffff));
 }
 
 .adam-membership-native-form > .adam-form-grid,
@@ -129,36 +129,36 @@
 	display: grid;
 	gap: 10px;
 	padding: 16px;
-	border: 1px solid var(--adam-border, #d9e4dc);
+	border: 1px solid var(--adam-border, var(--adam-border, #d9e4dc));
 	border-radius: 16px;
-	background: linear-gradient(180deg, #ffffff, #f8fcf9);
-	box-shadow: 0 10px 30px rgba(16, 32, 51, 0.04);
+	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f8fcf9));
+	box-shadow: 0 10px 30px var(--adam-shadow-color, rgba(16, 32, 51, 0.04));
 	cursor: pointer;
 	transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .adam-choice-card:hover {
-	border-color: rgba(47, 107, 59, 0.28);
+	border-color: var(--adam-primary-soft, rgba(47, 107, 59, 0.28));
 	transform: translateY(-1px);
-	box-shadow: 0 14px 34px rgba(16, 32, 51, 0.08);
+	box-shadow: 0 14px 34px var(--adam-shadow-color, rgba(16, 32, 51, 0.08));
 }
 
 .adam-choice-card:has(input:checked) {
-	border-color: var(--adam-green-700, #2f6b3b);
-	background: linear-gradient(180deg, rgba(240, 249, 243, 0.95), #ffffff);
-	box-shadow: 0 16px 36px rgba(47, 107, 59, 0.12);
+	border-color: var(--adam-green-700, var(--adam-primary, #2f6b3b));
+	background: linear-gradient(180deg, var(--adam-highlight, rgba(240, 249, 243, 0.95)), var(--adam-surface, #ffffff));
+	box-shadow: 0 16px 36px var(--adam-shadow-color, rgba(47, 107, 59, 0.12));
 }
 
 .adam-choice-card input,
 .adam-inline-choice input,
 .adam-checkbox-control input {
-	accent-color: var(--adam-green-700, #2f6b3b);
+	accent-color: var(--adam-green-700, var(--adam-focus-ring, #2f6b3b));
 }
 
 .adam-choice-card span,
 .adam-inline-choice label,
 .adam-checkbox-label {
-	color: var(--adam-ink, #102033);
+	color: var(--adam-ink, var(--adam-text, #102033));
 	font-weight: 700;
 	line-height: 1.45;
 }
@@ -178,17 +178,17 @@
 
 .adam-inline-choice label {
 	padding: 12px 14px;
-	border: 1px solid var(--adam-border, #d9e4dc);
+	border: 1px solid var(--adam-border, var(--adam-border, #d9e4dc));
 	border-radius: 14px;
-	background: #ffffff;
+	background: var(--adam-surface, #ffffff);
 	cursor: pointer;
 	transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .adam-inline-choice label:has(input:checked) {
-	border-color: var(--adam-green-700, #2f6b3b);
-	background: linear-gradient(180deg, rgba(240, 249, 243, 0.95), #ffffff);
-	box-shadow: 0 10px 24px rgba(47, 107, 59, 0.12);
+	border-color: var(--adam-green-700, var(--adam-primary, #2f6b3b));
+	background: linear-gradient(180deg, var(--adam-highlight, rgba(240, 249, 243, 0.95)), var(--adam-surface, #ffffff));
+	box-shadow: 0 10px 24px var(--adam-shadow-color, rgba(47, 107, 59, 0.12));
 }
 
 .adam-checkbox-field {
@@ -253,7 +253,7 @@
 .adam-payment-panel__fee strong,
 .adam-payment-panel__grid strong,
 .adam-form-summary strong {
-	color: var(--adam-green-900, #173f24);
+	color: var(--adam-green-900, var(--adam-text, #173f24));
 	font-size: 1rem;
 }
 
@@ -264,21 +264,21 @@
 }
 
 .adam-notice--success {
-	background: #f0fdf4;
-	border-color: #bbf7d0;
-	color: #166534;
+	background: var(--adam-success-bg, #f0fdf4);
+	border-color: var(--adam-primary, #bbf7d0);
+	color: var(--adam-primary, #166534);
 }
 
 .adam-notice--error {
-	background: #fff1f2;
-	border-color: #fecdd3;
-	color: #9f1239;
+	background: var(--adam-danger-bg, #fff1f2);
+	border-color: var(--adam-danger, #fecdd3);
+	color: var(--adam-danger, #9f1239);
 }
 
 .adam-notice--info {
-	background: #eff6ff;
-	border-color: #bfdbfe;
-	color: #1d4ed8;
+	background: var(--adam-info-bg, #eff6ff);
+	border-color: var(--adam-info, #bfdbfe);
+	color: var(--adam-info, #1d4ed8);
 }
 
 .adam-notice ul {
@@ -295,9 +295,9 @@
 	padding: 0 22px;
 	border: 0;
 	border-radius: 14px;
-	background: linear-gradient(180deg, #3f7a47, #24562d);
-	box-shadow: 0 14px 28px rgba(36, 86, 45, 0.22);
-	color: #ffffff;
+	background: linear-gradient(180deg, var(--adam-primary, #3f7a47), var(--adam-primary, #24562d));
+	box-shadow: 0 14px 28px var(--adam-shadow-color, rgba(36, 86, 45, 0.22));
+	color: var(--adam-text-inverse, #ffffff);
 	font-weight: 800;
 	text-decoration: none;
 	cursor: pointer;
@@ -309,14 +309,14 @@
 
 .adam-form-actions .adam-card-link:hover,
 .adam-membership-native-form button[type="submit"]:hover {
-	background: linear-gradient(180deg, #45864d, #214c29);
-	color: #ffffff;
+	background: linear-gradient(180deg, var(--adam-primary, #45864d), var(--adam-primary, #214c29));
+	color: var(--adam-text-inverse, #ffffff);
 }
 
 .adam-form-actions .adam-card-link:focus-visible,
 .adam-membership-native-form button[type="submit"]:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 4px rgba(63, 122, 71, 0.16), 0 14px 28px rgba(36, 86, 45, 0.22);
+	box-shadow: 0 0 0 4px var(--adam-shadow-color, rgba(63, 122, 71, 0.16)), 0 14px 28px var(--adam-shadow-color, rgba(36, 86, 45, 0.22));
 }
 
 @media (max-width: 768px) {

@@ -326,7 +326,7 @@ final class MemberArea {
 					</label>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
@@ -412,7 +412,7 @@ final class MemberArea {
 				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
 				<h2><?php esc_html_e( 'Informação indisponível', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'Não foi encontrada informação de associado para esta conta.', 'adam-membership' ); ?></p>
-				<a class="adam-action-card" href="<?php echo esc_url( wp_logout_url( home_url( '/socio/?logged_out=1' ) ) ); ?>">
+				<a class="adam-action-card adam-card" href="<?php echo esc_url( wp_logout_url( home_url( '/socio/?logged_out=1' ) ) ); ?>">
 					<?php esc_html_e( 'Terminar sessão', 'adam-membership' ); ?>
 				</a>
 			</section>
@@ -955,7 +955,7 @@ final class MemberArea {
 			</div>
 
 			<?php if ( $member->is_founder() ) : ?>
-				<div class="adam-founder-panel">
+				<div class="adam-founder-panel adam-card">
 					<strong><?php esc_html_e( 'Membro Fundador', 'adam-membership' ); ?></strong>
 					<span><?php echo esc_html( $member->founder_number() > 0 ? sprintf( __( 'Um dos primeiros 50 sócios da ADAM. Fundador #%d.', 'adam-membership' ), $member->founder_number() ) : __( 'Um dos primeiros 50 sócios da ADAM.', 'adam-membership' ) ); ?></span>
 				</div>
@@ -1052,11 +1052,11 @@ final class MemberArea {
 				<?php elseif ( $pending ) : ?>
 					<span class="adam-badge pending"><?php esc_html_e( 'Pendente', 'adam-membership' ); ?></span>
 				<?php elseif ( $is_founder ) : ?>
-					<span class="adam-badge warning"><?php esc_html_e( 'Fundadores', 'adam-membership' ); ?></span>
+					<span class="adam-badge warning adam-notice--warning"><?php esc_html_e( 'Fundadores', 'adam-membership' ); ?></span>
 				<?php elseif ( $is_loyalty ) : ?>
-					<span class="adam-badge warning"><?php esc_html_e( 'Fidelidade', 'adam-membership' ); ?></span>
+					<span class="adam-badge warning adam-notice--warning"><?php esc_html_e( 'Fidelidade', 'adam-membership' ); ?></span>
 				<?php elseif ( ! $redeemable ) : ?>
-					<span class="adam-badge warning"><?php echo esc_html( $cost_label ); ?></span>
+					<span class="adam-badge warning adam-notice--warning"><?php echo esc_html( $cost_label ); ?></span>
 				<?php elseif ( $can_redeem ) : ?>
 					<span class="adam-badge active"><?php esc_html_e( 'Disponivel', 'adam-membership' ); ?></span>
 				<?php else : ?>
@@ -1842,11 +1842,11 @@ final class MemberArea {
 				<?php endif; ?>
 			</div>
 			<div class="adam-announcement-card__actions">
-				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( add_query_arg( 'announcement_id', $announcement->id(), home_url( '/socio/' ) ) ); ?>">
+				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( add_query_arg( 'announcement_id', $announcement->id(), home_url( '/socio/' ) ) ); ?>">
 					<?php esc_html_e( 'Ler mais', 'adam-membership' ); ?>
 				</a>
 				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
-					<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $announcement->action_url() ); ?>">
+					<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $announcement->action_url() ); ?>">
 						<?php echo esc_html( $announcement->action_label() ); ?>
 					</a>
 				<?php endif; ?>
@@ -1881,9 +1881,9 @@ final class MemberArea {
 				<?php echo wp_kses_post( wpautop( $announcement->content() ) ); ?>
 			</div>
 			<div class="adam-announcement-card__actions">
-				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
 				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
-					<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $announcement->action_url() ); ?>"><?php echo esc_html( $announcement->action_label() ); ?></a>
+					<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $announcement->action_url() ); ?>"><?php echo esc_html( $announcement->action_label() ); ?></a>
 				<?php endif; ?>
 			</div>
 		</section>
@@ -1945,7 +1945,7 @@ final class MemberArea {
 	 */
 	private function render_document_card( Document $document ): void {
 		?>
-		<article class="adam-document-card">
+		<article class="adam-document-card adam-card">
 			<div class="adam-document-card__icon" aria-hidden="true"><?php echo esc_html( $this->document_file_icon( $document ) ); ?></div>
 			<div class="adam-document-card__body">
 				<div class="adam-document-card__meta">
@@ -1964,7 +1964,7 @@ final class MemberArea {
 					<span><?php echo esc_html( sprintf( __( 'Atualizado %s', 'adam-membership' ), $this->format_datetime( $document->updated_at() ) ) ); ?></span>
 					<span><?php echo esc_html( $this->format_file_size( $document->file_size() ) ); ?></span>
 				</div>
-				<a class="adam-action-card adam-action-card--inline" href="<?php echo esc_url( $this->documents->download_url( $document ) ); ?>">
+				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $this->documents->download_url( $document ) ); ?>">
 					<?php esc_html_e( 'Download', 'adam-membership' ); ?>
 				</a>
 			</div>
@@ -2551,7 +2551,7 @@ final class MemberArea {
 
 			<div class="adam-action-grid">
 				<?php foreach ( $actions as $action ) : ?>
-					<a class="adam-action-card" href="<?php echo esc_url( $action['url'] ); ?>">
+					<a class="adam-action-card adam-card" href="<?php echo esc_url( $action['url'] ); ?>">
 						<strong><?php echo esc_html( $action['label'] ); ?></strong>
 					</a>
 				<?php endforeach; ?>
@@ -2585,7 +2585,7 @@ final class MemberArea {
 		$role = 'error' === $type ? 'alert' : 'status';
 
 		return sprintf(
-			'<div class="notice notice-%1$s adam-member-notice" role="%2$s"><p>%3$s</p></div>',
+			'<div class="notice notice-%1$s adam-member-notice adam-notice" role="%2$s"><p>%3$s</p></div>',
 			esc_attr( $type ),
 			esc_attr( $role ),
 			esc_html( $message )

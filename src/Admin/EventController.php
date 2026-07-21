@@ -65,7 +65,7 @@ final class EventController {
 			</div>
 			<?php $this->render_notices(); ?>
 			<div class="adam-admin-actions">
-				<a class="button button-primary" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Novo evento', 'adam-membership' ); ?></a>
+				<a class="button button-primary adam-button" href="<?php echo esc_url( $this->edit_url() ); ?>"><?php esc_html_e( 'Novo evento', 'adam-membership' ); ?></a>
 			</div>
 			<form method="get" class="adam-admin-filters">
 				<input type="hidden" name="page" value="<?php echo esc_attr( self::MENU_SLUG ); ?>">
@@ -82,12 +82,12 @@ final class EventController {
 						<?php endforeach; ?>
 					</select>
 				</label>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Filtrar', 'adam-membership' ); ?></button>
+				<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Filtrar', 'adam-membership' ); ?></button>
 			</form>
 			<?php if ( array() === $events ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem eventos.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Título', 'adam-membership' ); ?></th>
@@ -115,7 +115,7 @@ final class EventController {
 										<input type="hidden" name="action" value="adam_membership_delete_event">
 										<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event->id() ); ?>">
 										<?php wp_nonce_field( 'adam_membership_delete_event_' . $event->id() ); ?>
-										<button type="submit" class="button button-small button-link-delete"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
+										<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Eliminar', 'adam-membership' ); ?></button>
 									</form>
 								</td>
 							</tr>
@@ -137,7 +137,7 @@ final class EventController {
 				<h1><?php echo esc_html( $title ); ?></h1>
 			</div>
 			<?php $this->render_notices(); ?>
-			<div class="adam-admin-panel">
+			<div class="adam-admin-panel adam-card">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form">
 					<input type="hidden" name="action" value="adam_membership_save_event">
 					<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) ( null !== $event ? $event->id() : 0 ) ); ?>">
@@ -187,14 +187,14 @@ final class EventController {
 					<label class="adam-admin-edit-field adam-admin-edit-field-full"><span><?php esc_html_e( 'Mensagem personalizada do bónus', 'adam-membership' ); ?></span><textarea name="checkin_bonus_custom_message" rows="4"><?php echo esc_textarea( null !== $event ? $event->checkin_bonus_custom_message() : '' ); ?></textarea></label>
 					<label class="adam-admin-checkbox-field"><input type="checkbox" name="image_video_notice_disabled" value="1" <?php checked( null !== $event ? $event->image_video_notice_disabled() : false ); ?>> <?php esc_html_e( 'Desativar aviso de imagem e video nesta pagina de evento', 'adam-membership' ); ?></label>
 					<div class="adam-admin-actions">
-						<button type="submit" class="button button-primary"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
+						<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar evento', 'adam-membership' ); ?></button>
 						<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Voltar à lista', 'adam-membership' ); ?></a>
 					</div>
 				</form>
 			</div>
 
 			<?php if ( null !== $event ) : ?>
-				<div class="adam-admin-panel">
+				<div class="adam-admin-panel adam-card">
 					<div class="adam-admin-actions">
 						<a class="button" href="<?php echo esc_url( $this->events->event_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página do evento', 'adam-membership' ); ?></a>
 					</div>
@@ -231,7 +231,7 @@ final class EventController {
 		$bonus    = $this->events->points()->bonus_entry_for_event( $event );
 		$winner   = null !== $bonus ? Member::load( $bonus->member_id() ) : null;
 		?>
-		<div class="adam-admin-panel">
+		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'QR de check-in', 'adam-membership' ); ?></h2>
 			<div class="adam-admin-edit-grid">
 				<div>
@@ -248,7 +248,7 @@ final class EventController {
 				<a class="button" href="<?php echo esc_url( $this->events->checkin_url( $event ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir página de check-in', 'adam-membership' ); ?></a>
 			</div>
 		</div>
-		<div class="adam-admin-panel">
+		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Bónus surpresa do check-in', 'adam-membership' ); ?></h2>
 			<div class="adam-admin-edit-grid">
 				<div><p><strong><?php esc_html_e( 'Ativado', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $event->checkin_bonus_enabled() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?></p></div>
@@ -264,12 +264,12 @@ final class EventController {
 				<p><strong><?php esc_html_e( 'Data de atribuição', 'adam-membership' ); ?>:</strong> <?php echo esc_html( $this->format_datetime( $bonus->created_at() ) ); ?></p>
 			<?php endif; ?>
 		</div>
-		<div class="adam-admin-panel">
+		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Sócios com check-in', 'adam-membership' ); ?></h2>
 			<?php if ( array() === $checkins ) : ?>
 				<div class="adam-admin-empty"><?php esc_html_e( 'Ainda não existem check-ins registados para este evento.', 'adam-membership' ); ?></div>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table">
+				<table class="widefat striped adam-admin-table adam-table">
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Sócio', 'adam-membership' ); ?></th>
@@ -338,11 +338,11 @@ final class EventController {
 		$error   = isset( $_GET['adam_error'] ) ? sanitize_text_field( wp_unslash( $_GET['adam_error'] ) ) : '';
 
 		if ( '' !== $message ) {
-			printf( '<div class="adam-admin-notice success"><p>%s</p></div>', esc_html( $message ) );
+			printf( '<div class="adam-admin-notice success adam-notice adam-notice--success"><p>%s</p></div>', esc_html( $message ) );
 		}
 
 		if ( '' !== $error ) {
-			printf( '<div class="adam-admin-notice error"><p>%s</p></div>', esc_html( $error ) );
+			printf( '<div class="adam-admin-notice error adam-notice adam-notice--danger"><p>%s</p></div>', esc_html( $error ) );
 		}
 	}
 

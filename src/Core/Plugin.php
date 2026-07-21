@@ -101,6 +101,8 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
+		( new InterfaceIntegration() )->register();
+
 		$logger             = new Logger();
 		$settings           = new SettingsRepository();
 		$members            = new MemberRepository();
