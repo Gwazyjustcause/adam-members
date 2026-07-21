@@ -427,12 +427,14 @@ final class AdminController {
 	public function render_dashboard_page(): void {
 		$this->ensure_can_manage();
 
-		$counts  = $this->members->dashboard_counts();
-		$context = $this->dashboard_context( $counts );
+		$counts          = $this->members->dashboard_counts();
+		$team_statistics = $this->teams->statistics();
+		$context         = $this->dashboard_context( $counts );
 
 		$this->render_header( __( 'Painel ADAM Sócios', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_dashboard_cards( $counts );
+		$this->render_team_dashboard_card( $team_statistics );
 		$this->render_dashboard_shortcuts( $context );
 		$this->render_dashboard_widgets( $context );
 		$this->render_footer();
@@ -1767,6 +1769,48 @@ final class AdminController {
 	}
 
 	/**
+	 * Render calculated team statistics on the main dashboard.
+	 *
+	 * @param array{teams:int,associated_teams:int,eligible_teams:int,distributed_members:int} $statistics Team statistics.
+	 */
+	private function render_team_dashboard_card( array $statistics ): void {
+		$cards = array(
+			array(
+				'label' => __( 'Equipas', 'adam-membership' ),
+				'value' => $statistics['teams'],
+			),
+			array(
+				'label' => __( 'Equipas Associadas', 'adam-membership' ),
+				'value' => $statistics['associated_teams'],
+			),
+			array(
+				'label' => __( 'Equipas Elegíveis', 'adam-membership' ),
+				'value' => $statistics['eligible_teams'],
+			),
+			array(
+				'label' => __( 'Sócios distribuídos por equipas', 'adam-membership' ),
+				'value' => $statistics['distributed_members'],
+			),
+		);
+		?>
+		<section class="adam-admin-panel adam-admin-team-summary">
+			<div class="adam-admin-dashboard-heading">
+				<h2><?php esc_html_e( 'Equipas', 'adam-membership' ); ?></h2>
+				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Gerir equipas', 'adam-membership' ); ?></a>
+			</div>
+			<div class="adam-admin-cards">
+				<?php foreach ( $cards as $card ) : ?>
+					<div class="adam-admin-card">
+						<span><?php echo esc_html( $card['label'] ); ?></span>
+						<strong><?php echo esc_html( number_format_i18n( $card['value'] ) ); ?></strong>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		</section>
+		<?php
+	}
+
+	/**
 	 * Render dashboard shortcut links.
 	 */
 	private function render_dashboard_shortcuts_legacy(): void {
@@ -2237,6 +2281,7 @@ final class AdminController {
 					<?php $this->render_select_option( 'created_at', __( 'Data de criação', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
 					<?php $this->render_select_option( 'updated_at', __( 'Última atualização', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
 					<?php $this->render_select_option( 'type', __( 'Estado', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+					<?php $this->render_select_option( 'eligible', __( 'Elegibilidade', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
 				</select>
 			</label>
 			<label>
@@ -2255,8 +2300,8 @@ final class AdminController {
 	/**
 	 * Render the team administration table.
 	 *
-	 * @param array<int, array{team:Team,active_members:int,total_members:int}> $rows Team rows.
-	 * @param array<string, string>                                            $filters Current filters.
+	 * @param array<int, array{team:Team,active_members:int,total_members:int,eligible:bool}> $rows Team rows.
+	 * @param array<string, string>                                                           $filters Current filters.
 	 */
 	private function render_teams_table( array $rows, array $filters ): void {
 		if ( array() === $rows ) {
@@ -2270,6 +2315,7 @@ final class AdminController {
 					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Nome da equipa', 'adam-membership' ), 'name', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'N.º de sócios ativos', 'adam-membership' ), 'members', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Estado', 'adam-membership' ), 'type', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Elegível', 'adam-membership' ), 'eligible', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Data de criação', 'adam-membership' ), 'created_at', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Última atualização', 'adam-membership' ), 'updated_at', $filters ) ); ?></th>
 					<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
@@ -2283,10 +2329,15 @@ final class AdminController {
 						<td><?php echo esc_html( number_format_i18n( $row['active_members'] ) ); ?></td>
 						<td>
 							<?php $this->render_team_type_badge( $team ); ?>
-							<?php if ( Team::TYPE_ASSOCIATED === $team->type() && $row['active_members'] < $this->teams->associated_minimum_active_members() ) : ?>
-								<small class="adam-admin-warning-text"><?php esc_html_e( 'Rever: menos de 5 sócios ativos.', 'adam-membership' ); ?></small>
+							<?php if ( Team::TYPE_ASSOCIATED === $team->type() && ! $row['eligible'] ) : ?>
+								<?php
+								/* translators: %d: current number of active team members. */
+								$eligibility_warning = sprintf( __( 'Rever: atualmente apenas %d sócios ativos.', 'adam-membership' ), $row['active_members'] );
+								?>
+								<small class="adam-admin-warning-text"><?php echo esc_html( $eligibility_warning ); ?></small>
 							<?php endif; ?>
 						</td>
+						<td><?php $this->render_team_eligibility_badge( $row['eligible'] ); ?></td>
 						<td><?php echo esc_html( $this->format_datetime( $team->created_at() ) ); ?></td>
 						<td><?php echo esc_html( $this->format_datetime( $team->updated_at() ) ); ?></td>
 						<td><a class="button button-small" href="<?php echo esc_url( $this->team_url( $team ) ); ?>"><?php esc_html_e( 'Ver', 'adam-membership' ); ?></a></td>
@@ -2304,15 +2355,21 @@ final class AdminController {
 	 */
 	private function render_team_detail( Team $team ): void {
 		$members      = $this->teams->members_for_team( $team->id() );
-		$active_count = $this->teams->member_count( $team->id(), true );
-		$total_count  = count( $members );
+		$summary      = $this->teams->summary( $team );
 		$minimum      = $this->teams->associated_minimum_active_members();
-		$below_limit  = $active_count < $minimum;
+		$active_count = $summary['active_member_count'] ?? 0;
+		$total_count  = $summary['member_count'] ?? 0;
+		$eligible     = ! empty( $summary['eligible'] );
+		$below_limit  = ! $eligible;
+		/* translators: %d: current number of active team members. */
+		$eligibility_warning = sprintf( __( 'Esta equipa possui atualmente apenas %d sócios ativos. Já não cumpre os requisitos mínimos para ser Equipa Associada. Reveja esta situação.', 'adam-membership' ), $active_count );
+		/* translators: %d: minimum number of active team members. */
+		$minimum_label = sprintf( __( '%d sócios', 'adam-membership' ), $minimum );
 		?>
 		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>">&larr; <?php esc_html_e( 'Voltar à lista de equipas', 'adam-membership' ); ?></a></p>
 
 		<?php if ( Team::TYPE_ASSOCIATED === $team->type() && $below_limit ) : ?>
-			<div class="notice notice-warning inline"><p><?php esc_html_e( 'Esta Equipa Associada tem menos de 5 sócios ativos. Reveja a situação; o estado não foi alterado automaticamente.', 'adam-membership' ); ?></p></div>
+			<div class="notice notice-warning inline"><p><?php echo esc_html( $eligibility_warning ); ?></p></div>
 		<?php endif; ?>
 
 		<div class="adam-admin-panel">
@@ -2323,8 +2380,17 @@ final class AdminController {
 				<?php $this->render_detail_item( __( 'Estado', 'adam-membership' ), $this->team_type_label( $team ) ); ?>
 				<?php $this->render_detail_item( __( 'Data de criação', 'adam-membership' ), $this->format_datetime( $team->created_at() ) ); ?>
 				<?php $this->render_detail_item( __( 'Última atualização', 'adam-membership' ), $this->format_datetime( $team->updated_at() ) ); ?>
-				<?php $this->render_detail_item( __( 'Sócios ativos', 'adam-membership' ), (string) $active_count ); ?>
 				<?php $this->render_detail_item( __( 'Sócios associados', 'adam-membership' ), (string) $total_count ); ?>
+			</div>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Estado da Associação', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-detail-grid">
+				<?php $this->render_detail_item( __( 'Estado atual', 'adam-membership' ), $this->team_type_label( $team ) ); ?>
+				<?php $this->render_detail_item( __( 'Sócios ativos', 'adam-membership' ), (string) $active_count ); ?>
+				<?php $this->render_detail_item( __( 'Requisito mínimo', 'adam-membership' ), $minimum_label ); ?>
+				<?php $this->render_detail_item( __( 'Elegível', 'adam-membership' ), $eligible ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?>
 			</div>
 		</div>
 
@@ -2363,7 +2429,14 @@ final class AdminController {
 
 		<div class="adam-admin-panel">
 			<h2><?php esc_html_e( 'Benefícios', 'adam-membership' ); ?></h2>
-			<p><?php esc_html_e( 'Esta funcionalidade será disponibilizada numa fase futura.', 'adam-membership' ); ?></p>
+			<fieldset class="adam-team-benefit-options" disabled aria-disabled="true">
+				<label><input type="checkbox" disabled> <?php esc_html_e( 'Desconto nas quotas', 'adam-membership' ); ?></label>
+				<label><input type="checkbox" disabled> <?php esc_html_e( 'Prioridade em eventos', 'adam-membership' ); ?></label>
+				<label><input type="checkbox" disabled> <?php esc_html_e( 'Destaque no website', 'adam-membership' ); ?></label>
+				<label><input type="checkbox" disabled> <?php esc_html_e( 'Benefícios de parceiros', 'adam-membership' ); ?></label>
+				<label><input type="checkbox" disabled> <?php esc_html_e( 'Outros benefícios futuros', 'adam-membership' ); ?></label>
+			</fieldset>
+			<p class="description"><?php esc_html_e( 'Estas opções são apenas uma preparação visual e não alteram o comportamento do plugin.', 'adam-membership' ); ?></p>
 		</div>
 
 		<div class="adam-admin-panel">
@@ -3664,7 +3737,7 @@ final class AdminController {
 
 		return array(
 			'search'  => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
-			'orderby' => in_array( $orderby, array( 'name', 'members', 'created_at', 'updated_at', 'type' ), true ) ? $orderby : 'name',
+			'orderby' => in_array( $orderby, array( 'name', 'members', 'created_at', 'updated_at', 'type', 'eligible' ), true ) ? $orderby : 'name',
 			'order'   => $order,
 		);
 	}
@@ -3765,6 +3838,19 @@ final class AdminController {
 			'<span class="adam-admin-badge %1$s">%2$s</span>',
 			esc_attr( $class ),
 			esc_html( $this->team_type_label( $team ) )
+		);
+	}
+
+	/**
+	 * Render current team eligibility.
+	 *
+	 * @param bool $eligible Eligibility state.
+	 */
+	private function render_team_eligibility_badge( bool $eligible ): void {
+		printf(
+			'<span class="adam-admin-badge %1$s">%2$s</span>',
+			esc_attr( $eligible ? 'status-active' : '' ),
+			esc_html( $eligible ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) )
 		);
 	}
 

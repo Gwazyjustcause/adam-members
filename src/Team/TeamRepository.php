@@ -218,7 +218,7 @@ final class TeamRepository {
 	 * Search and sort teams for administration without persisting member counts.
 	 *
 	 * @param array{search?:string,orderby?:string,order?:string} $filters Filters.
-	 * @return array<int, array{team:Team,active_members:int,total_members:int}>
+	 * @return array<int, array{team:Team,active_members:int,total_members:int,eligible:bool}>
 	 */
 	public function admin_list( array $filters = array() ): array {
 		$search      = $this->search_value( (string) ( $filters['search'] ?? '' ) );
@@ -230,23 +230,25 @@ final class TeamRepository {
 				continue;
 			}
 
-			$team_members = array_filter(
+			$team_members   = array_filter(
 				$all_members,
 				fn ( Member $member ): bool => $this->member_belongs_to_team( $member, $team )
 			);
-			$rows[]       = array(
+			$active_members = count(
+				array_filter(
+					$team_members,
+					static fn ( Member $member ): bool => Member::STATUS_ACTIVE === $member->effective_status()
+				)
+			);
+			$rows[]         = array(
 				'team'           => $team,
-				'active_members' => count(
-					array_filter(
-						$team_members,
-						static fn ( Member $member ): bool => Member::STATUS_ACTIVE === $member->effective_status()
-					)
-				),
+				'active_members' => $active_members,
 				'total_members'  => count( $team_members ),
+				'eligible'       => $active_members >= self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS,
 			);
 		}
 
-		$orderby = in_array( (string) ( $filters['orderby'] ?? '' ), array( 'name', 'members', 'created_at', 'updated_at', 'type' ), true ) ? (string) $filters['orderby'] : 'name';
+		$orderby = in_array( (string) ( $filters['orderby'] ?? '' ), array( 'name', 'members', 'created_at', 'updated_at', 'type', 'eligible' ), true ) ? (string) $filters['orderby'] : 'name';
 		$order   = 'desc' === strtolower( (string) ( $filters['order'] ?? '' ) ) ? 'desc' : 'asc';
 
 		usort(
@@ -259,6 +261,7 @@ final class TeamRepository {
 					'created_at' => $left_team->created_at(),
 					'updated_at' => $left_team->updated_at(),
 					'type'       => $left_team->type(),
+					'eligible'   => $left['eligible'],
 					default      => strtolower( $left_team->name() ),
 				};
 				$right_value = match ( $orderby ) {
@@ -266,6 +269,7 @@ final class TeamRepository {
 					'created_at' => $right_team->created_at(),
 					'updated_at' => $right_team->updated_at(),
 					'type'       => $right_team->type(),
+					'eligible'   => $right['eligible'],
 					default      => strtolower( $right_team->name() ),
 				};
 				$result = $left_value <=> $right_value;
@@ -279,6 +283,131 @@ final class TeamRepository {
 		);
 
 		return $rows;
+	}
+
+	/**
+	 * Get all teams currently marked as associated teams.
+	 *
+	 * This reflects the administrator-controlled state and never changes it.
+	 *
+	 * @return array<int, Team>
+	 */
+	public function associated_teams(): array {
+		return array_values(
+			array_filter(
+				$this->all(),
+				static fn ( Team $team ): bool => Team::TYPE_ASSOCIATED === $team->type()
+			)
+		);
+	}
+
+	/**
+	 * Get all teams that currently meet association eligibility.
+	 *
+	 * @return array<int, Team>
+	 */
+	public function eligible_teams(): array {
+		return array_values(
+			array_map(
+				static fn ( array $row ): Team => $row['team'],
+				array_filter(
+					$this->admin_list(),
+					static fn ( array $row ): bool => $row['eligible']
+				)
+			)
+		);
+	}
+
+	/**
+	 * Determine current association eligibility for a team.
+	 *
+	 * @param Team|int $team Team model or ID.
+	 */
+	public function is_eligible( Team|int $team ): bool {
+		$team_id = $team instanceof Team ? $team->id() : $team;
+
+		return $team_id > 0 && $this->member_count( $team_id, true ) >= self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS;
+	}
+
+	/**
+	 * Build one reusable team summary for internal consumers.
+	 *
+	 * @param Team|int $team Team model or ID.
+	 * @return array{id:int,name:string,slug:string,state:string,member_count:int,active_member_count:int,eligible:bool}|null
+	 */
+	public function summary( Team|int $team ): ?array {
+		$team = $team instanceof Team ? $team : $this->find( $team );
+
+		if ( null === $team ) {
+			return null;
+		}
+
+		$members      = $this->members_for_team( $team->id() );
+		$active_count = count(
+			array_filter(
+				$members,
+				static fn ( Member $member ): bool => Member::STATUS_ACTIVE === $member->effective_status()
+			)
+		);
+
+		return array(
+			'id'                  => $team->id(),
+			'name'                => $team->name(),
+			'slug'                => $team->slug(),
+			'state'               => $team->type(),
+			'member_count'        => count( $members ),
+			'active_member_count' => $active_count,
+			'eligible'            => $active_count >= self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS,
+		);
+	}
+
+	/**
+	 * Public internal directory for future ADAM Comunidade integration.
+	 *
+	 * The returned data is calculated from ADAM Sócios and is read-only for
+	 * consumers. No eligibility or member counts are duplicated in storage.
+	 *
+	 * @return array<int, array{id:int,name:string,slug:string,state:string,member_count:int,active_member_count:int,eligible:bool}>
+	 */
+	public function public_directory(): array {
+		return array_map(
+			static fn ( array $row ): array => array(
+				'id'                  => $row['team']->id(),
+				'name'                => $row['team']->name(),
+				'slug'                => $row['team']->slug(),
+				'state'               => $row['team']->type(),
+				'member_count'        => $row['total_members'],
+				'active_member_count' => $row['active_members'],
+				'eligible'            => $row['eligible'],
+			),
+			$this->admin_list()
+		);
+	}
+
+	/**
+	 * Calculate aggregate team statistics for administration dashboards.
+	 *
+	 * @return array{teams:int,associated_teams:int,eligible_teams:int,distributed_members:int}
+	 */
+	public function statistics(): array {
+		$rows = $this->admin_list();
+
+		return array(
+			'teams'               => count( $rows ),
+			'associated_teams'    => count(
+				array_filter(
+					$rows,
+					static fn ( array $row ): bool => Team::TYPE_ASSOCIATED === $row['team']->type()
+				)
+			),
+			'eligible_teams'      => count(
+				array_filter(
+					$rows,
+					static fn ( array $row ): bool => $row['eligible']
+				)
+			),
+			'distributed_members' => array_sum( array_column( $rows, 'total_members' ) ),
+		);
 	}
 
 	/**
@@ -390,7 +519,7 @@ final class TeamRepository {
 			return new WP_Error( 'adam_membership_team_type_invalid', __( 'Tipo de equipa inválido.', 'adam-membership' ) );
 		}
 
-		if ( Team::TYPE_ASSOCIATED === $type && Team::TYPE_ASSOCIATED !== $team->type() && $this->member_count( $team_id, true ) < self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS ) {
+		if ( Team::TYPE_ASSOCIATED === $type && Team::TYPE_ASSOCIATED !== $team->type() && ! $this->is_eligible( $team ) ) {
 			return new WP_Error(
 				'adam_membership_team_associated_minimum',
 				__( 'Esta equipa necessita de pelo menos 5 sócios ativos para poder ser marcada como Equipa Associada.', 'adam-membership' )
