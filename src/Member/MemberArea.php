@@ -11,6 +11,8 @@ namespace AdamMembership\Member;
 
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Announcement\AnnouncementService;
+use AdamMembership\Communication\CommunicationPreferences;
+use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
@@ -85,6 +87,13 @@ final class MemberArea {
 	private RecognitionService $recognition;
 
 	/**
+	 * Communication preferences.
+	 *
+	 * @var CommunicationPreferences
+	 */
+	private CommunicationPreferences $communication_preferences;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param MemberRepository   $members  Member repository.
@@ -96,9 +105,10 @@ final class MemberArea {
 	 * @param PointsService       $points        Points service.
 	 * @param RewardService       $rewards       Reward service.
 	 * @param AccountSetup        $account_setup Account setup service.
-	 * @param RecognitionService  $recognition   Recognition service.
+	 * @param RecognitionService       $recognition               Recognition service.
+	 * @param CommunicationPreferences $communication_preferences Communication preferences.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -109,6 +119,7 @@ final class MemberArea {
 		$this->rewards       = $rewards;
 		$this->account_setup = $account_setup;
 		$this->recognition   = $recognition;
+		$this->communication_preferences = $communication_preferences;
 	}
 
 	/**
@@ -132,6 +143,7 @@ final class MemberArea {
 	public function enqueue_assets(): void {
 		$asset_path = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
 		$rewards_script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/member-rewards.js';
+		$preferences_script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/member-communication-preferences.js';
 
 		wp_enqueue_style(
 			'adam-member-area',
@@ -143,6 +155,20 @@ final class MemberArea {
 		if ( ! $this->should_enqueue_download_assets() ) {
 			return;
 		}
+
+		wp_enqueue_script(
+			'adam-member-communication-preferences',
+			ADAM_MEMBERSHIP_URL . 'assets/js/member-communication-preferences.js',
+			array(),
+			file_exists( $preferences_script_path ) ? (string) filemtime( $preferences_script_path ) : ADAM_MEMBERSHIP_VERSION,
+			true
+		);
+
+		wp_add_inline_script(
+			'adam-member-communication-preferences',
+			'window.adamCommunicationPreferences = ' . wp_json_encode( CommunicationPreferencesController::script_config() ) . ';',
+			'before'
+		);
 
 		wp_enqueue_script(
 			'adam-member-rewards',
@@ -238,6 +264,8 @@ final class MemberArea {
 
 			<?php if ( 'recompensas' === $this->current_member_view() ) : ?>
 			<?php $this->render_rewards_catalogue_page( $member ); ?>
+			<?php elseif ( 'avisos' === $this->current_member_view() ) : ?>
+			<?php $this->render_announcements( $member, false, true ); ?>
 			<?php else : ?>
 
 				<?php
@@ -260,7 +288,7 @@ final class MemberArea {
 				$this->render_points_card( $member );
 				$this->render_documents( $member );
 				$this->render_member_actions( $member );
-				$this->render_announcements( $member );
+				$this->render_announcements( $member, true );
 				?>
 			<?php endif; ?>
 		</div>
@@ -1775,13 +1803,26 @@ final class MemberArea {
 	/**
 	 * Render Communication Centre.
 	 *
-	 * @param Member $member Member.
+	 * @param Member $member        Member.
+	 * @param bool   $homepage_only Only show homepage placements.
+	 * @param bool   $standalone    Whether this is the dedicated notices view.
 	 */
-	private function render_announcements( Member $member ): void {
+	private function render_announcements( Member $member, bool $homepage_only = true, bool $standalone = false ): void {
 		$selected_id   = isset( $_GET['announcement_id'] ) ? absint( wp_unslash( $_GET['announcement_id'] ) ) : 0;
-		$announcements = $this->announcements->visible_for_member( $member );
+		$announcements = $this->announcements->visible_for_member( $member, $homepage_only );
 
 		if ( array() === $announcements ) {
+			if ( $standalone ) {
+				?>
+				<section class="adam-card adam-announcements-section adam-empty-state" aria-label="<?php esc_attr_e( 'Centro de Avisos', 'adam-membership' ); ?>">
+					<p class="adam-eyebrow"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></p>
+					<h3><?php esc_html_e( 'Sem avisos disponíveis', 'adam-membership' ); ?></h3>
+					<p><?php esc_html_e( 'Não existem comunicações disponíveis para a sua conta neste momento.', 'adam-membership' ); ?></p>
+					<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url() ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+				</section>
+				<?php
+			}
+
 			return;
 		}
 
@@ -1798,7 +1839,14 @@ final class MemberArea {
 			<div class="adam-card-heading">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></p>
-					<h3><?php esc_html_e( 'Comunicacoes oficiais da ADAM', 'adam-membership' ); ?></h3>
+					<h3><?php esc_html_e( 'Comunicações oficiais da ADAM', 'adam-membership' ); ?></h3>
+				</div>
+				<div class="adam-card-actions">
+					<?php if ( $standalone ) : ?>
+						<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url() ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+					<?php else : ?>
+						<a class="adam-card-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Ver todos', 'adam-membership' ); ?></a>
+					<?php endif; ?>
 				</div>
 			</div>
 
@@ -1842,7 +1890,7 @@ final class MemberArea {
 				<?php endif; ?>
 			</div>
 			<div class="adam-announcement-card__actions">
-				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( add_query_arg( 'announcement_id', $announcement->id(), home_url( '/socio/' ) ) ); ?>">
+				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos', 'announcement_id' => (string) $announcement->id() ) ) ); ?>">
 					<?php esc_html_e( 'Ler mais', 'adam-membership' ); ?>
 				</a>
 				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
@@ -1881,7 +1929,7 @@ final class MemberArea {
 				<?php echo wp_kses_post( wpautop( $announcement->content() ) ); ?>
 			</div>
 			<div class="adam-announcement-card__actions">
-				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Voltar ao painel', 'adam-membership' ); ?></a>
+				<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Voltar aos avisos', 'adam-membership' ); ?></a>
 				<?php if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) : ?>
 					<a class="adam-action-card adam-action-card--inline adam-card" href="<?php echo esc_url( $announcement->action_url() ); ?>"><?php echo esc_html( $announcement->action_label() ); ?></a>
 				<?php endif; ?>
@@ -2052,10 +2100,23 @@ final class MemberArea {
 	 * @param array<int, string> $messages Notification messages.
 	 */
 	private function render_notifications_card( array $messages ): void {
+		$user_id       = get_current_user_id();
+		$optional      = $this->communication_preferences->categories()->optional();
+		$mandatory     = $this->communication_preferences->categories()->mandatory();
+		$subscriptions = $this->communication_preferences->subscriptions( $user_id, CommunicationPreferences::CHANNEL_EMAIL );
 		?>
-		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Notificações', 'adam-membership' ); ?>">
+		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Notificações', 'adam-membership' ); ?>" data-adam-communication-preferences>
 			<div class="adam-card-heading">
-				<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
+				<div>
+					<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
+				</div>
+				<div class="adam-card-actions">
+					<a class="adam-card-link adam-notifications-card__notices-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></a>
+					<button type="button" class="adam-communication-settings-button" data-adam-communication-preferences-open aria-controls="adam-communication-preferences-dialog" aria-haspopup="dialog" title="<?php esc_attr_e( 'Preferências de comunicação', 'adam-membership' ); ?>">
+						<span class="screen-reader-text"><?php esc_html_e( 'Abrir preferências de comunicação', 'adam-membership' ); ?></span>
+						<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.37 2.8a.5.5 0 0 0-.5-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.51c-.59.24-1.13.56-1.64.95L5.16 5.3a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.08.65-.08.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.95l.36 2.51a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .5-.4l.36-2.51a7.2 7.2 0 0 0 1.63-.95l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
+					</button>
+				</div>
 			</div>
 
 			<ul class="adam-notification-list">
@@ -2063,6 +2124,47 @@ final class MemberArea {
 					<li><?php echo esc_html( $message ); ?></li>
 				<?php endforeach; ?>
 			</ul>
+
+			<dialog id="adam-communication-preferences-dialog" class="adam-communication-preferences-dialog" data-adam-communication-preferences-dialog aria-labelledby="adam-communication-preferences-title">
+				<form method="post" class="adam-communication-preferences-form" data-adam-communication-preferences-form>
+					<div class="adam-communication-preferences-dialog__header">
+						<div>
+							<p class="adam-eyebrow"><?php esc_html_e( 'Email', 'adam-membership' ); ?></p>
+							<h2 id="adam-communication-preferences-title"><?php esc_html_e( 'Preferências de Comunicação', 'adam-membership' ); ?></h2>
+						</div>
+						<button type="button" class="adam-communication-preferences-dialog__close" data-adam-communication-preferences-cancel aria-label="<?php esc_attr_e( 'Fechar', 'adam-membership' ); ?>">&times;</button>
+					</div>
+
+					<p class="adam-communication-preferences-dialog__description"><?php esc_html_e( 'Escolha que tipos de comunicações pretende receber por email. As comunicações essenciais relacionadas com a sua inscrição, quota, regulamentos e obrigações legais continuarão sempre a ser enviadas.', 'adam-membership' ); ?></p>
+
+					<fieldset class="adam-communication-preferences-list">
+						<legend><?php esc_html_e( 'Comunicações opcionais por email', 'adam-membership' ); ?></legend>
+						<?php foreach ( $optional as $category_id => $category ) : ?>
+							<label>
+								<input type="checkbox" name="categories[]" value="<?php echo esc_attr( $category_id ); ?>" <?php checked( ! empty( $subscriptions[ $category_id ] ) ); ?>>
+								<span><?php echo esc_html( $category['label'] ); ?></span>
+							</label>
+						<?php endforeach; ?>
+					</fieldset>
+
+					<div class="adam-communication-mandatory-categories">
+						<h3><?php esc_html_e( 'Comunicações sempre enviadas', 'adam-membership' ); ?></h3>
+						<p><?php esc_html_e( 'Estas comunicações são essenciais e não podem ser desativadas.', 'adam-membership' ); ?></p>
+						<ul>
+							<?php foreach ( $mandatory as $category ) : ?>
+								<li><?php echo esc_html( $category['label'] ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					</div>
+
+					<p class="adam-communication-preferences-status" data-adam-communication-preferences-status role="status" aria-live="polite"></p>
+
+					<div class="adam-communication-preferences-dialog__actions">
+						<button type="submit" class="adam-button adam-communication-preferences-save"><?php esc_html_e( 'Guardar Preferências', 'adam-membership' ); ?></button>
+						<button type="button" class="adam-button adam-button--secondary" data-adam-communication-preferences-cancel><?php esc_html_e( 'Cancelar', 'adam-membership' ); ?></button>
+					</div>
+				</form>
+			</dialog>
 		</section>
 		<?php
 	}

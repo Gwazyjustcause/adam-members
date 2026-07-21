@@ -19,6 +19,9 @@ use AdamMembership\Admin\RewardController;
 use AdamMembership\Announcement\AnnouncementRepository;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Admin\AdminController;
+use AdamMembership\Communication\CommunicationCategoryRegistry;
+use AdamMembership\Communication\CommunicationPreferences;
+use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Document\DocumentRepository;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Emails\EmailService;
@@ -101,38 +104,40 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
-		( new InterfaceIntegration() )->register();
+		( new UIIntegration() )->register();
 
-		$logger             = new Logger();
-		$settings           = new SettingsRepository();
-		$members            = new MemberRepository();
-		$teams              = new TeamRepository( $members );
-		$renewal_repository = new RenewalRepository();
-		$history_repository = new HistoryRepository();
-		$history            = new HistoryService( $history_repository, $members );
-		$email              = new EmailService( $settings, $logger );
-		$announcement_repository = new AnnouncementRepository();
-		$announcements      = new AnnouncementService( $announcement_repository, $members, $email, $logger );
-		$document_repository = new DocumentRepository();
-		$documents          = new DocumentService( $document_repository, $members, $logger, $history_repository );
-		$event_repository   = new EventRepository();
-		$points_repository  = new PointsRepository();
-		$points             = new PointsService( $points_repository, $members, $history_repository, $logger );
-		$reward_repository  = new RewardRepository();
-		$rewards            = new RewardService( $reward_repository, $points, $members, $history_repository, $logger );
-		$recognition        = new RecognitionService( $members, $rewards, $history_repository, $logger );
-		$card_cosmetics     = new CardCosmeticsService( $rewards );
-		$events             = new EventService( $event_repository, $members, $logger, $history_repository, $points );
-		$statistics         = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
-		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
-		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
-		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
-		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
-		$config             = new RegistrationFormConfig();
-		$account_setup      = new AccountSetup( $settings, $members, $history );
-		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup, $teams );
-		$registration       = new UserRegistration( $config, $logger, $registration_service );
-		$renewal_submission = new RenewalSubmission( $renewals, $logger );
+		$logger                    = new Logger();
+		$settings                  = new SettingsRepository();
+		$members                   = new MemberRepository();
+		$teams                     = new TeamRepository( $members );
+		$renewal_repository        = new RenewalRepository();
+		$history_repository        = new HistoryRepository();
+		$history                   = new HistoryService( $history_repository, $members );
+		$email                     = new EmailService( $settings, $logger );
+		$communication_categories  = new CommunicationCategoryRegistry();
+		$communication_preferences = new CommunicationPreferences( $communication_categories );
+		$announcement_repository   = new AnnouncementRepository();
+		$announcements             = new AnnouncementService( $announcement_repository, $members, $email, $logger, $communication_preferences, $teams );
+		$document_repository       = new DocumentRepository();
+		$documents                 = new DocumentService( $document_repository, $members, $logger, $history_repository );
+		$event_repository          = new EventRepository();
+		$points_repository         = new PointsRepository();
+		$points                    = new PointsService( $points_repository, $members, $history_repository, $logger );
+		$reward_repository         = new RewardRepository();
+		$rewards                   = new RewardService( $reward_repository, $points, $members, $history_repository, $logger );
+		$recognition               = new RecognitionService( $members, $rewards, $history_repository, $logger );
+		$card_cosmetics            = new CardCosmeticsService( $rewards );
+		$events                    = new EventService( $event_repository, $members, $logger, $history_repository, $points );
+		$statistics                = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
+		$approval                  = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
+		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
+		$maintenance               = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
+		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
+		$config                    = new RegistrationFormConfig();
+		$account_setup             = new AccountSetup( $settings, $members, $history );
+		$registration_service      = new RegistrationService( $logger, $history, $email, $account_setup, $teams );
+		$registration              = new UserRegistration( $config, $logger, $registration_service );
+		$renewal_submission        = new RenewalSubmission( $renewals, $logger );
 
 		// Catalogue synchronization mutates plugin data and can touch translated
 		// labels indirectly, so keep it out of bootstrap and run it after the
@@ -146,6 +151,7 @@ final class Plugin {
 		$cards->register();
 		$history->register();
 		$documents->register();
+		( new CommunicationPreferencesController( $communication_preferences, $members ) )->register();
 
 		if ( is_admin() ) {
 			$admin = new AdminController(
@@ -180,7 +186,7 @@ final class Plugin {
 
 		( new ConsentManager( $settings ) )->register();
 		( new RewardQrFrontend( $rewards, $members ) )->register();
-		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition ) )->register();
+		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition, $communication_preferences ) )->register();
 		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams ) )->register();
 		$account_setup->register();
 		( new PasswordRecovery( $email, $members, $history ) )->register();

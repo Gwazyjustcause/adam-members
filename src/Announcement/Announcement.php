@@ -31,6 +31,16 @@ final class Announcement {
 	public const AUDIENCE_REJECTED_MEMBERS = 'rejected_members';
 	public const AUDIENCE_ADMINS           = 'admins_committee';
 
+	public const DELIVERY_MEMBER_AREA = 'member_area';
+	public const DELIVERY_EMAIL       = 'email';
+
+	public const EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS = 'category_subscribers';
+	public const EMAIL_AUDIENCE_ALL_MEMBERS          = 'all_members';
+	public const EMAIL_AUDIENCE_ACTIVE_MEMBERS       = 'active_members';
+	public const EMAIL_AUDIENCE_TEAM                 = 'specific_team';
+	public const EMAIL_AUDIENCE_SPECIFIC_MEMBERS     = 'specific_members';
+	public const EMAIL_AUDIENCE_LEGACY               = 'legacy_visibility_audience';
+
 	/**
 	 * Raw announcement data.
 	 *
@@ -131,6 +141,61 @@ final class Announcement {
 	}
 
 	/**
+	 * Get enabled delivery channels.
+	 *
+	 * Existing records did not store this list: they were always visible in the
+	 * member area and used send_email as the email-delivery flag.
+	 *
+	 * @return array<int, string>
+	 */
+	public function delivery_channels(): array {
+		if ( isset( $this->data['delivery_channels'] ) && is_array( $this->data['delivery_channels'] ) ) {
+			$channels = array();
+
+			foreach ( $this->data['delivery_channels'] as $key => $value ) {
+				$channel = is_int( $key ) ? sanitize_key( (string) $value ) : ( ! empty( $value ) ? sanitize_key( (string) $key ) : '' );
+
+				if ( '' !== $channel ) {
+					$channels[] = $channel;
+				}
+			}
+
+			return array_values( array_unique( $channels ) );
+		}
+
+		$channels = array( self::DELIVERY_MEMBER_AREA );
+
+		if ( ! empty( $this->data['send_email'] ) ) {
+			$channels[] = self::DELIVERY_EMAIL;
+		}
+
+		return $channels;
+	}
+
+	/**
+	 * Whether a delivery channel is enabled.
+	 *
+	 * @param string $channel Delivery channel.
+	 */
+	public function delivers_via( string $channel ): bool {
+		return in_array( sanitize_key( $channel ), $this->delivery_channels(), true );
+	}
+
+	/**
+	 * Whether the announcement is available in the member area.
+	 */
+	public function show_in_member_area(): bool {
+		return $this->delivers_via( self::DELIVERY_MEMBER_AREA );
+	}
+
+	/**
+	 * Whether the announcement is promoted on the member-area homepage.
+	 */
+	public function show_on_member_homepage(): bool {
+		return array_key_exists( 'show_on_member_homepage', $this->data ) ? ! empty( $this->data['show_on_member_homepage'] ) : true;
+	}
+
+	/**
 	 * Get action button label.
 	 */
 	public function action_label(): string {
@@ -148,7 +213,49 @@ final class Announcement {
 	 * Whether member-area email is enabled.
 	 */
 	public function send_email(): bool {
-		return ! empty( $this->data['send_email'] );
+		return $this->delivers_via( self::DELIVERY_EMAIL );
+	}
+
+	/**
+	 * Whether this announcement predates separate email-recipient settings.
+	 */
+	public function has_email_audience(): bool {
+		return isset( $this->data['email_audience'] ) && '' !== sanitize_key( (string) $this->data['email_audience'] );
+	}
+
+	/**
+	 * Get email recipient audience.
+	 */
+	public function email_audience(): string {
+		if ( ! $this->has_email_audience() ) {
+			return self::EMAIL_AUDIENCE_LEGACY;
+		}
+
+		$audience = sanitize_key( (string) $this->data['email_audience'] );
+
+		if ( self::EMAIL_AUDIENCE_LEGACY === $audience ) {
+			return self::EMAIL_AUDIENCE_LEGACY;
+		}
+
+		return in_array( $audience, self::email_audiences(), true ) ? $audience : self::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS;
+	}
+
+	/**
+	 * Get the selected email team ID.
+	 */
+	public function email_team_id(): int {
+		return absint( $this->data['email_team_id'] ?? 0 );
+	}
+
+	/**
+	 * Get selected email member IDs.
+	 *
+	 * @return array<int, int>
+	 */
+	public function email_member_ids(): array {
+		$member_ids = isset( $this->data['email_member_ids'] ) && is_array( $this->data['email_member_ids'] ) ? $this->data['email_member_ids'] : array();
+
+		return array_values( array_unique( array_filter( array_map( 'absint', $member_ids ) ) ) );
 	}
 
 	/**
@@ -263,6 +370,21 @@ final class Announcement {
 			self::AUDIENCE_PENDING_MEMBERS,
 			self::AUDIENCE_REJECTED_MEMBERS,
 			self::AUDIENCE_ADMINS,
+		);
+	}
+
+	/**
+	 * Get supported email recipient audiences.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function email_audiences(): array {
+		return array(
+			self::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS,
+			self::EMAIL_AUDIENCE_ALL_MEMBERS,
+			self::EMAIL_AUDIENCE_ACTIVE_MEMBERS,
+			self::EMAIL_AUDIENCE_TEAM,
+			self::EMAIL_AUDIENCE_SPECIFIC_MEMBERS,
 		);
 	}
 }

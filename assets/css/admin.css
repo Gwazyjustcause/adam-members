@@ -647,6 +647,64 @@
 	font-weight: 600;
 }
 
+.adam-admin-delivery-options,
+.adam-admin-email-recipients {
+	display: grid;
+	gap: 12px;
+	margin: 4px 0;
+	padding: 18px;
+	border: 1px solid var(--adam-admin-border, #d7e5d9);
+	border-radius: 12px;
+	background: var(--adam-admin-surface, #ffffff);
+}
+
+.adam-admin-delivery-options {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.adam-admin-delivery-options legend,
+.adam-admin-email-recipients legend {
+	padding: 0 8px;
+	color: var(--adam-admin-ink, #172033);
+	font-size: 14px;
+	font-weight: 800;
+}
+
+.adam-admin-radio-field {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	font-weight: 600;
+}
+
+.adam-admin-checkbox-field input[type="checkbox"],
+.adam-admin-radio-field input[type="radio"] {
+	flex: 0 0 auto;
+	width: auto;
+	margin: 0;
+}
+
+.adam-admin-email-recipient-detail {
+	display: grid;
+	gap: 6px;
+	margin-top: 6px;
+	padding-top: 14px;
+	border-top: 1px solid var(--adam-admin-border, #d7e5d9);
+}
+
+.adam-admin-email-recipient-detail > span {
+	font-weight: 700;
+}
+
+.adam-admin-email-recipient-detail small {
+	color: var(--adam-admin-muted, #5d6b7c);
+}
+
+.adam-admin-email-recipients[hidden],
+.adam-admin-email-recipient-detail[hidden] {
+	display: none;
+}
+
 .adam-admin-checkbox-field--catalog {
 	align-items: flex-start;
 	gap: 12px;
@@ -1036,6 +1094,10 @@
 }
 
 @media (max-width: 782px) {
+	.adam-admin-delivery-options {
+		grid-template-columns: 1fr;
+	}
+
 	.adam-admin-cards,
 	.adam-admin-dashboard-widgets,
 	.adam-admin-shortcut-grid,

@@ -11,14 +11,15 @@ namespace AdamMembership\Admin;
 
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Announcement\AnnouncementService;
+use AdamMembership\Communication\CommunicationCategoryRegistry;
 
 /**
  * Manages the admin-side Communication Centre.
  */
 final class AnnouncementController {
-	private const CAPABILITY      = 'manage_options';
-	private const MENU_SLUG       = 'adam-membership-notices';
-	private const EDIT_PAGE_SLUG  = 'adam-membership-notice-edit';
+	private const CAPABILITY     = 'manage_options';
+	private const MENU_SLUG      = 'adam-membership-notices';
+	private const EDIT_PAGE_SLUG = 'adam-membership-notice-edit';
 
 	/**
 	 * Announcement service.
@@ -41,9 +42,31 @@ final class AnnouncementController {
 	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_adam_membership_save_announcement', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_adam_membership_archive_announcement', array( $this, 'handle_archive' ) );
 		add_action( 'admin_post_adam_membership_delete_announcement', array( $this, 'handle_delete' ) );
+	}
+
+	/**
+	 * Enqueue the notice editor behavior on its own screen.
+	 */
+	public function enqueue_assets(): void {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+		if ( self::EDIT_PAGE_SLUG !== $page ) {
+			return;
+		}
+
+		$script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/admin-announcements.js';
+
+		wp_enqueue_script(
+			'adam-membership-admin-announcements',
+			ADAM_MEMBERSHIP_URL . 'assets/js/admin-announcements.js',
+			array(),
+			file_exists( $script_path ) ? (string) filemtime( $script_path ) : ADAM_MEMBERSHIP_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -171,9 +194,12 @@ final class AnnouncementController {
 	public function render_edit_page(): void {
 		$this->ensure_can_manage();
 
-		$announcement = $this->current_announcement();
-		$is_new       = null === $announcement;
-		$title        = $is_new ? __( 'Novo aviso', 'adam-membership' ) : __( 'Editar aviso', 'adam-membership' );
+		$announcement     = $this->current_announcement();
+		$is_new           = null === $announcement;
+		$title            = $is_new ? __( 'Novo aviso', 'adam-membership' ) : __( 'Editar aviso', 'adam-membership' );
+		$email_audience   = null !== $announcement ? $announcement->email_audience() : Announcement::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS;
+		$email_team_id    = null !== $announcement ? $announcement->email_team_id() : 0;
+		$email_member_ids = null !== $announcement ? $announcement->email_member_ids() : array();
 		?>
 		<div class="wrap adam-admin-wrap">
 			<div class="adam-admin-titlebar">
@@ -193,9 +219,7 @@ final class AnnouncementController {
 						<label>
 							<span><?php esc_html_e( 'Categoria', 'adam-membership' ); ?></span>
 							<select name="category">
-								<?php foreach ( $this->announcements->categories() as $category ) : ?>
-									<?php $this->render_select_option( $category, $category, null !== $announcement ? $announcement->category() : '' ); ?>
-								<?php endforeach; ?>
+								<?php $this->render_category_options( null !== $announcement ? $announcement->category() : '' ); ?>
 							</select>
 						</label>
 						<label>
@@ -250,8 +274,45 @@ final class AnnouncementController {
 						<textarea name="content" rows="12"><?php echo esc_textarea( null !== $announcement ? $announcement->content() : '' ); ?></textarea>
 					</label>
 
-					<label class="adam-admin-checkbox-field"><input type="checkbox" name="pinned" value="1" <?php checked( null !== $announcement ? $announcement->pinned() : false ); ?>> <?php esc_html_e( 'Fixar no topo', 'adam-membership' ); ?></label>
-					<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Mostrar na área do sócio e enviar email', 'adam-membership' ); ?></label>
+					<fieldset class="adam-admin-delivery-options">
+						<legend><?php esc_html_e( 'Entrega', 'adam-membership' ); ?></legend>
+						<label class="adam-admin-checkbox-field"><input type="checkbox" name="show_in_member_area" value="1" <?php checked( null !== $announcement ? $announcement->show_in_member_area() : true ); ?>> <?php esc_html_e( 'Mostrar na Área do Sócio', 'adam-membership' ); ?></label>
+						<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" data-adam-announcement-send-email <?php checked( null !== $announcement ? $announcement->send_email() : false ); ?>> <?php esc_html_e( 'Enviar Email', 'adam-membership' ); ?></label>
+						<label class="adam-admin-checkbox-field"><input type="checkbox" name="pinned" value="1" <?php checked( null !== $announcement ? $announcement->pinned() : false ); ?>> <?php esc_html_e( 'Fixar no topo', 'adam-membership' ); ?></label>
+						<label class="adam-admin-checkbox-field"><input type="checkbox" name="show_on_member_homepage" value="1" <?php checked( null !== $announcement ? $announcement->show_on_member_homepage() : false ); ?>> <?php esc_html_e( 'Mostrar na página inicial da Área do Sócio', 'adam-membership' ); ?></label>
+					</fieldset>
+
+					<fieldset class="adam-admin-email-recipients" data-adam-announcement-email-settings>
+						<legend><?php esc_html_e( 'Destinatários do email', 'adam-membership' ); ?></legend>
+						<p class="description"><?php esc_html_e( 'Nas categorias opcionais, as preferências de email dos membros são sempre respeitadas. As categorias obrigatórias não permitem exclusão.', 'adam-membership' ); ?></p>
+
+						<?php if ( Announcement::EMAIL_AUDIENCE_LEGACY === $email_audience ) : ?>
+							<label class="adam-admin-radio-field"><input type="radio" name="email_audience" value="<?php echo esc_attr( Announcement::EMAIL_AUDIENCE_LEGACY ); ?>" checked> <?php esc_html_e( 'Manter audiência original deste aviso', 'adam-membership' ); ?></label>
+						<?php endif; ?>
+						<?php foreach ( Announcement::email_audiences() as $audience ) : ?>
+							<label class="adam-admin-radio-field"><input type="radio" name="email_audience" value="<?php echo esc_attr( $audience ); ?>" data-adam-announcement-email-audience <?php checked( $email_audience, $audience ); ?>> <?php echo esc_html( $this->email_audience_label( $audience ) ); ?></label>
+						<?php endforeach; ?>
+
+						<label class="adam-admin-email-recipient-detail" data-adam-announcement-email-team>
+							<span><?php esc_html_e( 'Equipa específica', 'adam-membership' ); ?></span>
+							<select name="email_team_id">
+								<?php $this->render_select_option( '0', __( 'Selecionar equipa', 'adam-membership' ), (string) $email_team_id ); ?>
+								<?php foreach ( $this->announcements->team_choices() as $team_id => $team_name ) : ?>
+									<?php $this->render_select_option( (string) $team_id, $team_name, (string) $email_team_id ); ?>
+								<?php endforeach; ?>
+							</select>
+						</label>
+
+						<label class="adam-admin-email-recipient-detail" data-adam-announcement-email-members>
+							<span><?php esc_html_e( 'Sócio(s) específico(s)', 'adam-membership' ); ?></span>
+							<select name="email_member_ids[]" multiple size="8">
+								<?php foreach ( $this->announcements->member_choices() as $member_id => $member_label ) : ?>
+									<option value="<?php echo esc_attr( (string) $member_id ); ?>" <?php selected( in_array( $member_id, $email_member_ids, true ) ); ?>><?php echo esc_html( $member_label ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<small><?php esc_html_e( 'Use Ctrl/Cmd para selecionar vários membros.', 'adam-membership' ); ?></small>
+						</label>
+					</fieldset>
 
 					<div class="adam-admin-actions">
 						<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar aviso', 'adam-membership' ); ?></button>
@@ -345,20 +406,67 @@ final class AnnouncementController {
 	 */
 	private function posted_data(): array {
 		return array(
-			'title'           => isset( $_POST['title'] ) ? wp_unslash( $_POST['title'] ) : '',
-			'summary'         => isset( $_POST['summary'] ) ? wp_unslash( $_POST['summary'] ) : '',
-			'content'         => isset( $_POST['content'] ) ? wp_unslash( $_POST['content'] ) : '',
-			'category'        => isset( $_POST['category'] ) ? wp_unslash( $_POST['category'] ) : '',
-			'priority'        => isset( $_POST['priority'] ) ? wp_unslash( $_POST['priority'] ) : '',
-			'status'          => isset( $_POST['status'] ) ? wp_unslash( $_POST['status'] ) : '',
-			'publish_date'    => isset( $_POST['publish_date'] ) ? wp_unslash( $_POST['publish_date'] ) : '',
-			'expiry_date'     => isset( $_POST['expiry_date'] ) ? wp_unslash( $_POST['expiry_date'] ) : '',
-			'target_audience' => isset( $_POST['target_audience'] ) ? wp_unslash( $_POST['target_audience'] ) : '',
-			'pinned'          => isset( $_POST['pinned'] ),
-			'action_label'    => isset( $_POST['action_label'] ) ? wp_unslash( $_POST['action_label'] ) : '',
-			'action_url'      => isset( $_POST['action_url'] ) ? wp_unslash( $_POST['action_url'] ) : '',
-			'send_email'      => isset( $_POST['send_email'] ),
+			'title'                   => isset( $_POST['title'] ) ? wp_unslash( $_POST['title'] ) : '',
+			'summary'                 => isset( $_POST['summary'] ) ? wp_unslash( $_POST['summary'] ) : '',
+			'content'                 => isset( $_POST['content'] ) ? wp_unslash( $_POST['content'] ) : '',
+			'category'                => isset( $_POST['category'] ) ? wp_unslash( $_POST['category'] ) : '',
+			'priority'                => isset( $_POST['priority'] ) ? wp_unslash( $_POST['priority'] ) : '',
+			'status'                  => isset( $_POST['status'] ) ? wp_unslash( $_POST['status'] ) : '',
+			'publish_date'            => isset( $_POST['publish_date'] ) ? wp_unslash( $_POST['publish_date'] ) : '',
+			'expiry_date'             => isset( $_POST['expiry_date'] ) ? wp_unslash( $_POST['expiry_date'] ) : '',
+			'target_audience'         => isset( $_POST['target_audience'] ) ? wp_unslash( $_POST['target_audience'] ) : '',
+			'show_in_member_area'     => isset( $_POST['show_in_member_area'] ),
+			'show_on_member_homepage' => isset( $_POST['show_on_member_homepage'] ),
+			'pinned'                  => isset( $_POST['pinned'] ),
+			'action_label'            => isset( $_POST['action_label'] ) ? wp_unslash( $_POST['action_label'] ) : '',
+			'action_url'              => isset( $_POST['action_url'] ) ? wp_unslash( $_POST['action_url'] ) : '',
+			'send_email'              => isset( $_POST['send_email'] ),
+			'email_audience'          => isset( $_POST['email_audience'] ) ? wp_unslash( $_POST['email_audience'] ) : Announcement::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS,
+			'email_team_id'           => isset( $_POST['email_team_id'] ) ? absint( wp_unslash( $_POST['email_team_id'] ) ) : 0,
+			'email_member_ids'        => isset( $_POST['email_member_ids'] ) && is_array( $_POST['email_member_ids'] ) ? wp_unslash( $_POST['email_member_ids'] ) : array(),
 		);
+	}
+
+	/**
+	 * Render categories grouped by communication type.
+	 *
+	 * @param string $current Current stored category label.
+	 */
+	private function render_category_options( string $current ): void {
+		$definitions = $this->announcements->category_definitions();
+		$known       = false;
+
+		foreach ( $definitions as $definition ) {
+			if ( sanitize_title( $current ) === sanitize_title( $definition['label'] ) || in_array( $current, $definition['aliases'], true ) ) {
+				$known = true;
+				break;
+			}
+		}
+
+		if ( '' !== $current && ! $known ) {
+			$this->render_select_option( $current, sprintf( __( '%s (categoria existente)', 'adam-membership' ), $current ), $current );
+		}
+
+		foreach (
+			array(
+				CommunicationCategoryRegistry::TYPE_MANDATORY => __( 'Comunicações obrigatórias', 'adam-membership' ),
+				CommunicationCategoryRegistry::TYPE_OPTIONAL  => __( 'Comunicações opcionais', 'adam-membership' ),
+			) as $type => $group_label
+		) {
+			printf( '<optgroup label="%s">', esc_attr( $group_label ) );
+
+			foreach ( $definitions as $definition ) {
+				if ( $type !== $definition['type'] ) {
+					continue;
+				}
+
+				$selected_category = sanitize_title( $current ) === sanitize_title( $definition['label'] )
+					|| in_array( $current, $definition['aliases'], true ) ? $definition['label'] : $current;
+				$this->render_select_option( $definition['label'], $definition['label'], $selected_category );
+			}
+
+			echo '</optgroup>';
+		}
 	}
 
 	/**
@@ -479,6 +587,21 @@ final class AnnouncementController {
 			Announcement::AUDIENCE_REJECTED_MEMBERS => __( 'Inscrições rejeitadas', 'adam-membership' ),
 			Announcement::AUDIENCE_ADMINS           => __( 'Admins / Direcao', 'adam-membership' ),
 			default                                 => __( 'Todos os socios', 'adam-membership' ),
+		};
+	}
+
+	/**
+	 * Get an email recipient audience label.
+	 *
+	 * @param string $audience Email audience key.
+	 */
+	private function email_audience_label( string $audience ): string {
+		return match ( $audience ) {
+			Announcement::EMAIL_AUDIENCE_ALL_MEMBERS      => __( 'Todos os sócios', 'adam-membership' ),
+			Announcement::EMAIL_AUDIENCE_ACTIVE_MEMBERS   => __( 'Apenas sócios ativos', 'adam-membership' ),
+			Announcement::EMAIL_AUDIENCE_TEAM             => __( 'Equipa específica', 'adam-membership' ),
+			Announcement::EMAIL_AUDIENCE_SPECIFIC_MEMBERS => __( 'Sócio(s) específico(s)', 'adam-membership' ),
+			default                                       => __( 'Apenas membros inscritos nesta categoria', 'adam-membership' ),
 		};
 	}
 
