@@ -62,6 +62,28 @@
 	line-height: 1;
 }
 
+.adam-admin-team-card-metrics {
+	display: grid;
+	gap: 10px;
+}
+
+.adam-admin-team-card-metrics > div {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.adam-admin-team-card-metrics small {
+	color: var(--adam-admin-muted);
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.adam-admin-team-card-metrics strong {
+	font-size: 24px;
+}
+
 .adam-admin-dashboard-sections,
 .adam-admin-dashboard-widgets {
 	display: grid;
@@ -121,6 +143,20 @@
 	margin: 0;
 	color: var(--adam-admin-muted);
 	line-height: 1.55;
+}
+
+.adam-admin-shortcut-card__details {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding: 12px 0 0;
+	border-top: 1px solid #e5edf0;
+	color: var(--adam-admin-muted);
+	list-style: none;
+}
+
+.adam-admin-shortcut-card__details li {
+	margin: 0;
 }
 
 .adam-admin-shortcut-card__footer {

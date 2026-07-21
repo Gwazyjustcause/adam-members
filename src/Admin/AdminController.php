@@ -429,12 +429,20 @@ final class AdminController {
 
 		$counts          = $this->members->dashboard_counts();
 		$team_statistics = $this->teams->statistics();
+		$team_directory  = $this->teams->public_directory();
 		$context         = $this->dashboard_context( $counts );
+
+		$team_statistics['teams_with_active_members'] = count(
+			array_filter(
+				$team_directory,
+				static fn ( array $team ): bool => $team['active_member_count'] > 0
+			)
+		);
+		$context['team_statistics']                   = $team_statistics;
 
 		$this->render_header( __( 'Painel ADAM Sócios', 'adam-membership' ) );
 		$this->render_notices();
-		$this->render_dashboard_cards( $counts );
-		$this->render_team_dashboard_card( $team_statistics );
+		$this->render_dashboard_cards( $counts, $team_statistics );
 		$this->render_dashboard_shortcuts( $context );
 		$this->render_dashboard_widgets( $context );
 		$this->render_footer();
@@ -1744,9 +1752,10 @@ final class AdminController {
 	/**
 	 * Render dashboard cards.
 	 *
-	 * @param array<string, int> $counts Dashboard counts.
+	 * @param array<string, int> $counts          Dashboard counts.
+	 * @param array<string, int> $team_statistics Team statistics.
 	 */
-	private function render_dashboard_cards( array $counts ): void {
+	private function render_dashboard_cards( array $counts, array $team_statistics ): void {
 		$cards = array(
 			array( 'label' => __( 'Total de Sócios', 'adam-membership' ), 'value' => $counts['total'] ?? 0 ),
 			array( 'label' => __( 'Sócios Ativos', 'adam-membership' ), 'value' => $counts['active'] ?? 0 ),
@@ -1764,49 +1773,20 @@ final class AdminController {
 					<strong><?php echo esc_html( (string) $card['value'] ); ?></strong>
 				</div>
 			<?php endforeach; ?>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render calculated team statistics on the main dashboard.
-	 *
-	 * @param array{teams:int,associated_teams:int,eligible_teams:int,distributed_members:int} $statistics Team statistics.
-	 */
-	private function render_team_dashboard_card( array $statistics ): void {
-		$cards = array(
-			array(
-				'label' => __( 'Equipas', 'adam-membership' ),
-				'value' => $statistics['teams'],
-			),
-			array(
-				'label' => __( 'Equipas Associadas', 'adam-membership' ),
-				'value' => $statistics['associated_teams'],
-			),
-			array(
-				'label' => __( 'Equipas Elegíveis', 'adam-membership' ),
-				'value' => $statistics['eligible_teams'],
-			),
-			array(
-				'label' => __( 'Sócios distribuídos por equipas', 'adam-membership' ),
-				'value' => $statistics['distributed_members'],
-			),
-		);
-		?>
-		<section class="adam-admin-panel adam-admin-team-summary">
-			<div class="adam-admin-dashboard-heading">
-				<h2><?php esc_html_e( 'Equipas', 'adam-membership' ); ?></h2>
-				<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Gerir equipas', 'adam-membership' ); ?></a>
-			</div>
-			<div class="adam-admin-cards">
-				<?php foreach ( $cards as $card ) : ?>
-					<div class="adam-admin-card">
-						<span><?php echo esc_html( $card['label'] ); ?></span>
-						<strong><?php echo esc_html( number_format_i18n( $card['value'] ) ); ?></strong>
+			<div class="adam-admin-card adam-admin-card--teams">
+				<span><?php esc_html_e( 'Equipas', 'adam-membership' ); ?></span>
+				<div class="adam-admin-team-card-metrics">
+					<div>
+						<small><?php esc_html_e( 'Total de Equipas', 'adam-membership' ); ?></small>
+						<strong><?php echo esc_html( number_format_i18n( $team_statistics['teams'] ) ); ?></strong>
 					</div>
-				<?php endforeach; ?>
+					<div>
+						<small><?php esc_html_e( 'Equipas Associadas', 'adam-membership' ); ?></small>
+						<strong><?php echo esc_html( number_format_i18n( $team_statistics['associated_teams'] ) ); ?></strong>
+					</div>
+				</div>
 			</div>
-		</section>
+		</div>
 		<?php
 	}
 
@@ -1832,6 +1812,9 @@ final class AdminController {
 	 * @param array<string, mixed> $context Dashboard context.
 	 */
 	private function render_dashboard_shortcuts( array $context ): void {
+		$team_statistics = $context['team_statistics'] ?? array();
+		$team_count      = (int) ( $team_statistics['teams'] ?? 0 );
+
 		$sections = array(
 			array(
 				'title' => __( 'Gestão de Sócios', 'adam-membership' ),
@@ -1851,6 +1834,31 @@ final class AdminController {
 						'button'      => __( 'Abrir sócios', 'adam-membership' ),
 						'url'         => admin_url( 'admin.php?page=adam-membership-members' ),
 						'badge'       => (int) ( $context['counts']['total'] ?? 0 ),
+					),
+					array(
+						'icon'        => 'groups',
+						'title'       => __( 'Equipas', 'adam-membership' ),
+						'description' => __( 'Gerir equipas, consultar membros e estado das equipas.', 'adam-membership' ),
+						'button'      => __( 'Abrir Equipas', 'adam-membership' ),
+						'url'         => admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ),
+						'badge'       => $team_count,
+						'details'     => array(
+							sprintf(
+								/* translators: %s: number of teams. */
+								_n( '%s Equipa', '%s Equipas', $team_count, 'adam-membership' ),
+								number_format_i18n( $team_count )
+							),
+							sprintf(
+								/* translators: %s: number of teams with active members. */
+								__( '%s com sócios ativos', 'adam-membership' ),
+								number_format_i18n( (int) ( $team_statistics['teams_with_active_members'] ?? 0 ) )
+							),
+							sprintf(
+								/* translators: %s: number of associated teams. */
+								_n( '%s Equipa Associada', '%s Equipas Associadas', (int) ( $team_statistics['associated_teams'] ?? 0 ), 'adam-membership' ),
+								number_format_i18n( (int) ( $team_statistics['associated_teams'] ?? 0 ) )
+							),
+						),
 					),
 					array(
 						'icon'        => 'update',
@@ -2053,7 +2061,8 @@ final class AdminController {
 	 * @param array<string, mixed> $item Shortcut data.
 	 */
 	private function render_dashboard_shortcut_card( array $item ): void {
-		$badge = isset( $item['badge'] ) ? (int) $item['badge'] : null;
+		$badge   = isset( $item['badge'] ) ? (int) $item['badge'] : null;
+		$details = isset( $item['details'] ) && is_array( $item['details'] ) ? $item['details'] : array();
 		?>
 		<article class="adam-admin-shortcut-card">
 			<div class="adam-admin-shortcut-card__top">
@@ -2064,6 +2073,13 @@ final class AdminController {
 			</div>
 			<h3><?php echo esc_html( (string) $item['title'] ); ?></h3>
 			<p><?php echo esc_html( (string) $item['description'] ); ?></p>
+			<?php if ( array() !== $details ) : ?>
+				<ul class="adam-admin-shortcut-card__details">
+					<?php foreach ( $details as $detail ) : ?>
+						<li><?php echo esc_html( (string) $detail ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
 			<div class="adam-admin-shortcut-card__footer">
 				<a class="button button-secondary" href="<?php echo esc_url( (string) $item['url'] ); ?>"><?php echo esc_html( (string) $item['button'] ); ?></a>
 			</div>
