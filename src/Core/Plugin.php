@@ -53,6 +53,7 @@ use AdamMembership\Privacy\ConsentManager;
 use AdamMembership\Reward\RewardRepository;
 use AdamMembership\Reward\RewardQrFrontend;
 use AdamMembership\Reward\RewardService;
+use AdamMembership\Team\TeamRepository;
 
 /**
  * Coordinates plugin services.
@@ -103,6 +104,7 @@ final class Plugin {
 		$logger             = new Logger();
 		$settings           = new SettingsRepository();
 		$members            = new MemberRepository();
+		$teams              = new TeamRepository( $members );
 		$renewal_repository = new RenewalRepository();
 		$history_repository = new HistoryRepository();
 		$history            = new HistoryService( $history_repository, $members );
@@ -121,12 +123,12 @@ final class Plugin {
 		$events             = new EventService( $event_repository, $members, $logger, $history_repository, $points );
 		$statistics         = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
 		$approval           = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
-		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition );
+		$renewals           = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
 		$maintenance        = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards              = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
 		$config             = new RegistrationFormConfig();
 		$account_setup      = new AccountSetup( $settings, $members, $history );
-		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup );
+		$registration_service = new RegistrationService( $logger, $history, $email, $account_setup, $teams );
 		$registration       = new UserRegistration( $config, $logger, $registration_service );
 		$renewal_submission = new RenewalSubmission( $renewals, $logger );
 
@@ -159,7 +161,8 @@ final class Plugin {
 				$events,
 				$rewards,
 				$recognition,
-				$email
+				$email,
+				$teams
 			);
 
 			$admin->register();
@@ -176,7 +179,7 @@ final class Plugin {
 		( new ConsentManager( $settings ) )->register();
 		( new RewardQrFrontend( $rewards, $members ) )->register();
 		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition ) )->register();
-		( new MembershipForms( $settings, $members, $registration_service, $renewals ) )->register();
+		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams ) )->register();
 		$account_setup->register();
 		( new PasswordRecovery( $email, $members, $history ) )->register();
 		( new PasswordReset( $members, $history ) )->register();

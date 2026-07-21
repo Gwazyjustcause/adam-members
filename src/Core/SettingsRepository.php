@@ -519,6 +519,12 @@ final class SettingsRepository {
 					'enabled'  => true,
 					'required' => false,
 				),
+				'team' => array(
+					'label'    => 'Equipa (opcional)',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => false,
+				),
 				'payment_receipt' => array(
 					'label'    => 'Comprovativo de pagamento',
 					'help'     => '',
@@ -837,7 +843,7 @@ final class SettingsRepository {
 	private function system_field_keys( string $form ): array {
 		return 'registration' === $form
 			? array( 'full_name', 'email', 'citizen_card', 'nif', 'birth_date', 'phone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country', 'team', 'profile_photo', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' )
-			: array( 'phone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' );
+			: array( 'phone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country', 'team', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' );
 	}
 
 	/**
@@ -855,6 +861,7 @@ final class SettingsRepository {
 			'municipality'               => 'text',
 			'postcode'                   => 'text',
 			'country'                    => 'text',
+			'team'                       => 'text',
 			'payment_receipt'            => 'file',
 			'privacy_acceptance'         => 'checkbox',
 			'external_association_name'  => 'text',
@@ -896,6 +903,7 @@ final class SettingsRepository {
 				'municipality'               => 'renewal_profile',
 				'postcode'                   => 'renewal_profile',
 				'country'                    => 'renewal_profile',
+				'team'                       => 'always',
 				'payment_receipt'            => 'always',
 				'privacy_acceptance'         => 'always',
 				'external_association_name'  => 'renewal_external',

@@ -13,6 +13,7 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RenewalService;
+use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
 /**
@@ -23,17 +24,19 @@ final class MembershipForms {
 	private MemberRepository $members;
 	private RegistrationService $registration;
 	private RenewalService $renewals;
+	private TeamRepository $teams;
 
 	/**
 	 * @var array<string, mixed>|null
 	 */
 	private ?array $form_settings = null;
 
-	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals ) {
+	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals, TeamRepository $teams ) {
 		$this->settings     = $settings;
 		$this->members      = $members;
 		$this->registration = $registration;
 		$this->renewals     = $renewals;
+		$this->teams        = $teams;
 	}
 
 	/**
@@ -397,6 +400,9 @@ final class MembershipForms {
 		$renewal_mode    = 'external_association' === (string) ( $values['renewal_mode'] ?? '' ) ? 'external_association' : 'adam_primary';
 		$profile_changed = '1' === (string) ( $values['profile_changed'] ?? '0' );
 		$settings        = $this->settings();
+		$team_config     = $this->field_config( 'renewal', 'team' );
+
+		$this->validate_text_field( 'renewal', 'team', $values, $errors );
 
 		if ( $profile_changed ) {
 			$this->validate_text_field( 'renewal', 'phone', $values, $errors );
@@ -434,6 +440,10 @@ final class MembershipForms {
 			'adam_external_member_number'    => 'external_association' === $renewal_mode ? (string) ( $values['external_member_number'] ?? '' ) : '',
 			'adam_external_association_proof' => 'external_association' === $renewal_mode ? $association_proof : '',
 		);
+
+		if ( $team_config['enabled'] ) {
+			$submitted_data['equipa'] = TeamRepository::normalize_name( (string) ( $values['team'] ?? '' ) );
+		}
 
 		if ( $profile_changed ) {
 			$submitted_data['telefone']      = (string) ( $values['phone'] ?? '' );
@@ -799,6 +809,7 @@ final class MembershipForms {
 			'municipality'              => (string) $member->field( 'municipio' ),
 			'postcode'                  => (string) $member->field( 'codigo_postal' ),
 			'country'                   => (string) $member->field( 'pais' ),
+			'team'                      => $this->current_team_name( $member ),
 			'external_association_name' => (string) $member->field( 'adam_external_association_name' ),
 			'external_member_number'    => (string) $member->field( 'adam_external_member_number' ),
 			'renewal_mode'              => $this->member_uses_external_association( $member ) ? 'external_association' : 'adam_primary',
@@ -810,6 +821,25 @@ final class MembershipForms {
 		}
 
 		return $values;
+	}
+
+	/**
+	 * Get the current team name with a legacy-name fallback.
+	 *
+	 * @param Member $member Member record.
+	 */
+	private function current_team_name( Member $member ): string {
+		$team_id = absint( $member->field( 'team_id' ) );
+
+		if ( $team_id > 0 ) {
+			$team = $this->teams->find( $team_id );
+
+			if ( null !== $team ) {
+				return $team->name();
+			}
+		}
+
+		return TeamRepository::normalize_name( (string) $member->field( 'equipa' ) );
 	}
 
 	/**
@@ -923,6 +953,11 @@ final class MembershipForms {
 			return;
 		}
 
+		if ( 'team' === $field ) {
+			$this->render_team_field( $config, $values );
+			return;
+		}
+
 		$type        = (string) ( $config['type'] ?? 'text' );
 		$field_class = $this->field_layout_class( $type );
 		$label       = (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' );
@@ -997,6 +1032,34 @@ final class MembershipForms {
 		};
 
 		$this->render_text_field( $form, $field, $values, $input_type, $field_class );
+	}
+
+	/**
+	 * Render the optional searchable team field.
+	 *
+	 * The native datalist provides suggestions while retaining free text so a
+	 * previously unknown team can be created after a successful submission.
+	 *
+	 * @param array<string, mixed> $config Field configuration.
+	 * @param array<string, mixed> $values Form values.
+	 */
+	private function render_team_field( array $config, array $values ): void {
+		$list_id = wp_unique_id( 'adam-membership-team-options-' );
+		$value   = TeamRepository::normalize_name( (string) ( $values['team'] ?? '' ) );
+		?>
+		<label class="adam-form-field adam-team-field">
+			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
+			<input type="text" name="team" value="<?php echo esc_attr( $value ); ?>" list="<?php echo esc_attr( $list_id ); ?>" maxlength="191" autocomplete="off" placeholder="<?php esc_attr_e( 'Comece a escrever para pesquisar ou criar uma equipa', 'adam-membership' ); ?>">
+			<datalist id="<?php echo esc_attr( $list_id ); ?>">
+				<?php foreach ( $this->teams->all() as $team ) : ?>
+					<option value="<?php echo esc_attr( $team->name() ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
+			<?php if ( '' !== (string) $config['help'] ) : ?>
+				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+			<?php endif; ?>
+		</label>
+		<?php
 	}
 
 	/**

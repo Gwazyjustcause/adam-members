@@ -13,7 +13,7 @@ namespace AdamMembership\Team;
  * Installs and upgrades the team table without changing existing plugin data.
  */
 final class TeamSchema {
-	private const VERSION        = '1.0.0';
+	private const VERSION        = '1.1.0';
 	private const VERSION_OPTION = 'adam_membership_teams_schema_version';
 
 	/**
@@ -32,6 +32,7 @@ final class TeamSchema {
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(191) NOT NULL,
 			slug varchar(191) NOT NULL,
+			team_type varchar(32) NOT NULL DEFAULT 'team',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),

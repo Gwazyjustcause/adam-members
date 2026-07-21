@@ -13,6 +13,9 @@ namespace AdamMembership\Team;
  * Represents an ADAM team.
  */
 final class Team {
+	public const TYPE_TEAM       = 'team';
+	public const TYPE_ASSOCIATED = 'associated_team';
+
 	/**
 	 * Raw team data.
 	 *
@@ -48,6 +51,15 @@ final class Team {
 	 */
 	public function slug(): string {
 		return sanitize_title( (string) ( $this->data['slug'] ?? '' ) );
+	}
+
+	/**
+	 * Get team type.
+	 */
+	public function type(): string {
+		$type = sanitize_key( (string) ( $this->data['team_type'] ?? self::TYPE_TEAM ) );
+
+		return in_array( $type, array( self::TYPE_TEAM, self::TYPE_ASSOCIATED ), true ) ? $type : self::TYPE_TEAM;
 	}
 
 	/**

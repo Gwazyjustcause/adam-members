@@ -31,6 +31,8 @@ use AdamMembership\Member\RenewalRequest;
 use AdamMembership\Member\RenewalService;
 use AdamMembership\Reward\RewardRedemption;
 use AdamMembership\Reward\RewardService;
+use AdamMembership\Team\Team;
+use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
 /**
@@ -59,6 +61,10 @@ final class AdminController {
 	private const FOUNDERS_PAGE_SLUG     = 'adam-membership-founders';
 	private const FORMS_PAGE_SLUG        = 'adam-membership-forms';
 	private const EMAILS_PAGE_SLUG       = 'adam-membership-emails';
+	private const TEAMS_PAGE_SLUG        = 'adam-membership-teams';
+	private const TEAM_PAGE_SLUG         = 'adam-membership-team';
+	private const ACTION_SAVE_TEAM       = 'save_team';
+	private const ACTION_DELETE_TEAM     = 'delete_team';
 
 	/**
 	 * Member details page hook suffix.
@@ -73,6 +79,13 @@ final class AdminController {
 	 * @var string
 	 */
 	private string $renewal_page_hook = '';
+
+	/**
+	 * Team details page hook suffix.
+	 *
+	 * @var string
+	 */
+	private string $team_page_hook = '';
 
 	/**
 	 * Member repository.
@@ -168,6 +181,13 @@ final class AdminController {
 	private EmailService $email;
 
 	/**
+	 * Team repository.
+	 *
+	 * @var TeamRepository
+	 */
+	private TeamRepository $teams;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -185,8 +205,9 @@ final class AdminController {
 	 * @param RewardService       $rewards         Reward service.
 	 * @param RecognitionService  $recognition     Recognition service.
 	 * @param EmailService        $email           Email service.
+	 * @param TeamRepository      $teams           Team repository.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -202,6 +223,7 @@ final class AdminController {
 		$this->rewards             = $rewards;
 		$this->recognition         = $recognition;
 		$this->email               = $email;
+		$this->teams               = $teams;
 	}
 
 	/**
@@ -223,6 +245,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
 		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
 		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
+		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
 	}
 
 	/**
@@ -282,6 +305,15 @@ final class AdminController {
 			self::CAPABILITY,
 			'adam-membership-renewals',
 			array( $this, 'render_renewals_page' )
+		);
+
+		add_submenu_page(
+			self::MENU_SLUG,
+			esc_html__( 'Equipas', 'adam-membership' ),
+			esc_html__( 'Equipas', 'adam-membership' ),
+			self::CAPABILITY,
+			self::TEAMS_PAGE_SLUG,
+			array( $this, 'render_teams_page' )
 		);
 
 		add_submenu_page(
@@ -347,12 +379,25 @@ final class AdminController {
 			array( $this, 'render_renewal_page' )
 		);
 
+		$this->team_page_hook = (string) add_submenu_page(
+			null,
+			esc_html__( 'Detalhes da Equipa', 'adam-membership' ),
+			esc_html__( 'Detalhes da Equipa', 'adam-membership' ),
+			self::CAPABILITY,
+			self::TEAM_PAGE_SLUG,
+			array( $this, 'render_team_page' )
+		);
+
 		if ( '' !== $this->member_page_hook ) {
 			add_action( 'load-' . $this->member_page_hook, array( $this, 'prepare_member_page_screen' ) );
 		}
 
 		if ( '' !== $this->renewal_page_hook ) {
 			add_action( 'load-' . $this->renewal_page_hook, array( $this, 'prepare_renewal_page_screen' ) );
+		}
+
+		if ( '' !== $this->team_page_hook ) {
+			add_action( 'load-' . $this->team_page_hook, array( $this, 'prepare_team_page_screen' ) );
 		}
 	}
 
@@ -550,6 +595,44 @@ final class AdminController {
 	}
 
 	/**
+	 * Render the team administration list.
+	 */
+	public function render_teams_page(): void {
+		$this->ensure_can_manage();
+
+		$filters = $this->current_team_filters();
+		$teams   = $this->teams->admin_list( $filters );
+
+		$this->render_header( __( 'Lista de Equipas', 'adam-membership' ) );
+		$this->render_notices();
+		$this->render_team_filters( $filters );
+		$this->render_teams_table( $teams, $filters );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render one team administration page.
+	 */
+	public function render_team_page(): void {
+		$this->ensure_can_manage();
+
+		$team_id = isset( $_GET['team_id'] ) ? absint( wp_unslash( $_GET['team_id'] ) ) : 0;
+		$team    = $this->teams->find( $team_id );
+
+		$this->render_header( __( 'Detalhes da Equipa', 'adam-membership' ) );
+		$this->render_notices();
+
+		if ( null === $team ) {
+			$this->render_empty_state( __( 'Equipa não encontrada.', 'adam-membership' ) );
+			$this->render_footer();
+			return;
+		}
+
+		$this->render_team_detail( $team );
+		$this->render_footer();
+	}
+
+	/**
 	 * Render a single renewal request review page.
 	 */
 	public function render_renewal_page(): void {
@@ -620,12 +703,29 @@ final class AdminController {
 	}
 
 	/**
+	 * Ensure the hidden team page always has a valid admin title.
+	 */
+	public function prepare_team_page_screen(): void {
+		$team_id = isset( $_GET['team_id'] ) ? absint( wp_unslash( $_GET['team_id'] ) ) : 0;
+		$team    = $team_id > 0 ? $this->teams->find( $team_id ) : null;
+		$title   = null !== $team
+			? sprintf(
+				/* translators: %s: team name. */
+				__( 'Detalhes da Equipa: %s', 'adam-membership' ),
+				$team->name()
+			)
+			: __( 'Detalhes da Equipa', 'adam-membership' );
+
+		$this->prime_admin_page_title( $title );
+	}
+
+	/**
 	 * Prepare context for hidden ADAM admin screens before the header renders.
 	 *
 	 * @param mixed $screen Current screen object when available.
 	 */
 	public function prepare_hidden_screen_context( mixed $screen ): void {
-		if ( ! $this->is_member_page_request() && ! $this->is_renewal_page_request() ) {
+		if ( ! $this->is_member_page_request() && ! $this->is_renewal_page_request() && ! $this->is_team_page_request() ) {
 			return;
 		}
 
@@ -634,7 +734,12 @@ final class AdminController {
 			return;
 		}
 
-		$this->prepare_renewal_page_screen();
+		if ( $this->is_renewal_page_request() ) {
+			$this->prepare_renewal_page_screen();
+			return;
+		}
+
+		$this->prepare_team_page_screen();
 	}
 
 	/**
@@ -643,7 +748,7 @@ final class AdminController {
 	 * @param string|null $parent_file Current parent file.
 	 */
 	public function filter_hidden_parent_file( ?string $parent_file ): ?string {
-		if ( $this->is_member_page_request() || $this->is_renewal_page_request() ) {
+		if ( $this->is_member_page_request() || $this->is_renewal_page_request() || $this->is_team_page_request() ) {
 			return self::MENU_SLUG;
 		}
 
@@ -656,6 +761,10 @@ final class AdminController {
 	 * @param string|null $submenu_file Current submenu file.
 	 */
 	public function filter_hidden_submenu_file( ?string $submenu_file ): ?string {
+		if ( $this->is_team_page_request() ) {
+			return self::TEAMS_PAGE_SLUG;
+		}
+
 		if ( null === $submenu_file ) {
 			return null;
 		}
@@ -1123,6 +1232,56 @@ final class AdminController {
 		}
 
 		$this->redirect_with_message( __( 'Pedido de renovação atualizado com sucesso.', 'adam-membership' ) );
+	}
+
+	/**
+	 * Handle team administration actions.
+	 */
+	public function handle_team_admin_action(): void {
+		$this->ensure_can_manage();
+
+		$team_id = isset( $_POST['team_id'] ) ? absint( wp_unslash( $_POST['team_id'] ) ) : 0;
+		$action  = isset( $_POST['team_action'] ) ? sanitize_key( wp_unslash( $_POST['team_action'] ) ) : '';
+
+		check_admin_referer( 'adam_membership_team_action_' . $team_id );
+
+		$team = $this->teams->find( $team_id );
+
+		if ( null === $team ) {
+			$this->redirect_with_error( __( 'Equipa não encontrada.', 'adam-membership' ) );
+			return;
+		}
+
+		if ( self::ACTION_SAVE_TEAM === $action ) {
+			$name   = isset( $_POST['team_name'] ) ? sanitize_text_field( wp_unslash( $_POST['team_name'] ) ) : '';
+			$type   = isset( $_POST['team_type'] ) ? sanitize_key( wp_unslash( $_POST['team_type'] ) ) : $team->type();
+			$result = $this->teams->update_details( $team_id, $name, $type );
+
+			if ( $result instanceof WP_Error ) {
+				$this->redirect_with_error( $result->get_error_message() );
+				return;
+			}
+
+			$this->redirect_with_message( __( 'Equipa atualizada com sucesso.', 'adam-membership' ) );
+			return;
+		}
+
+		if ( self::ACTION_DELETE_TEAM === $action ) {
+			if ( $this->teams->member_count( $team_id ) > 0 ) {
+				$this->redirect_with_error( __( 'Não é possível eliminar uma equipa que possui sócios associados.', 'adam-membership' ) );
+				return;
+			}
+
+			if ( ! $this->teams->delete( $team_id ) ) {
+				$this->redirect_with_error( __( 'Não foi possível eliminar a equipa.', 'adam-membership' ) );
+				return;
+			}
+
+			$this->redirect_with_message( __( 'Equipa eliminada com sucesso.', 'adam-membership' ) );
+			return;
+		}
+
+		$this->redirect_with_error( __( 'Ação de equipa inválida.', 'adam-membership' ) );
 	}
 
 	/**
@@ -2054,6 +2213,206 @@ final class AdminController {
 				</div>
 			<?php endif; ?>
 		</section>
+		<?php
+	}
+
+	/**
+	 * Render team search and ordering controls.
+	 *
+	 * @param array<string, string> $filters Current filters.
+	 */
+	private function render_team_filters( array $filters ): void {
+		?>
+		<form method="get" class="adam-admin-filters">
+			<input type="hidden" name="page" value="<?php echo esc_attr( self::TEAMS_PAGE_SLUG ); ?>">
+			<label>
+				<span><?php esc_html_e( 'Pesquisar', 'adam-membership' ); ?></span>
+				<input type="search" name="s" value="<?php echo esc_attr( $filters['search'] ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Nome ou parte do nome', 'adam-membership' ); ?>">
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Ordenar por', 'adam-membership' ); ?></span>
+				<select name="orderby">
+					<?php $this->render_select_option( 'name', __( 'Nome', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+					<?php $this->render_select_option( 'members', __( 'Número de sócios ativos', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+					<?php $this->render_select_option( 'created_at', __( 'Data de criação', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+					<?php $this->render_select_option( 'updated_at', __( 'Última atualização', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+					<?php $this->render_select_option( 'type', __( 'Estado', 'adam-membership' ), $filters['orderby'] ?? 'name' ); ?>
+				</select>
+			</label>
+			<label>
+				<span><?php esc_html_e( 'Direção', 'adam-membership' ); ?></span>
+				<select name="order">
+					<?php $this->render_select_option( 'asc', __( 'Ascendente', 'adam-membership' ), $filters['order'] ?? 'asc' ); ?>
+					<?php $this->render_select_option( 'desc', __( 'Descendente', 'adam-membership' ), $filters['order'] ?? 'asc' ); ?>
+				</select>
+			</label>
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Aplicar', 'adam-membership' ); ?></button>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Repor', 'adam-membership' ); ?></a>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render the team administration table.
+	 *
+	 * @param array<int, array{team:Team,active_members:int,total_members:int}> $rows Team rows.
+	 * @param array<string, string>                                            $filters Current filters.
+	 */
+	private function render_teams_table( array $rows, array $filters ): void {
+		if ( array() === $rows ) {
+			$this->render_empty_state( __( 'Não foram encontradas equipas para os filtros atuais.', 'adam-membership' ) );
+			return;
+		}
+		?>
+		<table class="widefat striped adam-admin-table">
+			<thead>
+				<tr>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Nome da equipa', 'adam-membership' ), 'name', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'N.º de sócios ativos', 'adam-membership' ), 'members', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Estado', 'adam-membership' ), 'type', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Data de criação', 'adam-membership' ), 'created_at', $filters ) ); ?></th>
+					<th><?php echo wp_kses_post( $this->team_sort_link( __( 'Última atualização', 'adam-membership' ), 'updated_at', $filters ) ); ?></th>
+					<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $rows as $row ) : ?>
+					<?php $team = $row['team']; ?>
+					<tr>
+						<td><strong><a href="<?php echo esc_url( $this->team_url( $team ) ); ?>"><?php echo esc_html( $team->name() ); ?></a></strong></td>
+						<td><?php echo esc_html( number_format_i18n( $row['active_members'] ) ); ?></td>
+						<td>
+							<?php $this->render_team_type_badge( $team ); ?>
+							<?php if ( Team::TYPE_ASSOCIATED === $team->type() && $row['active_members'] < $this->teams->associated_minimum_active_members() ) : ?>
+								<small class="adam-admin-warning-text"><?php esc_html_e( 'Rever: menos de 5 sócios ativos.', 'adam-membership' ); ?></small>
+							<?php endif; ?>
+						</td>
+						<td><?php echo esc_html( $this->format_datetime( $team->created_at() ) ); ?></td>
+						<td><?php echo esc_html( $this->format_datetime( $team->updated_at() ) ); ?></td>
+						<td><a class="button button-small" href="<?php echo esc_url( $this->team_url( $team ) ); ?>"><?php esc_html_e( 'Ver', 'adam-membership' ); ?></a></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Render a team detail and editing screen.
+	 *
+	 * @param Team $team Team.
+	 */
+	private function render_team_detail( Team $team ): void {
+		$members      = $this->teams->members_for_team( $team->id() );
+		$active_count = $this->teams->member_count( $team->id(), true );
+		$total_count  = count( $members );
+		$minimum      = $this->teams->associated_minimum_active_members();
+		$below_limit  = $active_count < $minimum;
+		?>
+		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>">&larr; <?php esc_html_e( 'Voltar à lista de equipas', 'adam-membership' ); ?></a></p>
+
+		<?php if ( Team::TYPE_ASSOCIATED === $team->type() && $below_limit ) : ?>
+			<div class="notice notice-warning inline"><p><?php esc_html_e( 'Esta Equipa Associada tem menos de 5 sócios ativos. Reveja a situação; o estado não foi alterado automaticamente.', 'adam-membership' ); ?></p></div>
+		<?php endif; ?>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Informação', 'adam-membership' ); ?></h2>
+			<div class="adam-admin-detail-grid">
+				<?php $this->render_detail_item( __( 'Nome', 'adam-membership' ), $team->name() ); ?>
+				<?php $this->render_detail_item( __( 'Slug', 'adam-membership' ), $team->slug() ); ?>
+				<?php $this->render_detail_item( __( 'Estado', 'adam-membership' ), $this->team_type_label( $team ) ); ?>
+				<?php $this->render_detail_item( __( 'Data de criação', 'adam-membership' ), $this->format_datetime( $team->created_at() ) ); ?>
+				<?php $this->render_detail_item( __( 'Última atualização', 'adam-membership' ), $this->format_datetime( $team->updated_at() ) ); ?>
+				<?php $this->render_detail_item( __( 'Sócios ativos', 'adam-membership' ), (string) $active_count ); ?>
+				<?php $this->render_detail_item( __( 'Sócios associados', 'adam-membership' ), (string) $total_count ); ?>
+			</div>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Editar equipa', 'adam-membership' ); ?></h2>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_team_action">
+				<input type="hidden" name="team_action" value="<?php echo esc_attr( self::ACTION_SAVE_TEAM ); ?>">
+				<input type="hidden" name="team_id" value="<?php echo esc_attr( (string) $team->id() ); ?>">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->team_url( $team ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_team_action_' . $team->id() ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="adam-team-name"><?php esc_html_e( 'Nome', 'adam-membership' ); ?></label></th>
+						<td><input id="adam-team-name" type="text" name="team_name" class="regular-text" maxlength="191" required value="<?php echo esc_attr( $team->name() ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Tipo', 'adam-membership' ); ?></th>
+						<td>
+							<label><input type="radio" name="team_type" value="<?php echo esc_attr( Team::TYPE_TEAM ); ?>" <?php checked( Team::TYPE_TEAM, $team->type() ); ?>> <?php esc_html_e( 'Equipa', 'adam-membership' ); ?></label><br>
+							<label><input type="radio" name="team_type" value="<?php echo esc_attr( Team::TYPE_ASSOCIATED ); ?>" <?php checked( Team::TYPE_ASSOCIATED, $team->type() ); ?> <?php disabled( $below_limit && Team::TYPE_ASSOCIATED !== $team->type() ); ?>> <?php esc_html_e( 'Equipa Associada', 'adam-membership' ); ?></label>
+							<?php if ( $below_limit && Team::TYPE_ASSOCIATED !== $team->type() ) : ?>
+								<p class="description"><?php esc_html_e( 'Esta equipa necessita de pelo menos 5 sócios ativos para poder ser marcada como Equipa Associada.', 'adam-membership' ); ?></p>
+							<?php endif; ?>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Guardar equipa', 'adam-membership' ) ); ?>
+			</form>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Sócios', 'adam-membership' ); ?></h2>
+			<?php $this->render_team_members_table( $members ); ?>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Benefícios', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Esta funcionalidade será disponibilizada numa fase futura.', 'adam-membership' ); ?></p>
+		</div>
+
+		<div class="adam-admin-panel">
+			<h2><?php esc_html_e( 'Eliminar equipa', 'adam-membership' ); ?></h2>
+			<?php if ( $total_count > 0 ) : ?>
+				<p><?php esc_html_e( 'Não é possível eliminar uma equipa que possui sócios associados.', 'adam-membership' ); ?></p>
+			<?php else : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Tem a certeza de que pretende eliminar esta equipa?', 'adam-membership' ) ); ?>');">
+					<input type="hidden" name="action" value="adam_membership_team_action">
+					<input type="hidden" name="team_action" value="<?php echo esc_attr( self::ACTION_DELETE_TEAM ); ?>">
+					<input type="hidden" name="team_id" value="<?php echo esc_attr( (string) $team->id() ); ?>">
+					<input type="hidden" name="redirect_to" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEAMS_PAGE_SLUG ) ); ?>">
+					<?php wp_nonce_field( 'adam_membership_team_action_' . $team->id() ); ?>
+					<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Eliminar equipa', 'adam-membership' ); ?></button>
+				</form>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render members currently associated with a team.
+	 *
+	 * @param array<int, Member> $members Team members.
+	 */
+	private function render_team_members_table( array $members ): void {
+		if ( array() === $members ) {
+			$this->render_empty_state( __( 'Esta equipa ainda não possui sócios associados.', 'adam-membership' ) );
+			return;
+		}
+		?>
+		<table class="widefat striped adam-admin-table">
+			<thead><tr>
+				<th><?php esc_html_e( 'N.º ADAM', 'adam-membership' ); ?></th>
+				<th><?php esc_html_e( 'Nome', 'adam-membership' ); ?></th>
+				<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
+				<th><?php esc_html_e( 'Expiração', 'adam-membership' ); ?></th>
+			</tr></thead>
+			<tbody>
+				<?php foreach ( $members as $member ) : ?>
+					<tr>
+						<td><?php echo esc_html( $this->member_number_label( $member ) ); ?></td>
+						<td><a href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php echo esc_html( $member->full_name() ); ?></a></td>
+						<td><?php $this->render_status_badge( $member->effective_status() ); ?></td>
+						<td><?php echo esc_html( $this->format_date( $member->field( 'validade_quota' ) ) ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
 		<?php
 	}
 
@@ -3295,6 +3654,22 @@ final class AdminController {
 	}
 
 	/**
+	 * Read current team list filters from the query string.
+	 *
+	 * @return array<string, string>
+	 */
+	private function current_team_filters(): array {
+		$orderby = isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'name';
+		$order   = isset( $_GET['order'] ) && 'desc' === strtolower( sanitize_text_field( wp_unslash( $_GET['order'] ) ) ) ? 'desc' : 'asc';
+
+		return array(
+			'search'  => isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '',
+			'orderby' => in_array( $orderby, array( 'name', 'members', 'created_at', 'updated_at', 'type' ), true ) ? $orderby : 'name',
+			'order'   => $order,
+		);
+	}
+
+	/**
 	 * Read current renewal filters from query string.
 	 *
 	 * @return array<string, string>
@@ -3349,6 +3724,59 @@ final class AdminController {
 		);
 
 		return sprintf( '<a href="%1$s">%2$s</a>', esc_url( $url ), esc_html( $label ) );
+	}
+
+	/**
+	 * Render a sortable team column link.
+	 *
+	 * @param string                $label   Link label.
+	 * @param string                $orderby Sort key.
+	 * @param array<string, string> $filters Current filters.
+	 */
+	private function team_sort_link( string $label, string $orderby, array $filters ): string {
+		$current_orderby = $filters['orderby'] ?? 'name';
+		$current_order   = $filters['order'] ?? 'asc';
+		$next_order      = $current_orderby === $orderby && 'asc' === $current_order ? 'desc' : 'asc';
+
+		$url = add_query_arg(
+			array_filter(
+				array(
+					'page'    => self::TEAMS_PAGE_SLUG,
+					's'       => $filters['search'] ?? '',
+					'orderby' => $orderby,
+					'order'   => $next_order,
+				)
+			),
+			admin_url( 'admin.php' )
+		);
+
+		return sprintf( '<a href="%1$s">%2$s</a>', esc_url( $url ), esc_html( $label ) );
+	}
+
+	/**
+	 * Render a team-type badge.
+	 *
+	 * @param Team $team Team.
+	 */
+	private function render_team_type_badge( Team $team ): void {
+		$class = Team::TYPE_ASSOCIATED === $team->type() ? 'status-active' : '';
+
+		printf(
+			'<span class="adam-admin-badge %1$s">%2$s</span>',
+			esc_attr( $class ),
+			esc_html( $this->team_type_label( $team ) )
+		);
+	}
+
+	/**
+	 * Get a team-type display label.
+	 *
+	 * @param Team $team Team.
+	 */
+	private function team_type_label( Team $team ): string {
+		return Team::TYPE_ASSOCIATED === $team->type()
+			? __( 'Equipa Associada', 'adam-membership' )
+			: __( 'Equipa', 'adam-membership' );
 	}
 
 	/**
@@ -3994,6 +4422,15 @@ final class AdminController {
 	}
 
 	/**
+	 * Determine whether the current request is the hidden team details page.
+	 */
+	private function is_team_page_request(): bool {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+
+		return self::TEAM_PAGE_SLUG === $page;
+	}
+
+	/**
 	 * Render admin-only member diagnostics for status integrity debugging.
 	 *
 	 * @param Member $member Member.
@@ -4204,6 +4641,21 @@ final class AdminController {
 			array(
 				'page'      => self::MEMBER_PAGE_SLUG,
 				'member_id' => $member->user_id(),
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
+	/**
+	 * Build a team details URL.
+	 *
+	 * @param Team $team Team.
+	 */
+	private function team_url( Team $team ): string {
+		return add_query_arg(
+			array(
+				'page'    => self::TEAM_PAGE_SLUG,
+				'team_id' => $team->id(),
 			),
 			admin_url( 'admin.php' )
 		);

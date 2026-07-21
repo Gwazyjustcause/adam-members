@@ -11,6 +11,7 @@ namespace AdamMembership\Member;
 
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\Logger;
+use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
 /**
@@ -23,17 +24,19 @@ final class RenewalService {
 	private Logger $logger;
 	private HistoryService $history;
 	private RecognitionService $recognition;
+	private TeamRepository $teams;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history, RecognitionService $recognition ) {
+	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history, RecognitionService $recognition, TeamRepository $teams ) {
 		$this->members  = $members;
 		$this->renewals = $renewals;
 		$this->email    = $email;
 		$this->logger   = $logger;
 		$this->history  = $history;
 		$this->recognition = $recognition;
+		$this->teams    = $teams;
 	}
 
 	/**
@@ -65,6 +68,12 @@ final class RenewalService {
 	public function submit( Member $member, array $submitted_data, mixed $proof_of_payment, int $entry_id = 0 ): RenewalRequest|WP_Error {
 		if ( array() !== $this->renewals->pending_for_user( $member->user_id() ) ) {
 			return new WP_Error( 'adam_membership_renewal_already_pending', __( 'Já existe um pedido de renovação pendente de revisão.', 'adam-membership' ) );
+		}
+
+		$submitted_data = $this->resolve_submitted_team( $submitted_data );
+
+		if ( is_wp_error( $submitted_data ) ) {
+			return $submitted_data;
 		}
 
 		$normalized_data = $this->sanitize_submitted_data( $submitted_data );
@@ -117,6 +126,10 @@ final class RenewalService {
 		$field_changes = $this->changed_fields( $request, $member );
 
 		foreach ( $field_changes as $field => $change ) {
+			if ( 'equipa' === $field ) {
+				continue;
+			}
+
 			if ( 'email' === $field ) {
 				$email_result = $this->update_member_email( $member, $change['new'] );
 
@@ -128,6 +141,17 @@ final class RenewalService {
 			}
 
 			$this->audit( 'Campo do perfil alterado durante a aprovação da renovação.', $member, array( 'field' => $field, 'old_value' => $change['old'], 'new_value' => $change['new'] ) );
+		}
+
+		$team_result = $this->apply_submitted_team( $request, $member );
+
+		if ( is_wp_error( $team_result ) ) {
+			return $team_result;
+		}
+
+		if ( isset( $field_changes['equipa'] ) ) {
+			$change = $field_changes['equipa'];
+			$this->audit( 'Campo do perfil alterado durante a aprovação da renovação.', $member, array( 'field' => 'equipa', 'old_value' => $change['old'], 'new_value' => $change['new'] ) );
 		}
 
 		$old_expiry = (string) $member->field( 'validade_quota' );
@@ -217,9 +241,13 @@ final class RenewalService {
 		$changes = array();
 
 		foreach ( $request->submitted_data() as $field => $new_value ) {
+			if ( 'team_id' === $field ) {
+				continue;
+			}
+
 			$old_value = 'email' === $field ? $member->email() : $this->scalar( $member->field( $field ) );
 
-			if ( '' === $new_value || $old_value === $new_value ) {
+			if ( ( '' === $new_value && 'equipa' !== $field ) || $old_value === $new_value ) {
 				continue;
 			}
 
@@ -314,6 +342,94 @@ final class RenewalService {
 		}
 
 		return is_user_logged_in() ? $this->members->find( get_current_user_id() ) : null;
+	}
+
+	/**
+	 * Resolve and canonicalize an optional team included in renewal data.
+	 *
+	 * @param array<string, mixed> $submitted_data Submitted renewal data.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private function resolve_submitted_team( array $submitted_data ): array|WP_Error {
+		if ( ! array_key_exists( 'equipa', $submitted_data ) ) {
+			return $submitted_data;
+		}
+
+		$selection = $this->resolve_team_selection( (string) $submitted_data['equipa'] );
+
+		if ( is_wp_error( $selection ) ) {
+			return $selection;
+		}
+
+		$submitted_data['equipa']  = $selection['name'];
+		$submitted_data['team_id'] = $selection['team_id'];
+
+		return $submitted_data;
+	}
+
+	/**
+	 * Apply the submitted team to a member during renewal approval.
+	 *
+	 * @param RenewalRequest $request Renewal request.
+	 * @param Member         $member  Member being renewed.
+	 * @return true|WP_Error
+	 */
+	private function apply_submitted_team( RenewalRequest $request, Member $member ): true|WP_Error {
+		$submitted_data = $request->submitted_data();
+
+		if ( ! array_key_exists( 'equipa', $submitted_data ) ) {
+			return true;
+		}
+
+		$selection = null;
+		$team_id   = absint( $submitted_data['team_id'] ?? 0 );
+
+		if ( $team_id > 0 ) {
+			$team = $this->teams->find( $team_id );
+
+			if ( null !== $team ) {
+				$selection = array(
+					'team_id' => $team->id(),
+					'name'    => $team->name(),
+				);
+			}
+		}
+
+		if ( null === $selection ) {
+			$selection = $this->resolve_team_selection( (string) $submitted_data['equipa'] );
+		}
+
+		if ( is_wp_error( $selection ) ) {
+			return $selection;
+		}
+
+		$member->save(
+			array(
+				'equipa'  => $selection['name'],
+				'team_id' => $selection['team_id'],
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Resolve a team name to canonical storage values, creating it when needed.
+	 *
+	 * @param string $team_name Submitted team name.
+	 * @return array{team_id:int,name:string}|WP_Error
+	 */
+	private function resolve_team_selection( string $team_name ): array|WP_Error {
+		$selection = $this->teams->resolve_selection( $team_name );
+
+		if ( null !== $selection ) {
+			return $selection;
+		}
+
+		return new WP_Error(
+			'adam_membership_team_unavailable',
+			__( 'Não foi possível guardar a equipa indicada. Tente novamente.', 'adam-membership' )
+		);
 	}
 
 	/**

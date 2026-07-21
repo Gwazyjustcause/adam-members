@@ -14,6 +14,7 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\Member;
+use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
 /**
@@ -24,12 +25,14 @@ final class RegistrationService {
 	private HistoryService $history;
 	private EmailService $email;
 	private AccountSetup $account_setup;
+	private TeamRepository $teams;
 
-	public function __construct( Logger $logger, HistoryService $history, EmailService $email, AccountSetup $account_setup ) {
+	public function __construct( Logger $logger, HistoryService $history, EmailService $email, AccountSetup $account_setup, TeamRepository $teams ) {
 		$this->logger        = $logger;
 		$this->history       = $history;
 		$this->email         = $email;
 		$this->account_setup = $account_setup;
+		$this->teams         = $teams;
 	}
 
 	/**
@@ -52,6 +55,12 @@ final class RegistrationService {
 
 		if ( username_exists( $email ) ) {
 			return new WP_Error( 'adam_membership_username_exists', __( 'Este endereço de email já está a ser usado como nome de utilizador.', 'adam-membership' ) );
+		}
+
+		$payload = $this->resolve_team( $payload );
+
+		if ( is_wp_error( $payload ) ) {
+			return $payload;
 		}
 
 		$user_id = $this->create_user( $payload, $email );
@@ -145,6 +154,7 @@ final class RegistrationService {
 			'codigo_postal'                  => sanitize_text_field( (string) ( $payload['postcode'] ?? '' ) ),
 			'pais'                           => sanitize_text_field( (string) ( $payload['country'] ?? '' ) ),
 			'equipa'                         => sanitize_text_field( (string) ( $payload['team'] ?? '' ) ),
+			'team_id'                        => absint( $payload['team_id'] ?? 0 ),
 			'adam_membership_origin'         => $mode,
 			'adam_membership_fee'            => sanitize_text_field( (string) ( $payload['membership_fee'] ?? '' ) ),
 			'adam_external_association_name' => sanitize_text_field( (string) ( $payload['external_association_name'] ?? '' ) ),
@@ -153,6 +163,28 @@ final class RegistrationService {
 			'profile_photo'                  => $payload['profile_photo'] ?? '',
 			'payment_receipt'                => $payload['payment_receipt'] ?? '',
 		) + $this->custom_field_payload( $payload );
+	}
+
+	/**
+	 * Resolve the optional submitted team through the canonical repository.
+	 *
+	 * @param array<string, mixed> $payload Registration payload.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private function resolve_team( array $payload ): array|WP_Error {
+		$selection = $this->teams->resolve_selection( (string) ( $payload['team'] ?? '' ) );
+
+		if ( null === $selection ) {
+			return new WP_Error(
+				'adam_membership_team_unavailable',
+				__( 'Não foi possível guardar a equipa indicada. Tente novamente.', 'adam-membership' )
+			);
+		}
+
+		$payload['team']    = $selection['name'];
+		$payload['team_id'] = $selection['team_id'];
+
+		return $payload;
 	}
 
 	/**

@@ -9,10 +9,32 @@ declare(strict_types=1);
 
 namespace AdamMembership\Team;
 
+use AdamMembership\Member\Member;
+use AdamMembership\Member\MemberRepository;
+use WP_Error;
+
 /**
  * Stores and retrieves teams from the dedicated team table.
  */
 final class TeamRepository {
+	private const ASSOCIATED_MINIMUM_ACTIVE_MEMBERS = 5;
+
+	/**
+	 * Member repository used for derived team membership data.
+	 *
+	 * @var MemberRepository
+	 */
+	private MemberRepository $members;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param MemberRepository|null $members Member repository.
+	 */
+	public function __construct( ?MemberRepository $members = null ) {
+		$this->members = $members ?? new MemberRepository();
+	}
+
 	/**
 	 * Create a team unless an equivalent normalized name already exists.
 	 *
@@ -35,10 +57,11 @@ final class TeamRepository {
 			array(
 				'name'       => $name,
 				'slug'       => $slug,
+				'team_type'  => Team::TYPE_TEAM,
 				'created_at' => $now,
 				'updated_at' => $now,
 			),
-			array( '%s', '%s', '%s', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( false === $inserted ) {
@@ -46,6 +69,61 @@ final class TeamRepository {
 		}
 
 		return $this->find( (int) $wpdb->insert_id );
+	}
+
+	/**
+	 * Find an equivalent team or create it when it does not exist.
+	 *
+	 * A second lookup after insertion also covers a concurrent request that
+	 * creates the same canonical slug between the initial lookup and insert.
+	 *
+	 * @param string $name Team name.
+	 */
+	public function find_or_create( string $name ): ?Team {
+		$name = self::normalize_name( $name );
+
+		if ( '' === $name ) {
+			return null;
+		}
+
+		$team = $this->find_by_name( $name );
+
+		if ( null !== $team ) {
+			return $team;
+		}
+
+		return $this->create( $name ) ?? $this->find_by_name( $name );
+	}
+
+	/**
+	 * Resolve an optional form selection to canonical storage values.
+	 *
+	 * An empty selection is valid. A null return means a non-empty team could
+	 * not be retrieved or created.
+	 *
+	 * @param string $name Submitted team name.
+	 * @return array{team_id:int,name:string}|null
+	 */
+	public function resolve_selection( string $name ): ?array {
+		$name = self::normalize_name( $name );
+
+		if ( '' === $name ) {
+			return array(
+				'team_id' => 0,
+				'name'    => '',
+			);
+		}
+
+		$team = $this->find_or_create( $name );
+
+		if ( null === $team ) {
+			return null;
+		}
+
+		return array(
+			'team_id' => $team->id(),
+			'name'    => $team->name(),
+		);
 	}
 
 	/**
@@ -137,24 +215,189 @@ final class TeamRepository {
 	}
 
 	/**
+	 * Search and sort teams for administration without persisting member counts.
+	 *
+	 * @param array{search?:string,orderby?:string,order?:string} $filters Filters.
+	 * @return array<int, array{team:Team,active_members:int,total_members:int}>
+	 */
+	public function admin_list( array $filters = array() ): array {
+		$search      = $this->search_value( (string) ( $filters['search'] ?? '' ) );
+		$rows        = array();
+		$all_members = $this->members->all_members();
+
+		foreach ( $this->all() as $team ) {
+			if ( '' !== $search && ! str_contains( $this->search_value( $team->name() ), $search ) ) {
+				continue;
+			}
+
+			$team_members = array_filter(
+				$all_members,
+				fn ( Member $member ): bool => $this->member_belongs_to_team( $member, $team )
+			);
+			$rows[]       = array(
+				'team'           => $team,
+				'active_members' => count(
+					array_filter(
+						$team_members,
+						static fn ( Member $member ): bool => Member::STATUS_ACTIVE === $member->effective_status()
+					)
+				),
+				'total_members'  => count( $team_members ),
+			);
+		}
+
+		$orderby = in_array( (string) ( $filters['orderby'] ?? '' ), array( 'name', 'members', 'created_at', 'updated_at', 'type' ), true ) ? (string) $filters['orderby'] : 'name';
+		$order   = 'desc' === strtolower( (string) ( $filters['order'] ?? '' ) ) ? 'desc' : 'asc';
+
+		usort(
+			$rows,
+			static function ( array $left, array $right ) use ( $orderby, $order ): int {
+				$left_team  = $left['team'];
+				$right_team = $right['team'];
+				$left_value = match ( $orderby ) {
+					'members'    => $left['active_members'],
+					'created_at' => $left_team->created_at(),
+					'updated_at' => $left_team->updated_at(),
+					'type'       => $left_team->type(),
+					default      => strtolower( $left_team->name() ),
+				};
+				$right_value = match ( $orderby ) {
+					'members'    => $right['active_members'],
+					'created_at' => $right_team->created_at(),
+					'updated_at' => $right_team->updated_at(),
+					'type'       => $right_team->type(),
+					default      => strtolower( $right_team->name() ),
+				};
+				$result = $left_value <=> $right_value;
+
+				if ( 0 === $result ) {
+					$result = strcasecmp( $left_team->name(), $right_team->name() );
+				}
+
+				return 'desc' === $order ? -$result : $result;
+			}
+		);
+
+		return $rows;
+	}
+
+	/**
+	 * Get members associated with a team.
+	 *
+	 * Team ID is authoritative. The legacy name is considered only for members
+	 * that do not yet have an ID-based association.
+	 *
+	 * @param int  $team_id     Team ID.
+	 * @param bool $active_only Return only active members.
+	 * @return array<int, Member>
+	 */
+	public function members_for_team( int $team_id, bool $active_only = false ): array {
+		$team = $this->find( $team_id );
+
+		if ( null === $team ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				$this->members->all_members(),
+				fn ( Member $member ): bool => $this->member_belongs_to_team( $member, $team ) && ( ! $active_only || Member::STATUS_ACTIVE === $member->effective_status() )
+			)
+		);
+	}
+
+	/**
+	 * Calculate the current member count for a team.
+	 *
+	 * @param int  $team_id     Team ID.
+	 * @param bool $active_only Count only active members.
+	 */
+	public function member_count( int $team_id, bool $active_only = false ): int {
+		return count( $this->members_for_team( $team_id, $active_only ) );
+	}
+
+	/**
+	 * Minimum active members required for associated-team status.
+	 */
+	public function associated_minimum_active_members(): int {
+		return self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS;
+	}
+
+	/**
 	 * Update a team name and canonical slug.
 	 *
 	 * @param int    $team_id Team ID.
 	 * @param string $name    New team name.
 	 */
 	public function update( int $team_id, string $name ): ?Team {
+		$team = $this->find( $team_id );
+
+		if ( null === $team ) {
+			return null;
+		}
+
+		$result = $this->update_details( $team_id, $name, $team->type() );
+
+		return $result instanceof WP_Error ? null : $result;
+	}
+
+	/**
+	 * Update a team's administrative type.
+	 *
+	 * @param int    $team_id Team ID.
+	 * @param string $type    Team type.
+	 * @return Team|WP_Error
+	 */
+	public function update_type( int $team_id, string $type ): Team|WP_Error {
+		$team = $this->find( $team_id );
+
+		if ( null === $team ) {
+			return new WP_Error( 'adam_membership_team_not_found', __( 'Equipa não encontrada.', 'adam-membership' ) );
+		}
+
+		return $this->update_details( $team_id, $team->name(), $type );
+	}
+
+	/**
+	 * Update the editable administrative details of a team in one operation.
+	 *
+	 * @param int    $team_id Team ID.
+	 * @param string $name    Team name.
+	 * @param string $type    Team type.
+	 * @return Team|WP_Error
+	 */
+	public function update_details( int $team_id, string $name, string $type ): Team|WP_Error {
 		global $wpdb;
 
-		if ( null === $this->find( $team_id ) ) {
-			return null;
-		}
-
+		$team = $this->find( $team_id );
 		$name = self::normalize_name( $name );
 		$slug = self::normalize_slug( $name );
+		$type = sanitize_key( $type );
 
-		if ( '' === $name || '' === $slug || $this->exists( $name, $team_id ) ) {
-			return null;
+		if ( null === $team ) {
+			return new WP_Error( 'adam_membership_team_not_found', __( 'Equipa não encontrada.', 'adam-membership' ) );
 		}
+
+		if ( '' === $name || '' === $slug ) {
+			return new WP_Error( 'adam_membership_team_name_required', __( 'O nome da equipa é obrigatório.', 'adam-membership' ) );
+		}
+
+		if ( $this->exists( $name, $team_id ) ) {
+			return new WP_Error( 'adam_membership_team_name_exists', __( 'Já existe uma equipa com um nome equivalente.', 'adam-membership' ) );
+		}
+
+		if ( ! in_array( $type, array( Team::TYPE_TEAM, Team::TYPE_ASSOCIATED ), true ) ) {
+			return new WP_Error( 'adam_membership_team_type_invalid', __( 'Tipo de equipa inválido.', 'adam-membership' ) );
+		}
+
+		if ( Team::TYPE_ASSOCIATED === $type && Team::TYPE_ASSOCIATED !== $team->type() && $this->member_count( $team_id, true ) < self::ASSOCIATED_MINIMUM_ACTIVE_MEMBERS ) {
+			return new WP_Error(
+				'adam_membership_team_associated_minimum',
+				__( 'Esta equipa necessita de pelo menos 5 sócios ativos para poder ser marcada como Equipa Associada.', 'adam-membership' )
+			);
+		}
+
+		$associated_members = $this->members_for_team( $team_id );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This repository is the team persistence boundary.
 		$updated = $wpdb->update(
@@ -162,18 +405,28 @@ final class TeamRepository {
 			array(
 				'name'       => $name,
 				'slug'       => $slug,
+				'team_type'  => $type,
 				'updated_at' => current_time( 'mysql' ),
 			),
 			array( 'id' => $team_id ),
-			array( '%s', '%s', '%s' ),
+			array( '%s', '%s', '%s', '%s' ),
 			array( '%d' )
 		);
 
 		if ( false === $updated ) {
-			return null;
+			return new WP_Error( 'adam_membership_team_update_failed', __( 'Não foi possível atualizar a equipa.', 'adam-membership' ) );
 		}
 
-		return $this->find( $team_id );
+		foreach ( $associated_members as $member ) {
+			$member->save(
+				array(
+					'equipa'  => $name,
+					'team_id' => $team_id,
+				)
+			);
+		}
+
+		return $this->find( $team_id ) ?? new WP_Error( 'adam_membership_team_not_found', __( 'Equipa não encontrada.', 'adam-membership' ) );
 	}
 
 	/**
@@ -184,7 +437,7 @@ final class TeamRepository {
 	public function delete( int $team_id ): bool {
 		global $wpdb;
 
-		if ( $team_id <= 0 ) {
+		if ( $team_id <= 0 || null === $this->find( $team_id ) || $this->member_count( $team_id ) > 0 ) {
 			return false;
 		}
 
@@ -256,5 +509,28 @@ final class TeamRepository {
 	 */
 	public static function normalize_slug( string $name ): string {
 		return sanitize_title( self::normalize_name( $name ) );
+	}
+
+	/**
+	 * Normalize text used by team administration search.
+	 *
+	 * @param string $value Search value.
+	 */
+	private function search_value( string $value ): string {
+		return strtolower( remove_accents( self::normalize_name( $value ) ) );
+	}
+
+	/**
+	 * Determine whether a member belongs to a team.
+	 *
+	 * @param Member $member Member.
+	 * @param Team   $team   Team.
+	 */
+	private function member_belongs_to_team( Member $member, Team $team ): bool {
+		$member_team_id = absint( $member->field( 'team_id' ) );
+
+		return $member_team_id > 0
+			? $member_team_id === $team->id()
+			: self::normalize_slug( (string) $member->field( 'equipa' ) ) === $team->slug();
 	}
 }
