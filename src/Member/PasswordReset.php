@@ -82,21 +82,24 @@ final class PasswordReset {
 	 * Render page.
 	 */
 	public function render(): string {
-		$login = sanitize_text_field(
-			wp_unslash( $_GET['login'] ?? '' )
-		);
-
-		$key = sanitize_text_field(
-			wp_unslash( $_GET['key'] ?? '' )
-		);
+		$login          = sanitize_text_field( wp_unslash( $_GET['login'] ?? '' ) );
+		$key            = sanitize_text_field( wp_unslash( $_GET['key'] ?? '' ) );
+		$preview_notice = '';
+		$is_preview     = false;
 
 		$user = check_password_reset_key( $key, $login );
 
-		if ( ! $user instanceof WP_User ) {
+		if ( ! $user instanceof WP_User && AdminPreview::is_available() ) {
+			$is_preview     = true;
+			$preview_notice = AdminPreview::notice_markup();
+			$preview_user   = AdminPreview::demo_user();
+			$login          = (string) $preview_user['username'];
+			$key            = 'preview-key';
+		} elseif ( ! $user instanceof WP_User ) {
 			return $this->render_invalid_link();
 		}
 
-		$message = $this->process( $user );
+		$message = $is_preview ? $this->preview_message() : $this->process( $user );
 
 		if ( str_contains( $message, 'adam-login-required' ) ) {
 			return $message;
@@ -105,6 +108,7 @@ final class PasswordReset {
 		ob_start();
 		?>
 		<div class="adam-member-area adam-account-page">
+			<?php echo wp_kses_post( $preview_notice ); ?>
 			<section class="adam-member-hero adam-account-hero">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Acesso à conta', 'adam-membership' ); ?></p>
@@ -150,7 +154,7 @@ final class PasswordReset {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action" <?php disabled( $is_preview ); ?>>
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
 						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
@@ -219,6 +223,17 @@ final class PasswordReset {
 		}
 
 		return $this->render_success();
+	}
+
+	/**
+	 * Build a non-processing preview message.
+	 */
+	private function preview_message(): string {
+		if ( 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+			return AdminPreview::submission_notice();
+		}
+
+		return '';
 	}
 
 	/**

@@ -133,36 +133,51 @@ final class AccountSetup {
 	 * Render the branded setup page.
 	 */
 	public function render(): string {
-		$user_id = absint( $_REQUEST['user'] ?? 0 );
-		$token   = sanitize_text_field( wp_unslash( $_REQUEST['token'] ?? '' ) );
+		$user_id          = absint( $_REQUEST['user'] ?? 0 );
+		$token            = sanitize_text_field( wp_unslash( $_REQUEST['token'] ?? '' ) );
+		$preview_enabled  = AdminPreview::is_available();
+		$is_preview       = false;
+		$preview_notice   = '';
+		$preview_user     = array();
+		$user             = null;
+		$validation_error = '';
 
-		if ( 0 === $user_id || '' === $token ) {
+		if ( 0 !== $user_id && '' !== $token ) {
+			$resolved_user = get_user_by( 'ID', $user_id );
+
+			if ( $resolved_user instanceof WP_User ) {
+				$user             = $resolved_user;
+				$validation_error = $this->validate_token( $user, $token, ! $preview_enabled );
+			}
+		}
+
+		if ( ( 0 === $user_id || '' === $token || ! $user instanceof WP_User || '' !== $validation_error ) && $preview_enabled ) {
+			$is_preview     = true;
+			$preview_notice = AdminPreview::notice_markup();
+			$preview_user   = AdminPreview::demo_user();
+			$user_id        = (int) $preview_user['user_id'];
+			$token          = 'preview-token';
+		} elseif ( 0 === $user_id || '' === $token ) {
 			return $this->render_error_state( __( 'O link de definição de acesso é inválido.', 'adam-membership' ) );
-		}
-
-		$user = get_user_by( 'ID', $user_id );
-
-		if ( ! $user instanceof WP_User ) {
+		} elseif ( ! $user instanceof WP_User ) {
 			return $this->render_error_state( __( 'Não foi possível localizar a conta associada a este link.', 'adam-membership' ) );
-		}
-
-		$validation_error = $this->validate_token( $user, $token );
-
-		if ( '' !== $validation_error ) {
+		} elseif ( '' !== $validation_error ) {
 			return $this->render_error_state( $validation_error );
 		}
 
-		$message = $this->process_submission( $user, $token );
+		$message = $is_preview ? $this->preview_message() : $this->process_submission( $user, $token );
 
 		if ( 'success' === ( $message['state'] ?? '' ) ) {
 			return $this->render_success_state();
 		}
 
-		$username = isset( $message['username'] ) ? (string) $message['username'] : '';
+		$username = isset( $message['username'] ) ? (string) $message['username'] : (string) ( $preview_user['username'] ?? '' );
+		$email    = $is_preview ? (string) ( $preview_user['email'] ?? '' ) : (string) $user->user_email;
 
 		ob_start();
 		?>
 		<div class="adam-member-area adam-account-page">
+			<?php echo wp_kses_post( $preview_notice ); ?>
 			<section class="adam-member-hero adam-account-hero">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Ativação da conta', 'adam-membership' ); ?></p>
@@ -178,12 +193,12 @@ final class AccountSetup {
 
 				<form method="post" class="adam-account-form">
 					<?php wp_nonce_field( 'adam_account_setup' ); ?>
-					<input type="hidden" name="user" value="<?php echo esc_attr( (string) $user->ID ); ?>">
+					<input type="hidden" name="user" value="<?php echo esc_attr( (string) $user_id ); ?>">
 					<input type="hidden" name="token" value="<?php echo esc_attr( $token ); ?>">
 
 					<div class="adam-form-field">
 						<label for="adam_setup_email"><?php esc_html_e( 'Email', 'adam-membership' ); ?></label>
-						<input type="email" id="adam_setup_email" value="<?php echo esc_attr( (string) $user->user_email ); ?>" readonly>
+						<input type="email" id="adam_setup_email" value="<?php echo esc_attr( $email ); ?>" readonly>
 					</div>
 
 					<div class="adam-form-field">
@@ -224,7 +239,7 @@ final class AccountSetup {
 					</div>
 
 					<div class="adam-form-actions">
-						<button type="submit" name="adam_account_setup_submit" class="button button-primary adam-primary-action">
+						<button type="submit" name="adam_account_setup_submit" class="button button-primary adam-primary-action" <?php disabled( $is_preview ); ?>>
 							<?php esc_html_e( 'Concluir acesso', 'adam-membership' ); ?>
 						</button>
 					</div>
@@ -262,10 +277,11 @@ final class AccountSetup {
 	/**
 	 * Validate a token for the supplied user.
 	 *
-	 * @param WP_User $user  User.
-	 * @param string  $token Raw token.
+	 * @param WP_User $user          User.
+	 * @param string  $token         Raw token.
+	 * @param bool    $allow_cleanup Whether expired tokens may be deleted.
 	 */
-	private function validate_token( WP_User $user, string $token ): string {
+	private function validate_token( WP_User $user, string $token, bool $allow_cleanup = true ): string {
 		$stored_hash = (string) get_user_meta( $user->ID, self::TOKEN_META, true );
 		$expires     = absint( get_user_meta( $user->ID, self::TOKEN_EXPIRES_META, true ) );
 
@@ -274,7 +290,9 @@ final class AccountSetup {
 		}
 
 		if ( time() > $expires ) {
-			$this->delete_setup_token( (int) $user->ID );
+			if ( $allow_cleanup ) {
+				$this->delete_setup_token( (int) $user->ID );
+			}
 
 			return __( 'Este link expirou. Solicite um novo pedido de inscrição à ADAM se necessário.', 'adam-membership' );
 		}
@@ -368,6 +386,21 @@ final class AccountSetup {
 			'state'    => 'success',
 			'notice'   => '',
 			'username' => $normalized_username,
+		);
+	}
+
+	/**
+	 * Build a non-processing preview state.
+	 *
+	 * @return array{state:string,notice:string,username:string}
+	 */
+	private function preview_message(): array {
+		$preview_user = AdminPreview::demo_user();
+
+		return array(
+			'state'    => 'preview',
+			'notice'   => 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ? AdminPreview::submission_notice() : '',
+			'username' => (string) $preview_user['username'],
 		);
 	}
 

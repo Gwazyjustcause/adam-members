@@ -52,6 +52,10 @@ if ( file_exists( $adam_membership_autoloader ) ) {
 register_activation_hook(
 	__FILE__,
 	static function (): void {
+		if ( class_exists( Team\TeamSchema::class ) ) {
+			Team\TeamSchema::install();
+		}
+
 		if ( class_exists( Core\MaintenanceService::class ) ) {
 			Core\MaintenanceService::activate();
 		}
@@ -73,6 +77,16 @@ register_deactivation_hook(
 			Event\EventFrontend::deactivate();
 		}
 	}
+);
+
+add_action(
+	'init',
+	static function (): void {
+		if ( class_exists( Team\TeamSchema::class ) ) {
+			Team\TeamSchema::maybe_install();
+		}
+	},
+	1
 );
 
 add_action(
