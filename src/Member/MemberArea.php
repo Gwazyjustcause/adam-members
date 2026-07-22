@@ -2105,18 +2105,13 @@ final class MemberArea {
 		$mandatory     = $this->communication_preferences->categories()->mandatory();
 		$subscriptions = $this->communication_preferences->subscriptions( $user_id, CommunicationPreferences::CHANNEL_EMAIL );
 		?>
-		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Notificações', 'adam-membership' ); ?>" data-adam-communication-preferences>
-			<div class="adam-card-heading">
-				<div>
-					<p class="adam-eyebrow"><?php esc_html_e( 'Notificações', 'adam-membership' ); ?></p>
-				</div>
-				<div class="adam-card-actions">
-					<a class="adam-card-link adam-notifications-card__notices-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></a>
-					<button type="button" class="adam-communication-settings-button" data-adam-communication-preferences-open aria-controls="adam-communication-preferences-dialog" aria-haspopup="dialog" title="<?php esc_attr_e( 'Preferências de comunicação', 'adam-membership' ); ?>">
-						<span class="screen-reader-text"><?php esc_html_e( 'Abrir preferências de comunicação', 'adam-membership' ); ?></span>
-						<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.37 2.8a.5.5 0 0 0-.5-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.51c-.59.24-1.13.56-1.64.95L5.16 5.3a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.08.65-.08.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.95l.36 2.51a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .5-.4l.36-2.51a7.2 7.2 0 0 0 1.63-.95l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
-					</button>
-				</div>
+		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Centro de Avisos', 'adam-membership' ); ?>" data-adam-communication-preferences>
+			<div class="adam-card-heading adam-notifications-card__header">
+				<a class="adam-card-link adam-notifications-card__notices-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></a>
+				<button type="button" class="adam-communication-settings-button" data-adam-communication-preferences-open aria-controls="adam-communication-preferences-dialog" aria-haspopup="dialog" title="<?php esc_attr_e( 'Preferências de comunicação', 'adam-membership' ); ?>">
+					<span class="screen-reader-text"><?php esc_html_e( 'Abrir preferências de comunicação', 'adam-membership' ); ?></span>
+					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.37 2.8a.5.5 0 0 0-.5-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.51c-.59.24-1.13.56-1.64.95L5.16 5.3a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.08.65-.08.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.95l.36 2.51a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .5-.4l.36-2.51a7.2 7.2 0 0 0 1.63-.95l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
+				</button>
 			</div>
 
 			<ul class="adam-notification-list">

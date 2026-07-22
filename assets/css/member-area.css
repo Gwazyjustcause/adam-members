@@ -2258,6 +2258,16 @@
 	font-size: 0.82rem;
 }
 
+.adam-card-heading.adam-notifications-card__header {
+	align-items: center;
+	flex-direction: row;
+}
+
+.adam-notifications-card__header .adam-communication-settings-button {
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
 .adam-communication-settings-button,
 .adam-communication-preferences-dialog__close {
 	display: inline-flex;
