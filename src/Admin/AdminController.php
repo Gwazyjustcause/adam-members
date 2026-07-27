@@ -1920,7 +1920,7 @@ final class AdminController {
 						'title'       => __( 'Eventos', 'adam-membership' ),
 						'description' => __( 'Gerir eventos, páginas públicas e QR codes de check-in.', 'adam-membership' ),
 						'button'      => __( 'Abrir eventos', 'adam-membership' ),
-						'url'         => admin_url( 'admin.php?page=adam-membership-events' ),
+						'url'         => admin_url( 'admin.php?page=' . ( function_exists( '\adam_comunidade_events' ) ? 'adam-comunidade-events' : 'adam-membership-events' ) ),
 						'badge'       => count( $context['events_all'] ?? array() ),
 					),
 					array(
@@ -1928,7 +1928,7 @@ final class AdminController {
 						'title'       => __( 'Criar novo evento', 'adam-membership' ),
 						'description' => __( 'Criar rapidamente um novo evento ADAM.', 'adam-membership' ),
 						'button'      => __( 'Criar evento', 'adam-membership' ),
-						'url'         => admin_url( 'admin.php?page=adam-membership-event-edit' ),
+						'url'         => admin_url( 'admin.php?page=' . ( function_exists( '\adam_comunidade_events' ) ? 'adam-comunidade-event-add' : 'adam-membership-event-edit' ) ),
 					),
 					array(
 						'icon'        => 'star-half',

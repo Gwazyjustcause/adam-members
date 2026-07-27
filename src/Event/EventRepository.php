@@ -26,6 +26,14 @@ final class EventRepository {
 	 * @param array<string, mixed> $data Event data.
 	 */
 	public function create_event( array $data ): Event {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			$event = \adam_comunidade_events()->save_event( $data );
+			if ( $event instanceof \ADAM\Comunidade\Events\Event ) {
+				return new Event( $event->data() );
+			}
+			throw new \RuntimeException( 'ADAM Comunidade rejeitou a criação do evento.' );
+		}
+
 		$id     = absint( get_option( self::OPTION_EVENT_NEXT_ID, 1 ) );
 		$events = $this->raw_events();
 
@@ -45,6 +53,14 @@ final class EventRepository {
 	 * @param array<string, mixed> $data  Updated data.
 	 */
 	public function update_event( Event $event, array $data ): Event {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			$canonical = \adam_comunidade_events()->save_event( array_merge( $event->data(), $data ), $event->id() );
+			if ( $canonical instanceof \ADAM\Comunidade\Events\Event ) {
+				return new Event( $canonical->data() );
+			}
+			throw new \RuntimeException( 'ADAM Comunidade rejeitou a atualização do evento.' );
+		}
+
 		$events = $this->raw_events();
 		$item   = array_merge( $event->data(), $data );
 
@@ -60,6 +76,13 @@ final class EventRepository {
 	 * @param int $event_id Event ID.
 	 */
 	public function delete_event( int $event_id ): void {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			if ( \adam_comunidade_events()->get_event( $event_id ) ) {
+				\adam_comunidade_events()->delete_event( $event_id );
+			}
+			return;
+		}
+
 		$events = $this->raw_events();
 		unset( $events[ $event_id ] );
 		update_option( self::OPTION_EVENTS, $events, false );
@@ -90,9 +113,34 @@ final class EventRepository {
 	}
 
 	/**
+	 * Removes member interactions after the canonical event is deleted.
+	 */
+	public function delete_interactions( int $event_id ): void {
+		$registrations = $this->raw_registrations();
+		foreach ( $registrations as $id => $registration ) {
+			if ( is_array( $registration ) && absint( $registration['event_id'] ?? 0 ) === $event_id ) {
+				unset( $registrations[ $id ] );
+			}
+		}
+		update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+
+		$checkins = $this->raw_checkins();
+		foreach ( $checkins as $id => $checkin ) {
+			if ( is_array( $checkin ) && absint( $checkin['event_id'] ?? 0 ) === $event_id ) {
+				unset( $checkins[ $id ] );
+			}
+		}
+		update_option( self::OPTION_CHECKINS, $checkins, false );
+	}
+
+	/**
 	 * Find an event by ID.
 	 */
 	public function find_event( int $event_id ): ?Event {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			return $this->community_event( $event_id );
+		}
+
 		$events = $this->raw_events();
 
 		if ( ! isset( $events[ $event_id ] ) || ! is_array( $events[ $event_id ] ) ) {
@@ -106,6 +154,10 @@ final class EventRepository {
 	 * Find an event by slug.
 	 */
 	public function find_event_by_slug( string $slug ): ?Event {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			return $this->community_event( $slug );
+		}
+
 		foreach ( $this->raw_events() as $event ) {
 			if ( ! is_array( $event ) ) {
 				continue;
@@ -126,6 +178,15 @@ final class EventRepository {
 	 * @return array<int, Event>
 	 */
 	public function query_events( array $filters = array() ): array {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			$events = \adam_comunidade_events()->get_events( $filters );
+
+			return array_map(
+				static fn ( object $event ): Event => new Event( $event->data() ),
+				$events
+			);
+		}
+
 		$search = isset( $filters['search'] ) ? strtolower( sanitize_text_field( (string) $filters['search'] ) ) : '';
 		$status = isset( $filters['status'] ) ? sanitize_key( (string) $filters['status'] ) : '';
 
@@ -434,5 +495,23 @@ final class EventRepository {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Reads one canonical event through the ADAM Comunidade API.
+	 *
+	 * The legacy option store remains a read-only fallback so a temporary
+	 * deactivation of ADAM Comunidade does not break the members plugin.
+	 *
+	 * @param int|string $identifier Event ID or slug.
+	 */
+	private function community_event( int|string $identifier ): ?Event {
+		if ( ! function_exists( '\adam_comunidade_events' ) ) {
+			return null;
+		}
+
+		$event = \adam_comunidade_events()->get_event( $identifier );
+
+		return $event ? new Event( $event->data() ) : null;
 	}
 }

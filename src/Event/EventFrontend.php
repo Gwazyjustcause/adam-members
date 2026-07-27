@@ -36,6 +36,15 @@ final class EventFrontend {
 	}
 
 	public function register(): void {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			add_filter( 'adam_comunidade_events_render_checkin', array( $this, 'render_delegated_checkin' ), 10, 2 );
+			add_filter( 'adam_comunidade_events_register_attendee', array( $this, 'register_attendee' ), 10, 3 );
+			add_filter( 'adam_comunidade_events_attendance_status', array( $this, 'attendance_status' ), 10, 3 );
+			add_action( 'adam_comunidade_event_deleted', array( $this, 'event_deleted' ) );
+			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+			return;
+		}
+
 		add_action( 'init', array( $this, 'register_routes' ) );
 		add_action( 'init', array( $this, 'maybe_flush_rewrite_rules' ), 20 );
 		add_filter( 'query_vars', array( $this, 'register_query_vars' ) );
@@ -71,6 +80,10 @@ final class EventFrontend {
 	}
 
 	public static function activate(): void {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			return;
+		}
+
 		$logger = new \AdamMembership\Helpers\Logger();
 		$members = new MemberRepository();
 		$points  = new PointsService( new PointsRepository(), $members, new \AdamMembership\Member\HistoryRepository(), $logger );
@@ -81,12 +94,20 @@ final class EventFrontend {
 	}
 
 	public static function deactivate(): void {
+		if ( function_exists( '\adam_comunidade_events' ) ) {
+			return;
+		}
+
 		flush_rewrite_rules();
 		delete_option( self::REWRITE_OPTION );
 	}
 
 	public function enqueue_assets(): void {
-		if ( '' === $this->current_events_route() ) {
+		if ( function_exists( '\adam_comunidade_events' ) && 'checkin' !== (string) get_query_var( 'adam_events' ) ) {
+			return;
+		}
+
+		if ( ! function_exists( '\adam_comunidade_events' ) && '' === $this->current_events_route() ) {
 			return;
 		}
 
@@ -123,6 +144,118 @@ final class EventFrontend {
 		echo '</main>';
 		get_footer();
 		exit;
+	}
+
+	/**
+	 * Renders only the member-owned check-in inside ADAM Comunidade's route.
+	 *
+	 * @param bool   $handled Existing handled state.
+	 * @param string $token   Public check-in token.
+	 */
+	public function render_delegated_checkin( bool $handled, string $token ): bool {
+		if ( $handled ) {
+			return true;
+		}
+
+		set_query_var( 'adam_event_checkin', sanitize_text_field( $token ) );
+		status_header( 200 );
+		nocache_headers();
+		get_header();
+		echo '<main class="adam-events-shell">';
+		$this->render_checkin_page();
+		echo '</main>';
+		get_footer();
+
+		return true;
+	}
+
+	/**
+	 * Implements the registration part of the Community Events API.
+	 *
+	 * @param mixed                $fallback Existing API result.
+	 * @param int                  $event_id Event ID.
+	 * @param array<string,mixed> $attendee Attendee input.
+	 * @return EventRegistration|\WP_Error
+	 */
+	public function register_attendee( mixed $fallback, int $event_id, array $attendee ): EventRegistration|\WP_Error {
+		unset( $fallback );
+		$event = $this->events->repository()->find_event( $event_id );
+		$member = $this->current_member();
+
+		if ( ! $event ) {
+			return new \WP_Error( 'adam_membership_event_not_found', __( 'Evento não encontrado.', 'adam-membership' ) );
+		}
+		if ( ! $member ) {
+			return new \WP_Error( 'adam_membership_member_required', __( 'É necessária uma conta de sócio para efetuar esta inscrição.', 'adam-membership' ) );
+		}
+		foreach ( $this->events->repository()->query_registrations( array( 'event_id' => $event_id, 'member_id' => $member->user_id() ) ) as $registration ) {
+			if ( $registration->is_active() ) {
+				return $registration;
+			}
+		}
+
+		$confirmed = $this->events->repository()->query_registrations( array( 'event_id' => $event_id, 'status' => EventRegistration::STATUS_CONFIRMED ) );
+		$status = EventRegistration::STATUS_CONFIRMED;
+		if ( $event->player_limit() > 0 && count( $confirmed ) >= $event->player_limit() ) {
+			if ( ! $event->waiting_list_enabled() ) {
+				return new \WP_Error( 'adam_membership_event_full', __( 'Este evento já atingiu o limite de participantes.', 'adam-membership' ) );
+			}
+			$status = EventRegistration::STATUS_WAITING_LIST;
+		}
+
+		$now = current_time( 'mysql', true );
+		return $this->events->repository()->create_registration(
+			array(
+				'event_id' => $event_id,
+				'member_id' => $member->user_id(),
+				'name' => sanitize_text_field( (string) ( $attendee['name'] ?? $member->full_name() ) ),
+				'email' => sanitize_email( (string) ( $attendee['email'] ?? $member->email() ) ),
+				'phone' => sanitize_text_field( (string) ( $attendee['phone'] ?? '' ) ),
+				'team' => sanitize_text_field( (string) ( $attendee['team'] ?? '' ) ),
+				'status' => $status,
+				'manage_token' => wp_generate_password( 32, false, false ),
+				'notes' => sanitize_textarea_field( (string) ( $attendee['notes'] ?? '' ) ),
+				'created_at' => $now,
+				'updated_at' => $now,
+			)
+		);
+	}
+
+	/**
+	 * Implements the attendance lookup part of the Community Events API.
+	 *
+	 * @param mixed $status    Existing status.
+	 * @param int   $event_id  Event ID.
+	 * @param int   $member_id Member ID.
+	 * @return array<string,mixed>|null
+	 */
+	public function attendance_status( mixed $status, int $event_id, int $member_id ): ?array {
+		unset( $status );
+		$checkin = $this->events->repository()->find_checkin_for_member( $event_id, $member_id );
+		$registrations = $this->events->repository()->query_registrations( array( 'event_id' => $event_id, 'member_id' => $member_id ) );
+		$registration = $registrations[0] ?? null;
+
+		if ( ! $checkin && ! $registration ) {
+			return null;
+		}
+
+		return array(
+			'event_id' => $event_id,
+			'member_id' => $member_id,
+			'registration_status' => $registration ? $registration->status() : '',
+			'checked_in' => null !== $checkin,
+			'checked_in_at' => $checkin ? $checkin->checked_in_at() : '',
+			'points_awarded' => $checkin ? $checkin->points_awarded() : 0,
+		);
+	}
+
+	/**
+	 * Preserves the legacy cascade behavior for member-owned interactions.
+	 */
+	public function event_deleted( object $event ): void {
+		if ( method_exists( $event, 'id' ) ) {
+			$this->events->repository()->delete_interactions( absint( $event->id() ) );
+		}
 	}
 
 	private function render_archive_page(): void {

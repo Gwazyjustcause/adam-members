@@ -176,7 +176,9 @@ final class Plugin {
 			$admin->register();
 			( new AnnouncementController( $announcements ) )->register();
 			( new DocumentController( $documents ) )->register();
-			( new EventController( $events ) )->register();
+			if ( ! function_exists( '\adam_comunidade_events' ) ) {
+				( new EventController( $events ) )->register();
+			}
 			( new PointsController( $points, $members, $events ) )->register();
 			( new RewardController( $rewards, $members, $cards ) )->register();
 			( new StatisticsController( $statistics, $events, $points ) )->register();
