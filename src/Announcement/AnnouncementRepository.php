@@ -64,6 +64,49 @@ final class AnnouncementRepository {
 	}
 
 	/**
+	 * Remove a deleted member from specific-recipient announcement records.
+	 *
+	 * Announcements remain intact; only the obsolete member reference is
+	 * removed.
+	 *
+	 * @param int $member_id Member user ID.
+	 */
+	public function remove_member_references( int $member_id ): int {
+		$announcements = $this->raw_items();
+		$updated       = 0;
+
+		foreach ( $announcements as $id => $announcement ) {
+			if ( ! is_array( $announcement ) || ! isset( $announcement['email_member_ids'] ) || ! is_array( $announcement['email_member_ids'] ) ) {
+				continue;
+			}
+
+			$current_member_ids = array_values(
+				array_filter(
+					array_map( 'absint', $announcement['email_member_ids'] )
+				)
+			);
+
+			if ( ! in_array( $member_id, $current_member_ids, true ) ) {
+				continue;
+			}
+
+			$announcements[ $id ]['email_member_ids'] = array_values(
+				array_filter(
+					$current_member_ids,
+					static fn ( int $stored_id ): bool => $stored_id !== $member_id
+				)
+			);
+			++$updated;
+		}
+
+		if ( $updated > 0 ) {
+			update_option( self::OPTION_ITEMS, $announcements, false );
+		}
+
+		return $updated;
+	}
+
+	/**
 	 * Find one announcement.
 	 *
 	 * @param int $announcement_id Announcement ID.

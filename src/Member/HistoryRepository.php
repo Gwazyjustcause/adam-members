@@ -110,6 +110,31 @@ final class HistoryRepository {
 	}
 
 	/**
+	 * Permanently delete every history entry linked to a member.
+	 *
+	 * @param int $member_id Member user ID.
+	 */
+	public function delete_for_member( int $member_id ): int {
+		$entries = $this->raw_entries();
+		$removed = 0;
+
+		foreach ( $entries as $id => $entry ) {
+			if ( ! is_array( $entry ) || absint( $entry['member_id'] ?? 0 ) !== $member_id ) {
+				continue;
+			}
+
+			unset( $entries[ $id ] );
+			++$removed;
+		}
+
+		if ( $removed > 0 ) {
+			update_option( self::OPTION_ENTRIES, $entries, false );
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * Get available action types from stored history.
 	 *
 	 * @return array<string, string>

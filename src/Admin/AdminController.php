@@ -24,6 +24,7 @@ use AdamMembership\Member\CardService;
 use AdamMembership\Member\HistoryEntry;
 use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
+use AdamMembership\Member\MemberDeletionService;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\RecognitionService;
 use AdamMembership\Member\RenewalRepository;
@@ -188,6 +189,13 @@ final class AdminController {
 	private TeamRepository $teams;
 
 	/**
+	 * Permanent member deletion service.
+	 *
+	 * @var MemberDeletionService
+	 */
+	private MemberDeletionService $member_deletion;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -206,8 +214,9 @@ final class AdminController {
 	 * @param RecognitionService  $recognition     Recognition service.
 	 * @param EmailService        $email           Email service.
 	 * @param TeamRepository      $teams           Team repository.
+	 * @param MemberDeletionService $member_deletion Permanent member deletion service.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -224,6 +233,7 @@ final class AdminController {
 		$this->recognition         = $recognition;
 		$this->email               = $email;
 		$this->teams               = $teams;
+		$this->member_deletion     = $member_deletion;
 	}
 
 	/**
@@ -238,6 +248,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_approve_member', array( $this, 'handle_approve_member' ) );
 		add_action( 'admin_post_adam_membership_reject_member', array( $this, 'handle_reject_member' ) );
 		add_action( 'admin_post_adam_membership_member_action', array( $this, 'handle_member_admin_action' ) );
+		add_action( 'admin_post_adam_membership_delete_member_permanently', array( $this, 'handle_permanent_member_deletion' ) );
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'admin_post_adam_membership_save_forms_settings', array( $this, 'handle_save_forms_settings' ) );
@@ -419,6 +430,18 @@ final class AdminController {
 			array(),
 			file_exists( $asset_path ) ? (string) filemtime( $asset_path ) : ADAM_MEMBERSHIP_VERSION
 		);
+
+		if ( $hook_suffix === $this->member_page_hook ) {
+			$script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/admin-member-delete.js';
+
+			wp_enqueue_script(
+				'adam-membership-admin-member-delete',
+				ADAM_MEMBERSHIP_URL . 'assets/js/admin-member-delete.js',
+				array(),
+				file_exists( $script_path ) ? (string) filemtime( $script_path ) : ADAM_MEMBERSHIP_VERSION,
+				true
+			);
+		}
 	}
 
 	/**
@@ -1216,6 +1239,38 @@ final class AdminController {
 		$action = isset( $_POST['member_action'] ) ? sanitize_key( wp_unslash( $_POST['member_action'] ) ) : '';
 
 		$this->handle_member_action( $action );
+	}
+
+	/**
+	 * Permanently delete a member after explicit confirmation.
+	 */
+	public function handle_permanent_member_deletion(): void {
+		$this->ensure_can_manage();
+
+		$user_id      = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
+		$confirmation = isset( $_POST['delete_confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['delete_confirmation'] ) ) : '';
+
+		check_admin_referer( 'adam_membership_permanent_delete_' . $user_id );
+
+		if ( 'DELETE' !== $confirmation ) {
+			$this->redirect_with_error( __( 'Type DELETE exactly to confirm permanent member deletion.', 'adam-membership' ) );
+		}
+
+		$result = $this->member_deletion->delete( $user_id );
+
+		if ( $result instanceof WP_Error ) {
+			$this->logger->error( 'Permanent member deletion failed.', array( 'error' => $result->get_error_message() ) );
+			$this->redirect_with_error( $result->get_error_message() );
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				'adam_message',
+				__( 'The member has been permanently deleted.', 'adam-membership' ),
+				admin_url( 'admin.php?page=adam-membership-members' )
+			)
+		);
+		exit;
 	}
 
 	/**
@@ -2701,6 +2756,8 @@ final class AdminController {
 				</div>
 			</div>
 
+			<?php $this->render_member_deletion_panel( $member ); ?>
+
 			<div class="adam-admin-panel adam-admin-history-panel adam-card">
 				<h2><?php esc_html_e( 'Histórico do Sócio', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'Esta cronologia apresenta os principais eventos de inscrição, conta e administração deste sócio.', 'adam-membership' ); ?></p>
@@ -2716,6 +2773,65 @@ final class AdminController {
 			</div>
 
 			<?php $this->render_member_diagnostics( $member ); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render the isolated permanent-deletion danger zone.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_member_deletion_panel( Member $member ): void {
+		$dialog_id  = 'adam-member-delete-dialog-' . $member->user_id();
+		$can_delete = current_user_can( 'delete_user', $member->user_id() ) && ( ! is_multisite() || is_super_admin( get_current_user_id() ) );
+		?>
+		<div class="adam-admin-panel adam-admin-member-danger-zone adam-card" data-adam-member-delete>
+			<div>
+				<h2><?php esc_html_e( 'Permanent Member Deletion', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'Reserved for exceptional situations such as duplicate records, test accounts, GDPR requests, or accidental registrations.', 'adam-membership' ); ?></p>
+			</div>
+
+			<?php if ( get_current_user_id() === $member->user_id() ) : ?>
+				<p class="adam-admin-member-danger-zone__blocked"><?php esc_html_e( 'Safety rule: administrators cannot permanently delete their own account.', 'adam-membership' ); ?></p>
+			<?php elseif ( ! $can_delete ) : ?>
+				<p class="adam-admin-member-danger-zone__blocked"><?php esc_html_e( 'You do not have permission to permanently delete this member.', 'adam-membership' ); ?></p>
+			<?php else : ?>
+				<button type="button" class="button adam-button adam-button--danger" data-adam-member-delete-open aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $dialog_id ); ?>">
+					<?php esc_html_e( 'Delete Member', 'adam-membership' ); ?>
+				</button>
+
+				<dialog id="<?php echo esc_attr( $dialog_id ); ?>" class="adam-admin-member-delete-dialog" data-adam-member-delete-dialog aria-labelledby="<?php echo esc_attr( $dialog_id . '-title' ); ?>" aria-describedby="<?php echo esc_attr( $dialog_id . '-warning' ); ?>">
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-adam-member-delete-form>
+						<input type="hidden" name="action" value="adam_membership_delete_member_permanently">
+						<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+						<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+						<?php wp_nonce_field( 'adam_membership_permanent_delete_' . $member->user_id() ); ?>
+
+						<div class="adam-admin-member-delete-dialog__header">
+							<h2 id="<?php echo esc_attr( $dialog_id . '-title' ); ?>"><?php esc_html_e( 'Permanently Delete Member?', 'adam-membership' ); ?></h2>
+							<button type="button" class="adam-admin-member-delete-dialog__close" data-adam-member-delete-close aria-label="<?php esc_attr_e( 'Close', 'adam-membership' ); ?>">&times;</button>
+						</div>
+
+						<div class="adam-admin-member-delete-dialog__body" id="<?php echo esc_attr( $dialog_id . '-warning' ); ?>">
+							<p><strong><?php esc_html_e( 'This action is permanent and cannot be undone.', 'adam-membership' ); ?></strong></p>
+							<p><?php esc_html_e( 'The member record and all associated data will be permanently removed from the ADAM system.', 'adam-membership' ); ?></p>
+							<p><?php esc_html_e( 'This includes membership information, profile details, uploaded documents, reward progress, attendance history, points, communication preferences, and any other data linked to this member.', 'adam-membership' ); ?></p>
+							<p><?php esc_html_e( 'This action should only be used for duplicate records, test accounts, GDPR data deletion requests, or registrations created by mistake.', 'adam-membership' ); ?></p>
+
+							<label class="adam-admin-member-delete-confirmation">
+								<span><?php esc_html_e( 'Type DELETE to confirm', 'adam-membership' ); ?></span>
+								<input type="text" name="delete_confirmation" value="" pattern="DELETE" required autocomplete="off" autocapitalize="characters" spellcheck="false" data-adam-member-delete-confirmation>
+							</label>
+						</div>
+
+						<div class="adam-admin-member-delete-dialog__actions">
+							<button type="button" class="button" data-adam-member-delete-close><?php esc_html_e( 'Cancel', 'adam-membership' ); ?></button>
+							<button type="submit" class="button adam-button adam-button--danger" disabled data-adam-member-delete-submit><?php esc_html_e( 'Permanently Delete Member', 'adam-membership' ); ?></button>
+						</div>
+					</form>
+				</dialog>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

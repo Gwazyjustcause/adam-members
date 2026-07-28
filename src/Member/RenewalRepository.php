@@ -127,6 +127,31 @@ final class RenewalRepository {
 	}
 
 	/**
+	 * Permanently delete every renewal request owned by a user.
+	 *
+	 * @param int $user_id User ID.
+	 */
+	public function delete_for_user( int $user_id ): int {
+		$requests = $this->raw_requests();
+		$removed  = 0;
+
+		foreach ( $requests as $id => $request ) {
+			if ( ! is_array( $request ) || absint( $request['user_id'] ?? $request['member_id'] ?? 0 ) !== $user_id ) {
+				continue;
+			}
+
+			unset( $requests[ $id ] );
+			++$removed;
+		}
+
+		if ( $removed > 0 ) {
+			update_option( self::OPTION_REQUESTS, $requests, false );
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * Get raw stored requests.
 	 *
 	 * @return array<int, array<string, mixed>>

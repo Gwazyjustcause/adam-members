@@ -2094,3 +2094,145 @@
 .adam-reward-card--editor-preview .adam-reward-card__shapes {
 	inset: var(--adam-reward-card-frame-inset);
 }
+
+.adam-admin-member-danger-zone {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
+	border: 1px solid #fecaca;
+	border-left: 4px solid #b91c1c;
+	background: #fffafa;
+}
+
+.adam-admin-member-danger-zone h2 {
+	color: #991b1b;
+}
+
+.adam-admin-member-danger-zone p {
+	margin: 6px 0 0;
+}
+
+.adam-admin-member-danger-zone__blocked {
+	color: #991b1b;
+	font-weight: 600;
+}
+
+.adam-admin-member-danger-zone .adam-button--danger,
+.adam-admin-member-delete-dialog .adam-button--danger {
+	border-color: #991b1b;
+	background: #b91c1c;
+	color: #fff;
+}
+
+.adam-admin-member-danger-zone .adam-button--danger:hover,
+.adam-admin-member-danger-zone .adam-button--danger:focus,
+.adam-admin-member-delete-dialog .adam-button--danger:hover,
+.adam-admin-member-delete-dialog .adam-button--danger:focus {
+	border-color: #7f1d1d;
+	background: #991b1b;
+	color: #fff;
+}
+
+.adam-admin-member-delete-dialog .adam-button--danger:disabled {
+	border-color: #d1d5db;
+	background: #e5e7eb;
+	color: #6b7280;
+	cursor: not-allowed;
+}
+
+.adam-admin-member-delete-dialog {
+	width: min(620px, calc(100vw - 40px));
+	max-width: none;
+	padding: 0;
+	border: 0;
+	border-radius: 12px;
+	box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+	color: #1f2937;
+}
+
+.adam-admin-member-delete-dialog::backdrop {
+	background: rgba(15, 23, 42, 0.62);
+}
+
+.adam-admin-member-delete-dialog__header,
+.adam-admin-member-delete-dialog__actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 18px 22px;
+}
+
+.adam-admin-member-delete-dialog__header {
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.adam-admin-member-delete-dialog__header h2 {
+	margin: 0;
+	color: #991b1b;
+}
+
+.adam-admin-member-delete-dialog__close {
+	padding: 2px 8px;
+	border: 0;
+	background: transparent;
+	color: #6b7280;
+	font-size: 28px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.adam-admin-member-delete-dialog__close:hover,
+.adam-admin-member-delete-dialog__close:focus {
+	color: #111827;
+}
+
+.adam-admin-member-delete-dialog__body {
+	padding: 22px;
+}
+
+.adam-admin-member-delete-dialog__body p:first-child {
+	margin-top: 0;
+	color: #991b1b;
+}
+
+.adam-admin-member-delete-confirmation {
+	display: grid;
+	gap: 8px;
+	margin-top: 22px;
+	font-weight: 600;
+}
+
+.adam-admin-member-delete-confirmation input {
+	width: 100%;
+	max-width: none;
+	border-color: #b91c1c;
+	font-family: monospace;
+	font-size: 16px;
+	letter-spacing: 0.08em;
+}
+
+.adam-admin-member-delete-dialog__actions {
+	justify-content: flex-end;
+	border-top: 1px solid #e5e7eb;
+	background: #f9fafb;
+}
+
+@media (max-width: 782px) {
+	.adam-admin-member-danger-zone {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.adam-admin-member-danger-zone > .button {
+		width: 100%;
+		text-align: center;
+	}
+
+	.adam-admin-member-delete-dialog__actions {
+		align-items: stretch;
+		flex-direction: column-reverse;
+	}
+}

@@ -134,6 +134,42 @@ final class EventRepository {
 	}
 
 	/**
+	 * Permanently delete registrations and check-ins linked to a member.
+	 *
+	 * @param int $member_id Member user ID.
+	 */
+	public function delete_member_interactions( int $member_id ): int {
+		$registrations = $this->raw_registrations();
+		$checkins      = $this->raw_checkins();
+		$removed       = 0;
+
+		foreach ( $registrations as $id => $registration ) {
+			if ( ! is_array( $registration ) || absint( $registration['member_id'] ?? 0 ) !== $member_id ) {
+				continue;
+			}
+
+			unset( $registrations[ $id ] );
+			++$removed;
+		}
+
+		foreach ( $checkins as $id => $checkin ) {
+			if ( ! is_array( $checkin ) || absint( $checkin['member_id'] ?? 0 ) !== $member_id ) {
+				continue;
+			}
+
+			unset( $checkins[ $id ] );
+			++$removed;
+		}
+
+		if ( $removed > 0 ) {
+			update_option( self::OPTION_REGISTRATIONS, $registrations, false );
+			update_option( self::OPTION_CHECKINS, $checkins, false );
+		}
+
+		return $removed;
+	}
+
+	/**
 	 * Find an event by ID.
 	 */
 	public function find_event( int $event_id ): ?Event {
