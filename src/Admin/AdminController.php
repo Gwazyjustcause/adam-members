@@ -3255,8 +3255,10 @@ final class AdminController {
 		}
 
 		if ( ! isset( $_FILES['member_document_file'] ) || ! is_array( $_FILES['member_document_file'] ) || UPLOAD_ERR_NO_FILE === (int) ( $_FILES['member_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
-			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para substituir o documento.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para carregar.', 'adam-membership' ) );
 		}
+
+		$previous_attachment_id = is_numeric( $member->field( $document_field ) ) ? absint( $member->field( $document_field ) ) : 0;
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -3281,7 +3283,22 @@ final class AdminController {
 			return $attachment_id;
 		}
 
+		update_post_meta( $attachment_id, '_adam_membership_admin_document', '1' );
 		$member->save( array( $document_field => $attachment_id ) );
+
+		if ( $previous_attachment_id > 0 && $previous_attachment_id !== $attachment_id ) {
+			$this->delete_attachment_if_unreferenced( $previous_attachment_id );
+		}
+
+		$this->record_admin_member_history(
+			$member,
+			'member_document_uploaded_by_admin',
+			__( 'Documento carregado pela administração', 'adam-membership' ),
+			__( 'Um administrador carregou ou substituiu um documento do sócio.', 'adam-membership' ),
+			array(
+				'document_field' => $document_field,
+			)
+		);
 
 		return true;
 	}
@@ -3305,7 +3322,23 @@ final class AdminController {
 			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
 		}
 
+		$attachment_id = is_numeric( $member->field( $document_field ) ) ? absint( $member->field( $document_field ) ) : 0;
+
 		$member->save( array( $document_field => '' ) );
+
+		if ( $attachment_id > 0 ) {
+			$this->delete_attachment_if_unreferenced( $attachment_id );
+		}
+
+		$this->record_admin_member_history(
+			$member,
+			'member_document_removed_by_admin',
+			__( 'Documento removido pela administração', 'adam-membership' ),
+			__( 'Um administrador removeu um documento do sócio.', 'adam-membership' ),
+			array(
+				'document_field' => $document_field,
+			)
+		);
 
 		return true;
 	}
@@ -3330,8 +3363,12 @@ final class AdminController {
 		}
 
 		if ( ! isset( $_FILES['member_document_file'] ) || ! is_array( $_FILES['member_document_file'] ) || UPLOAD_ERR_NO_FILE === (int) ( $_FILES['member_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
-			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para substituir o documento.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_document_missing', __( 'Selecione um ficheiro para carregar.', 'adam-membership' ) );
 		}
+
+		$submitted_data         = $request->submitted_data();
+		$previous_value         = 'payment_receipt' === $document_field ? $request->proof_of_payment() : ( $submitted_data[ $document_field ] ?? '' );
+		$previous_attachment_id = is_numeric( $previous_value ) ? absint( $previous_value ) : 0;
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -3356,6 +3393,8 @@ final class AdminController {
 			return $attachment_id;
 		}
 
+		update_post_meta( $attachment_id, '_adam_membership_admin_document', '1' );
+
 		if ( 'payment_receipt' === $document_field ) {
 			$this->renewal_repository->update(
 				$request,
@@ -3364,10 +3403,13 @@ final class AdminController {
 				)
 			);
 
+			if ( $previous_attachment_id > 0 && $previous_attachment_id !== $attachment_id ) {
+				$this->delete_attachment_if_unreferenced( $previous_attachment_id );
+			}
+
 			return true;
 		}
 
-		$submitted_data                    = $request->submitted_data();
 		$submitted_data[ $document_field ] = $attachment_id;
 
 		$this->renewal_repository->update(
@@ -3376,6 +3418,10 @@ final class AdminController {
 				'submitted_data' => $submitted_data,
 			)
 		);
+
+		if ( $previous_attachment_id > 0 && $previous_attachment_id !== $attachment_id ) {
+			$this->delete_attachment_if_unreferenced( $previous_attachment_id );
+		}
 
 		return true;
 	}
@@ -3399,6 +3445,10 @@ final class AdminController {
 			return new WP_Error( 'adam_membership_invalid_document_field', __( 'Documento inválido.', 'adam-membership' ) );
 		}
 
+		$submitted_data = $request->submitted_data();
+		$previous_value = 'payment_receipt' === $document_field ? $request->proof_of_payment() : ( $submitted_data[ $document_field ] ?? '' );
+		$attachment_id  = is_numeric( $previous_value ) ? absint( $previous_value ) : 0;
+
 		if ( 'payment_receipt' === $document_field ) {
 			$this->renewal_repository->update(
 				$request,
@@ -3407,10 +3457,13 @@ final class AdminController {
 				)
 			);
 
+			if ( $attachment_id > 0 ) {
+				$this->delete_attachment_if_unreferenced( $attachment_id );
+			}
+
 			return true;
 		}
 
-		$submitted_data = $request->submitted_data();
 		unset( $submitted_data[ $document_field ] );
 
 		$this->renewal_repository->update(
@@ -3419,6 +3472,10 @@ final class AdminController {
 				'submitted_data' => $submitted_data,
 			)
 		);
+
+		if ( $attachment_id > 0 ) {
+			$this->delete_attachment_if_unreferenced( $attachment_id );
+		}
 
 		return true;
 	}
@@ -3451,6 +3508,49 @@ final class AdminController {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Delete an attachment only after every member and renewal reference is gone.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	private function delete_attachment_if_unreferenced( int $attachment_id ): void {
+		if ( $attachment_id <= 0 || '1' !== (string) get_post_meta( $attachment_id, '_adam_membership_admin_document', true ) ) {
+			return;
+		}
+
+		$definitions = array_merge( $this->document_field_definitions( 'registration' ), $this->document_field_definitions( 'renewal' ) );
+		$meta_keys   = array_values(
+			array_unique(
+				array_map(
+					static fn ( array $definition ): string => (string) ( $definition['meta_key'] ?? '' ),
+					$definitions
+				)
+			)
+		);
+
+		foreach ( $this->members->all_members() as $member ) {
+			foreach ( $meta_keys as $meta_key ) {
+				$value = $member->field( $meta_key );
+
+				if ( is_numeric( $value ) && absint( $value ) === $attachment_id ) {
+					return;
+				}
+			}
+		}
+
+		foreach ( $this->renewal_repository->admin_requests() as $request ) {
+			$references = array_merge( array( $request->proof_of_payment() ), array_values( $request->submitted_data() ) );
+
+			foreach ( $references as $value ) {
+				if ( is_numeric( $value ) && absint( $value ) === $attachment_id ) {
+					return;
+				}
+			}
+		}
+
+		wp_delete_attachment( $attachment_id, true );
 	}
 
 	/**
@@ -4066,6 +4166,7 @@ final class AdminController {
 				'field_key'    => (string) $definition['field_key'],
 				'meta_key'     => $meta_key,
 				'label'        => (string) $definition['label'],
+				'file_name'    => $this->media_reference_filename( $value ),
 				'workflow'     => __( 'Inscrição', 'adam-membership' ),
 				'status'       => '' !== $url ? __( 'Submetido', 'adam-membership' ) : __( 'Em falta', 'adam-membership' ),
 				'missing'      => '' === $url,
@@ -4099,6 +4200,7 @@ final class AdminController {
 				'field_key'    => $field_key,
 				'meta_key'     => (string) $definition['meta_key'],
 				'label'        => (string) $definition['label'],
+				'file_name'    => $this->media_reference_filename( $value ),
 				'workflow'     => sprintf(
 					/* translators: %s: renewal status label */
 					__( 'Renovação (%s)', 'adam-membership' ),
@@ -4164,49 +4266,58 @@ final class AdminController {
 	 */
 	private function render_documents_panel( string $title, array $rows, ?Member $member = null, ?RenewalRequest $request = null, bool $show_management = false ): void {
 		?>
-		<div class="adam-admin-panel adam-card">
+		<div class="adam-admin-panel adam-card adam-admin-documents-panel">
 			<h2><?php echo esc_html( $title ); ?></h2>
 			<?php if ( array() === $rows ) : ?>
 				<?php $this->render_empty_state( __( 'Não existem documentos submetidos para mostrar.', 'adam-membership' ) ); ?>
 			<?php else : ?>
-				<table class="widefat striped adam-admin-table adam-table">
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Documento', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Pré-visualização', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Fluxo', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Data de envio', 'adam-membership' ); ?></th>
-							<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $rows as $row ) : ?>
-							<tr>
-								<td><strong><?php echo esc_html( (string) $row['label'] ); ?></strong></td>
-								<td>
+				<div class="adam-admin-document-list" role="table" aria-label="<?php echo esc_attr( $title ); ?>">
+					<div class="adam-admin-document-list__header" role="row">
+						<span role="columnheader"><?php esc_html_e( 'Documento', 'adam-membership' ); ?></span>
+						<span role="columnheader"><?php esc_html_e( 'Estado', 'adam-membership' ); ?></span>
+						<span role="columnheader"><?php esc_html_e( 'Pré-visualização', 'adam-membership' ); ?></span>
+						<span role="columnheader"><?php esc_html_e( 'Fluxo', 'adam-membership' ); ?></span>
+						<span role="columnheader"><?php esc_html_e( 'Data de envio', 'adam-membership' ); ?></span>
+						<span role="columnheader"><?php esc_html_e( 'Ações', 'adam-membership' ); ?></span>
+					</div>
+					<?php foreach ( $rows as $row ) : ?>
+						<div class="adam-admin-document-row" role="row">
+							<div class="adam-admin-document-cell adam-admin-document-cell--name" role="cell" data-label="<?php esc_attr_e( 'Documento', 'adam-membership' ); ?>">
+								<strong><?php echo esc_html( (string) $row['label'] ); ?></strong>
+								<span class="adam-admin-document-filename" title="<?php echo esc_attr( (string) ( $row['file_name'] ?: __( 'Sem ficheiro', 'adam-membership' ) ) ); ?>">
+									<?php echo esc_html( (string) ( $row['file_name'] ?: __( 'Sem ficheiro', 'adam-membership' ) ) ); ?>
+								</span>
+							</div>
+							<div class="adam-admin-document-cell" role="cell" data-label="<?php esc_attr_e( 'Estado', 'adam-membership' ); ?>">
 									<span class="adam-admin-badge <?php echo ! empty( $row['missing'] ) ? 'quota-expired' : 'quota-active'; ?>">
 										<?php echo esc_html( (string) $row['status'] ); ?>
 									</span>
-								</td>
-								<td><?php echo wp_kses_post( (string) $row['preview_html'] ); ?></td>
-								<td><?php echo esc_html( (string) $row['workflow'] ); ?></td>
-								<td><?php echo esc_html( (string) ( $row['uploaded_at'] ?: '—' ) ); ?></td>
-								<td class="adam-admin-row-actions">
-									<?php if ( '' !== (string) $row['url'] ) : ?>
+							</div>
+							<div class="adam-admin-document-cell adam-admin-document-cell--preview" role="cell" data-label="<?php esc_attr_e( 'Pré-visualização', 'adam-membership' ); ?>">
+								<?php echo wp_kses_post( (string) $row['preview_html'] ); ?>
+							</div>
+							<div class="adam-admin-document-cell" role="cell" data-label="<?php esc_attr_e( 'Fluxo', 'adam-membership' ); ?>">
+								<?php echo esc_html( (string) $row['workflow'] ); ?>
+							</div>
+							<div class="adam-admin-document-cell" role="cell" data-label="<?php esc_attr_e( 'Data de envio', 'adam-membership' ); ?>">
+								<?php echo esc_html( (string) ( $row['uploaded_at'] ?: '—' ) ); ?>
+							</div>
+							<div class="adam-admin-document-cell adam-admin-document-actions" role="cell" data-label="<?php esc_attr_e( 'Ações', 'adam-membership' ); ?>">
+								<?php if ( '' !== (string) $row['url'] ) : ?>
+									<div class="adam-admin-document-links">
 										<a class="button button-small" href="<?php echo esc_url( (string) $row['url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir', 'adam-membership' ); ?></a>
 										<a class="button button-small" href="<?php echo esc_url( (string) $row['url'] ); ?>" download><?php esc_html_e( 'Descarregar', 'adam-membership' ); ?></a>
-									<?php endif; ?>
-									<?php if ( $show_management && $member instanceof Member ) : ?>
-										<?php $this->render_document_management_controls( $member, (string) $row['meta_key'] ); ?>
-									<?php elseif ( $show_management && $request instanceof RenewalRequest ) : ?>
-										<?php $this->render_renewal_document_management_controls( $request, (string) $row['meta_key'] ); ?>
-									<?php endif; ?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
+									</div>
+								<?php endif; ?>
+								<?php if ( $show_management && $member instanceof Member ) : ?>
+									<?php $this->render_document_management_controls( $member, (string) $row['meta_key'], empty( $row['missing'] ) ); ?>
+								<?php elseif ( $show_management && $request instanceof RenewalRequest ) : ?>
+									<?php $this->render_renewal_document_management_controls( $request, (string) $row['meta_key'], empty( $row['missing'] ) ); ?>
+								<?php endif; ?>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -4239,28 +4350,31 @@ final class AdminController {
 	 *
 	 * @param Member $member Member.
 	 * @param string $meta_key Meta key.
+	 * @param bool   $has_document Whether the document currently exists.
 	 */
-	private function render_document_management_controls( Member $member, string $meta_key ): void {
+	private function render_document_management_controls( Member $member, string $meta_key, bool $has_document ): void {
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-inline-form">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-document-upload-form">
 			<input type="hidden" name="action" value="adam_membership_member_action">
 			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REPLACE_DOCUMENT ); ?>">
 			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
 			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
 			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
-			<input type="file" name="member_document_file" accept=".pdf,image/*">
-			<button type="submit" class="button button-small"><?php esc_html_e( 'Substituir', 'adam-membership' ); ?></button>
+			<input type="file" name="member_document_file" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
+			<button type="submit" class="button button-small button-primary"><?php echo esc_html( $has_document ? __( 'Substituir', 'adam-membership' ) : __( 'Carregar', 'adam-membership' ) ); ?></button>
 		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
-			<input type="hidden" name="action" value="adam_membership_member_action">
-			<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_DOCUMENT ); ?>">
-			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
-			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
-			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
-			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
-			<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
-		</form>
+		<?php if ( $has_document ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Remover este documento? Esta ação não pode ser anulada.', 'adam-membership' ) ); ?>');">
+				<input type="hidden" name="action" value="adam_membership_member_action">
+				<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_DOCUMENT ); ?>">
+				<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+				<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+				<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+			</form>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -4269,20 +4383,22 @@ final class AdminController {
 	 *
 	 * @param RenewalRequest $request Renewal request.
 	 * @param string         $meta_key Meta key.
+	 * @param bool           $has_document Whether the document currently exists.
 	 */
-	private function render_renewal_document_management_controls( RenewalRequest $request, string $meta_key ): void {
+	private function render_renewal_document_management_controls( RenewalRequest $request, string $meta_key, bool $has_document ): void {
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-inline-form">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" class="adam-admin-document-upload-form">
 			<input type="hidden" name="action" value="adam_membership_renewal_action">
 			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REPLACE_RENEWAL_DOCUMENT ); ?>">
 			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
 			<input type="hidden" name="document_field" value="<?php echo esc_attr( $meta_key ); ?>">
 			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>">
 			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
-			<input type="file" name="member_document_file" accept=".pdf,image/*">
-			<button type="submit" class="button button-small"><?php esc_html_e( 'Substituir', 'adam-membership' ); ?></button>
+			<input type="file" name="member_document_file" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
+			<button type="submit" class="button button-small button-primary"><?php echo esc_html( $has_document ? __( 'Substituir', 'adam-membership' ) : __( 'Carregar', 'adam-membership' ) ); ?></button>
 		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+		<?php if ( $has_document ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Remover este documento? Esta ação não pode ser anulada.', 'adam-membership' ) ); ?>');">
 			<input type="hidden" name="action" value="adam_membership_renewal_action">
 			<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REMOVE_RENEWAL_DOCUMENT ); ?>">
 			<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>">
@@ -4291,6 +4407,7 @@ final class AdminController {
 			<?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
 			<button type="submit" class="button button-small button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
 		</form>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -4390,6 +4507,31 @@ final class AdminController {
 	}
 
 	/**
+	 * Resolve a compact display filename for a media reference.
+	 *
+	 * @param mixed $value Media reference.
+	 */
+	private function media_reference_filename( mixed $value ): string {
+		if ( is_numeric( $value ) ) {
+			$file = get_attached_file( absint( $value ) );
+
+			if ( is_string( $file ) && '' !== $file ) {
+				return wp_basename( $file );
+			}
+		}
+
+		$url = $this->media_reference_url( $value );
+
+		if ( '' === $url ) {
+			return '';
+		}
+
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+
+		return is_string( $path ) ? sanitize_file_name( rawurldecode( wp_basename( $path ) ) ) : '';
+	}
+
+	/**
 	 * Render a compact preview cell for one uploaded document.
 	 *
 	 * @param string $fallback_alt Fallback alt text.
@@ -4400,21 +4542,34 @@ final class AdminController {
 		$url = $this->media_reference_url( $value );
 
 		if ( '' === $url ) {
-			return '<span class="adam-admin-empty">' . esc_html__( 'Sem ficheiro', 'adam-membership' ) . '</span>';
+			return '<span class="adam-admin-document-preview adam-admin-document-preview--empty" aria-label="' . esc_attr__( 'Sem ficheiro', 'adam-membership' ) . '"><span class="dashicons dashicons-minus" aria-hidden="true"></span></span>';
 		}
 
 		if ( is_numeric( $value ) && wp_attachment_is_image( absint( $value ) ) ) {
-			$image = wp_get_attachment_image( absint( $value ), array( 88, 88 ), false, array( 'class' => 'adam-admin-avatar', 'alt' => $fallback_alt ) );
+			$image = wp_get_attachment_image( absint( $value ), array( 64, 64 ), false, array( 'class' => 'adam-admin-document-thumbnail', 'alt' => $fallback_alt ) );
 
 			if ( is_string( $image ) && '' !== $image ) {
-				return $image;
+				return sprintf(
+					'<a class="adam-admin-document-preview" href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">%3$s</a>',
+					esc_url( $url ),
+					esc_attr__( 'Abrir imagem completa', 'adam-membership' ),
+					$image
+				);
 			}
 		}
 
 		$extension = strtoupper( (string) pathinfo( $url, PATHINFO_EXTENSION ) );
+		$is_pdf    = 'PDF' === $extension;
+		$icon      = $is_pdf ? 'dashicons-pdf' : 'dashicons-media-default';
 		$label     = '' !== $extension ? $extension : strtoupper( sanitize_text_field( $meta_key ) );
 
-		return '<span class="adam-admin-avatar-placeholder">' . esc_html( substr( $label, 0, 4 ) ) . '</span>';
+		return sprintf(
+			'<a class="adam-admin-document-preview adam-admin-document-preview--file" href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s"><span class="dashicons %3$s" aria-hidden="true"></span><small>%4$s</small></a>',
+			esc_url( $url ),
+			esc_attr__( 'Abrir documento', 'adam-membership' ),
+			esc_attr( $icon ),
+			esc_html( substr( $label, 0, 4 ) )
+		);
 	}
 
 	/**
@@ -5038,7 +5193,7 @@ final class AdminController {
 			self::ACTION_RESEND_EMAIL => __( 'Email de aprovação reenviado com sucesso.', 'adam-membership' ),
 			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
 			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
-			self::ACTION_REPLACE_DOCUMENT => __( 'Documento substituído com sucesso.', 'adam-membership' ),
+			self::ACTION_REPLACE_DOCUMENT => __( 'Documento carregado com sucesso.', 'adam-membership' ),
 			self::ACTION_REMOVE_DOCUMENT  => __( 'Documento removido com sucesso.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};

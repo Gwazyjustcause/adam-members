@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>ADAM Admin Documents Layout</title>
+	<link rel="stylesheet" href="../assets/css/admin.css">
+	<style>
+		body { margin: 0; padding: 24px; background: #f0f0f1; font-family: Arial, sans-serif; }
+		.button { display: inline-block; box-sizing: border-box; min-height: 30px; padding: 4px 10px; border: 1px solid #2271b1; border-radius: 3px; background: #fff; color: #2271b1; line-height: 20px; text-decoration: none; }
+		.button-primary { background: #2271b1; color: #fff; }
+		.dashicons { display: inline-block; }
+	</style>
+</head>
+<body>
+	<div class="adam-admin-wrap">
+		<div class="adam-admin-member-layout">
+			<div class="adam-admin-panel adam-card adam-admin-documents-panel">
+				<h2>Documentos submetidos</h2>
+				<div class="adam-admin-document-list" role="table" aria-label="Documentos submetidos">
+					<div class="adam-admin-document-list__header" role="row">
+						<span>Documento</span><span>Estado</span><span>Pré-visualização</span><span>Fluxo</span><span>Data de envio</span><span>Ações</span>
+					</div>
+					<div class="adam-admin-document-row" role="row">
+						<div class="adam-admin-document-cell adam-admin-document-cell--name" data-label="Documento"><strong>Fotografia</strong><span class="adam-admin-document-filename" title="fotografia-de-perfil-com-um-nome-muito-longo.jpg">fotografia-de-perfil-com-um-nome-muito-longo.jpg</span></div>
+						<div class="adam-admin-document-cell" data-label="Estado"><span class="adam-admin-badge quota-active">Submetido</span></div>
+						<div class="adam-admin-document-cell adam-admin-document-cell--preview" data-label="Pré-visualização"><a class="adam-admin-document-preview adam-admin-document-preview--file" href="#"><span class="dashicons">🖼️</span><small>JPG</small></a></div>
+						<div class="adam-admin-document-cell" data-label="Fluxo">Inscrição</div>
+						<div class="adam-admin-document-cell" data-label="Data de envio">28/07/2026 12:00</div>
+						<div class="adam-admin-document-cell adam-admin-document-actions" data-label="Ações">
+							<div class="adam-admin-document-links"><a class="button" href="#">Abrir</a><a class="button" href="#">Descarregar</a></div>
+							<form class="adam-admin-document-upload-form"><input type="file"><button class="button button-primary">Substituir</button></form>
+							<form class="adam-admin-inline-form"><button class="button">Remover</button></form>
+						</div>
+					</div>
+					<div class="adam-admin-document-row" role="row">
+						<div class="adam-admin-document-cell adam-admin-document-cell--name" data-label="Documento"><strong>Comprovativo de Pagamento</strong><span class="adam-admin-document-filename">Sem ficheiro</span></div>
+						<div class="adam-admin-document-cell" data-label="Estado"><span class="adam-admin-badge quota-expired">Em falta</span></div>
+						<div class="adam-admin-document-cell adam-admin-document-cell--preview" data-label="Pré-visualização"><span class="adam-admin-document-preview adam-admin-document-preview--empty">—</span></div>
+						<div class="adam-admin-document-cell" data-label="Fluxo">Inscrição</div>
+						<div class="adam-admin-document-cell" data-label="Data de envio">—</div>
+						<div class="adam-admin-document-cell adam-admin-document-actions" data-label="Ações"><form class="adam-admin-document-upload-form"><input type="file"><button class="button button-primary">Carregar</button></form></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

@@ -368,6 +368,169 @@
 	font-weight: 800;
 }
 
+.adam-admin-documents-panel {
+	grid-column: 1 / -1;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.adam-admin-document-list {
+	min-width: 0;
+	border: 1px solid var(--adam-admin-border);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.adam-admin-document-list__header,
+.adam-admin-document-row {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1.2fr)
+		minmax(88px, 0.6fr)
+		72px
+		minmax(0, 0.9fr)
+		minmax(105px, 0.8fr)
+		minmax(190px, 1.5fr);
+	gap: 12px;
+	align-items: center;
+	min-width: 0;
+}
+
+.adam-admin-document-list__header {
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--adam-admin-border);
+	background: var(--adam-surface, #f6f7f7);
+	color: var(--adam-admin-ink);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.adam-admin-document-row {
+	padding: 14px;
+	border-bottom: 1px solid var(--adam-admin-border);
+	background: var(--adam-surface, #fff);
+}
+
+.adam-admin-document-row:nth-child(odd) {
+	background: var(--adam-surface, #fbfcfb);
+}
+
+.adam-admin-document-row:last-child {
+	border-bottom: 0;
+}
+
+.adam-admin-document-cell {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.adam-admin-document-cell--name {
+	display: grid;
+	gap: 5px;
+}
+
+.adam-admin-document-filename {
+	display: block;
+	max-width: 100%;
+	overflow: hidden;
+	color: var(--adam-admin-muted);
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.adam-admin-document-cell--preview {
+	display: flex;
+	justify-content: flex-start;
+}
+
+.adam-admin-document-preview {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	border: 1px solid var(--adam-admin-border);
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--adam-surface, #fff);
+	color: var(--adam-admin-green-dark);
+	text-decoration: none;
+}
+
+.adam-admin-document-preview:hover,
+.adam-admin-document-preview:focus {
+	border-color: var(--adam-admin-green);
+	color: var(--adam-admin-green);
+	box-shadow: 0 0 0 2px var(--adam-primary-soft, rgba(47, 107, 59, 0.12));
+}
+
+.adam-admin-document-thumbnail {
+	display: block;
+	width: 48px;
+	height: 48px;
+	object-fit: cover;
+}
+
+.adam-admin-document-preview--file {
+	position: relative;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.adam-admin-document-preview--file .dashicons {
+	width: 22px;
+	height: 22px;
+	font-size: 22px;
+	line-height: 22px;
+}
+
+.adam-admin-document-preview--file small {
+	margin: 0;
+	font-size: 9px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.adam-admin-document-preview--empty {
+	border-style: dashed;
+	color: var(--adam-admin-muted);
+}
+
+.adam-admin-document-actions,
+.adam-admin-document-links {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-width: 0;
+}
+
+.adam-admin-document-actions {
+	align-items: stretch;
+	flex-direction: column;
+}
+
+.adam-admin-document-upload-form {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 6px;
+	align-items: center;
+	min-width: 0;
+	margin: 0;
+}
+
+.adam-admin-document-upload-form input[type="file"] {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	font-size: 11px;
+}
+
+.adam-admin-document-actions .adam-admin-inline-form {
+	align-self: flex-start;
+}
+
 .adam-admin-badge {
 	display: inline-flex;
 	align-items: center;
@@ -1082,6 +1245,39 @@
 		grid-template-columns: repeat(3, minmax(150px, 1fr));
 	}
 
+	.adam-admin-document-list__header {
+		display: none;
+	}
+
+	.adam-admin-document-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		align-items: start;
+	}
+
+	.adam-admin-document-cell {
+		display: grid;
+		grid-template-columns: 112px minmax(0, 1fr);
+		gap: 10px;
+		align-items: center;
+	}
+
+	.adam-admin-document-cell::before {
+		content: attr(data-label);
+		color: var(--adam-admin-muted);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+	}
+
+	.adam-admin-document-cell--name,
+	.adam-admin-document-actions {
+		grid-column: 1 / -1;
+	}
+
+	.adam-admin-document-cell--preview {
+		justify-content: initial;
+	}
+
 	.adam-admin-shortcut-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -1112,6 +1308,28 @@
 
 	.adam-admin-checkbox-field--catalog {
 		grid-column: auto;
+	}
+
+	.adam-admin-document-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.adam-admin-document-cell {
+		grid-template-columns: minmax(88px, 0.35fr) minmax(0, 1fr);
+	}
+
+	.adam-admin-document-upload-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.adam-admin-document-upload-form .button,
+	.adam-admin-document-links,
+	.adam-admin-document-links .button {
+		width: 100%;
+	}
+
+	.adam-admin-document-links .button {
+		text-align: center;
 	}
 
 	.adam-admin-filters,
