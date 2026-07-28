@@ -127,15 +127,15 @@ final class MembershipForms {
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>>
 							<span><?php esc_html_e( 'Não, pretendo inscrever-me na ANA através da ADAM', 'adam-membership' ); ?></span>
-							<div class="adam-ana-information" data-adam-ana-information <?php echo 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ? '' : 'hidden'; ?>>
-								<strong><?php esc_html_e( 'Informação', 'adam-membership' ); ?></strong>
-								<p><?php esc_html_e( 'A inscrição na ANA efetuada através da ADAM já inclui o seguro de responsabilidade civil, não sendo necessária a contratação de um seguro adicional para esse efeito.', 'adam-membership' ); ?></p>
-							</div>
 						</label>
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['membership_mode'] ?? '' ) ); ?>>
 							<span><?php esc_html_e( 'Sim, já pertenço a uma APD de Airsoft', 'adam-membership' ); ?></span>
 						</label>
+					</div>
+					<div class="adam-ana-information" data-adam-ana-information hidden>
+						<strong><?php esc_html_e( 'Informação', 'adam-membership' ); ?></strong>
+						<p><?php esc_html_e( 'A inscrição na ANA efetuada através da ADAM já inclui o seguro de responsabilidade civil, não sendo necessária a contratação de um seguro adicional para esse efeito.', 'adam-membership' ); ?></p>
 					</div>
 				</div>
 
@@ -566,12 +566,30 @@ final class MembershipForms {
 		if ( ! $config['enabled'] ) {
 			return;
 		}
+
+		$is_registration_nif = 'registration' === $form && 'nif' === $field;
+		$feedback_id         = $is_registration_nif ? wp_unique_id( 'adam-membership-nif-feedback-' ) : '';
 		?>
 		<label class="adam-form-field <?php echo esc_attr( $extra_class ); ?>">
 			<span><?php echo esc_html( $config['label'] . ( $config['required'] ? ' *' : '' ) ); ?></span>
-			<input type="<?php echo esc_attr( $type ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) ( $values[ $field ] ?? '' ) ); ?>">
+			<input
+				type="<?php echo esc_attr( $type ); ?>"
+				name="<?php echo esc_attr( $field ); ?>"
+				value="<?php echo esc_attr( (string) ( $values[ $field ] ?? '' ) ); ?>"
+				<?php if ( $is_registration_nif ) : ?>
+					inputmode="numeric"
+					maxlength="9"
+					pattern="[0-9]{9}"
+					autocomplete="off"
+					aria-describedby="<?php echo esc_attr( $feedback_id ); ?>"
+					data-adam-nif-input
+				<?php endif; ?>
+			>
 			<?php if ( '' !== $config['help'] ) : ?>
 				<small><?php echo esc_html( $config['help'] ); ?></small>
+			<?php endif; ?>
+			<?php if ( $is_registration_nif ) : ?>
+				<small id="<?php echo esc_attr( $feedback_id ); ?>" class="adam-nif-feedback" role="status" aria-live="polite" hidden data-adam-nif-feedback></small>
 			<?php endif; ?>
 		</label>
 		<?php
@@ -981,11 +999,6 @@ final class MembershipForms {
 			return;
 		}
 
-		if ( 'registration' === $form && 'nif' === $field ) {
-			$this->render_nif_field( $config, $values );
-			return;
-		}
-
 		$type        = (string) ( $config['type'] ?? 'text' );
 		$field_class = $this->field_layout_class( $type );
 		$label       = (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' );
@@ -1060,26 +1073,6 @@ final class MembershipForms {
 		};
 
 		$this->render_text_field( $form, $field, $values, $input_type, $field_class );
-	}
-
-	/**
-	 * Render the registration NIF field with live-validation feedback.
-	 *
-	 * @param array<string, mixed> $config Field configuration.
-	 * @param array<string, mixed> $values Form values.
-	 */
-	private function render_nif_field( array $config, array $values ): void {
-		$feedback_id = wp_unique_id( 'adam-membership-nif-feedback-' );
-		?>
-		<label class="adam-form-field adam-nif-field">
-			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
-			<input type="text" name="nif" value="<?php echo esc_attr( (string) ( $values['nif'] ?? '' ) ); ?>" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" autocomplete="off" aria-describedby="<?php echo esc_attr( $feedback_id ); ?>" <?php required( ! empty( $config['required'] ) ); ?> data-adam-nif-input>
-			<?php if ( '' !== (string) $config['help'] ) : ?>
-				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
-			<?php endif; ?>
-			<small id="<?php echo esc_attr( $feedback_id ); ?>" class="adam-nif-feedback" role="status" aria-live="polite" hidden data-adam-nif-feedback></small>
-		</label>
-		<?php
 	}
 
 	/**

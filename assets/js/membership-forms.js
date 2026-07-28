@@ -31,7 +31,7 @@
 		node.hidden = ! visible;
 	}
 
-	function syncFormState( form ) {
+	function syncFormState( form, updateAnaInformation ) {
 		var registrationMode = form.querySelector( 'input[name="membership_mode"]:checked' );
 		var renewalMode = form.querySelector( 'input[name="renewal_mode"]:checked' );
 		var profileChanged = form.querySelector( 'input[name="profile_changed"]:checked' );
@@ -51,11 +51,13 @@
 			'[data-adam-conditional="renewal-profile"]',
 			Boolean( profileChanged && '1' === profileChanged.value )
 		);
-		toggleConditional(
-			form,
-			'[data-adam-ana-information]',
-			Boolean( registrationMode && 'adam_primary' === registrationMode.value )
-		);
+		if ( updateAnaInformation ) {
+			toggleConditional(
+				form,
+				'[data-adam-ana-information]',
+				Boolean( registrationMode && 'adam_primary' === registrationMode.value )
+			);
+		}
 		updateFee( form );
 	}
 
@@ -257,11 +259,31 @@
 			return;
 		}
 
-		syncFormState( form );
+		syncFormState(
+			form,
+			target.matches( 'input[name="membership_mode"]' )
+		);
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		var target = event.target;
+
+		if (
+			!( target instanceof HTMLElement ) ||
+			! target.matches( 'input[name="membership_mode"]' )
+		) {
+			return;
+		}
+
+		var form = target.closest( '.adam-membership-native-form' );
+
+		if ( form ) {
+			syncFormState( form, true );
+		}
 	} );
 
 	document.querySelectorAll( '.adam-membership-native-form' ).forEach( function ( form ) {
-		syncFormState( form );
+		syncFormState( form, false );
 		initializeNifValidation( form );
 	} );
 }() );
