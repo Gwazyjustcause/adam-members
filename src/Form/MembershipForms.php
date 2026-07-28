@@ -122,15 +122,19 @@ final class MembershipForms {
 				<?php wp_nonce_field( 'adam_membership_registration_form' ); ?>
 
 				<div class="adam-form-section">
-					<h4><?php esc_html_e( "J\u{00E1} pertence a outra associa\u{00E7}\u{00E3}o de airsoft?", 'adam-membership' ); ?></h4>
+					<h4><?php esc_html_e( 'Já pertence a uma APD de Airsoft?', 'adam-membership' ); ?></h4>
 					<div class="adam-choice-grid">
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( "N\u{00E3}o, a ADAM ser\u{00E1} a minha associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
+							<span><?php esc_html_e( 'Não, pretendo inscrever-me na ANA através da ADAM', 'adam-membership' ); ?></span>
+							<div class="adam-ana-information" data-adam-ana-information <?php echo 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ? '' : 'hidden'; ?>>
+								<strong><?php esc_html_e( 'Informação', 'adam-membership' ); ?></strong>
+								<p><?php esc_html_e( 'A inscrição na ANA efetuada através da ADAM já inclui o seguro de responsabilidade civil, não sendo necessária a contratação de um seguro adicional para esse efeito.', 'adam-membership' ); ?></p>
+							</div>
 						</label>
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="membership_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['membership_mode'] ?? '' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( "Sim, j\u{00E1} perten\u{00E7}o a outra associa\u{00E7}\u{00E3}o de airsoft \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
+							<span><?php esc_html_e( 'Sim, já pertenço a uma APD de Airsoft', 'adam-membership' ); ?></span>
 						</label>
 					</div>
 				</div>
@@ -311,6 +315,20 @@ final class MembershipForms {
 		$this->validate_email_field( 'registration', 'email', $values, $errors );
 		$this->validate_text_field( 'registration', 'citizen_card', $values, $errors );
 		$this->validate_text_field( 'registration', 'nif', $values, $errors );
+
+		$nif = $this->registration->validate_nif( $values['nif'] ?? '' );
+
+		if ( $nif instanceof WP_Error ) {
+			$errors[] = $nif->get_error_message();
+
+			return array(
+				'values' => $values,
+				'errors' => $errors,
+			);
+		}
+
+		$values['nif'] = $nif;
+
 		$this->validate_date_field( 'registration', 'birth_date', $values, $errors );
 		$this->validate_text_field( 'registration', 'phone', $values, $errors );
 		$this->validate_text_field( 'registration', 'address_line_1', $values, $errors );
@@ -483,6 +501,11 @@ final class MembershipForms {
 				array(
 					'primaryFee'   => $this->format_fee( (string) $this->settings()['fees']['primary'] ),
 					'secondaryFee' => $this->format_fee( (string) $this->settings()['fees']['secondary'] ),
+					'nifValidationUrl' => admin_url( 'admin-ajax.php' ),
+					'nifValidationNonce' => wp_create_nonce( 'adam_membership_nif_validation' ),
+					'nifInvalidMessage' => __( 'O NIF introduzido não é válido. Verifique o número e tente novamente.', 'adam-membership' ),
+					'nifDuplicateMessage' => __( 'Já existe uma inscrição associada a este NIF. Se pretende renovar a sua quota ou atualizar os seus dados, utilize o formulário de renovação em vez de criar uma nova inscrição.', 'adam-membership' ),
+					'nifCheckErrorMessage' => __( 'Não foi possível verificar o NIF neste momento. Tente novamente.', 'adam-membership' ),
 				)
 			) . ';',
 			'before'
@@ -958,6 +981,11 @@ final class MembershipForms {
 			return;
 		}
 
+		if ( 'registration' === $form && 'nif' === $field ) {
+			$this->render_nif_field( $config, $values );
+			return;
+		}
+
 		$type        = (string) ( $config['type'] ?? 'text' );
 		$field_class = $this->field_layout_class( $type );
 		$label       = (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' );
@@ -1032,6 +1060,26 @@ final class MembershipForms {
 		};
 
 		$this->render_text_field( $form, $field, $values, $input_type, $field_class );
+	}
+
+	/**
+	 * Render the registration NIF field with live-validation feedback.
+	 *
+	 * @param array<string, mixed> $config Field configuration.
+	 * @param array<string, mixed> $values Form values.
+	 */
+	private function render_nif_field( array $config, array $values ): void {
+		$feedback_id = wp_unique_id( 'adam-membership-nif-feedback-' );
+		?>
+		<label class="adam-form-field adam-nif-field">
+			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
+			<input type="text" name="nif" value="<?php echo esc_attr( (string) ( $values['nif'] ?? '' ) ); ?>" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" autocomplete="off" aria-describedby="<?php echo esc_attr( $feedback_id ); ?>" <?php required( ! empty( $config['required'] ) ); ?> data-adam-nif-input>
+			<?php if ( '' !== (string) $config['help'] ) : ?>
+				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+			<?php endif; ?>
+			<small id="<?php echo esc_attr( $feedback_id ); ?>" class="adam-nif-feedback" role="status" aria-live="polite" hidden data-adam-nif-feedback></small>
+		</label>
+		<?php
 	}
 
 	/**

@@ -48,7 +48,33 @@ final class UserRegistration {
 	 * Register WordPress hooks.
 	 */
 	public function register(): void {
+		add_filter( 'forminator_custom_form_submit_errors', array( $this, 'validate_nif' ), 10, 3 );
 		add_action( 'forminator_custom_form_after_save_entry', array( $this, 'handle_submission' ), 10, 3 );
+	}
+
+	/**
+	 * Reject invalid or duplicate NIFs before Forminator stores the entry.
+	 *
+	 * @param array<int, mixed> $submit_errors   Existing validation errors.
+	 * @param mixed             $form_id         Forminator form ID.
+	 * @param mixed             $field_data_array Submitted field data.
+	 * @return array<int, mixed>
+	 */
+	public function validate_nif( array $submit_errors, mixed $form_id, mixed $field_data_array ): array {
+		if ( $this->config->form_id() !== absint( $form_id ) || ! is_array( $field_data_array ) ) {
+			return $submit_errors;
+		}
+
+		$submission = new SubmissionData( $field_data_array, $this->config );
+		$result     = $this->registration->validate_nif( $submission->get_string( 'nif' ) );
+
+		if ( is_wp_error( $result ) ) {
+			$submit_errors[] = array(
+				$this->config->field( 'nif' ) => $result->get_error_message(),
+			);
+		}
+
+		return $submit_errors;
 	}
 
 	/**

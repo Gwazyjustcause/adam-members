@@ -163,6 +163,57 @@
 	line-height: 1.45;
 }
 
+.adam-ana-information {
+	margin-top: 4px;
+	padding: 12px 14px;
+	border: 1px solid var(--adam-warning-border, #f3c969);
+	border-radius: 12px;
+	background: var(--adam-warning-bg, #fff8db);
+	color: var(--adam-warning-text, #6f4d00);
+	cursor: default;
+}
+
+.adam-ana-information[hidden] {
+	display: none !important;
+}
+
+.adam-ana-information strong {
+	display: block;
+	margin-bottom: 4px;
+	color: inherit;
+}
+
+.adam-ana-information p {
+	margin: 0;
+	color: inherit;
+	font-size: 0.92rem;
+	font-weight: 500;
+	line-height: 1.5;
+}
+
+.adam-nif-feedback {
+	padding: 9px 11px;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	font-weight: 700;
+}
+
+.adam-nif-feedback[hidden] {
+	display: none !important;
+}
+
+.adam-nif-feedback--error {
+	border-color: var(--adam-danger, #fecdd3);
+	background: var(--adam-danger-bg, #fff1f2);
+	color: var(--adam-danger, #9f1239);
+}
+
+.adam-nif-feedback--warning {
+	border-color: var(--adam-warning-border, #f3c969);
+	background: var(--adam-warning-bg, #fff8db);
+	color: var(--adam-warning-text, #6f4d00);
+}
+
 .adam-inline-choice {
 	display: flex;
 	flex-wrap: wrap;
@@ -305,6 +356,13 @@
 
 .adam-membership-native-form button[type="submit"] {
 	appearance: none;
+}
+
+.adam-membership-native-form button[type="submit"]:disabled {
+	background: var(--adam-disabled-bg, #d1d5db);
+	box-shadow: none;
+	color: var(--adam-disabled-text, #6b7280);
+	cursor: not-allowed;
 }
 
 .adam-form-actions .adam-card-link:hover,

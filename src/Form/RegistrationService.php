@@ -14,6 +14,8 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\Member;
+use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\NifValidator;
 use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
@@ -27,12 +29,53 @@ final class RegistrationService {
 	private AccountSetup $account_setup;
 	private TeamRepository $teams;
 
-	public function __construct( Logger $logger, HistoryService $history, EmailService $email, AccountSetup $account_setup, TeamRepository $teams ) {
+	/**
+	 * Member repository.
+	 *
+	 * @var MemberRepository
+	 */
+	private MemberRepository $members;
+
+	/**
+	 * Create the registration service.
+	 *
+	 * @param Logger             $logger        Logger helper.
+	 * @param HistoryService     $history       History service.
+	 * @param EmailService       $email         Email service.
+	 * @param AccountSetup       $account_setup Account setup service.
+	 * @param TeamRepository     $teams         Team repository.
+	 * @param MemberRepository   $members       Member repository.
+	 */
+	public function __construct( Logger $logger, HistoryService $history, EmailService $email, AccountSetup $account_setup, TeamRepository $teams, MemberRepository $members ) {
 		$this->logger        = $logger;
 		$this->history       = $history;
 		$this->email         = $email;
 		$this->account_setup = $account_setup;
 		$this->teams         = $teams;
+		$this->members       = $members;
+	}
+
+	/**
+	 * Validate and normalize a registration NIF.
+	 *
+	 * @param mixed $value Submitted NIF.
+	 * @return string|WP_Error
+	 */
+	public function validate_nif( mixed $value ): string|WP_Error {
+		$nif = NifValidator::normalize( $value );
+
+		if ( ! NifValidator::is_valid( $nif ) ) {
+			return new WP_Error(
+				'adam_membership_invalid_nif',
+				__( 'O NIF introduzido não é válido. Verifique o número e tente novamente.', 'adam-membership' )
+			);
+		}
+
+		if ( $this->members->nif_exists( $nif ) ) {
+			return $this->duplicate_nif_error();
+		}
+
+		return $nif;
 	}
 
 	/**
@@ -44,6 +87,13 @@ final class RegistrationService {
 	 */
 	public function register( array $payload, int $entry_id = 0 ): Member|WP_Error {
 		$email = sanitize_email( (string) ( $payload['email'] ?? '' ) );
+		$nif   = $this->validate_nif( $payload['nif'] ?? '' );
+
+		if ( $nif instanceof WP_Error ) {
+			return $nif;
+		}
+
+		$payload['nif'] = $nif;
 
 		if ( ! is_email( $email ) ) {
 			return new WP_Error( 'adam_membership_invalid_email', __( 'O endereço de email submetido é inválido.', 'adam-membership' ) );
@@ -63,14 +113,29 @@ final class RegistrationService {
 			return $payload;
 		}
 
-		$user_id = $this->create_user( $payload, $email );
+		$lock = $this->acquire_nif_lock( $nif );
 
-		if ( is_wp_error( $user_id ) ) {
-			return $user_id;
+		if ( $lock instanceof WP_Error ) {
+			return $lock;
 		}
 
-		$member = new Member( (int) $user_id );
-		$member->initialize( $this->build_member_data( $payload ) );
+		try {
+			if ( $this->members->nif_exists( $nif ) ) {
+				return $this->duplicate_nif_error();
+			}
+
+			$user_id = $this->create_user( $payload, $email );
+
+			if ( is_wp_error( $user_id ) ) {
+				return $user_id;
+			}
+
+			$member = new Member( (int) $user_id );
+			$member->initialize( $this->build_member_data( $payload ) );
+		} finally {
+			$this->release_nif_lock( $lock );
+		}
+
 		$user = get_user_by( 'ID', (int) $user_id );
 
 		if ( $user instanceof \WP_User ) {
@@ -99,6 +164,73 @@ final class RegistrationService {
 		$this->history->registration_submitted( $member, $entry_id );
 
 		return $member;
+	}
+
+	/**
+	 * Return the canonical duplicate-NIF error.
+	 */
+	private function duplicate_nif_error(): WP_Error {
+		return new WP_Error(
+			'adam_membership_duplicate_nif',
+			__( 'Já existe uma inscrição associada a este NIF. Se pretende renovar a sua quota ou atualizar os seus dados, utilize o formulário de renovação em vez de criar uma nova inscrição.', 'adam-membership' )
+		);
+	}
+
+	/**
+	 * Acquire an atomic, short-lived lock for a NIF registration.
+	 *
+	 * @param string $nif Normalized NIF.
+	 * @return array{key:string,token:string}|WP_Error
+	 */
+	private function acquire_nif_lock( string $nif ): array|WP_Error {
+		$key     = 'adam_membership_nif_lock_' . hash( 'sha256', $nif );
+		$token   = wp_generate_uuid4();
+		$payload = array(
+			'token'      => $token,
+			'created_at' => time(),
+		);
+
+		if ( add_option( $key, $payload, '', false ) ) {
+			return array(
+				'key'   => $key,
+				'token' => $token,
+			);
+		}
+
+		$current = get_option( $key, array() );
+
+		if ( is_array( $current ) && absint( $current['created_at'] ?? 0 ) < time() - 120 ) {
+			delete_option( $key );
+
+			if ( add_option( $key, $payload, '', false ) ) {
+				return array(
+					'key'   => $key,
+					'token' => $token,
+				);
+			}
+		}
+
+		if ( $this->members->nif_exists( $nif ) ) {
+			return $this->duplicate_nif_error();
+		}
+
+		return new WP_Error(
+			'adam_membership_nif_check_in_progress',
+			__( 'Não foi possível confirmar o NIF neste momento. Aguarde alguns segundos e tente novamente.', 'adam-membership' )
+		);
+	}
+
+	/**
+	 * Release a NIF registration lock owned by this request.
+	 *
+	 * @param array{key:string,token:string} $lock Lock details.
+	 */
+	private function release_nif_lock( array $lock ): void {
+		$current = get_option( $lock['key'], array() );
+
+		if ( is_array( $current ) && hash_equals( $lock['token'], (string) ( $current['token'] ?? '' ) ) ) {
+			delete_option( $lock['key'] );
+		}
 	}
 
 	/**

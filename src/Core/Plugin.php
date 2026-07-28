@@ -26,6 +26,7 @@ use AdamMembership\Document\DocumentRepository;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Form\MembershipForms;
+use AdamMembership\Form\NifValidationController;
 use AdamMembership\Form\RegistrationService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
@@ -137,7 +138,7 @@ final class Plugin {
 		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
 		$config                    = new RegistrationFormConfig();
 		$account_setup             = new AccountSetup( $settings, $members, $history );
-		$registration_service      = new RegistrationService( $logger, $history, $email, $account_setup, $teams );
+		$registration_service      = new RegistrationService( $logger, $history, $email, $account_setup, $teams, $members );
 		$registration              = new UserRegistration( $config, $logger, $registration_service );
 		$renewal_submission        = new RenewalSubmission( $renewals, $logger );
 
@@ -147,6 +148,7 @@ final class Plugin {
 		add_action( 'wp_loaded', array( $rewards, 'ensure_initial_catalogue' ), 5 );
 
 		$registration->register();
+		( new NifValidationController( $registration_service ) )->register();
 		$renewal_submission->register();
 		( new EventFrontend( $events, $members, $logger, $settings ) )->register();
 		$maintenance->register();

@@ -232,6 +232,32 @@ final class MemberRepository {
 	}
 
 	/**
+	 * Determine whether a NIF is already assigned to another ADAM member.
+	 *
+	 * @param string $nif             Normalized NIF.
+	 * @param int    $exclude_user_id User ID to exclude from the check.
+	 */
+	public function nif_exists( string $nif, int $exclude_user_id = 0 ): bool {
+		$nif = NifValidator::canonicalize_stored( $nif );
+
+		if ( '' === $nif ) {
+			return false;
+		}
+
+		foreach ( $this->all_members() as $member ) {
+			if ( $member->user_id() === $exclude_user_id ) {
+				continue;
+			}
+
+			if ( $nif === NifValidator::canonicalize_stored( $member->field( 'nif' ) ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Determine whether a founder number is already assigned to another member.
 	 *
 	 * @param int $founder_number   Founder number.
