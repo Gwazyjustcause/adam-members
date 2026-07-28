@@ -125,7 +125,7 @@ final class MembershipForms {
 					<h4><?php esc_html_e( 'Já pertence a uma APD de Airsoft?', 'adam-membership' ); ?></h4>
 					<div class="adam-choice-grid">
 						<label class="adam-choice-card adam-card">
-							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'external_association' !== (string) ( $values['membership_mode'] ?? '' ) ); ?>>
+							<input type="radio" name="membership_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['membership_mode'] ?? '' ) ); ?> required>
 							<span><?php esc_html_e( 'Não, pretendo inscrever-me na ANA através da ADAM', 'adam-membership' ); ?></span>
 						</label>
 						<label class="adam-choice-card adam-card">
@@ -299,7 +299,7 @@ final class MembershipForms {
 		$values = $this->posted_values();
 
 		if ( 'registration' !== (string) ( $values['adam_membership_form_action'] ?? '' ) ) {
-			return array( 'values' => array( 'membership_mode' => 'adam_primary' ) );
+			return array( 'values' => array() );
 		}
 
 		$errors = array();
@@ -308,8 +308,13 @@ final class MembershipForms {
 			$errors[] = __( "N\u{00E3}o foi poss\u{00ED}vel validar a submiss\u{00E3}o da inscri\u{00E7}\u{00E3}o.", 'adam-membership' );
 		}
 
-		$mode     = 'external_association' === (string) ( $values['membership_mode'] ?? '' ) ? 'external_association' : 'adam_primary';
+		$mode     = (string) ( $values['membership_mode'] ?? '' );
 		$settings = $this->settings();
+
+		if ( ! in_array( $mode, array( 'adam_primary', 'external_association' ), true ) ) {
+			$errors[] = __( 'Selecione uma das opções da pergunta sobre a APD para continuar.', 'adam-membership' );
+			$mode     = '';
+		}
 
 		$this->validate_text_field( 'registration', 'full_name', $values, $errors );
 		$this->validate_email_field( 'registration', 'email', $values, $errors );
