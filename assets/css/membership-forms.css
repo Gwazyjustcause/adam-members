@@ -52,6 +52,7 @@
 .adam-form-field input[type="tel"],
 .adam-form-field input[type="number"],
 .adam-form-field input[type="date"],
+.adam-form-field input[type="search"],
 .adam-form-field input[type="file"],
 .adam-form-field select,
 .adam-form-field textarea {
@@ -84,6 +85,7 @@
 .adam-form-field input[type="tel"]:focus,
 .adam-form-field input[type="number"]:focus,
 .adam-form-field input[type="date"]:focus,
+.adam-form-field input[type="search"]:focus,
 .adam-form-field input[type="file"]:focus,
 .adam-form-field select:focus,
 .adam-form-field textarea:focus {
@@ -96,6 +98,16 @@
 .adam-payment-panel__notes {
 	color: var(--adam-muted, var(--adam-text-muted, #5d6b7c));
 	line-height: 1.5;
+}
+
+.adam-searchable-select {
+	display: grid;
+	gap: 8px;
+}
+
+.adam-searchable-select__empty {
+	color: var(--adam-warning-text, #6f4d00);
+	font-weight: 700;
 }
 
 .adam-form-section,

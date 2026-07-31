@@ -246,6 +246,58 @@
 		}
 	}
 
+	function normalizeSearchValue( value ) {
+		return value
+			.normalize( 'NFD' )
+			.replace( /[\u0300-\u036f]/g, '' )
+			.toLocaleLowerCase( 'pt-PT' )
+			.trim();
+	}
+
+	function initializeSearchableSelect( container ) {
+		var search = container.querySelector( '[data-adam-select-search]' );
+		var select = container.querySelector( '[data-adam-select-options]' );
+		var empty = container.querySelector( '[data-adam-select-empty]' );
+
+		if ( ! search || ! select ) {
+			return;
+		}
+
+		function filterOptions() {
+			var query = normalizeSearchValue( search.value );
+			var matches = 0;
+
+			Array.from( select.options ).forEach( function ( option, index ) {
+				if ( 0 === index ) {
+					option.hidden = false;
+					option.disabled = false;
+					return;
+				}
+
+				var matchesQuery = '' === query || normalizeSearchValue( option.textContent || '' ).includes( query );
+				var shouldShow = matchesQuery || option.selected;
+
+				option.hidden = ! shouldShow;
+				option.disabled = ! shouldShow;
+
+				if ( matchesQuery ) {
+					matches += 1;
+				}
+			} );
+
+			if ( empty ) {
+				empty.hidden = matches > 0;
+			}
+		}
+
+		search.addEventListener( 'input', filterOptions );
+		select.addEventListener( 'change', function () {
+			search.value = '';
+			filterOptions();
+		} );
+		filterOptions();
+	}
+
 	document.addEventListener( 'change', function ( event ) {
 		var target = event.target;
 
@@ -286,4 +338,6 @@
 		syncFormState( form, false );
 		initializeNifValidation( form );
 	} );
+
+	document.querySelectorAll( '[data-adam-searchable-select]' ).forEach( initializeSearchableSelect );
 }() );

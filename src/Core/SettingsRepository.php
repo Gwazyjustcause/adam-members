@@ -241,6 +241,7 @@ final class SettingsRepository {
 			)
 		);
 		$settings = $this->upgrade_registration_field_labels( $settings );
+		$settings = $this->apply_registration_select_catalogs( $settings );
 
 		$settings['registration_fields'] = $this->enrich_form_field_settings( (array) $settings['registration_fields'], 'registration' );
 		$settings['renewal_fields']      = $this->enrich_form_field_settings( (array) $settings['renewal_fields'], 'renewal' );
@@ -276,6 +277,27 @@ final class SettingsRepository {
 		}
 
 		$settings['registration_fields'] = $fields;
+
+		return $settings;
+	}
+
+	/**
+	 * Keep the protected registration catalogues canonical across upgrades.
+	 *
+	 * @param array<string, mixed> $settings Merged form settings.
+	 * @return array<string, mixed>
+	 */
+	private function apply_registration_select_catalogs( array $settings ): array {
+		if ( ! isset( $settings['registration_fields'] ) || ! is_array( $settings['registration_fields'] ) ) {
+			return $settings;
+		}
+
+		$settings['registration_fields']['profession']['type']       = 'select';
+		$settings['registration_fields']['profession']['options']    = RegistrationFieldCatalog::profession_sector_options();
+		$settings['registration_fields']['profession']['help']       = 'Pesquise e selecione o setor profissional correspondente.';
+		$settings['registration_fields']['nationality']['type']      = 'select';
+		$settings['registration_fields']['nationality']['options']   = RegistrationFieldCatalog::nationality_country_options();
+		$settings['registration_fields']['nationality']['help']      = 'Pesquise e selecione um país.';
 
 		return $settings;
 	}
@@ -424,11 +446,11 @@ final class SettingsRepository {
 				),
 				'profession' => array(
 					'label'    => 'Profissão',
-					'help'     => 'Comece a escrever para pesquisar ou introduza outra profissão.',
+					'help'     => 'Pesquise e selecione o setor profissional correspondente.',
 					'enabled'  => true,
 					'required' => true,
 					'type'     => 'select',
-					'options'  => "Administrador(a)\nAdvogado(a)\nArquiteto(a)\nComercial\nContabilista\nDesigner\nEletricista\nEmpresário(a)\nEngenheiro(a)\nEstudante\nFuncionário(a) Público(a)\nGestor(a)\nMecânico(a)\nMédico(a)\nMilitar\nMotorista\nProfessor(a)\nProgramador(a)\nTécnico(a)\nTrabalhador(a) por Conta Própria\nOutra",
+					'options'  => RegistrationFieldCatalog::profession_sector_options(),
 				),
 				'birthplace' => array(
 					'label'    => 'Naturalidade',
@@ -438,11 +460,11 @@ final class SettingsRepository {
 				),
 				'nationality' => array(
 					'label'    => 'Nacionalidade',
-					'help'     => 'Comece a escrever para pesquisar uma nacionalidade.',
+					'help'     => 'Pesquise e selecione um país.',
 					'enabled'  => true,
 					'required' => true,
 					'type'     => 'select',
-					'options'  => "Portuguesa\nAngolana\nBrasileira\nBritânica\nCabo-verdiana\nChinesa\nEspanhola\nFrancesa\nGuineense\nIndiana\nItaliana\nMoçambicana\nNeerlandesa\nRomena\nSão-tomense\nUcraniana",
+					'options'  => RegistrationFieldCatalog::nationality_country_options(),
 				),
 				'email' => array(
 					'label'    => 'Email',

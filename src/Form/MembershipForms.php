@@ -320,9 +320,9 @@ final class MembershipForms {
 		$this->validate_text_field( 'registration', 'full_name', $values, $errors );
 		$this->validate_text_field( 'registration', 'marital_status', $values, $errors );
 		$this->validate_text_field( 'registration', 'gender', $values, $errors );
-		$this->validate_text_field( 'registration', 'profession', $values, $errors );
+		$this->validate_catalog_field( 'registration', 'profession', $values, $errors );
 		$this->validate_text_field( 'registration', 'birthplace', $values, $errors );
-		$this->validate_text_field( 'registration', 'nationality', $values, $errors );
+		$this->validate_catalog_field( 'registration', 'nationality', $values, $errors );
 		$this->validate_email_field( 'registration', 'email', $values, $errors );
 		$this->validate_text_field( 'registration', 'citizen_card', $values, $errors );
 		$this->validate_date_field( 'registration', 'document_expiry_date', $values, $errors );
@@ -887,6 +887,31 @@ final class MembershipForms {
 	}
 
 	/**
+	 * Validate a field against its configured, closed option catalogue.
+	 *
+	 * @param string               $form   Form type.
+	 * @param string               $field  Field key.
+	 * @param array<string, mixed> $values Posted values.
+	 * @param array<int, string>   $errors Error list.
+	 */
+	private function validate_catalog_field( string $form, string $field, array $values, array &$errors ): void {
+		$this->validate_text_field( $form, $field, $values, $errors );
+
+		$config = $this->field_config( $form, $field );
+		$value  = (string) ( $values[ $field ] ?? '' );
+
+		if ( ! $config['enabled'] || '' === $value ) {
+			return;
+		}
+
+		$options = $this->parse_field_options( (string) $config['options'] );
+
+		if ( ! array_key_exists( $value, $options ) ) {
+			$errors[] = sprintf( __( 'Selecione uma opção válida para o campo "%s".', 'adam-membership' ), (string) $config['label'] );
+		}
+	}
+
+	/**
 	 * Get the current team name with a legacy-name fallback.
 	 *
 	 * @param Member $member Member record.
@@ -1022,7 +1047,7 @@ final class MembershipForms {
 		}
 
 		if ( in_array( $field, array( 'profession', 'nationality' ), true ) ) {
-			$this->render_editable_datalist_field( $field, $config, $values );
+			$this->render_searchable_select_field( $field, $config, $values );
 			return;
 		}
 
@@ -1139,25 +1164,29 @@ final class MembershipForms {
 	}
 
 	/**
-	 * Render a searchable suggestion list that still accepts a custom value.
+	 * Render a searchable closed select catalogue.
 	 *
 	 * @param string               $field  Field key.
 	 * @param array<string, mixed> $config Field configuration.
 	 * @param array<string, mixed> $values Form values.
 	 */
-	private function render_editable_datalist_field( string $field, array $config, array $values ): void {
-		$list_id = wp_unique_id( 'adam-membership-' . $field . '-options-' );
-		$value   = (string) ( $values[ $field ] ?? '' );
-		$options = $this->parse_field_options( (string) $config['options'] );
+	private function render_searchable_select_field( string $field, array $config, array $values ): void {
+		$select_id = wp_unique_id( 'adam-membership-' . $field . '-' );
+		$value     = 'nationality' === $field && array() === $values ? 'Portugal' : (string) ( $values[ $field ] ?? '' );
+		$options   = $this->parse_field_options( (string) $config['options'] );
 		?>
-		<label class="adam-form-field">
+		<label class="adam-form-field" for="<?php echo esc_attr( $select_id ); ?>">
 			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
-			<input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $value ); ?>" list="<?php echo esc_attr( $list_id ); ?>" maxlength="191" autocomplete="off">
-			<datalist id="<?php echo esc_attr( $list_id ); ?>">
-				<?php foreach ( $options as $option_label ) : ?>
-					<option value="<?php echo esc_attr( $option_label ); ?>"></option>
-				<?php endforeach; ?>
-			</datalist>
+			<div class="adam-searchable-select" data-adam-searchable-select>
+				<input type="search" value="" autocomplete="off" placeholder="<?php esc_attr_e( 'Pesquisar…', 'adam-membership' ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Pesquisar %s', 'adam-membership' ), (string) $config['label'] ) ); ?>" aria-controls="<?php echo esc_attr( $select_id ); ?>" data-adam-select-search>
+				<select id="<?php echo esc_attr( $select_id ); ?>" name="<?php echo esc_attr( $field ); ?>" <?php echo ! empty( $config['required'] ) ? 'required' : ''; ?> data-adam-select-options>
+					<option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
+					<?php foreach ( $options as $option_value => $option_label ) : ?>
+						<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<small class="adam-searchable-select__empty" role="status" hidden data-adam-select-empty><?php esc_html_e( 'Nenhuma opção encontrada.', 'adam-membership' ); ?></small>
+			</div>
 			<?php if ( '' !== (string) $config['help'] ) : ?>
 				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
 			<?php endif; ?>
