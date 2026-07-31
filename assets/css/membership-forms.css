@@ -101,8 +101,99 @@
 }
 
 .adam-searchable-select {
+	position: relative;
+	min-width: 0;
+}
+
+.adam-searchable-select--enhanced > select {
+	display: none;
+}
+
+.adam-searchable-select__trigger {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 12px;
+	align-items: center;
+	gap: 12px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 46px;
+	padding: 12px 14px;
+	border: 1px solid var(--adam-border, #d9e4dc);
+	border-radius: 14px;
+	background: var(--adam-surface, #ffffff);
+	box-shadow: inset 0 1px 2px var(--adam-shadow-color, rgba(16, 32, 51, 0.03));
+	color: var(--adam-ink, var(--adam-text, #102033));
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.adam-searchable-select__trigger[hidden] {
+	display: none;
+}
+
+.adam-searchable-select__trigger:focus-visible,
+.adam-searchable-select__trigger[aria-expanded="true"] {
+	outline: none;
+	border-color: var(--adam-green-600, var(--adam-primary, #3f7a47));
+	box-shadow: 0 0 0 4px var(--adam-shadow-color, rgba(63, 122, 71, 0.12));
+}
+
+.adam-searchable-select__chevron {
+	width: 8px;
+	height: 8px;
+	border-right: 2px solid currentColor;
+	border-bottom: 2px solid currentColor;
+	transform: rotate(45deg) translateY(-2px);
+}
+
+.adam-searchable-select__trigger[aria-expanded="true"] .adam-searchable-select__chevron {
+	transform: rotate(225deg) translate(-2px, -2px);
+}
+
+.adam-searchable-select__panel {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 8px);
+	left: 0;
+	right: 0;
 	display: grid;
 	gap: 8px;
+	padding: 10px;
+	border: 1px solid var(--adam-border, #d9e4dc);
+	border-radius: 14px;
+	background: var(--adam-surface, #ffffff);
+	box-shadow: 0 18px 42px var(--adam-shadow-color, rgba(16, 32, 51, 0.16));
+}
+
+.adam-searchable-select__panel[hidden] {
+	display: none;
+}
+
+.adam-searchable-select__options {
+	display: grid;
+	max-height: 260px;
+	overflow-y: auto;
+}
+
+.adam-searchable-select__option {
+	width: 100%;
+	padding: 10px 12px;
+	border: 0;
+	border-radius: 9px;
+	background: transparent;
+	color: var(--adam-ink, var(--adam-text, #102033));
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.adam-searchable-select__option:hover,
+.adam-searchable-select__option:focus-visible,
+.adam-searchable-select__option[aria-selected="true"] {
+	outline: none;
+	background: var(--adam-highlight, #f0f9f3);
+	color: var(--adam-green-900, var(--adam-text, #173f24));
 }
 
 .adam-searchable-select__empty {

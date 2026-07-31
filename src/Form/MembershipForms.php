@@ -1172,25 +1172,35 @@ final class MembershipForms {
 	 */
 	private function render_searchable_select_field( string $field, array $config, array $values ): void {
 		$select_id = wp_unique_id( 'adam-membership-' . $field . '-' );
+		$label_id  = $select_id . '-label';
+		$panel_id  = $select_id . '-panel';
 		$value     = 'nationality' === $field && array() === $values ? 'Portugal' : (string) ( $values[ $field ] ?? '' );
 		$options   = $this->parse_field_options( (string) $config['options'] );
+		$selected_label = isset( $options[ $value ] ) ? (string) $options[ $value ] : __( 'Selecionar', 'adam-membership' );
 		?>
-		<label class="adam-form-field" for="<?php echo esc_attr( $select_id ); ?>">
-			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
+		<div class="adam-form-field">
+			<span id="<?php echo esc_attr( $label_id ); ?>"><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
 			<div class="adam-searchable-select" data-adam-searchable-select>
-				<input type="search" value="" autocomplete="off" placeholder="<?php esc_attr_e( 'Pesquisar…', 'adam-membership' ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Pesquisar %s', 'adam-membership' ), (string) $config['label'] ) ); ?>" aria-controls="<?php echo esc_attr( $select_id ); ?>" data-adam-select-search>
-				<select id="<?php echo esc_attr( $select_id ); ?>" name="<?php echo esc_attr( $field ); ?>" <?php echo ! empty( $config['required'] ) ? 'required' : ''; ?> data-adam-select-options>
+				<select id="<?php echo esc_attr( $select_id ); ?>" name="<?php echo esc_attr( $field ); ?>" aria-labelledby="<?php echo esc_attr( $label_id ); ?>" data-adam-select-options>
 					<option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
 					<?php foreach ( $options as $option_value => $option_label ) : ?>
 						<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<small class="adam-searchable-select__empty" role="status" hidden data-adam-select-empty><?php esc_html_e( 'Nenhuma opção encontrada.', 'adam-membership' ); ?></small>
+				<button type="button" class="adam-searchable-select__trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="<?php echo esc_attr( $panel_id ); ?>" hidden data-adam-select-trigger>
+					<span data-adam-select-value><?php echo esc_html( $selected_label ); ?></span>
+					<span class="adam-searchable-select__chevron" aria-hidden="true"></span>
+				</button>
+				<div id="<?php echo esc_attr( $panel_id ); ?>" class="adam-searchable-select__panel" hidden data-adam-select-panel>
+					<input type="search" value="" autocomplete="off" placeholder="<?php esc_attr_e( 'Pesquisar…', 'adam-membership' ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Pesquisar %s', 'adam-membership' ), (string) $config['label'] ) ); ?>" data-adam-select-search>
+					<div class="adam-searchable-select__options" role="listbox" aria-labelledby="<?php echo esc_attr( $label_id ); ?>" data-adam-select-results></div>
+					<small class="adam-searchable-select__empty" role="status" hidden data-adam-select-empty><?php esc_html_e( 'Nenhuma opção encontrada.', 'adam-membership' ); ?></small>
+				</div>
 			</div>
 			<?php if ( '' !== (string) $config['help'] ) : ?>
 				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
 			<?php endif; ?>
-		</label>
+		</div>
 		<?php
 	}
 

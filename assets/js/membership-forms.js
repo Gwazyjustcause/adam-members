@@ -258,31 +258,51 @@
 		var search = container.querySelector( '[data-adam-select-search]' );
 		var select = container.querySelector( '[data-adam-select-options]' );
 		var empty = container.querySelector( '[data-adam-select-empty]' );
+		var trigger = container.querySelector( '[data-adam-select-trigger]' );
+		var selectedValue = container.querySelector( '[data-adam-select-value]' );
+		var panel = container.querySelector( '[data-adam-select-panel]' );
+		var results = container.querySelector( '[data-adam-select-results]' );
 
-		if ( ! search || ! select ) {
+		if ( ! search || ! select || ! trigger || ! selectedValue || ! panel || ! results ) {
 			return;
 		}
 
-		function filterOptions() {
+		var options = Array.from( select.options ).filter( function ( option ) {
+			return '' !== option.value;
+		} );
+
+		function updateSelectedValue() {
+			var option = select.options[ select.selectedIndex ];
+
+			selectedValue.textContent = option && option.value ? option.textContent : select.options[0].textContent;
+		}
+
+		function renderOptions() {
 			var query = normalizeSearchValue( search.value );
 			var matches = 0;
 
-			Array.from( select.options ).forEach( function ( option, index ) {
-				if ( 0 === index ) {
-					option.hidden = false;
-					option.disabled = false;
+			results.replaceChildren();
+
+			options.forEach( function ( option ) {
+				if ( '' !== query && ! normalizeSearchValue( option.textContent || '' ).includes( query ) ) {
 					return;
 				}
 
-				var matchesQuery = '' === query || normalizeSearchValue( option.textContent || '' ).includes( query );
-				var shouldShow = matchesQuery || option.selected;
+				var item = document.createElement( 'button' );
 
-				option.hidden = ! shouldShow;
-				option.disabled = ! shouldShow;
-
-				if ( matchesQuery ) {
-					matches += 1;
-				}
+				item.type = 'button';
+				item.className = 'adam-searchable-select__option';
+				item.textContent = option.textContent || '';
+				item.setAttribute( 'role', 'option' );
+				item.setAttribute( 'aria-selected', option.value === select.value ? 'true' : 'false' );
+				item.addEventListener( 'click', function () {
+					select.value = option.value;
+					select.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+					closePanel();
+					trigger.focus();
+				} );
+				results.appendChild( item );
+				matches += 1;
 			} );
 
 			if ( empty ) {
@@ -290,12 +310,43 @@
 			}
 		}
 
-		search.addEventListener( 'input', filterOptions );
-		select.addEventListener( 'change', function () {
+		function openPanel() {
+			panel.hidden = false;
+			trigger.setAttribute( 'aria-expanded', 'true' );
+			renderOptions();
+			search.focus();
+		}
+
+		function closePanel() {
+			panel.hidden = true;
+			trigger.setAttribute( 'aria-expanded', 'false' );
 			search.value = '';
-			filterOptions();
+		}
+
+		container.classList.add( 'adam-searchable-select--enhanced' );
+		trigger.hidden = false;
+		updateSelectedValue();
+
+		trigger.addEventListener( 'click', function () {
+			if ( panel.hidden ) {
+				openPanel();
+			} else {
+				closePanel();
+			}
 		} );
-		filterOptions();
+		search.addEventListener( 'input', renderOptions );
+		select.addEventListener( 'change', updateSelectedValue );
+		container.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key && ! panel.hidden ) {
+				closePanel();
+				trigger.focus();
+			}
+		} );
+		document.addEventListener( 'click', function ( event ) {
+			if ( ! panel.hidden && event.target instanceof Node && ! container.contains( event.target ) ) {
+				closePanel();
+			}
+		} );
 	}
 
 	document.addEventListener( 'change', function ( event ) {

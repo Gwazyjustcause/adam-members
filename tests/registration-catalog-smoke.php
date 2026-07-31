@@ -71,6 +71,11 @@ $form_source = (string) file_get_contents( dirname( __DIR__ ) . '/src/Form/Membe
 adam_registration_catalog_assert( str_contains( $form_source, 'render_searchable_select_field' ), 'The catalogues are not rendered as searchable selects.' );
 adam_registration_catalog_assert( str_contains( $form_source, 'validate_catalog_field' ), 'Closed catalogue values are not validated server-side.' );
 adam_registration_catalog_assert( str_contains( $form_source, "? 'Portugal'" ), 'Portugal is not the fresh-registration default.' );
+adam_registration_catalog_assert( ! str_contains( $form_source, 'render_editable_datalist_field' ), 'The legacy editable profession field is still present.' );
+adam_registration_catalog_assert( str_contains( $form_source, 'data-adam-select-trigger' ), 'The searchable select has no single collapsed trigger.' );
+adam_registration_catalog_assert( str_contains( $form_source, 'data-adam-select-panel' ), 'The search input is not contained in an expandable dropdown panel.' );
+adam_registration_catalog_assert( 1 === substr_count( $form_source, 'data-adam-select-search' ), 'A separate legacy search input remains in the field renderer.' );
+adam_registration_catalog_assert( strpos( $form_source, 'data-adam-select-panel' ) < strpos( $form_source, 'data-adam-select-search' ), 'The search input is visible outside the dropdown panel.' );
 
 $GLOBALS['adam_catalog_options']['adam_membership_form_settings'] = array(
 	'registration_fields' => array(
