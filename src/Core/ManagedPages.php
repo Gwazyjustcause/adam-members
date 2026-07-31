@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Core;
 
+use AdamMembership\Member\AdminPreview;
 use WP_Post;
 
 /**
@@ -235,6 +236,7 @@ final class ManagedPages {
 	/** Registers IDs and token entry points with the shared protection engine. */
 	public function protection_definitions(): array {
 		$token_pages = array(
+			'registration'       => static fn (): bool => AdminPreview::is_available(),
 			'account_setup'      => static fn (): bool => ! empty( $_GET['user'] ) && ! empty( $_GET['token'] ),
 			'password_reset'     => static fn (): bool => ! empty( $_GET['login'] ) && ! empty( $_GET['key'] ),
 			'email_confirmation' => static fn (): bool => ! empty( $_GET['user'] ) && ! empty( $_GET['token'] ),
