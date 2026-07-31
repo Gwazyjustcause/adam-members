@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\RateLimiter;
 
@@ -52,15 +53,7 @@ final class Account {
 	 * Enqueue password strength and visibility assets.
 	 */
 	public function enqueue_assets(): void {
-		if (
-			! is_page(
-				array(
-					'socio-password',
-					'socio-email',
-					'redefinir-password',
-				)
-			)
-		) {
+		if ( ! is_page( array( ManagedPages::id( 'change_password' ), ManagedPages::id( 'change_email' ), ManagedPages::id( 'password_reset' ) ) ) ) {
 			return;
 		}
 
@@ -143,7 +136,7 @@ final class Account {
 						<button type="submit" name="adam_change_password" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
-						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 							<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 						</a>
 					</div>
@@ -221,7 +214,7 @@ final class Account {
 						<button type="submit" name="adam_change_email" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Enviar confirmacao', 'adam-membership' ); ?>
 						</button>
-						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 							<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 						</a>
 					</div>
@@ -281,7 +274,7 @@ final class Account {
 			$this->history->password_changed( $member );
 		}
 
-		wp_safe_redirect( home_url( '/socio/?password_changed=1' ) );
+		wp_safe_redirect( add_query_arg( 'password_changed', '1', ManagedPages::url( 'member_area' ) ) );
 		exit;
 	}
 
@@ -327,7 +320,7 @@ final class Account {
 				'token' => $token,
 				'user'  => $user->ID,
 			),
-			home_url( '/confirmar-email/' )
+			ManagedPages::url( 'email_confirmation' )
 		);
 
 		$this->email->send_email_confirmation( $user, $new, $link );
@@ -361,10 +354,10 @@ final class Account {
 				<p><?php esc_html_e( 'Esta pagina destina-se apenas a associados que ja possuem uma conta na ADAM.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 						<?php esc_html_e( 'Iniciar sessao', 'adam-membership' ); ?>
 					</a>
-					<a class="button" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+					<a class="button" href="<?php echo esc_url( ManagedPages::url( 'password_recovery' ) ); ?>">
 						<?php esc_html_e( 'Recuperar palavra-passe', 'adam-membership' ); ?>
 					</a>
 				</div>

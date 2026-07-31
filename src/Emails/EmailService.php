@@ -11,6 +11,7 @@ namespace AdamMembership\Emails;
 
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use WP_User;
@@ -342,7 +343,7 @@ final class EmailService {
 				'login' => rawurlencode( $user->user_login ),
 				'key'   => rawurlencode( $key ),
 			),
-			home_url( '/redefinir-password/' )
+			ManagedPages::url( 'password_reset' )
 		);
 
 		$rendered = $this->render_configured_email_template(
@@ -579,8 +580,8 @@ final class EmailService {
 			'renewal_link'      => $this->settings->renewal_page_url(),
 			'reason'            => __( 'Falta um comprovativo legível.', 'adam-membership' ),
 			'new_email'         => 'novo.email@example.com',
-			'confirmation_link' => home_url( '/confirmar-email/' ),
-			'reset_link'        => home_url( '/redefinir-password/' ),
+			'confirmation_link' => ManagedPages::url( 'email_confirmation' ),
+			'reset_link'        => ManagedPages::url( 'password_reset' ),
 			'account_setup_link' => $this->settings->account_setup_page_url(),
 		);
 	}

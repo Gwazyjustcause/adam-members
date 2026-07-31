@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Reward;
 
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
 
@@ -54,7 +55,7 @@ final class RewardQrFrontend {
 		$reward         = $this->rewards->find_reward_by_qr_token( $token );
 		$notice_type    = 'info';
 		$notice_lines   = array();
-		$registration   = home_url( '/inscricao/' );
+		$registration   = ManagedPages::url( 'registration' );
 		$member         = $this->current_member();
 
 		if ( null === $reward ) {
@@ -133,7 +134,7 @@ final class RewardQrFrontend {
 					</div>
 				<?php else : ?>
 					<div class="adam-reward-claim-card__actions">
-						<a class="adam-reward-claim-card__button" href="<?php echo esc_url( home_url( '/socio/?view=recompensas' ) ); ?>">
+						<a class="adam-reward-claim-card__button" href="<?php echo esc_url( add_query_arg( 'view', 'recompensas', ManagedPages::url( 'member_area' ) ) ); ?>">
 							<?php esc_html_e( 'Ver recompensas', 'adam-membership' ); ?>
 						</a>
 					</div>

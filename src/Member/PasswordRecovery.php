@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\RateLimiter;
 
@@ -90,7 +91,7 @@ final class PasswordRecovery {
 						<button type="submit" name="adam_password_recovery_submit" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Enviar email', 'adam-membership' ); ?>
 						</button>
-						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 							<?php esc_html_e( 'Voltar ao início de sessão', 'adam-membership' ); ?>
 						</a>
 					</div>

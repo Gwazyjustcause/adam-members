@@ -12,6 +12,7 @@ namespace AdamMembership\Admin;
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Emails\EmailService;
@@ -2748,7 +2749,7 @@ final class AdminController {
 				<div class="adam-admin-safe-view">
 					<h3><?php esc_html_e( 'Ver como sócio', 'adam-membership' ); ?></h3>
 					<?php if ( get_current_user_id() === $member->user_id() ) : ?>
-						<a class="button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir Área do Sócio', 'adam-membership' ); ?></a>
+						<a class="button" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir Área do Sócio', 'adam-membership' ); ?></a>
 					<?php else : ?>
 						<p><?php esc_html_e( 'A impersonação não está ativa por motivos de segurança. Utilize o perfil de utilizador do WordPress para rever a conta.', 'adam-membership' ); ?></p>
 					<?php endif; ?>

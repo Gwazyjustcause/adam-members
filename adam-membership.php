@@ -63,6 +63,10 @@ register_activation_hook(
 		if ( class_exists( Event\EventFrontend::class ) ) {
 			Event\EventFrontend::activate();
 		}
+
+		if ( class_exists( Core\ManagedPages::class ) ) {
+			Core\ManagedPages::activate();
+		}
 	}
 );
 

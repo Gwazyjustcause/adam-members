@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Helpers\RateLimiter;
 use WP_User;
 
@@ -49,7 +50,7 @@ final class PasswordReset {
 	 * Enqueue assets.
 	 */
 	public function enqueue_assets(): void {
-		if ( ! is_page( 'redefinir-password' ) ) {
+		if ( ! is_page( ManagedPages::id( 'password_reset' ) ) ) {
 			return;
 		}
 
@@ -157,7 +158,7 @@ final class PasswordReset {
 						<button type="submit" name="adam_reset_submit" class="button button-primary adam-primary-action adam-button" <?php disabled( $is_preview ); ?>>
 							<?php esc_html_e( 'Alterar palavra-passe', 'adam-membership' ); ?>
 						</button>
-						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+						<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 							<?php esc_html_e( 'Voltar ao início de sessão', 'adam-membership' ); ?>
 						</a>
 					</div>
@@ -249,10 +250,10 @@ final class PasswordReset {
 				<p><?php esc_html_e( 'O link é inválido ou expirou. Peça um novo link para continuar.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( ManagedPages::url( 'password_recovery' ) ); ?>">
 						<?php esc_html_e( 'Pedir novo link', 'adam-membership' ); ?>
 					</a>
-					<a class="button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 						<?php esc_html_e( 'Voltar ao início de sessão', 'adam-membership' ); ?>
 					</a>
 				</div>
@@ -277,7 +278,7 @@ final class PasswordReset {
 				<p><?php esc_html_e( 'Já pode iniciar sessão utilizando a sua nova palavra-passe.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 						<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
 					</a>
 				</div>

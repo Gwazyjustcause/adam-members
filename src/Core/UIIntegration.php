@@ -40,7 +40,7 @@ final class UIIntegration {
 				'ADAM SÃ³cios',
 				array(
 					'version'     => defined( 'ADAM_MEMBERSHIP_VERSION' ) ? ADAM_MEMBERSHIP_VERSION : '',
-					'requires_ui' => '1.0.0',
+					'requires_ui' => '5.1.0',
 					'components'  => self::COMPONENTS,
 					'plugin_file' => defined( 'ADAM_MEMBERSHIP_FILE' ) ? plugin_basename( ADAM_MEMBERSHIP_FILE ) : '',
 				)

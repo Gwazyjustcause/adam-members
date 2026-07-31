@@ -110,6 +110,8 @@ final class Plugin {
 
 		$logger                    = new Logger();
 		$settings                  = new SettingsRepository();
+		$managed_pages             = new ManagedPages();
+		$managed_pages->register();
 		$members                   = new MemberRepository();
 		$teams                     = new TeamRepository( $members );
 		$renewal_repository        = new RenewalRepository();

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Helpers\RateLimiter;
 use WP_User;
@@ -498,7 +499,7 @@ final class AccountSetup {
 				<p><?php esc_html_e( 'Já pode iniciar sessão na Área de Sócio com o email ou com o nome de utilizador escolhido.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">
 						<?php esc_html_e( 'Ir para a Área de Sócio', 'adam-membership' ); ?>
 					</a>
 				</div>

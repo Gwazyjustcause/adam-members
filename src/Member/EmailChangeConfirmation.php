@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Core\ManagedPages;
 use WP_User;
 
 /**
@@ -147,7 +148,7 @@ final class EmailChangeConfirmation {
 				<p><?php esc_html_e( 'O seu endereço de email foi alterado com sucesso.', 'adam-membership' ); ?></p>
 
 				<div class="adam-form-actions adam-form-actions-center">
-					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( home_url( '/socio/?email_changed=1' ) ); ?>">
+					<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( add_query_arg( 'email_changed', '1', ManagedPages::url( 'member_area' ) ) ); ?>">
 						<?php esc_html_e( 'Voltar à área do sócio', 'adam-membership' ); ?>
 					</a>
 				</div>

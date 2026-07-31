@@ -14,6 +14,7 @@ use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Communication\CommunicationPreferences;
 use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\ManagedPages;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
@@ -357,7 +358,7 @@ final class MemberArea {
 						<button type="submit" name="adam_login_submit" class="button button-primary adam-primary-action adam-button">
 							<?php esc_html_e( 'Iniciar sessão', 'adam-membership' ); ?>
 						</button>
-						<a class="adam-text-link" href="<?php echo esc_url( home_url( '/recuperar-password/' ) ); ?>">
+						<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'password_recovery' ) ); ?>">
 							<?php esc_html_e( 'Esqueceu-se da palavra-passe?', 'adam-membership' ); ?>
 						</a>
 					</div>
@@ -424,7 +425,7 @@ final class MemberArea {
 			return $this->notice_markup( 'error', __( 'Email ou palavra-passe incorretos.', 'adam-membership' ) );
 		}
 
-		wp_safe_redirect( home_url( '/socio/' ) );
+		wp_safe_redirect( ManagedPages::url( 'member_area' ) );
 		RateLimiter::clear( 'member_login', $identity );
 		exit;
 	}
@@ -440,7 +441,7 @@ final class MemberArea {
 				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
 				<h2><?php esc_html_e( 'Informação indisponível', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'Não foi encontrada informação de associado para esta conta.', 'adam-membership' ); ?></p>
-				<a class="adam-action-card adam-card" href="<?php echo esc_url( wp_logout_url( home_url( '/socio/?logged_out=1' ) ) ); ?>">
+				<a class="adam-action-card adam-card" href="<?php echo esc_url( wp_logout_url( add_query_arg( 'logged_out', '1', ManagedPages::url( 'member_area' ) ) ) ); ?>">
 					<?php esc_html_e( 'Terminar sessão', 'adam-membership' ); ?>
 				</a>
 			</section>
@@ -839,8 +840,8 @@ final class MemberArea {
 		$total_earned   = $this->points->total_earned( $member );
 		$recent_entries = $this->points->recent_activity( $member, 5 );
 		$show_history   = isset( $_GET['points_history'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['points_history'] ) );
-		$history_url    = add_query_arg( 'points_history', '1', home_url( '/socio/' ) );
-		$back_url       = home_url( '/socio/' );
+		$history_url    = add_query_arg( 'points_history', '1', ManagedPages::url( 'member_area' ) );
+		$back_url       = ManagedPages::url( 'member_area' );
 		?>
 		<section class="adam-card adam-points-section" aria-label="<?php esc_attr_e( 'Pontos ADAM', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -1974,7 +1975,7 @@ final class MemberArea {
 					</select>
 				</label>
 				<button type="submit" class="adam-card-link"><?php esc_html_e( 'Filtrar', 'adam-membership' ); ?></button>
-				<a class="adam-text-link" href="<?php echo esc_url( home_url( '/socio/' ) ); ?>"><?php esc_html_e( 'Limpar', 'adam-membership' ); ?></a>
+				<a class="adam-text-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>"><?php esc_html_e( 'Limpar', 'adam-membership' ); ?></a>
 			</form>
 
 			<div class="adam-document-grid">
@@ -2319,17 +2320,17 @@ final class MemberArea {
 			array(
 				'label'       => __( 'Alterar palavra-passe', 'adam-membership' ),
 				'description' => '',
-				'url'         => home_url( '/socio-password/' ),
+				'url'         => ManagedPages::url( 'change_password' ),
 			),
 			array(
 				'label'       => __( 'Alterar email', 'adam-membership' ),
 				'description' => '',
-				'url'         => home_url( '/socio-email/' ),
+				'url'         => ManagedPages::url( 'change_email' ),
 			),
 			array(
 				'label'       => __( 'Terminar sessão', 'adam-membership' ),
 				'description' => '',
-				'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+				'url'         => wp_logout_url( add_query_arg( 'logged_out', '1', ManagedPages::url( 'member_area' ) ) ),
 			),
 		);
 	}
@@ -2344,7 +2345,7 @@ final class MemberArea {
 			array(
 				'label'       => __( 'Terminar sessão', 'adam-membership' ),
 				'description' => '',
-				'url'         => wp_logout_url( home_url( '/socio/?logged_out=1' ) ),
+				'url'         => wp_logout_url( add_query_arg( 'logged_out', '1', ManagedPages::url( 'member_area' ) ) ),
 			),
 		);
 	}
@@ -2546,7 +2547,7 @@ final class MemberArea {
 	 * @param array<string, string> $args Query arguments.
 	 */
 	private function member_area_url( array $args = array() ): string {
-		$url = home_url( '/socio/' );
+		$url = ManagedPages::url( 'member_area' );
 
 		if ( array() === $args ) {
 			return $url;
