@@ -173,6 +173,28 @@
 	cursor: default;
 }
 
+.adam-photo-information {
+	padding: 12px 14px;
+	border: 1px solid var(--adam-warning-border, #f3c969);
+	border-radius: 12px;
+	background: var(--adam-warning-bg, #fff8db);
+	color: var(--adam-warning-text, #6f4d00);
+}
+
+.adam-photo-information strong {
+	display: block;
+	margin-bottom: 4px;
+	color: inherit;
+}
+
+.adam-photo-information p {
+	margin: 0;
+	color: inherit;
+	font-size: 0.92rem;
+	font-weight: 500;
+	line-height: 1.5;
+}
+
 .adam-ana-information[hidden] {
 	display: none !important;
 }

@@ -72,9 +72,17 @@ final class Member {
 		'adam_active_card_theme' => '',
 		'adam_active_card_frame' => '',
 		'telefone'        => '',
+		'telefone_fixo'   => '',
 		'nif'             => '',
 		'cartao_cidadao'  => '',
+		'documento_validade' => '',
+		'documento_local_emissao' => '',
 		'data_nascimento' => '',
+		'estado_civil'    => '',
+		'genero'          => '',
+		'profissao'       => '',
+		'naturalidade'    => '',
+		'nacionalidade'   => '',
 		'morada'          => '',
 		'morada_linha_2'  => '',
 		'codigo_postal'   => '',
@@ -104,6 +112,7 @@ final class Member {
 		'data_adesao',
 		'validade_quota',
 		'data_nascimento',
+		'documento_validade',
 	);
 
 	/**
@@ -131,6 +140,14 @@ final class Member {
 		'adam_external_association_name',
 		'adam_external_member_number',
 		'adam_external_association_proof',
+		'telefone_fixo',
+		'documento_validade',
+		'documento_local_emissao',
+		'estado_civil',
+		'genero',
+		'profissao',
+		'naturalidade',
+		'nacionalidade',
 	);
 
 	/**

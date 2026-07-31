@@ -240,9 +240,42 @@ final class SettingsRepository {
 				is_array( $stored ) ? $stored : array()
 			)
 		);
+		$settings = $this->upgrade_registration_field_labels( $settings );
 
 		$settings['registration_fields'] = $this->enrich_form_field_settings( (array) $settings['registration_fields'], 'registration' );
 		$settings['renewal_fields']      = $this->enrich_form_field_settings( (array) $settings['renewal_fields'], 'renewal' );
+
+		return $settings;
+	}
+
+	/**
+	 * Replace unchanged legacy labels with the expanded registration wording.
+	 *
+	 * Administrators may customize labels, so only known former defaults are
+	 * migrated. Any genuinely custom label remains untouched.
+	 *
+	 * @param array<string, mixed> $settings Merged form settings.
+	 * @return array<string, mixed>
+	 */
+	private function upgrade_registration_field_labels( array $settings ): array {
+		$fields = isset( $settings['registration_fields'] ) && is_array( $settings['registration_fields'] )
+			? $settings['registration_fields']
+			: array();
+		$replacements = array(
+			'citizen_card'   => array( 'BI / Cartão de Cidadão', 'BI / Cartão de Cidadão / Passaporte' ),
+			'phone'          => array( 'Número de Telemóvel', 'Telemóvel' ),
+			'address_line_1' => array( 'Rua', 'Morada Completa' ),
+			'city'           => array( 'Cidade', 'Localidade' ),
+			'postcode'       => array( 'ZIP / Código Postal', 'Código Postal' ),
+		);
+
+		foreach ( $replacements as $field_key => $labels ) {
+			if ( isset( $fields[ $field_key ]['label'] ) && $labels[0] === (string) $fields[ $field_key ]['label'] ) {
+				$fields[ $field_key ]['label'] = $labels[1];
+			}
+		}
+
+		$settings['registration_fields'] = $fields;
 
 		return $settings;
 	}
@@ -367,6 +400,50 @@ final class SettingsRepository {
 					'enabled'  => true,
 					'required' => true,
 				),
+				'birth_date' => array(
+					'label'    => 'Data de Nascimento',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+				),
+				'marital_status' => array(
+					'label'    => 'Estado Civil',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+					'type'     => 'select',
+					'options'  => "Solteiro(a)\nCasado(a)\nUnião de Facto\nDivorciado(a)\nViúvo(a)",
+				),
+				'gender' => array(
+					'label'    => 'Género',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+					'type'     => 'select',
+					'options'  => "Masculino\nFeminino\nOutro",
+				),
+				'profession' => array(
+					'label'    => 'Profissão',
+					'help'     => 'Comece a escrever para pesquisar ou introduza outra profissão.',
+					'enabled'  => true,
+					'required' => true,
+					'type'     => 'select',
+					'options'  => "Administrador(a)\nAdvogado(a)\nArquiteto(a)\nComercial\nContabilista\nDesigner\nEletricista\nEmpresário(a)\nEngenheiro(a)\nEstudante\nFuncionário(a) Público(a)\nGestor(a)\nMecânico(a)\nMédico(a)\nMilitar\nMotorista\nProfessor(a)\nProgramador(a)\nTécnico(a)\nTrabalhador(a) por Conta Própria\nOutra",
+				),
+				'birthplace' => array(
+					'label'    => 'Naturalidade',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+				),
+				'nationality' => array(
+					'label'    => 'Nacionalidade',
+					'help'     => 'Comece a escrever para pesquisar uma nacionalidade.',
+					'enabled'  => true,
+					'required' => true,
+					'type'     => 'select',
+					'options'  => "Portuguesa\nAngolana\nBrasileira\nBritânica\nCabo-verdiana\nChinesa\nEspanhola\nFrancesa\nGuineense\nIndiana\nItaliana\nMoçambicana\nNeerlandesa\nRomena\nSão-tomense\nUcraniana",
+				),
 				'email' => array(
 					'label'    => 'Email',
 					'help'     => '',
@@ -374,7 +451,19 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'citizen_card' => array(
-					'label'    => "BI / Cart\u{00E3}o de Cidad\u{00E3}o",
+					'label'    => "BI / Cart\u{00E3}o de Cidad\u{00E3}o / Passaporte",
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+				),
+				'document_expiry_date' => array(
+					'label'    => 'Data de Validade do Documento',
+					'help'     => '',
+					'enabled'  => true,
+					'required' => true,
+				),
+				'document_issuing_place' => array(
+					'label'    => 'Local de Emissão',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
@@ -385,20 +474,20 @@ final class SettingsRepository {
 					'enabled'  => true,
 					'required' => true,
 				),
-				'birth_date' => array(
-					'label'    => 'Data de Nascimento',
+				'phone' => array(
+					'label'    => "Telem\u{00F3}vel",
 					'help'     => '',
 					'enabled'  => true,
-					'required' => true,
+					'required' => false,
 				),
-				'phone' => array(
-					'label'    => "N\u{00FA}mero de Telem\u{00F3}vel",
+				'telephone' => array(
+					'label'    => 'Telefone (opcional)',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => false,
 				),
 				'address_line_1' => array(
-					'label'    => 'Rua',
+					'label'    => 'Morada Completa',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
@@ -410,7 +499,7 @@ final class SettingsRepository {
 					'required' => false,
 				),
 				'city' => array(
-					'label'    => 'Cidade',
+					'label'    => 'Localidade',
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
@@ -422,7 +511,7 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'postcode' => array(
-					'label'    => "ZIP / C\u{00F3}digo Postal",
+					'label'    => "C\u{00F3}digo Postal",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,
@@ -842,7 +931,7 @@ final class SettingsRepository {
 	 */
 	private function system_field_keys( string $form ): array {
 		return 'registration' === $form
-			? array( 'full_name', 'email', 'citizen_card', 'nif', 'birth_date', 'phone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country', 'team', 'profile_photo', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' )
+			? array( 'full_name', 'birth_date', 'marital_status', 'gender', 'profession', 'birthplace', 'nationality', 'email', 'phone', 'telephone', 'address_line_1', 'address_line_2', 'postcode', 'city', 'municipality', 'country', 'citizen_card', 'document_expiry_date', 'document_issuing_place', 'nif', 'team', 'profile_photo', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' )
 			: array( 'phone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country', 'team', 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' );
 	}
 
@@ -876,10 +965,18 @@ final class SettingsRepository {
 		return array_merge(
 			array(
 				'full_name'      => 'text',
+				'marital_status' => 'select',
+				'gender'         => 'select',
+				'profession'     => 'select',
+				'birthplace'     => 'text',
+				'nationality'    => 'select',
 				'email'          => 'email',
 				'citizen_card'   => 'text',
+				'document_expiry_date' => 'date',
+				'document_issuing_place' => 'text',
 				'nif'            => 'text',
 				'birth_date'     => 'date',
+				'telephone'      => 'phone',
 				'team'           => 'text',
 				'profile_photo'  => 'file',
 			),
@@ -914,11 +1011,19 @@ final class SettingsRepository {
 
 		return array(
 			'full_name'                  => 'always',
+			'marital_status'             => 'always',
+			'gender'                     => 'always',
+			'profession'                 => 'always',
+			'birthplace'                 => 'always',
+			'nationality'                => 'always',
 			'email'                      => 'always',
 			'citizen_card'               => 'always',
+			'document_expiry_date'       => 'always',
+			'document_issuing_place'     => 'always',
 			'nif'                        => 'always',
 			'birth_date'                 => 'always',
 			'phone'                      => 'always',
+			'telephone'                  => 'always',
 			'address_line_1'             => 'always',
 			'address_line_2'             => 'always',
 			'city'                       => 'always',

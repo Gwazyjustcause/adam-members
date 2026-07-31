@@ -2706,12 +2706,25 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'N.º Fundador', 'adam-membership' ), $member->is_founder() ? (string) $member->founder_number() : '—' ); ?>
 					<?php $this->render_detail_item( __( 'Quota válida até', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Data de adesão', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
-					<?php $this->render_detail_item( __( 'Telefone', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
+					<?php $this->render_detail_item( __( 'Telemóvel', 'adam-membership' ), (string) $member->field( 'telefone' ) ); ?>
+					<?php $this->render_detail_item( __( 'Telefone', 'adam-membership' ), (string) $member->field( 'telefone_fixo' ) ); ?>
 					<?php $this->render_detail_item( __( 'Equipa', 'adam-membership' ), (string) $member->field( 'equipa' ) ); ?>
 					<?php $this->render_detail_item( __( 'NIF', 'adam-membership' ), (string) $member->field( 'nif' ) ); ?>
-					<?php $this->render_detail_item( __( 'Citizen card', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
+					<?php $this->render_detail_item( __( 'BI / Cartão de Cidadão / Passaporte', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
+					<?php $this->render_detail_item( __( 'Validade do documento', 'adam-membership' ), $this->format_date( $member->field( 'documento_validade' ) ) ); ?>
+					<?php $this->render_detail_item( __( 'Local de emissão', 'adam-membership' ), (string) $member->field( 'documento_local_emissao' ) ); ?>
 					<?php $this->render_detail_item( __( 'Data de nascimento', 'adam-membership' ), $this->format_date( $member->field( 'data_nascimento' ) ) ); ?>
-					<?php $this->render_detail_item( __( 'Morada', 'adam-membership' ), (string) $member->field( 'morada' ) ); ?>
+					<?php $this->render_detail_item( __( 'Estado civil', 'adam-membership' ), (string) $member->field( 'estado_civil' ) ); ?>
+					<?php $this->render_detail_item( __( 'Género', 'adam-membership' ), (string) $member->field( 'genero' ) ); ?>
+					<?php $this->render_detail_item( __( 'Profissão', 'adam-membership' ), (string) $member->field( 'profissao' ) ); ?>
+					<?php $this->render_detail_item( __( 'Naturalidade', 'adam-membership' ), (string) $member->field( 'naturalidade' ) ); ?>
+					<?php $this->render_detail_item( __( 'Nacionalidade', 'adam-membership' ), (string) $member->field( 'nacionalidade' ) ); ?>
+					<?php $this->render_detail_item( __( 'Morada completa', 'adam-membership' ), (string) $member->field( 'morada' ) ); ?>
+					<?php $this->render_detail_item( __( 'Complemento de morada', 'adam-membership' ), (string) $member->field( 'morada_linha_2' ) ); ?>
+					<?php $this->render_detail_item( __( 'Código postal', 'adam-membership' ), (string) $member->field( 'codigo_postal' ) ); ?>
+					<?php $this->render_detail_item( __( 'Localidade', 'adam-membership' ), (string) $member->field( 'cidade' ) ); ?>
+					<?php $this->render_detail_item( __( 'Município', 'adam-membership' ), (string) $member->field( 'municipio' ) ); ?>
+					<?php $this->render_detail_item( __( 'País', 'adam-membership' ), (string) $member->field( 'pais' ) ); ?>
 					<?php $this->render_detail_item( __( 'Motivo de rejeição', 'adam-membership' ), (string) $member->field( 'motivo_rejeicao' ) ); ?>
 					<?php $this->render_detail_item( __( 'Nota privada de rejeição', 'adam-membership' ), (string) $member->field( 'nota_rejeicao_admin' ) ); ?>
 				</div>

@@ -317,8 +317,15 @@ final class MembershipForms {
 		}
 
 		$this->validate_text_field( 'registration', 'full_name', $values, $errors );
+		$this->validate_text_field( 'registration', 'marital_status', $values, $errors );
+		$this->validate_text_field( 'registration', 'gender', $values, $errors );
+		$this->validate_text_field( 'registration', 'profession', $values, $errors );
+		$this->validate_text_field( 'registration', 'birthplace', $values, $errors );
+		$this->validate_text_field( 'registration', 'nationality', $values, $errors );
 		$this->validate_email_field( 'registration', 'email', $values, $errors );
 		$this->validate_text_field( 'registration', 'citizen_card', $values, $errors );
+		$this->validate_date_field( 'registration', 'document_expiry_date', $values, $errors );
+		$this->validate_text_field( 'registration', 'document_issuing_place', $values, $errors );
 		$this->validate_text_field( 'registration', 'nif', $values, $errors );
 
 		$nif = $this->registration->validate_nif( $values['nif'] ?? '' );
@@ -336,6 +343,7 @@ final class MembershipForms {
 
 		$this->validate_date_field( 'registration', 'birth_date', $values, $errors );
 		$this->validate_text_field( 'registration', 'phone', $values, $errors );
+		$this->validate_text_field( 'registration', 'telephone', $values, $errors );
 		$this->validate_text_field( 'registration', 'address_line_1', $values, $errors );
 		$this->validate_text_field( 'registration', 'address_line_2', $values, $errors );
 		$this->validate_text_field( 'registration', 'city', $values, $errors );
@@ -367,11 +375,19 @@ final class MembershipForms {
 		$result = $this->registration->register(
 			array(
 				'full_name'                  => (string) ( $values['full_name'] ?? '' ),
+				'marital_status'             => (string) ( $values['marital_status'] ?? '' ),
+				'gender'                     => (string) ( $values['gender'] ?? '' ),
+				'profession'                 => (string) ( $values['profession'] ?? '' ),
+				'birthplace'                 => (string) ( $values['birthplace'] ?? '' ),
+				'nationality'                => (string) ( $values['nationality'] ?? '' ),
 				'email'                      => (string) ( $values['email'] ?? '' ),
 				'citizen_card'               => (string) ( $values['citizen_card'] ?? '' ),
+				'document_expiry_date'       => (string) ( $values['document_expiry_date'] ?? '' ),
+				'document_issuing_place'     => (string) ( $values['document_issuing_place'] ?? '' ),
 				'nif'                        => (string) ( $values['nif'] ?? '' ),
 				'birth_date'                 => (string) ( $values['birth_date'] ?? '' ),
 				'phone'                      => (string) ( $values['phone'] ?? '' ),
+				'telephone'                  => (string) ( $values['telephone'] ?? '' ),
 				'address_line_1'             => (string) ( $values['address_line_1'] ?? '' ),
 				'address_line_2'             => (string) ( $values['address_line_2'] ?? '' ),
 				'city'                       => (string) ( $values['city'] ?? '' ),
@@ -1004,12 +1020,25 @@ final class MembershipForms {
 			return;
 		}
 
+		if ( in_array( $field, array( 'profession', 'nationality' ), true ) ) {
+			$this->render_editable_datalist_field( $field, $config, $values );
+			return;
+		}
+
 		$type        = (string) ( $config['type'] ?? 'text' );
 		$field_class = $this->field_layout_class( $type );
 		$label       = (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' );
 		$value       = (string) ( $values[ $field ] ?? '' );
 
 		if ( 'file' === $type ) {
+			if ( 'registration' === $form && 'profile_photo' === $field ) {
+				?>
+				<div class="adam-photo-information adam-field--full" role="note">
+					<strong><?php esc_html_e( 'Fotografia', 'adam-membership' ); ?></strong>
+					<p><?php esc_html_e( 'A fotografia deve apresentar uma expressão facial neutra (boca fechada e sem sorrir), olhos abertos a olhar diretamente para a câmara e a cabeça descoberta (sem chapéus, bonés ou óculos escuros).', 'adam-membership' ); ?></p>
+				</div>
+				<?php
+			}
 			$this->render_upload_field( $form, $field, $this->field_accept_attribute( $field ), $field_class );
 			return;
 		}
@@ -1099,6 +1128,33 @@ final class MembershipForms {
 			<datalist id="<?php echo esc_attr( $list_id ); ?>">
 				<?php foreach ( $this->teams->all() as $team ) : ?>
 					<option value="<?php echo esc_attr( $team->name() ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
+			<?php if ( '' !== (string) $config['help'] ) : ?>
+				<small><?php echo esc_html( (string) $config['help'] ); ?></small>
+			<?php endif; ?>
+		</label>
+		<?php
+	}
+
+	/**
+	 * Render a searchable suggestion list that still accepts a custom value.
+	 *
+	 * @param string               $field  Field key.
+	 * @param array<string, mixed> $config Field configuration.
+	 * @param array<string, mixed> $values Form values.
+	 */
+	private function render_editable_datalist_field( string $field, array $config, array $values ): void {
+		$list_id = wp_unique_id( 'adam-membership-' . $field . '-options-' );
+		$value   = (string) ( $values[ $field ] ?? '' );
+		$options = $this->parse_field_options( (string) $config['options'] );
+		?>
+		<label class="adam-form-field">
+			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
+			<input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $value ); ?>" list="<?php echo esc_attr( $list_id ); ?>" maxlength="191" autocomplete="off">
+			<datalist id="<?php echo esc_attr( $list_id ); ?>">
+				<?php foreach ( $options as $option_label ) : ?>
+					<option value="<?php echo esc_attr( $option_label ); ?>"></option>
 				<?php endforeach; ?>
 			</datalist>
 			<?php if ( '' !== (string) $config['help'] ) : ?>
