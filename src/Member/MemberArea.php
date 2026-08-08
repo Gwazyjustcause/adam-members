@@ -2486,6 +2486,15 @@ final class MemberArea {
 		return array( array( 'label' => __( 'Atualizar dados', 'adam-membership' ), 'description' => __( 'Solicitar alterações aos seus dados pessoais.', 'adam-membership' ), 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) );
 	}
 
+	private function member_update_field_definitions( Member $member ): array {
+		$configs = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
+		$map = array( 'full_name' => $member->full_name(), 'birth_date' => $member->field( 'data_nascimento' ), 'marital_status' => $member->field( 'estado_civil' ), 'gender' => $member->field( 'genero' ), 'profession' => $member->field( 'profissao' ), 'birthplace' => $member->field( 'naturalidade' ), 'nationality' => $member->field( 'nacionalidade' ), 'email' => $member->email(), 'phone' => $member->field( 'telefone' ), 'telephone' => $member->field( 'telefone_fixo' ), 'address_line_1' => $member->field( 'morada' ), 'address_line_2' => $member->field( 'morada_linha_2' ), 'postcode' => $member->field( 'codigo_postal' ), 'city' => $member->field( 'cidade' ), 'municipality' => $member->field( 'municipio' ), 'country' => $member->field( 'pais' ), 'citizen_card' => $member->field( 'cartao_cidadao' ), 'document_expiry_date' => $member->field( 'documento_validade' ), 'document_issuing_place' => $member->field( 'documento_local_emissao' ), 'nif' => $member->field( 'nif' ), 'team' => $member->field( 'equipa' ) );
+		$meta_map = array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
+		$out = array();
+		foreach ( $configs as $key => $config ) { if ( ! is_array( $config ) || empty( $config['enabled'] ) || in_array( $key, array( 'payment_receipt', 'privacy_acceptance', 'profile_photo', 'external_association_name', 'external_member_number', 'external_association_proof' ), true ) ) { continue; } $meta = $meta_map[ $key ] ?? ''; $out[ $key ] = array( 'label' => (string) ( $config['label'] ?? $key ), 'value' => (string) ( $map[ $key ] ?? ( '' !== $meta ? $member->field( $meta ) : $member->field( 'adam_custom_' . sanitize_key( (string) $key ) ) ) ), 'key' => $key, 'type' => (string) ( $config['type'] ?? 'text' ), 'options' => (string) ( $config['options'] ?? '' ), 'readonly' => 'full_name' === $key ); }
+		return $out;
+	}
+
 	private function render_member_update_page( Member $member ): string {
 		if ( ! $member->isActive() && ! $member->isExpired() ) {
 			return $this->render_not_found();
@@ -2512,6 +2521,7 @@ final class MemberArea {
 			'documento_validade' => array( 'label' => __( 'Data de validade', 'adam-membership' ), 'value' => $member->field( 'documento_validade' ), 'key' => 'documento_validade' ),
 			'documento_local_emissao' => array( 'label' => __( 'Local de emissão', 'adam-membership' ), 'value' => $member->field( 'documento_local_emissao' ), 'key' => 'documento_local_emissao' ),
 		);
+		$fields = $this->member_update_field_definitions( $member );
 		$external = Member::APD_EXTERNAL === (string) $member->field( 'adam_apd_management_status' );
 		if ( $external ) {
 			$fields['adam_external_association_name'] = array( 'label' => __( 'APD / Associação', 'adam-membership' ), 'value' => $member->field( 'adam_external_association_name' ), 'key' => 'adam_external_association_name' );
@@ -2525,7 +2535,9 @@ final class MemberArea {
 				$submitted = array();
 				foreach ( $fields as $field ) {
 					if ( ! empty( $field['readonly'] ) || ! isset( $_POST[ $field['key'] ] ) ) { continue; }
-					$submitted[ $field['key'] ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
+					$patch_keys = array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
+					$patch_key = $patch_keys[ $field['key'] ] ?? $field['key'];
+					$submitted[ $patch_key ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
 				}
 				foreach ( array( 'profile_photo', 'adam_external_association_proof' ) as $upload_field ) {
 					if ( empty( $_FILES[ $upload_field ]['name'] ) ) { continue; }
@@ -2542,7 +2554,7 @@ final class MemberArea {
 			<?php echo wp_kses_post( $message ); ?><p><?php esc_html_e( 'As alterações serão revistas por um administrador antes de serem aplicadas.', 'adam-membership' ); ?></p>
 			<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_member_update' ); ?>
 				<div class="adam-form-section"><h3><?php esc_html_e( 'Informação pessoal', 'adam-membership' ); ?></h3><div class="adam-form-grid">
-				<?php foreach ( $fields as $name => $field ) : ?><label class="adam-form-field"><?php echo esc_html( $field['label'] ); ?><input type="text" name="<?php echo esc_attr( $field['key'] ); ?>" value="<?php echo esc_attr( (string) $field['value'] ); ?>" <?php echo ! empty( $field['readonly'] ) ? 'readonly' : ''; ?>></label><?php endforeach; ?>
+				<?php foreach ( $fields as $name => $field ) : ?><label class="adam-form-field"><?php echo esc_html( $field['label'] ); ?><?php if ( 'select' === $field['type'] ) : ?><select name="<?php echo esc_attr( $field['key'] ); ?>"><option value="">Selecionar</option><?php foreach ( preg_split( '/\r\n|\r|\n/', $field['options'] ) ?: array() as $option ) : $option = trim( (string) $option ); if ( '' === $option ) { continue; } $parts = explode( '|', $option, 2 ); ?><option value="<?php echo esc_attr( $parts[0] ); ?>" <?php selected( (string) $field['value'], (string) $parts[0] ); ?>><?php echo esc_html( $parts[1] ?? $parts[0] ); ?></option><?php endforeach; ?></select><?php else : ?><input type="<?php echo esc_attr( 'date' === $field['type'] ? 'date' : ( 'email' === $field['type'] ? 'email' : ( 'phone' === $field['type'] ? 'tel' : 'text' ) ) ); ?>" name="<?php echo esc_attr( $field['key'] ); ?>" value="<?php echo esc_attr( (string) $field['value'] ); ?>" <?php echo ! empty( $field['readonly'] ) ? 'readonly' : ''; ?>><?php endif; ?></label><?php endforeach; ?>
 				</div></div><div class="adam-form-section"><h3><?php esc_html_e( 'Documentos', 'adam-membership' ); ?></h3><div class="adam-form-grid"><label class="adam-form-field"><?php esc_html_e( 'Fotografia', 'adam-membership' ); ?><input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp"></label><?php if ( $external ) : ?><label class="adam-form-field"><?php esc_html_e( 'Comprovativo de Associação/APD', 'adam-membership' ); ?><input type="file" name="adam_external_association_proof" accept=".pdf,.jpg,.jpeg,.png"></label><?php endif; ?></div></div>
 				<button class="button button-primary" name="adam_member_update_submit" value="1"><?php esc_html_e( 'Enviar para validação', 'adam-membership' ); ?></button>
 			</form>
