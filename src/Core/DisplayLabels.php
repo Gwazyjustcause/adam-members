@@ -49,12 +49,14 @@ final class DisplayLabels {
 
 	/** @var array<string,string> */
 	private const STATUSES = array(
-		'pending' => 'Pendente',
 		'active' => 'Ativo',
 		'renewal_pending' => 'Renovação pendente',
 		'expired' => 'Expirado',
 		'pending_review' => 'Pendente de aprovação',
 		'pending_payment' => 'Pendente de pagamento',
+		'pending' => 'Pendente de pagamento',
+		'submitted' => 'Submetido',
+		'awaiting_adam' => 'A aguardar processamento ADAM',
 		'paid_awaiting_processing' => 'Pago / A aguardar processamento',
 		'submitted_to_ana' => 'Submetido à ANA',
 		'ana_confirmed' => 'ANA confirmada',

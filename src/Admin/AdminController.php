@@ -608,7 +608,7 @@ final class AdminController {
 		if ( 'registration' === $review_type ) { $this->render_member_page(); return; }
 		if ( 'renewal' === $review_type ) { $this->render_renewal_page(); return; }
 		if ( 'changes' === $review_type ) { $this->render_member_changes_page(); return; }
-		if ( 'apd' === $review_type ) { $this->render_apd_requests_page_clean(); return; }
+		if ( 'apd' === $review_type ) { $this->render_apd_review_or_list(); return; }
 		$this->render_header( 'Aprovações' );
 		$this->render_notices();
 		echo '<div class="adam-admin-panel adam-card"><h2>Aprovações</h2><p>Selecione uma categoria para rever os pedidos pendentes.</p><p><a class="button button-primary" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=all' ) ) . '">Todos</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=registrations' ) ) . '">Inscrições</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=renewals' ) ) . '">Renovações</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=changes' ) ) . '">Alterações de dados</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=apd' ) ) . '">APD / ANA</a></p></div>';
@@ -5740,6 +5740,39 @@ final class AdminController {
 		exit;
 	}
 
+	private function render_apd_review_or_list(): void {
+		$requested_id = absint( $_GET['request_id'] ?? 0 );
+		$requests = $this->apd_association->repository()->all();
+		$this->render_header( 'Pedidos APD/ANA' );
+		$this->render_notices();
+		if ( $requested_id > 0 ) {
+			$request = null;
+			foreach ( $requests as $candidate ) { if ( $candidate->id() === $requested_id ) { $request = $candidate; break; } }
+			if ( null === $request ) { $this->render_empty_state( 'Pedido APD/ANA não encontrado.' ); $this->render_footer(); return; }
+			$member = $this->members->find( $request->user_id() );
+			if ( null === $member ) { $this->render_empty_state( 'Sócio não encontrado.' ); $this->render_footer(); return; }
+			$data = (array) ( $request->data()['submitted_data'] ?? array() );
+			$proof = (string) ( $request->data()['proof_of_payment'] ?? '' );
+			$back = admin_url( 'admin.php?page=adam-membership-pending&approval_type=apd' );
+			echo '<div class="adam-admin-panel adam-card"><p><a href="' . esc_url( $back ) . '">← Voltar a Aprovações / APD / ANA</a></p><h2>Rever pedido APD/ANA</h2><div class="adam-admin-detail-grid"><div><strong>Sócio</strong><span>' . esc_html( $member->full_name() ) . '</span></div><div><strong>N.º de sócio ADAM</strong><span>' . esc_html( (string) $member->field( 'numero_socio' ) ) . '</span></div><div><strong>Data do pedido</strong><span>' . esc_html( $this->format_datetime( $request->requested_at() ) ) . '</span></div><div><strong>Valor aplicável</strong><span>' . esc_html( (string) $request->amount() ) . ' €</span></div><div><strong>Estado do pagamento</strong><span>' . esc_html( DisplayLabels::status( (string) $request->payment_status() ) ) . '</span></div><div><strong>Estado do pedido</strong><span>' . esc_html( DisplayLabels::status( (string) $request->status() ) ) . '</span></div></div></div>';
+			echo '<div class="adam-admin-panel adam-card"><h2>Informação para a ANA</h2><div class="adam-admin-detail-grid">';
+			foreach ( $data as $field => $value ) { if ( is_scalar( $value ) && '' !== (string) $value ) { echo '<div><strong>' . esc_html( DisplayLabels::field( (string) $field ) ) . '</strong><span>' . esc_html( DisplayLabels::value( (string) $field, $value ) ) . '</span></div>'; } }
+			$photo_id = absint( $data['profile_photo'] ?? $member->field( 'profile_photo' ) );
+			$photo_url = $photo_id ? wp_get_attachment_url( $photo_id ) : '';
+			if ( $photo_url ) { echo '<div class="adam-admin-panel adam-card"><h2>Fotografia</h2><img src="' . esc_url( (string) $photo_url ) . '" alt="Fotografia do sócio" style="max-width:220px;height:auto;border-radius:12px"></div>'; }
+			echo '</div></div><div class="adam-admin-panel adam-card"><h2>Pagamento</h2><p><strong>Valor:</strong> ' . esc_html( (string) $request->amount() ) . ' €</p><p><strong>Comprovativo:</strong> ' . ( $proof ? '<a href="' . esc_url( $proof ) . '" target="_blank" rel="noopener">Abrir</a> · <a href="' . esc_url( $proof ) . '" download>Descarregar</a>' : 'Não disponível' ) . '</p><p><strong>Estado:</strong> ' . esc_html( DisplayLabels::status( (string) $request->payment_status() ) ) . '</p></div><div class="adam-admin-panel adam-card"><h2>Processamento ANA</h2><p>Pagamento confirmado <span aria-hidden="true">→</span> Submetido à ANA <span aria-hidden="true">→</span> Confirmado pela ANA</p>';
+			if ( ApdAssociationRequest::STATUS_CONFIRMED !== $request->status() ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'; wp_nonce_field( 'adam_membership_apd_action_' . $request->id() ); echo '<input type="hidden" name="action" value="adam_membership_apd_action"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><input type="hidden" name="apd_action" value="confirm"><label>Data de confirmação ANA <input type="date" name="confirmation_date" required></label><label>N.º ANA <input type="text" name="ana_member_number" required></label><button class="button button-primary">Confirmar ANA</button></form>';
+			}
+			echo '</div>';
+			$this->render_footer(); return;
+		}
+		echo '<div class="adam-admin-panel adam-card"><h2>Pedidos APD/ANA</h2><table class="widefat striped"><thead><tr><th>Sócio</th><th>N.º</th><th>Data</th><th>Valor</th><th>Pagamento</th><th>Estado</th><th>Ação</th></tr></thead><tbody>';
+		foreach ( $requests as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null === $member ) { continue; } echo '<tr><td>' . esc_html( $member->full_name() ) . '</td><td>' . esc_html( (string) $member->field( 'numero_socio' ) ) . '</td><td>' . esc_html( $this->format_datetime( $request->requested_at() ) ) . '</td><td>' . esc_html( (string) $request->amount() ) . ' €</td><td>' . esc_html( DisplayLabels::status( (string) $request->payment_status() ) ) . '</td><td>' . esc_html( DisplayLabels::status( (string) $request->status() ) ) . '</td><td><a class="button button-small button-primary" href="' . esc_url( add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'apd', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ) . '">Rever</a></td></tr>'; }
+		echo '</tbody></table></div>';
+		$this->render_footer();
+	}
+
 	private function render_apd_requests_page_clean(): void {
 		$requested_id = absint( $_GET['request_id'] ?? 0 );
 		$this->render_header( 'Pedidos APD/ANA' );
@@ -5770,6 +5803,8 @@ final class AdminController {
 
 	public function render_apd_requests_page(): void {
 		$this->ensure_can_manage();
+		$this->render_apd_review_or_list();
+		return;
 		$requested_id = absint( $_GET['request_id'] ?? 0 );
 		$this->render_header( __( 'Pedidos APD/ANA', 'adam-membership' ) );
 		$fees = (array) ( $this->settings->membership_form_settings()['apd_association_fees'] ?? array() );
