@@ -12,6 +12,7 @@ namespace AdamMembership\Admin;
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\DisplayLabels;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Document\DocumentService;
@@ -573,7 +574,7 @@ final class AdminController {
 								<td><?php echo esc_html( $founder->full_name() ); ?></td>
 								<td><?php echo esc_html( $this->member_number_label( $founder ) ); ?></td>
 								<td><?php echo esc_html( $this->format_date( $founder->field( 'data_adesao' ) ) ); ?></td>
-								<td><?php echo esc_html( $founder->effective_status() ); ?></td>
+								<td><?php echo esc_html( DisplayLabels::status( (string) $founder->effective_status() ) ); ?></td>
 								<td><a class="button button-small" href="<?php echo esc_url( $this->member_url( $founder ) ); ?>"><?php esc_html_e( 'Ver sócio', 'adam-membership' ); ?></a></td>
 							</tr>
 						<?php endforeach; ?>
@@ -607,7 +608,7 @@ final class AdminController {
 		if ( 'registration' === $review_type ) { $this->render_member_page(); return; }
 		if ( 'renewal' === $review_type ) { $this->render_renewal_page(); return; }
 		if ( 'changes' === $review_type ) { $this->render_member_changes_page(); return; }
-		if ( 'apd' === $review_type ) { $this->render_apd_requests_page(); return; }
+		if ( 'apd' === $review_type ) { $this->render_apd_requests_page_clean(); return; }
 		$this->render_header( 'Aprovações' );
 		$this->render_notices();
 		echo '<div class="adam-admin-panel adam-card"><h2>Aprovações</h2><p>Selecione uma categoria para rever os pedidos pendentes.</p><p><a class="button button-primary" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=all' ) ) . '">Todos</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=registrations' ) ) . '">Inscrições</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=renewals' ) ) . '">Renovações</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=changes' ) ) . '">Alterações de dados</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=apd' ) ) . '">APD / ANA</a></p></div>';
@@ -625,6 +626,10 @@ final class AdminController {
 		foreach ( $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'renewal', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'changes', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'apd', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $rows as &$row ) {
+			$row['status'] = DisplayLabels::status( (string) $row['status'] );
+		}
+		unset( $row );
 		usort( $rows, static fn( array $a, array $b ): int => strcmp( $b['date'], $a['date'] ) );
 		return $rows;
 	}
@@ -903,9 +908,9 @@ final class AdminController {
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Último número de sócio atribuído', 'adam-membership' ); ?></th>
 						<td>
-							<label for="adam_last_assigned_member_number" class="screen-reader-text"><?php esc_html_e( "\u{00DA}ltimo n\u{00FA}mero de s\u{00F3}cio atribu\u{00ED}do", 'adam-membership' ); ?></label>
+							<label for="adam_last_assigned_member_number" class="screen-reader-text"><?php esc_html_e( 'Último número de sócio atribuído', 'adam-membership' ); ?></label>
 							<input type="number" id="adam_last_assigned_member_number" name="last_assigned_member_number" class="small-text" min="0" step="1" required value="<?php echo esc_attr( (string) $this->settings->last_assigned_member_number() ); ?>">
-							<p class="description"><?php esc_html_e( "Alterar este valor afeta apenas o pr\u{00F3}ximo n\u{00FA}mero a atribuir. Os n\u{00FA}meros dos s\u{00F3}cios existentes n\u{00E3}o ser\u{00E3}o alterados.", 'adam-membership' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Alterar este valor afeta apenas o próximo número a atribuir. Os números dos sócios existentes não serão alterados.', 'adam-membership' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -3040,8 +3045,8 @@ final class AdminController {
 				<div class="adam-admin-detail-grid">
 					<?php $this->render_detail_item( __( 'APD / Associação', 'adam-membership' ), (string) $member->field( 'adam_external_association_name' ) ); ?>
 					<?php $this->render_detail_item( __( 'N.º de sócio APD', 'adam-membership' ), (string) $member->field( 'adam_external_member_number' ) ); ?>
-					<?php $this->render_detail_item( __( 'Estado da inscrição', 'adam-membership' ), $member->effective_status() ); ?>
-					<?php $this->render_detail_item( __( 'Estado guardado', 'adam-membership' ), $member->status() ); ?>
+					<?php $this->render_detail_item( __( 'Estado da inscrição', 'adam-membership' ), DisplayLabels::status( (string) $member->effective_status() ) ); ?>
+					<?php $this->render_detail_item( __( 'Estado guardado', 'adam-membership' ), DisplayLabels::status( (string) $member->status() ) ); ?>
 					<?php $this->render_detail_item( __( 'N.º de sócio', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
 					<?php $this->render_detail_item( __( 'Membro Fundador', 'adam-membership' ), $member->is_founder() ? __( 'Sim', 'adam-membership' ) : __( 'Não', 'adam-membership' ) ); ?>
 					<?php $this->render_detail_item( __( 'N.º Fundador', 'adam-membership' ), $member->is_founder() ? (string) $member->founder_number() : '—' ); ?>
@@ -4500,7 +4505,7 @@ final class AdminController {
 		printf(
 			'<span class="adam-admin-badge %1$s">%2$s</span>',
 			esc_attr( $this->status_badge_class( $status ) ),
-			esc_html( $status )
+			esc_html( DisplayLabels::status( $status ) )
 		);
 	}
 
@@ -5703,23 +5708,56 @@ final class AdminController {
 	}
 
 	public function render_member_changes_page(): void {
-		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permiss\u{00E3}o.', 'adam-membership' ) ); }
+		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permissão.', 'adam-membership' ) ); }
+		$this->render_member_changes_page_clean();
+		return;
+	}
+
+	private function render_member_changes_page_clean(): void {
 		$requests = $this->member_changes->repository()->all();
 		$requested_id = absint( $_GET['request_id'] ?? 0 );
 		if ( $requested_id > 0 ) {
 			$requests = array_values( array_filter( $requests, static fn( MemberChangeRequest $request ): bool => $request->id() === $requested_id ) );
 		}
-		?><div class="wrap"><h1><?php esc_html_e( 'Pedidos de altera\u{00E7}\u{00E3}o de dados', 'adam-membership' ); ?></h1><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'S\u{00F3}cio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Diferen\u{00E7}as', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'A\u{00E7}\u{00F5}es', 'adam-membership' ); ?></th></tr></thead><tbody><?php foreach ( $requests as $request ) : $member = $this->members->find( $request->user_id() ); if ( null === $member ) { continue; } ?><tr><td><?php echo esc_html( $member->full_name() . ( $member->member_number() ? ' — ' . $member->member_number() : '' ) ); ?></td><td><?php echo esc_html( $request->submitted_at() ); ?></td><td><table><?php foreach ( $request->changes() as $field => $change ) : ?><tr><td><?php echo esc_html( $field ); ?></td><td><?php echo esc_html( (string) ( $change['old'] ?? '' ) ); ?></td><td>→ <?php echo esc_html( (string) ( $change['new'] ?? '' ) ); ?></td></tr><?php endforeach; ?></table></td><td><?php echo esc_html( $request->status() ); ?></td><td><?php if ( MemberChangeRequest::STATUS_PENDING === $request->status() ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'adam_member_change_' . $request->id() ); ?><input type="hidden" name="action" value="adam_membership_member_change_action"><input type="hidden" name="request_id" value="<?php echo esc_attr( $request->id() ); ?>"><button class="button button-primary" name="decision" value="approve"><?php esc_html_e( 'Aprovar', 'adam-membership' ); ?></button> <button class="button" name="decision" value="reject"><?php esc_html_e( 'Rejeitar', 'adam-membership' ); ?></button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
+		?><div class="wrap"><h1>Pedidos de alteração de dados</h1><table class="widefat striped"><thead><tr><th>Sócio</th><th>Data</th><th>Diferenças</th><th>Estado</th><th>Ações</th></tr></thead><tbody><?php foreach ( $requests as $request ) : $member = $this->members->find( $request->user_id() ); if ( null === $member ) { continue; } ?><tr><td><?php echo esc_html( $member->full_name() . ( $member->member_number() ? ' — ' . $member->member_number() : '' ) ); ?></td><td><?php echo esc_html( $request->submitted_at() ); ?></td><td><table><?php foreach ( $request->changes() as $field => $change ) : ?><tr><td><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?></td><td><?php echo esc_html( DisplayLabels::value( (string) $field, $change['old'] ?? '' ) ); ?></td><td>→ <?php echo esc_html( DisplayLabels::value( (string) $field, $change['new'] ?? '' ) ); ?></td></tr><?php endforeach; ?></table></td><td><?php echo esc_html( DisplayLabels::status( (string) $request->status() ) ); ?></td><td><?php if ( MemberChangeRequest::STATUS_PENDING === $request->status() ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'adam_member_change_' . $request->id() ); ?><input type="hidden" name="action" value="adam_membership_member_change_action"><input type="hidden" name="request_id" value="<?php echo esc_attr( $request->id() ); ?>"><button class="button button-primary" name="decision" value="approve">Aprovar</button> <button class="button" name="decision" value="reject">Rejeitar</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
 	}
 
 	public function handle_member_change_action(): void {
-		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permiss\u{00E3}o.', 'adam-membership' ) ); }
+		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permissão.', 'adam-membership' ) ); }
 		$id = absint( $_POST['request_id'] ?? 0 );
 		check_admin_referer( 'adam_member_change_' . $id );
 		$result = 'approve' === sanitize_key( (string) ( $_POST['decision'] ?? '' ) ) ? $this->member_changes->approve( $id ) : $this->member_changes->reject( $id );
 		$url = add_query_arg( array( 'page' => 'adam-membership-pending', 'approval_type' => 'changes', 'member_change_result' => is_wp_error( $result ) ? 'error' : 'ok' ), admin_url( 'admin.php' ) );
 		wp_safe_redirect( $url );
 		exit;
+	}
+
+	private function render_apd_requests_page_clean(): void {
+		$requested_id = absint( $_GET['request_id'] ?? 0 );
+		$this->render_header( 'Pedidos APD/ANA' );
+		$this->render_notices();
+		echo '<div class="adam-admin-panel adam-card"><h2>Pedidos APD/ANA</h2><table class="widefat striped"><thead><tr><th>Sócio</th><th>N.º</th><th>Data</th><th>Valor</th><th>Pagamento</th><th>Estado</th><th>Confirmação ANA</th><th>Ações</th></tr></thead><tbody>';
+		foreach ( $this->apd_association->repository()->all() as $request ) {
+			if ( $requested_id > 0 && $request->id() !== $requested_id ) { continue; }
+			$member = $this->members->find( $request->user_id() );
+			if ( null === $member ) { continue; }
+			if ( $requested_id > 0 ) {
+				echo '<tr><td colspan="8"><h3>Informação submetida para ANA</h3><table class="widefat striped">';
+				foreach ( (array) ( $request->data()['submitted_data'] ?? array() ) as $field => $value ) {
+					if ( is_scalar( $value ) && '' !== (string) $value ) { echo '<tr><th>' . esc_html( DisplayLabels::field( (string) $field ) ) . '</th><td>' . esc_html( DisplayLabels::value( (string) $field, $value ) ) . '</td></tr>'; }
+				}
+				echo '</table></td></tr>';
+			}
+			echo '<tr><td>' . esc_html( $member->full_name() ) . '</td><td>' . esc_html( (string) $member->field( 'numero_socio' ) ) . '</td><td>' . esc_html( $this->format_datetime( $request->requested_at() ) ) . '</td><td>' . esc_html( $request->amount() ) . ' €</td><td>' . esc_html( DisplayLabels::status( (string) $request->payment_status() ) ) . '</td><td>' . esc_html( DisplayLabels::status( (string) $request->status() ) ) . '</td><td>' . esc_html( $request->confirmation_date() ?: '—' ) . '</td><td>';
+			if ( $request->status() !== ApdAssociationRequest::STATUS_CONFIRMED ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+				wp_nonce_field( 'adam_membership_apd_action_' . $request->id() );
+				echo '<input type="hidden" name="action" value="adam_membership_apd_action"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><input type="hidden" name="apd_action" value="confirm"><input type="date" name="confirmation_date" required><input type="text" name="ana_member_number" placeholder="N.º ANA" required><button class="button button-primary">Confirmar ANA</button></form>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table></div>';
+		$this->render_footer();
 	}
 
 	public function render_apd_requests_page(): void {

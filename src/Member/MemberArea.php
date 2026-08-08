@@ -15,6 +15,7 @@ use AdamMembership\Communication\CommunicationPreferences;
 use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\ManagedPages;
+use AdamMembership\Core\DisplayLabels;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
@@ -2060,7 +2061,7 @@ final class MemberArea {
 		printf(
 			'<span class="adam-badge %1$s">%2$s</span>',
 			esc_attr( $this->status_class( $status ) ),
-			esc_html( $status )
+			esc_html( DisplayLabels::status( $status ) )
 		);
 	}
 
@@ -2410,7 +2411,7 @@ final class MemberArea {
 		}
 		ob_start(); ?>
 		<section class="adam-public-form adam-card" data-adam-membership-form="apd-association">
-			<div class="adam-card-heading"><p class="adam-eyebrow">ADAM / ANA</p><h2><?php esc_html_e( "Associar APD atrav\u{00E9}s da ADAM", 'adam-membership' ); ?></h2></div>
+			<div class="adam-card-heading"><p class="adam-eyebrow">ADAM / ANA</p><h2><?php esc_html_e( 'Associar APD através da ADAM', 'adam-membership' ); ?></h2></div>
 			<?php echo wp_kses_post( $message ); ?><p><?php esc_html_e( "Reveja os dados que a ADAM ir\u{00E1} utilizar no seu registo ANA.", 'adam-membership' ); ?></p>
 			<p><strong><?php esc_html_e( "Valor aplic\u{00E1}vel:", 'adam-membership' ); ?> <?php echo esc_html( number_format_i18n( (float) $price, 2 ) . ' ' . html_entity_decode( '&#8364;', ENT_QUOTES, 'UTF-8' ) ); ?></strong></p>
 			<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_apd_association' ); ?>

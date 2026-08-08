@@ -19,7 +19,7 @@ final class MemberChangeService {
 	/** @param array<string,mixed> $submitted */
 	public function submit( Member $member, array $submitted ): MemberChangeRequest|WP_Error {
 		if ( $this->repository->pending_for_user( $member->user_id() ) ) {
-			return new WP_Error( 'adam_member_change_pending', __( "J\u{00E1} existe um pedido de altera\u{00E7}\u{00E3}o pendente.", 'adam-membership' ) );
+			return new WP_Error( 'adam_member_change_pending', __( 'Já existe um pedido de alteração pendente.', 'adam-membership' ) );
 		}
 
 		$protected = array(
@@ -43,7 +43,7 @@ final class MemberChangeService {
 		}
 
 		if ( array() === $changes ) {
-			return new WP_Error( 'adam_member_change_empty', __( "N\u{00E3}o foram encontradas altera\u{00E7}\u{00F5}es.", 'adam-membership' ) );
+			return new WP_Error( 'adam_member_change_empty', __( 'Não foram encontradas alterações.', 'adam-membership' ) );
 		}
 		return $this->repository->create( $member->user_id(), $changes );
 	}
@@ -51,11 +51,11 @@ final class MemberChangeService {
 	public function approve( int $id ): true|WP_Error {
 		$request = $this->repository->find( $id );
 		if ( null === $request || MemberChangeRequest::STATUS_PENDING !== $request->status() ) {
-			return new WP_Error( 'adam_member_change_not_pending', __( "Pedido de altera\u{00E7}\u{00E3}o inv\u{00E1}lido.", 'adam-membership' ) );
+			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
 		}
 		$member = $this->members->find( $request->user_id() );
 		if ( null === $member ) {
-			return new WP_Error( 'adam_member_not_found', __( "S\u{00F3}cio n\u{00E3}o encontrado.", 'adam-membership' ) );
+			return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		}
 		$patch = array();
 		foreach ( $request->changes() as $field => $change ) {
@@ -82,7 +82,7 @@ final class MemberChangeService {
 	public function reject( int $id ): true|WP_Error {
 		$request = $this->repository->find( $id );
 		if ( null === $request || MemberChangeRequest::STATUS_PENDING !== $request->status() ) {
-			return new WP_Error( 'adam_member_change_not_pending', __( "Pedido de altera\u{00E7}\u{00E3}o inv\u{00E1}lido.", 'adam-membership' ) );
+			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
 		}
 		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_REJECTED, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
 		return true;
