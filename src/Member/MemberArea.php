@@ -2579,12 +2579,7 @@ final class MemberArea {
 	private function render_registration_correction_page( Member $member ): string {
 		$settings = $this->settings->membership_form_settings();
 		$fields = (array) ( $settings['registration_fields'] ?? array() );
-		$allowed = array();
-		foreach ( (array) $member->field( 'adam_correction_fields' ) as $raw_field ) {
-			$key = is_array( $raw_field ) ? ( $raw_field['field_key'] ?? $raw_field['key'] ?? '' ) : $raw_field;
-			$key = sanitize_key( (string) $key );
-			if ( '' !== $key && ! in_array( $key, $allowed, true ) ) { $allowed[] = $key; }
-		}
+		$allowed = $this->normalize_correction_fields( $member->field( 'adam_correction_fields' ), $fields );
 		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) ) {
@@ -2592,6 +2587,26 @@ final class MemberArea {
 			else { $updates = array(); foreach ( $allowed as $key ) { if ( array_key_exists( $key, $_POST ) && isset( $map[ $key ] ) ) { $updates[ $map[ $key ] ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) ); } } if ( isset( $_FILES['profile_photo'] ) && ! empty( $_FILES['profile_photo']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = media_handle_upload( 'profile_photo', 0, array(), array( 'test_form' => false ) ); if ( ! is_wp_error( $upload ) ) { $updates['profile_photo'] = $upload; } } if ( array() !== $updates ) { $member->save( array_merge( $updates, array( 'adam_correction_status' => 'correction_submitted' ) ) ); wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1' ) ) ); exit; } $message = $this->notice_markup( 'error', 'Corrija pelo menos um campo antes de enviar.' ); }
 		}
 		ob_start(); ?><div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Corrigir pedido</h2><p><?php echo esc_html( (string) $member->field( 'adam_correction_note' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Necessita de correção</strong><p>Motivo: <?php echo esc_html( (string) $member->field( 'adam_correction_reason' ) ); ?></p></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_registration_correction' ); ?><div class="adam-form-grid"><?php foreach ( $allowed as $key ) : $field = $fields[ $key ] ?? array( 'label' => DisplayLabels::field( $key ) ); $storage = $map[ $key ] ?? $key; $value = (string) $member->field( $storage ); ?><label class="adam-form-field"><span><?php echo esc_html( $field['label'] ?? $key ); ?></span><input type="text" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>"></label><?php endforeach; ?><?php if ( in_array( 'profile_photo', $allowed, true ) ) : ?><label class="adam-form-field">Fotografia<input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp"></label><?php endif; ?></div><button class="button button-primary" name="adam_registration_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
+	}
+
+	/** @param mixed $stored @param array<string,mixed> $definitions @return array<int,string> */
+	private function normalize_correction_fields( mixed $stored, array $definitions ): array {
+		$out = array();
+		$aliases = array( 'civil_status' => 'marital_status', 'estado_civil' => 'marital_status', 'telemovel' => 'phone', 'fotografia' => 'profile_photo' );
+		$items = (array) $stored;
+		if ( is_array( $stored ) && array_keys( $stored ) !== range( 0, count( $stored ) - 1 ) ) { $items = array_keys( $stored ); }
+		foreach ( $items as $raw ) {
+			$key = is_array( $raw ) ? ( $raw['field_key'] ?? $raw['key'] ?? $raw['name'] ?? '' ) : $raw;
+			$key = sanitize_key( (string) $key );
+			$key = $aliases[ $key ] ?? $key;
+			if ( isset( $definitions[ $key ] ) ) { $out[] = $key; continue; }
+			foreach ( $definitions as $definition_key => $definition ) {
+				if ( is_array( $definition ) && $key === sanitize_key( (string) ( $definition['label'] ?? '' ) ) ) { $out[] = (string) $definition_key; break; }
+			}
+			if ( ! in_array( $key, $out, true ) && 'profile_photo' === $key ) { $out[] = $key; }
+			if ( ! in_array( $key, $out, true ) && function_exists( 'error_log' ) ) { error_log( 'ADAM correction field could not be resolved: ' . $key ); }
+		}
+		return array_values( array_unique( $out ) );
 	}
 
 	private function render_apd_correction_page( Member $member, int $request_id ): string {
