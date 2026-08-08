@@ -2402,6 +2402,12 @@ final class MemberArea {
 
 	private function render_apd_clean_form( Member $member, array $fields, string $message ): string {
 		$price = $this->apd_association->price_for( $member );
+		foreach ( $fields as $field_key => $field_definition ) {
+			$fields[ $field_key ] = is_array( $field_definition ) ? $field_definition : array();
+			$fields[ $field_key ]['type'] = isset( $fields[ $field_key ]['type'] ) && is_string( $fields[ $field_key ]['type'] ) && '' !== $fields[ $field_key ]['type'] ? $fields[ $field_key ]['type'] : 'text';
+			$fields[ $field_key ]['label'] = (string) ( $fields[ $field_key ]['label'] ?? $field_key );
+			$fields[ $field_key ]['key'] = (string) ( $fields[ $field_key ]['key'] ?? $field_key );
+		}
 		ob_start(); ?>
 		<section class="adam-public-form adam-card" data-adam-membership-form="apd-association">
 			<div class="adam-card-heading"><p class="adam-eyebrow">ADAM / ANA</p><h2><?php esc_html_e( "Associar APD atrav\u{00E9}s da ADAM", 'adam-membership' ); ?></h2></div>
@@ -2499,6 +2505,12 @@ final class MemberArea {
 		$meta_map = array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
 		$out = array();
 		foreach ( $configs as $key => $config ) { if ( ! is_array( $config ) || empty( $config['enabled'] ) || in_array( $key, array( 'payment_receipt', 'privacy_acceptance', 'profile_photo', 'external_association_name', 'external_member_number', 'external_association_proof' ), true ) ) { continue; } $meta = $meta_map[ $key ] ?? ''; $out[ $key ] = array( 'label' => (string) ( $config['label'] ?? $key ), 'value' => (string) ( $map[ $key ] ?? ( '' !== $meta ? $member->field( $meta ) : $member->field( 'adam_custom_' . sanitize_key( (string) $key ) ) ) ), 'key' => $key, 'type' => (string) ( $config['type'] ?? 'text' ), 'options' => (string) ( $config['options'] ?? '' ), 'readonly' => 'full_name' === $key ); }
+		foreach ( $out as $field_key => $definition ) {
+			$out[ $field_key ]['type'] = isset( $definition['type'] ) && is_string( $definition['type'] ) && '' !== $definition['type'] ? $definition['type'] : 'text';
+			$out[ $field_key ]['label'] = (string) ( $definition['label'] ?? $field_key );
+			$out[ $field_key ]['key'] = (string) ( $definition['key'] ?? $field_key );
+			$out[ $field_key ]['options'] = (string) ( $definition['options'] ?? '' );
+		}
 		return $out;
 	}
 
@@ -2532,7 +2544,8 @@ final class MemberArea {
 			'documento_local_emissao' => array( 'label' => __( 'Local de emissão', 'adam-membership' ), 'value' => $member->field( 'documento_local_emissao' ), 'key' => 'documento_local_emissao' ),
 		);
 		$fields = $this->member_update_field_definitions( $member );
-		$external = Member::APD_EXTERNAL === (string) $member->field( 'adam_apd_management_status' );
+		// External APD identity is managed outside this form; it must not be editable here.
+		$external = false;
 		if ( $external ) {
 			$fields['adam_external_association_name'] = array( 'label' => __( 'APD / Associação', 'adam-membership' ), 'value' => $member->field( 'adam_external_association_name' ), 'key' => 'adam_external_association_name' );
 			$fields['adam_external_member_number'] = array( 'label' => __( 'N.º de sócio APD', 'adam-membership' ), 'value' => $member->field( 'adam_external_member_number' ), 'key' => 'adam_external_member_number' );
@@ -2549,7 +2562,7 @@ final class MemberArea {
 					$patch_key = $patch_keys[ $field['key'] ] ?? $field['key'];
 					$submitted[ $patch_key ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
 				}
-				foreach ( array( 'profile_photo', 'adam_external_association_proof' ) as $upload_field ) {
+				foreach ( array( 'profile_photo' ) as $upload_field ) {
 					if ( empty( $_FILES[ $upload_field ]['name'] ) ) { continue; }
 					require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
 					$attachment = media_handle_upload( $upload_field, 0, array(), array( 'test_form' => false ) );

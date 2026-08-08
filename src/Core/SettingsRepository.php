@@ -280,10 +280,12 @@ final class SettingsRepository {
 			is_array( $settings['forms']['apd'] ?? null ) ? $settings['forms']['apd'] : array()
 		);
 		$shared = array_keys( (array) ( $settings['registration_fields'] ?? array() ) );
+		$special = array( 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' );
 		foreach ( array( 'update', 'apd' ) as $form ) {
+			$available = array_values( array_diff( $shared, $special ) );
 			$selected = isset( $settings['forms'][ $form ]['fields'] ) && is_array( $settings['forms'][ $form ]['fields'] )
-				? array_values( array_intersect( $shared, array_map( 'sanitize_key', $settings['forms'][ $form ]['fields'] ) ) )
-				: $shared;
+				? array_values( array_intersect( $available, array_map( 'sanitize_key', $settings['forms'][ $form ]['fields'] ) ) )
+				: $available;
 			$settings['forms'][ $form ]['fields'] = $selected;
 		}
 		$settings['shared_fields'] = $shared;
