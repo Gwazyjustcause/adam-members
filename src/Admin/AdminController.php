@@ -19,6 +19,7 @@ use AdamMembership\Emails\EmailService;
 use AdamMembership\Event\Event;
 use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
+use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
