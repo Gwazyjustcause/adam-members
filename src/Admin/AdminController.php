@@ -1420,7 +1420,7 @@ final class AdminController {
 		$user_id      = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
 		$confirmation = isset( $_POST['delete_confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['delete_confirmation'] ) ) : '';
 
-		check_admin_referer( 'adam_membership_permanent_delete_' . $user_id );
+		$this->verify_admin_nonce( 'adam_membership_permanent_delete_' . $user_id );
 
 		if ( 'DELETE' !== $confirmation ) {
 			$this->redirect_with_error( __( 'Type DELETE exactly to confirm permanent member deletion.', 'adam-membership' ) );
@@ -1452,7 +1452,7 @@ final class AdminController {
 		$request_id = isset( $_POST['request_id'] ) ? absint( wp_unslash( $_POST['request_id'] ) ) : 0;
 		$action     = isset( $_POST['renewal_action'] ) ? sanitize_key( wp_unslash( $_POST['renewal_action'] ) ) : '';
 
-		check_admin_referer( 'adam_membership_renewal_action_' . $request_id );
+		$this->verify_admin_nonce( 'adam_membership_renewal_action_' . $request_id );
 
 		$result = match ( $action ) {
 			self::ACTION_APPROVE_RENEWAL          => $this->renewal_service->approve( $request_id ),
@@ -1479,7 +1479,7 @@ final class AdminController {
 		$team_id = isset( $_POST['team_id'] ) ? absint( wp_unslash( $_POST['team_id'] ) ) : 0;
 		$action  = isset( $_POST['team_action'] ) ? sanitize_key( wp_unslash( $_POST['team_action'] ) ) : '';
 
-		check_admin_referer( 'adam_membership_team_action_' . $team_id );
+		$this->verify_admin_nonce( 'adam_membership_team_action_' . $team_id );
 
 		$team = $this->teams->find( $team_id );
 
@@ -1525,7 +1525,7 @@ final class AdminController {
 	 */
 	public function handle_save_settings(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_save_settings' );
+		$this->verify_admin_nonce( 'adam_membership_save_settings' );
 
 		if ( isset( $_POST['last_assigned_member_number'] ) ) {
 			$raw_counter = trim( (string) wp_unslash( $_POST['last_assigned_member_number'] ) );
@@ -1586,7 +1586,7 @@ final class AdminController {
 	 */
 	public function handle_save_forms_settings(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_save_forms_settings' );
+		$this->verify_admin_nonce( 'adam_membership_save_forms_settings' );
 
 		$registration_url = isset( $_POST['registration_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['registration_page_url'] ) ) : $this->settings->registration_page_url();
 		$renewal_url      = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : $this->settings->renewal_page_url();
@@ -1618,7 +1618,7 @@ final class AdminController {
 	 */
 	public function handle_save_email_settings(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_save_email_settings' );
+		$this->verify_admin_nonce( 'adam_membership_save_email_settings' );
 
 		if ( isset( $_POST['template_key'] ) ) {
 			$this->handle_send_test_email();
@@ -1639,7 +1639,7 @@ final class AdminController {
 	 */
 	public function handle_send_test_email(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_save_email_settings' );
+		$this->verify_admin_nonce( 'adam_membership_save_email_settings' );
 
 		$template_key = isset( $_POST['template_key'] ) ? sanitize_key( wp_unslash( $_POST['template_key'] ) ) : '';
 		$user         = wp_get_current_user();
@@ -1661,7 +1661,7 @@ final class AdminController {
 	 */
 	public function handle_run_maintenance(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_run_maintenance' );
+		$this->verify_admin_nonce( 'adam_membership_run_maintenance' );
 
 		$this->logger->info(
 			'Manutenção manual de sócios solicitada.',
@@ -1689,7 +1689,7 @@ final class AdminController {
 	 */
 	public function handle_export_members_csv(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_export_members_csv' );
+		$this->verify_admin_nonce( 'adam_membership_export_members_csv' );
 
 		$filename = 'adam-socios-' . wp_date( 'Ymd-His', current_time( 'timestamp' ) ) . '.csv';
 		$members  = $this->members->admin_members( array( 'orderby' => 'registered', 'order' => 'desc' ) );
@@ -1731,7 +1731,7 @@ final class AdminController {
 	 */
 	public function handle_export_complete_zip(): void {
 		$this->ensure_can_manage();
-		check_admin_referer( 'adam_membership_export_complete_zip' );
+		$this->verify_admin_nonce( 'adam_membership_export_complete_zip' );
 
 		$scope   = isset( $_REQUEST['export_scope'] ) ? sanitize_key( wp_unslash( $_REQUEST['export_scope'] ) ) : 'selected';
 		$members = array();
@@ -3364,7 +3364,7 @@ final class AdminController {
 		}
 
 		$user_id = isset( $_POST['user_id'] ) ? absint( wp_unslash( $_POST['user_id'] ) ) : 0;
-		check_admin_referer( 'adam_membership_member_action_' . $user_id );
+		$this->verify_admin_nonce( 'adam_membership_member_action_' . $user_id );
 
 		if ( 0 === $user_id ) {
 			$this->redirect_with_error( __( 'Invalid member.', 'adam-membership' ) );
@@ -5616,6 +5616,14 @@ final class AdminController {
 		$this->redirect_with_notice( 'adam_message', $message );
 	}
 
+	/** Validate an admin nonce and return to the ADAM admin screen on failure. */
+	private function verify_admin_nonce( string $action ): void {
+		$nonce = isset( $_REQUEST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['_wpnonce'] ) ) : '';
+		if ( '' === $nonce || ! wp_verify_nonce( $nonce, $action ) ) {
+			$this->redirect_with_error( __( 'A ação expirou ou não é válida. Tente novamente.', 'adam-membership' ) );
+		}
+	}
+
 	/**
 	 * Redirect with an error message.
 	 *
@@ -5725,7 +5733,7 @@ final class AdminController {
 	public function handle_member_change_action(): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permissão.', 'adam-membership' ) ); }
 		$id = absint( $_POST['request_id'] ?? 0 );
-		check_admin_referer( 'adam_member_change_' . $id );
+		$this->verify_admin_nonce( 'adam_member_change_' . $id );
 		$result = 'approve' === sanitize_key( (string) ( $_POST['decision'] ?? '' ) ) ? $this->member_changes->approve( $id ) : $this->member_changes->reject( $id );
 		$url = add_query_arg( array( 'page' => 'adam-membership-pending', 'approval_type' => 'changes', 'member_change_result' => is_wp_error( $result ) ? 'error' : 'ok' ), admin_url( 'admin.php' ) );
 		wp_safe_redirect( $url );
@@ -5782,7 +5790,7 @@ final class AdminController {
 	public function handle_apd_action(): void {
 		$this->ensure_can_manage();
 		$id = absint( $_POST['request_id'] ?? 0 );
-		check_admin_referer( 'adam_membership_apd_action_' . $id );
+		$this->verify_admin_nonce( 'adam_membership_apd_action_' . $id );
 		$action = sanitize_key( wp_unslash( $_POST['apd_action'] ?? '' ) );
 		$result = 'confirm' === $action ? $this->apd_association->confirm( $id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['ana_member_number'] ?? '' ) ) ) : new WP_Error( 'adam_invalid_apd_action', __( 'Ação APD inválida.', 'adam-membership' ) );
 		if ( $result instanceof WP_Error ) { $this->redirect_with_error( $result->get_error_message() ); }
