@@ -40,7 +40,15 @@ final class ApdAssociationService {
 		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
 		$member = $this->members->find( $request->user_id() );
 		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
-		$member->save( array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'adam_external_association_name' => 'ANA', 'adam_external_member_number' => $ana_member_number, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ), 'estado' => Member::STATUS_ACTIVE ) );
+		$updates = array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'adam_external_association_name' => 'ANA', 'adam_external_member_number' => $ana_member_number, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ), 'estado' => Member::STATUS_ACTIVE );
+		$submitted = $request->data()['submitted_data'] ?? array();
+		if ( is_array( $submitted ) ) {
+			foreach ( array( 'data_nascimento' => 'birth_date', 'genero' => 'gender', 'estado_civil' => 'marital_status', 'profissao' => 'profession', 'naturalidade' => 'birthplace', 'nacionalidade' => 'nationality', 'telefone' => 'phone', 'telefone_fixo' => 'telephone', 'morada' => 'address_line_1', 'morada_linha_2' => 'address_line_2', 'codigo_postal' => 'postcode', 'cidade' => 'city', 'municipio' => 'municipality', 'pais' => 'country', 'cartao_cidadao' => 'citizen_card', 'documento_validade' => 'document_expiry_date', 'documento_local_emissao' => 'document_issuing_place', 'nif' => 'nif', 'equipa' => 'team' ) as $member_field => $submitted_field ) {
+				if ( isset( $submitted[ $submitted_field ] ) ) { $updates[ $member_field ] = sanitize_text_field( (string) $submitted[ $submitted_field ] ); }
+			}
+			if ( ! empty( $submitted['remove_profile_photo'] ) ) { $updates['profile_photo'] = ''; } elseif ( ! empty( $submitted['profile_photo'] ) ) { $updates['profile_photo'] = absint( $submitted['profile_photo'] ); }
+		}
+		$member->save( $updates );
 		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
 		return true;
 	}
