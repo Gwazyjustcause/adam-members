@@ -107,6 +107,9 @@ final class Member {
 		'payment_receipt' => '',
 		'motivo_rejeicao'     => '',
 		'nota_rejeicao_admin' => '',
+		'adam_correction_status' => '',
+		'adam_correction_reason' => '',
+		'adam_correction_note' => '',
 	);
 
 	/**

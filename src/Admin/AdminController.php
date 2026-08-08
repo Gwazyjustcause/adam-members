@@ -57,6 +57,7 @@ final class AdminController {
 	private const ACTION_CONFIRM_ANA  = 'confirm_ana';
 	private const ACTION_REMOVE_ANA   = 'remove_ana';
 	private const ACTION_REJECT       = 'reject';
+	private const ACTION_REQUEST_CORRECTION = 'request_correction';
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
@@ -1838,6 +1839,7 @@ final class AdminController {
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=adam-membership-renewals' ) ); ?>"><?php esc_html_e( 'Repor', 'adam-membership' ); ?></a>
 		</form>
 		<?php
+		?>
 	}
 
 	/**
@@ -3392,6 +3394,7 @@ final class AdminController {
 			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ) ),
 			self::ACTION_REMOVE_ANA   => $this->remove_ana_for_testing( $user_id ),
 			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
+			self::ACTION_REQUEST_CORRECTION => $this->approval_service->request_correction( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),

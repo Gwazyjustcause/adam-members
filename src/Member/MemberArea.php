@@ -646,6 +646,19 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_rejected( Member $member ): void {
+		$correction = 'correction_requested' === (string) $member->field( 'adam_correction_status' );
+		if ( 'correction_submitted' === (string) $member->field( 'adam_correction_status' ) ) {
+			$this->render_status_card( 'Correção submetida — A aguardar nova análise', 'A ADAM irá analisar novamente a informação enviada.' );
+			$this->render_profile( $member );
+			return;
+		}
+		if ( $correction ) {
+			$this->render_status_card( 'Necessita de correção', 'Motivo: ' . (string) $member->field( 'adam_correction_reason' ) . ( $member->field( 'adam_correction_note' ) ? ' — ' . (string) $member->field( 'adam_correction_note' ) : '' ) );
+			$this->render_notifications_card( array( 'A sua inscrição necessita de correções.', 'O que precisa de corrigir: ' . (string) $member->field( 'adam_correction_note' ) ) );
+			$this->render_actions( array( array( 'label' => 'Corrigir pedido', 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) ) );
+			$this->render_profile( $member );
+			return;
+		}
 		?>
 		<div class="adam-dashboard-grid">
 			<?php
@@ -2681,7 +2694,7 @@ final class MemberArea {
 					$message = $this->notice_markup( 'error', $validation_error->get_error_message() );
 				} else {
 					$result = $this->member_changes->submit( $member, $submitted );
-					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $result->id() ) ) ); exit; }
+					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { if ( 'correction_requested' === (string) $member->field( 'adam_correction_status' ) ) { $member->save( array( 'adam_correction_status' => 'correction_submitted' ) ); } wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $result->id() ) ) ); exit; }
 				}
 			}
 		}

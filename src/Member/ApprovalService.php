@@ -218,6 +218,15 @@ final class ApprovalService {
 		return true;
 	}
 
+	public function request_correction( int $user_id, string $reason = '', string $note = '' ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
+		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_membership_correction_reason_required', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
+		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note ) );
+		$this->email->send_registration_correction_email( $member, $reason, $note );
+		return true;
+	}
+
 	/**
 	 * Get missing required registration documents for a member awaiting approval.
 	 *
