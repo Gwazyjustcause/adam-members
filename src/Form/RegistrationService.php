@@ -296,6 +296,7 @@ final class RegistrationService {
 			'equipa'                         => sanitize_text_field( (string) ( $payload['team'] ?? '' ) ),
 			'team_id'                        => absint( $payload['team_id'] ?? 0 ),
 			'adam_membership_origin'         => $mode,
+			'adam_apd_management_status'     => 'adam_primary' === $mode ? Member::APD_PENDING : Member::APD_EXTERNAL,
 			'adam_membership_fee'            => sanitize_text_field( (string) ( $payload['membership_fee'] ?? '' ) ),
 			'adam_external_association_name' => sanitize_text_field( (string) ( $payload['external_association_name'] ?? '' ) ),
 			'adam_external_member_number'    => sanitize_text_field( (string) ( $payload['external_member_number'] ?? '' ) ),

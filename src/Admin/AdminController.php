@@ -21,6 +21,8 @@ use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
+use AdamMembership\Member\ApdAssociationService;
+use AdamMembership\Member\ApdAssociationRequest;
 use AdamMembership\Member\CardService;
 use AdamMembership\Member\HistoryEntry;
 use AdamMembership\Member\HistoryRepository;
@@ -46,6 +48,7 @@ final class AdminController {
 	private const HISTORY_PAGE_SLUG   = 'adam-membership-history';
 	private const MEMBER_PAGE_SLUG    = 'adam-membership-member';
 	private const ACTION_APPROVE      = 'approve';
+	private const ACTION_CONFIRM_ANA  = 'confirm_ana';
 	private const ACTION_REJECT       = 'reject';
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
@@ -57,6 +60,7 @@ final class AdminController {
 	private const ACTION_REPLACE_RENEWAL_DOCUMENT = 'replace_renewal_document';
 	private const ACTION_REMOVE_RENEWAL_DOCUMENT  = 'remove_renewal_document';
 	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
+	private const ACTION_CONFIRM_ANA_RENEWAL = 'confirm_ana_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
 	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
@@ -202,6 +206,7 @@ final class AdminController {
 	 * @var CompleteMemberExportService
 	 */
 	private CompleteMemberExportService $complete_export;
+	private ApdAssociationService $apd_association;
 
 	/**
 	 * Create the admin controller.
@@ -225,7 +230,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -244,6 +249,7 @@ final class AdminController {
 		$this->teams               = $teams;
 		$this->member_deletion     = $member_deletion;
 		$this->complete_export     = $complete_export;
+		$this->apd_association     = $apd_association;
 	}
 
 	/**
@@ -267,6 +273,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
 		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
 		add_action( 'admin_post_adam_membership_export_complete_zip', array( $this, 'handle_export_complete_zip' ) );
+		add_action( 'admin_post_adam_membership_apd_action', array( $this, 'handle_apd_action' ) );
 		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
 	}
 
@@ -328,6 +335,8 @@ final class AdminController {
 			'adam-membership-renewals',
 			array( $this, 'render_renewals_page' )
 		);
+
+		add_submenu_page( self::MENU_SLUG, esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), self::CAPABILITY, 'adam-membership-apd-requests', array( $this, 'render_apd_requests_page' ) );
 
 		add_submenu_page(
 			self::MENU_SLUG,
@@ -1299,6 +1308,7 @@ final class AdminController {
 
 		$result = match ( $action ) {
 			self::ACTION_APPROVE_RENEWAL          => $this->renewal_service->approve( $request_id ),
+			self::ACTION_CONFIRM_ANA_RENEWAL     => $this->renewal_service->confirm_ana_and_approve( $request_id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ) ),
 			self::ACTION_REJECT_RENEWAL           => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
 			self::ACTION_REPLACE_RENEWAL_DOCUMENT => $this->replace_renewal_document( $request_id ),
 			self::ACTION_REMOVE_RENEWAL_DOCUMENT  => $this->remove_renewal_document( $request_id ),
@@ -1886,6 +1896,7 @@ final class AdminController {
 				<h2><?php esc_html_e( 'Decisão de revisão', 'adam-membership' ); ?></h2>
 				<div class="adam-admin-actions">
 					<?php $this->render_renewal_action_form( $request, self::ACTION_APPROVE_RENEWAL, __( 'Aprovar renovação', 'adam-membership' ), 'button-primary' ); ?>
+				<?php $submitted = $request->data()['submitted_data'] ?? array(); if ( 'adam_primary' === (string) ( $submitted['adam_membership_origin'] ?? '' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_renewal_action"><input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA_RENEWAL ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>"><?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?><label>Data de confirmaÃ§Ã£o ANA <input type="date" name="confirmation_date" required></label><button class="button button-primary">Confirmar ANA e concluir</button></form><?php endif; ?>
 				</div>
 				<?php $this->render_renewal_rejection_form( $request ); ?>
 			</div>
@@ -2894,6 +2905,7 @@ final class AdminController {
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
+				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmaÃ§Ã£o ANA <input type="date" name="ana_confirmation_date" required></label><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
 				</div>
 
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-quota-form">
@@ -3177,6 +3189,7 @@ final class AdminController {
 
 		$result = match ( $action ) {
 			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id ),
+			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ) ),
 			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
@@ -5459,5 +5472,31 @@ final class AdminController {
 		}
 
 		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? $date : '';
+	}
+
+	public function render_apd_requests_page(): void {
+		$this->ensure_can_manage();
+		$this->render_header( __( 'Pedidos APD/ANA', 'adam-membership' ) );
+		$fees = (array) ( $this->settings->membership_form_settings()['apd_association_fees'] ?? array() );
+		echo '<div class="adam-admin-panel adam-card"><h2>PreÃ§os de associaÃ§Ã£o APD</h2><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="adam_membership_save_forms_settings">'; wp_nonce_field( 'adam_membership_save_forms_settings' ); echo '<input name="membership_forms[apd_association_fees][0_3]" value="' . esc_attr( $fees['0_3'] ?? '12.00' ) . '"> 0-3 meses <input name="membership_forms[apd_association_fees][4_6]" value="' . esc_attr( $fees['4_6'] ?? '14.00' ) . '"> 4-6 meses <input name="membership_forms[apd_association_fees][7_9]" value="' . esc_attr( $fees['7_9'] ?? '17.00' ) . '"> 7-9 meses <input name="membership_forms[apd_association_fees][10_plus]" value="' . esc_attr( $fees['10_plus'] ?? '22.00' ) . '"> 10+ meses <button class="button button-primary">Guardar preÃ§os</button></form></div>';
+		echo '<div class="adam-admin-panel adam-card"><table class="widefat striped"><thead><tr><th>Membro</th><th>N.Âº</th><th>Data</th><th>Valor</th><th>Pagamento</th><th>Estado</th><th>ConfirmaÃ§Ã£o ANA</th><th>AÃ§Ãµes</th></tr></thead><tbody>';
+		foreach ( $this->apd_association->repository()->all() as $request ) {
+			$member = $this->members->find( $request->user_id() );
+			if ( null === $member ) { continue; }
+			echo '<tr><td>' . esc_html( $member->full_name() ) . '</td><td>' . esc_html( (string) $member->field( 'numero_socio' ) ) . '</td><td>' . esc_html( $this->format_datetime( $request->requested_at() ) ) . '</td><td>' . esc_html( $request->amount() ) . ' â‚¬</td><td>' . esc_html( $request->payment_status() ) . '</td><td>' . esc_html( $request->status() ) . '</td><td>' . esc_html( $request->confirmation_date() ?: 'â€”' ) . '</td><td>';
+			if ( $request->status() !== ApdAssociationRequest::STATUS_CONFIRMED ) { echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="adam_membership_apd_action">'; wp_nonce_field( 'adam_membership_apd_action_' . $request->id() ); echo '<input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><input type="hidden" name="apd_action" value="confirm"><input type="date" name="confirmation_date" required><button class="button button-primary">Confirmar ANA</button></form>'; }
+			echo '</td></tr>';
+		}
+		echo '</tbody></table></div>';
+	}
+
+	public function handle_apd_action(): void {
+		$this->ensure_can_manage();
+		$id = absint( $_POST['request_id'] ?? 0 );
+		check_admin_referer( 'adam_membership_apd_action_' . $id );
+		$action = sanitize_key( wp_unslash( $_POST['apd_action'] ?? '' ) );
+		$result = 'confirm' === $action ? $this->apd_association->confirm( $id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ) ) : new WP_Error( 'adam_invalid_apd_action', __( 'AÃ§Ã£o APD invÃ¡lida.', 'adam-membership' ) );
+		if ( $result instanceof WP_Error ) { $this->redirect_with_error( $result->get_error_message() ); }
+		$this->redirect_with_message( __( 'Pedido APD atualizado com sucesso.', 'adam-membership' ) );
 	}
 }

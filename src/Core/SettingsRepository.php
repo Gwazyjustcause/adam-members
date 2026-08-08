@@ -316,6 +316,12 @@ final class SettingsRepository {
 
 		$clean['fees']['primary']   = $this->sanitize_money( $settings['fees']['primary'] ?? $defaults['fees']['primary'] );
 		$clean['fees']['secondary'] = $this->sanitize_money( $settings['fees']['secondary'] ?? $defaults['fees']['secondary'] );
+		$clean['apd_association_fees'] = array(
+			'0_3' => $this->sanitize_money( $settings['apd_association_fees']['0_3'] ?? $defaults['apd_association_fees']['0_3'] ),
+			'4_6' => $this->sanitize_money( $settings['apd_association_fees']['4_6'] ?? $defaults['apd_association_fees']['4_6'] ),
+			'7_9' => $this->sanitize_money( $settings['apd_association_fees']['7_9'] ?? $defaults['apd_association_fees']['7_9'] ),
+			'10_plus' => $this->sanitize_money( $settings['apd_association_fees']['10_plus'] ?? $defaults['apd_association_fees']['10_plus'] ),
+		);
 
 		$clean['payment']['mbway']        = sanitize_text_field( (string) ( $settings['payment']['mbway'] ?? $defaults['payment']['mbway'] ) );
 		$clean['payment']['iban']         = sanitize_text_field( (string) ( $settings['payment']['iban'] ?? $defaults['payment']['iban'] ) );
@@ -404,6 +410,7 @@ final class SettingsRepository {
 				'primary'   => '22.00',
 				'secondary' => '12.00',
 			),
+			'apd_association_fees' => array( '0_3' => '12.00', '4_6' => '14.00', '7_9' => '17.00', '10_plus' => '22.00' ),
 			'payment' => array(
 				'mbway'        => '',
 				'iban'         => '',

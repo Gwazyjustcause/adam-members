@@ -35,6 +35,10 @@ final class Member {
 	 */
 	public const STATUS_EXPIRED = 'Expirado';
 
+	public const APD_EXTERNAL = 'external';
+	public const APD_PENDING = 'pending';
+	public const APD_MANAGED = 'managed';
+
 	/**
 	 * Renewal pending member status.
 	 */
@@ -97,6 +101,8 @@ final class Member {
 		'adam_external_association_name' => '',
 		'adam_external_member_number' => '',
 		'adam_external_association_proof' => '',
+		'adam_apd_management_status' => self::APD_EXTERNAL,
+		'adam_apd_ana_confirmation_date' => '',
 		'profile_photo'   => '',
 		'payment_receipt' => '',
 		'motivo_rejeicao'     => '',
@@ -140,6 +146,8 @@ final class Member {
 		'adam_external_association_name',
 		'adam_external_member_number',
 		'adam_external_association_proof',
+		'adam_apd_management_status',
+		'adam_apd_ana_confirmation_date',
 		'telefone_fixo',
 		'documento_validade',
 		'documento_local_emissao',

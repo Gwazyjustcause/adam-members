@@ -239,11 +239,11 @@ final class MembershipForms {
 					<div class="adam-choice-grid">
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="renewal_mode" value="adam_primary" <?php checked( 'adam_primary', (string) ( $values['renewal_mode'] ?? 'adam_primary' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( "A ADAM ser\u{00E1} a minha associa\u{00E7}\u{00E3}o principal \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
+			<span><?php echo esc_html( sprintf( __( "Renovar com ANA atrav\u{00E9}s da ADAM \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['primary'] ) ) ); ?></span>
 						</label>
 						<label class="adam-choice-card adam-card">
 							<input type="radio" name="renewal_mode" value="external_association" <?php checked( 'external_association', (string) ( $values['renewal_mode'] ?? '' ) ); ?>>
-							<span><?php echo esc_html( sprintf( __( "Continuo associado atrav\u{00E9}s de outra associa\u{00E7}\u{00E3}o de airsoft \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
+			<span><?php echo esc_html( sprintf( __( "Renovar apenas a quota ADAM \u{2014} %s/ano", 'adam-membership' ), $this->format_fee( (string) $settings['fees']['secondary'] ) ) ); ?></span>
 						</label>
 					</div>
 				</div>
@@ -414,7 +414,7 @@ final class MembershipForms {
 			);
 		}
 
-		$this->redirect_after_success( 'registration' );
+		$this->redirect_after_success( 'registration', $mode );
 		return array( 'values' => $values );
 	}
 
@@ -939,13 +939,9 @@ final class MembershipForms {
 	 * @param Member $member Member record.
 	 */
 	private function member_uses_external_association( Member $member ): bool {
-		if ( 'external_association' === (string) $member->field( 'adam_membership_origin' ) ) {
-			return true;
-		}
-
-		return '' !== trim( (string) $member->field( 'adam_external_association_name' ) )
-			|| '' !== trim( (string) $member->field( 'adam_external_member_number' ) )
-			|| '' !== trim( (string) $member->field( 'adam_external_association_proof' ) );
+		$status = (string) $member->field( 'adam_apd_management_status' );
+		if ( Member::APD_EXTERNAL === $status && 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) { return false; }
+		return Member::APD_MANAGED !== $status;
 	}
 
 	/**
@@ -1415,6 +1411,10 @@ final class MembershipForms {
 		$success_key = isset( $_GET['adam_form_success'] ) ? sanitize_key( wp_unslash( $_GET['adam_form_success'] ) ) : '';
 
 		if ( $success_key === $form ) {
+			$ana_mode = 'adam_primary' === (string) ( $_GET['adam_registration_mode'] ?? '' );
+			if ( 'registration' === $form && $ana_mode ) {
+				return '<div class="adam-notice adam-notice--success"><strong>' . esc_html__( 'InscriÃ§Ã£o atravÃ©s da ANA', 'adam-membership' ) . '</strong><p>' . esc_html__( 'A sua inscriÃ§Ã£o serÃ¡ submetida Ã  ANA pela ADAM. A aprovaÃ§Ã£o como sÃ³cio da ADAM serÃ¡ concluÃ­da apÃ³s recebermos a confirmaÃ§Ã£o da ANA, pelo que o processo poderÃ¡ demorar atÃ© 7 dias.', 'adam-membership' ) . '</p></div>';
+			}
 			return $this->notice_markup(
 				'success',
 				'renewal' === $form
@@ -1423,6 +1423,7 @@ final class MembershipForms {
 			);
 		}
 
+		if ( 'registration' === $form && ! $ana_mode ) { return $this->notice_markup( 'success', __( 'A inscriÃ§Ã£o foi submetida com sucesso. Prazo estimado de processamento: 2-7 dias.', 'adam-membership' ) ); }
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
 
 		if ( array() === $errors ) {
@@ -1445,12 +1446,12 @@ final class MembershipForms {
 	 *
 	 * @param string $form Form key.
 	 */
-	private function redirect_after_success( string $form ): void {
+	private function redirect_after_success( string $form, string $mode = '' ): void {
+		$args = array( 'adam_form_success' => $form );
+		if ( 'registration' === $form && '' !== $mode ) { $args['adam_registration_mode'] = $mode; }
 		wp_safe_redirect(
 			add_query_arg(
-				array(
-					'adam_form_success' => $form,
-				),
+				$args,
 				$this->current_url()
 			)
 		);

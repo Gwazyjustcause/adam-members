@@ -93,6 +93,7 @@ final class MemberArea {
 	 * @var CommunicationPreferences
 	 */
 	private CommunicationPreferences $communication_preferences;
+	private ApdAssociationService $apd_association;
 
 	/**
 	 * Constructor.
@@ -109,7 +110,7 @@ final class MemberArea {
 	 * @param RecognitionService       $recognition               Recognition service.
 	 * @param CommunicationPreferences $communication_preferences Communication preferences.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences, ApdAssociationService $apd_association ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -121,6 +122,7 @@ final class MemberArea {
 		$this->account_setup = $account_setup;
 		$this->recognition   = $recognition;
 		$this->communication_preferences = $communication_preferences;
+		$this->apd_association = $apd_association;
 	}
 
 	/**
@@ -252,6 +254,9 @@ final class MemberArea {
 
 		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
+		if ( 'apd-association' === $this->current_member_view() ) {
+			return $this->render_apd_association_page( $member );
+		}
 		$this->recognition->grant_eligible_loyalty_rewards( $member );
 
 		ob_start();
@@ -2335,6 +2340,30 @@ final class MemberArea {
 		);
 	}
 
+	private function render_apd_association_page( Member $member ): string {
+		$message = '';
+		if ( 'POST' === strtoupper( $_SERVER['REQUEST_METHOD'] ?? '' ) && isset( $_POST['adam_apd_association_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_association' ) ) { $message = $this->notice_markup( 'error', __( 'NÃ£o foi possÃ­vel validar o pedido.', 'adam-membership' ) ); }
+			else {
+				$receipt = '';
+				if ( ! empty( $_FILES['payment_receipt']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = wp_handle_upload( $_FILES['payment_receipt'], array( 'test_form' => false, 'mimes' => array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf' ) ) ); $receipt = is_array( $upload ) ? (string) ( $upload['url'] ?? '' ) : ''; }
+				$result = $this->apd_association->submit( $member, array( 'full_name' => $member->full_name(), 'email' => $member->email(), 'nif' => (string) $member->field( 'nif' ), 'citizen_card' => (string) $member->field( 'cartao_cidadao' ), 'birth_date' => (string) $member->field( 'data_nascimento' ), 'address' => (string) $member->field( 'morada' ), 'association_name' => sanitize_text_field( wp_unslash( $_POST['association_name'] ?? $member->field( 'adam_external_association_name' ) ) ), 'external_member_number' => sanitize_text_field( wp_unslash( $_POST['external_member_number'] ?? $member->field( 'adam_external_member_number' ) ) ) ), $receipt );
+				if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'apd_message' => 'submitted' ) ) ); exit; }
+			}
+		}
+		if ( 'submitted' === (string) ( $_GET['apd_message'] ?? '' ) ) { $message = $this->notice_markup( 'success', __( 'Pedido de associaÃ§Ã£o APD submetido com sucesso.', 'adam-membership' ) ); }
+		if ( ! $this->apd_association->eligible( $member ) && '' === $message ) { return $this->render_not_found(); }
+		$price = $this->apd_association->price_for( $member );
+		ob_start();
+		?><section class="adam-card"><p class="adam-eyebrow">ADAM / ANA</p><h2><?php esc_html_e( 'Associar APD atravÃ©s da ADAM', 'adam-membership' ); ?></h2><?php echo wp_kses_post( $message ); ?><p><?php esc_html_e( 'Confirme os seus dados e envie o comprovativo de pagamento.', 'adam-membership' ); ?></p><p><strong><?php esc_html_e( 'Valor aplicÃ¡vel:', 'adam-membership' ); ?> <?php echo esc_html( number_format_i18n( (float) $price, 2 ) . ' â‚¬' ); ?></strong></p><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_apd_association' ); ?><p><label><?php esc_html_e( 'AssociaÃ§Ã£o/APD atual', 'adam-membership' ); ?><input type="text" name="association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>" required></label></p><p><label><?php esc_html_e( 'N.Âº de sÃ³cio APD', 'adam-membership' ); ?><input type="text" name="external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></p><p><label><?php esc_html_e( 'Comprovativo de pagamento', 'adam-membership' ); ?><input type="file" name="payment_receipt" accept=".pdf,.jpg,.jpeg,.png"></label></p><button class="button button-primary" name="adam_apd_association_submit" value="1"><?php esc_html_e( 'Submeter pedido', 'adam-membership' ); ?></button></form></section><?php
+		return (string) ob_get_clean();
+	}
+
+	private function apd_association_actions( Member $member ): array {
+		if ( ! $this->apd_association->eligible( $member ) ) { return array(); }
+		return array( array( 'label' => __( 'Associar APD atravÃ©s da ADAM', 'adam-membership' ), 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'apd-association' ) ) ) );
+	}
+
 	/**
 	 * Build logout-only actions.
 	 *
@@ -2359,6 +2388,7 @@ final class MemberArea {
 	private function active_actions( Member $member ): array {
 		return array_merge(
 			$this->renewal_actions( $member ),
+			$this->apd_association_actions( $member ),
 			$this->standard_account_actions()
 		);
 	}
