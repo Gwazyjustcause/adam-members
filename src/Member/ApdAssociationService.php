@@ -38,6 +38,8 @@ final class ApdAssociationService {
 
 	public function confirm( int $request_id, string $date, string $ana_member_number = '' ): true|WP_Error {
 		$request = $this->repository->find( $request_id );
+		if ( null !== $request && ApdAssociationRequest::STATUS_SUBMITTED_ANA !== $request->status() ) { return new WP_Error( 'adam_apd_not_ready', __( 'O pedido só pode ser aprovado depois de ser submetido à ANA.', 'adam-membership' ) ); }
+		if ( null !== $request && ( '' === trim( $date ) || '' === trim( $ana_member_number ) ) ) { return new WP_Error( 'adam_apd_confirmation_required', __( 'Indique a data de confirmação e o número ANA.', 'adam-membership' ) ); }
 		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
 		$member = $this->members->find( $request->user_id() );
 		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
@@ -51,6 +53,32 @@ final class ApdAssociationService {
 		}
 		$member->save( $updates );
 		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		return true;
+	}
+
+	public function mark_payment_received( int $request_id ): true|WP_Error {
+		$request = $this->repository->find( $request_id );
+		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
+		if ( ApdAssociationRequest::STATUS_PENDING_PAYMENT !== $request->status() ) { return new WP_Error( 'adam_apd_payment_stage', __( 'O pagamento já foi processado neste pedido.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'payment_status' => 'paid', 'status' => ApdAssociationRequest::STATUS_AWAITING_ADAM, 'payment_confirmed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'payment_confirmed_by' => get_current_user_id() ) );
+		return true;
+	}
+
+	public function submit_to_ana( int $request_id ): true|WP_Error {
+		$request = $this->repository->find( $request_id );
+		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
+		if ( ApdAssociationRequest::STATUS_AWAITING_ADAM !== $request->status() ) { return new WP_Error( 'adam_apd_submit_stage', __( 'Confirme primeiro o pagamento deste pedido.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_SUBMITTED_ANA, 'submitted_to_ana_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'submitted_to_ana_by' => get_current_user_id() ) );
+		return true;
+	}
+
+	public function reject( int $request_id, string $reason, string $note = '' ): true|WP_Error {
+		$request = $this->repository->find( $request_id );
+		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
+		if ( '' === trim( $reason ) ) { return new WP_Error( 'adam_apd_rejection_reason', __( 'Indique o motivo da rejeição.', 'adam-membership' ) ); }
+		$member = $this->members->find( $request->user_id() );
+		if ( null !== $member && Member::APD_PENDING === (string) $member->field( 'adam_apd_management_status' ) ) { $member->save( array( 'adam_apd_management_status' => Member::APD_EXTERNAL ) ); }
+		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_REJECTED, 'rejection_reason' => sanitize_text_field( $reason ), 'rejection_note' => sanitize_textarea_field( $note ), 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
 		return true;
 	}
 }

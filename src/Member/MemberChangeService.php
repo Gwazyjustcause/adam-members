@@ -79,12 +79,17 @@ final class MemberChangeService {
 		return true;
 	}
 
-	public function reject( int $id ): true|WP_Error {
+	public function reject( int $id, string $reason = '', string $note = '' ): true|WP_Error {
 		$request = $this->repository->find( $id );
 		if ( null === $request || MemberChangeRequest::STATUS_PENDING !== $request->status() ) {
 			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
 		}
-		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_REJECTED, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		if ( '' === trim( $reason ) ) { return new WP_Error( 'adam_member_change_rejection_reason', __( 'Indique o motivo da rejeição.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_REJECTED, 'rejection_reason' => sanitize_text_field( $reason ), 'rejection_note' => sanitize_textarea_field( $note ), 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		$member = $this->members->find( $request->user_id() );
+		if ( null !== $member && is_email( $member->email() ) ) {
+			wp_mail( $member->email(), 'Pedido de alteração de dados não aceite', "O seu pedido de alteração de dados não foi aceite.\n\nMotivo: " . $reason . ( '' !== trim( $note ) ? "\n\nObservações: " . $note : '' ) );
+		}
 		return true;
 	}
 }
