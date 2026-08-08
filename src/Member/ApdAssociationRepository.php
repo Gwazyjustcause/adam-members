@@ -58,4 +58,15 @@ final class ApdAssociationRepository {
 		}
 		return false;
 	}
+
+	public function reset_for_user( int $user_id ): void {
+		$rows = get_option( self::OPTION, array() );
+		if ( ! is_array( $rows ) ) { return; }
+		foreach ( $rows as $id => $row ) {
+			if ( is_array( $row ) && absint( $row['user_id'] ?? 0 ) === $user_id && ! in_array( (string) ( $row['status'] ?? '' ), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) {
+				$rows[ $id ]['status'] = ApdAssociationRequest::STATUS_REJECTED;
+			}
+		}
+		update_option( self::OPTION, $rows, false );
+	}
 }

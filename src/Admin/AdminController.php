@@ -52,6 +52,7 @@ final class AdminController {
 	private const MEMBER_PAGE_SLUG    = 'adam-membership-member';
 	private const ACTION_APPROVE      = 'approve';
 	private const ACTION_CONFIRM_ANA  = 'confirm_ana';
+	private const ACTION_REMOVE_ANA   = 'remove_ana';
 	private const ACTION_REJECT       = 'reject';
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
@@ -2957,6 +2958,7 @@ final class AdminController {
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
 				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmação ANA <input type="date" name="ana_confirmation_date" required></label><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
+				<?php if ( Member::APD_MANAGED === (string) $member->field( 'adam_apd_management_status' ) || 'ANA' === (string) $member->field( 'adam_external_association_name' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('Tem a certeza de que pretende remover a associação ANA deste sócio?');"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><button class="button">Remover ANA</button></form><?php endif; ?>
 				</div>
 
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-quota-form">
@@ -3080,9 +3082,9 @@ final class AdminController {
 				<div class="adam-admin-edit-grid">
 					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'Informação pessoal e contacto', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid">
 					<label><span><?php esc_html_e( 'Nome', 'adam-membership' ); ?></span><input type="text" name="member_first_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'first_name', true ) ); ?>"></label><label><span><?php esc_html_e( 'Apelido', 'adam-membership' ); ?></span><input type="text" name="member_last_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'last_name', true ) ); ?>"></label>
-					<?php foreach ( array( 'email' => array( 'Email', $member->email() ), 'data_nascimento' => array( 'Data de nascimento', $member->field( 'data_nascimento' ) ), 'genero' => array( 'G\u{00E9}nero', $member->field( 'genero' ) ), 'estado_civil' => array( 'Estado civil', $member->field( 'estado_civil' ) ), 'nacionalidade' => array( 'Nacionalidade', $member->field( 'nacionalidade' ) ), 'naturalidade' => array( 'Naturalidade', $member->field( 'naturalidade' ) ), 'profissao' => array( 'Profiss\u{00E3}o', $member->field( 'profissao' ) ), 'telefone_fixo' => array( 'Telefone fixo', $member->field( 'telefone_fixo' ) ), 'morada' => array( 'Morada', $member->field( 'morada' ) ), 'morada_linha_2' => array( 'Morada (linha 2)', $member->field( 'morada_linha_2' ) ), 'codigo_postal' => array( 'C\u{00F3}digo postal', $member->field( 'codigo_postal' ) ), 'cidade' => array( 'Localidade', $member->field( 'cidade' ) ), 'municipio' => array( 'Munic\u{00ED}pio', $member->field( 'municipio' ) ), 'pais' => array( 'Pa\u{00ED}s', $member->field( 'pais' ) ), 'nif' => array( 'NIF', $member->field( 'nif' ) ), 'cartao_cidadao' => array( 'BI / Cart\u{00E3}o de Cidad\u{00E3}o / Passaporte', $member->field( 'cartao_cidadao' ) ), 'documento_validade' => array( 'Data de validade', $member->field( 'documento_validade' ) ), 'documento_local_emissao' => array( 'Local de emiss\u{00E3}o', $member->field( 'documento_local_emissao' ) ) ) as $key => $item ) : ?><label><span><?php echo esc_html( $item[0] ); ?></span><input type="<?php echo 'data_nascimento' === $key || 'documento_validade' === $key ? 'date' : 'text'; ?>" name="member_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $item[1] ); ?>"></label><?php endforeach; ?>
+					<?php foreach ( array( 'email' => array( 'Email', $member->email() ), 'data_nascimento' => array( 'Data de nascimento', $member->field( 'data_nascimento' ) ), 'genero' => array( 'Género', $member->field( 'genero' ) ), 'estado_civil' => array( 'Estado civil', $member->field( 'estado_civil' ) ), 'nacionalidade' => array( 'Nacionalidade', $member->field( 'nacionalidade' ) ), 'naturalidade' => array( 'Naturalidade', $member->field( 'naturalidade' ) ), 'profissao' => array( 'Profissão', $member->field( 'profissao' ) ), 'telefone_fixo' => array( 'Telefone fixo', $member->field( 'telefone_fixo' ) ), 'morada' => array( 'Morada', $member->field( 'morada' ) ), 'morada_linha_2' => array( 'Morada (linha 2)', $member->field( 'morada_linha_2' ) ), 'codigo_postal' => array( 'Código postal', $member->field( 'codigo_postal' ) ), 'cidade' => array( 'Localidade', $member->field( 'cidade' ) ), 'municipio' => array( 'Município', $member->field( 'municipio' ) ), 'pais' => array( 'País', $member->field( 'pais' ) ), 'nif' => array( 'NIF', $member->field( 'nif' ) ), 'cartao_cidadao' => array( 'BI / Cartão de Cidadão / Passaporte', $member->field( 'cartao_cidadao' ) ), 'documento_validade' => array( 'Data de validade', $member->field( 'documento_validade' ) ), 'documento_local_emissao' => array( 'Local de emissão', $member->field( 'documento_local_emissao' ) ) ) as $key => $item ) : ?><label><span><?php echo esc_html( $item[0] ); ?></span><input type="<?php echo 'data_nascimento' === $key || 'documento_validade' === $key ? 'date' : 'text'; ?>" name="member_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $item[1] ); ?>"></label><?php endforeach; ?>
 					</div></div>
-					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'APD atual', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid"><label><span><?php esc_html_e( 'APD / Associa\u{00E7}\u{00E3}o', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>"></label><label><span><?php esc_html_e( 'N.\u{00BA} de s\u{00F3}cio APD', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></div></div>
+					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'APD atual', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid"><label><span><?php esc_html_e( 'APD / Associação', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>"></label><label><span><?php esc_html_e( 'N.º de sócio APD', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></div></div>
 					<label>
 						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
 						<input type="text" name="member_number" value="<?php echo esc_attr( (string) $member->field( 'numero_socio' ) ); ?>" placeholder="<?php esc_attr_e( 'Por atribuir', 'adam-membership' ); ?>">
@@ -3246,6 +3248,7 @@ final class AdminController {
 		$result = match ( $action ) {
 			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id ),
 			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ) ),
+			self::ACTION_REMOVE_ANA   => $this->remove_ana_for_testing( $user_id ),
 			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
@@ -3271,6 +3274,14 @@ final class AdminController {
 	 * @param int $user_id User ID.
 	 * @return true|WP_Error
 	 */
+	private function remove_ana_for_testing( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
+		$member->save( array( 'adam_apd_management_status' => Member::APD_EXTERNAL, 'adam_external_association_name' => '', 'adam_external_member_number' => '', 'adam_apd_ana_confirmation_date' => '' ) );
+		$this->apd_association->repository()->reset_for_user( $user_id );
+		return true;
+	}
+
 	private function save_member_fields( int $user_id ): true|WP_Error {
 		$member = $this->members->find( $user_id );
 
@@ -5456,6 +5467,7 @@ final class AdminController {
 			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
 			self::ACTION_REPLACE_DOCUMENT => __( 'Documento carregado com sucesso.', 'adam-membership' ),
 			self::ACTION_REMOVE_DOCUMENT  => __( 'Documento removido com sucesso.', 'adam-membership' ),
+			self::ACTION_REMOVE_ANA       => __( 'Associação ANA removida com sucesso.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};
 	}
