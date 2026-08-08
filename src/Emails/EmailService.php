@@ -218,10 +218,10 @@ final class EmailService {
 	}
 
 	public function send_registration_correction_email( Member $member, string $reason = '', string $note = '' ): bool {
-		$link = add_query_arg( array( 'view' => 'member-update' ), $this->settings->member_area_url() );
+		$link = add_query_arg( array( 'view' => 'correction', 'correction_user' => $member->user_id(), 'correction_token' => hash_hmac( 'sha256', (string) $member->user_id(), wp_salt( 'auth' ) ) ), $this->settings->member_area_url() );
 		$body = '';
 		if ( '' !== trim( $note ) ) { $body .= '<p><strong>O que precisa de corrigir:</strong><br>' . nl2br( esc_html( $note ) ) . '</p>'; }
-		$body .= '<p><a href="' . esc_url( $link ) . '" style="display:inline-block;background:#4f9f2f;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px;font-weight:bold;">CORRIGIR PEDIDO</a></p><p>Se necessitar de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:' . esc_attr( $this->settings->support_email() ) . '">' . esc_html( $this->settings->support_email() ) . '</a>.</p>';
+		$body .= '<p><a href="' . esc_url( $link ) . '" style="display:inline-block;background:#4f9f2f;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px;font-weight:bold;">CORRIGIR PEDIDO</a></p>';
 		return $this->send_member_template_email( 'member_correction_requested', $member, array( 'reason' => $reason, 'correction_html' => $body ), array( 'member_id' => $member->user_id() ) );
 	}
 
