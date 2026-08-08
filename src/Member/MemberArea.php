@@ -2579,7 +2579,12 @@ final class MemberArea {
 	private function render_registration_correction_page( Member $member ): string {
 		$settings = $this->settings->membership_form_settings();
 		$fields = (array) ( $settings['registration_fields'] ?? array() );
-		$allowed = array_map( 'sanitize_key', (array) $member->field( 'adam_correction_fields' ) );
+		$allowed = array();
+		foreach ( (array) $member->field( 'adam_correction_fields' ) as $raw_field ) {
+			$key = is_array( $raw_field ) ? ( $raw_field['field_key'] ?? $raw_field['key'] ?? '' ) : $raw_field;
+			$key = sanitize_key( (string) $key );
+			if ( '' !== $key && ! in_array( $key, $allowed, true ) ) { $allowed[] = $key; }
+		}
 		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) ) {
