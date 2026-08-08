@@ -219,10 +219,10 @@ final class EmailService {
 
 	public function send_registration_correction_email( Member $member, string $reason = '', string $note = '' ): bool {
 		$link = add_query_arg( array( 'view' => 'member-update' ), $this->settings->member_area_url() );
-		$body = '<p><strong>A sua inscrição foi analisada pela ADAM e necessita de correções.</strong></p><p><strong>Motivo indicado:</strong> ' . esc_html( $reason ?: 'Dados incompletos.' ) . '</p>';
+		$body = '';
 		if ( '' !== trim( $note ) ) { $body .= '<p><strong>O que precisa de corrigir:</strong><br>' . nl2br( esc_html( $note ) ) . '</p>'; }
 		$body .= '<p><a href="' . esc_url( $link ) . '" style="display:inline-block;background:#4f9f2f;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px;font-weight:bold;">CORRIGIR PEDIDO</a></p><p>Se necessitar de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:' . esc_attr( $this->settings->support_email() ) . '">' . esc_html( $this->settings->support_email() ) . '</a>.</p>';
-		return $this->send_member_template_email( 'member_correction_requested', $member, array( 'reason' => $reason, 'correction_body' => $body ), array( 'member_id' => $member->user_id() ) );
+		return $this->send_member_template_email( 'member_correction_requested', $member, array( 'reason' => $reason, 'correction_html' => $body ), array( 'member_id' => $member->user_id() ) );
 	}
 
 	public function send_member_change_received_email( Member $member ): bool {
@@ -637,7 +637,7 @@ final class EmailService {
 
 			$replacements[ '{{' . $key . '}}' ] = str_ends_with( $key, '_link' )
 				? esc_url( $value )
-				: esc_html( $value );
+				: ( str_ends_with( $key, '_html' ) ? wp_kses_post( $value ) : esc_html( $value ) );
 		}
 
 		return strtr( $text, $replacements );

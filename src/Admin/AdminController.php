@@ -5125,7 +5125,7 @@ final class AdminController {
 	}
 
 	private function render_correction_request_form( Member $member ): void {
-		?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-rejection-form"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label><span>Motivo da correção</span><select name="rejection_reason" required><option value="">Selecionar</option><?php foreach ( $this->rejection_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label><label><span>O que precisa de corrigir</span><textarea name="rejection_note" rows="3"></textarea></label><button type="submit" class="button button-primary adam-button">Pedir correção</button></form><?php
+		?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-rejection-form"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label><span>Motivo da correção</span><select name="rejection_reason" required><option value="">Selecionar</option><?php foreach ( $this->rejection_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label><label><span>O que precisa de corrigir</span><textarea name="rejection_note" rows="3"></textarea></label><button type="submit" class="button button-primary adam-button">Pedir correção</button></form><?php
 	}
 
 	/**
@@ -5627,6 +5627,7 @@ final class AdminController {
 			self::ACTION_REPLACE_DOCUMENT => __( 'Documento carregado com sucesso.', 'adam-membership' ),
 			self::ACTION_REMOVE_DOCUMENT  => __( 'Documento removido com sucesso.', 'adam-membership' ),
 			self::ACTION_REMOVE_ANA       => __( 'Associação ANA removida com sucesso.', 'adam-membership' ),
+			self::ACTION_REQUEST_CORRECTION => __( 'Pedido de correção enviado com sucesso.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
 		};
 	}

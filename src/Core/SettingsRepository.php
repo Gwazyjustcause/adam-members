@@ -794,7 +794,7 @@ final class SettingsRepository {
 			'member_correction_requested' => array(
 				'enabled' => true,
 				'subject' => 'A sua inscrição necessita de correções',
-				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>A sua inscrição foi analisada pela ADAM e necessita de correções.</p><p><strong>Motivo indicado:</strong> {{reason}}</p>{{correction_body}}<p>Se necessitar de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:{{support_email}}">{{support_email}}</a>.</p>',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>A sua inscrição foi analisada pela ADAM e necessita de correções.</p><p><strong>Motivo indicado:</strong> {{reason}}</p>{{correction_html}}<p>Se necessitar de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:{{support_email}}">{{support_email}}</a>.</p>',
 			),
 			'member_change_received' => array(
 				'enabled' => true,
