@@ -3168,6 +3168,34 @@
 	transform: translateY(-50%) !important;
 }
 
+/* Keep the icon coupled to its fixed password-eye hitbox. Generic dashicon and
+ * button rules must never position or translate the icon independently. */
+.adam-password-wrapper .adam-password-toggle {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	place-content: center !important;
+	place-items: center !important;
+}
+
+.adam-password-wrapper .adam-password-toggle > .dashicons,
+.adam-password-wrapper .adam-password-toggle > .dashicons::before {
+	position: static !important;
+	top: auto !important;
+	right: auto !important;
+	bottom: auto !important;
+	left: auto !important;
+	display: block !important;
+	width: 20px !important;
+	height: 20px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	transform: none !important;
+	line-height: 20px !important;
+	vertical-align: middle !important;
+	pointer-events: none !important;
+}
+
 .adam-login-required {
 	text-align: center !important;
 }
