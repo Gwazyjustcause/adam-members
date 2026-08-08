@@ -29,6 +29,9 @@
 		}
 
 		node.hidden = ! visible;
+		node.querySelectorAll( 'input, select, textarea, button' ).forEach( function ( control ) {
+			control.disabled = ! visible;
+		} );
 	}
 
 	function syncFormState( form, updateAnaInformation ) {
@@ -111,6 +114,7 @@
 
 		var debounceTimer = 0;
 		var activeRequest = null;
+		var submitAfterCheck = false;
 
 		function stopPendingCheck() {
 			window.clearTimeout( debounceTimer );
@@ -189,6 +193,10 @@
 				}
 
 				setNifState( form, input, feedback, status, message );
+				if ( 'available' === status && submitAfterCheck ) {
+					submitAfterCheck = false;
+					if ( form.requestSubmit ) { form.requestSubmit(); }
+				}
 			} ).catch( function ( error ) {
 				if ( 'AbortError' === error.name || input.value.trim() !== value ) {
 					return;
@@ -230,6 +238,7 @@
 			event.preventDefault();
 
 			if ( showLocalResult( true ) ) {
+				submitAfterCheck = true;
 				checkAvailability();
 			}
 

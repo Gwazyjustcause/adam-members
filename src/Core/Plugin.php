@@ -111,6 +111,12 @@ final class Plugin {
 	 * Register plugin modules.
 	 */
 	private function register_modules(): void {
+		// Keep the WordPress toolbar available in wp-admin, but never expose it on
+		// public pages (including logged-in member-area pages). Returning false
+		// here also prevents WordPress from adding its admin-bar top offset.
+		add_filter( 'show_admin_bar', static function ( bool $show ): bool {
+			return is_admin() ? $show : false;
+		}, 1000 );
 		( new UIIntegration() )->register();
 
 		$logger                    = new Logger();
