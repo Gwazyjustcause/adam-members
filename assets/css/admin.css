@@ -2473,3 +2473,30 @@
 		flex-direction: column-reverse;
 	}
 }
+.adam-admin-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.adam-admin-tabs a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 34px;
+	padding: 6px 14px;
+	border: 1px solid var(--adam-admin-border, #d7dee7);
+	border-radius: 6px;
+	background: #fff;
+	color: var(--adam-admin-green-dark, #166534);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.adam-admin-tabs a:hover,
+.adam-admin-tabs a:focus,
+.adam-admin-tabs a.is-active {
+	border-color: var(--adam-admin-green, #16a34a);
+	background: var(--adam-admin-green, #16a34a);
+	color: #fff;
+}
