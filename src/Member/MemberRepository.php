@@ -30,12 +30,38 @@ final class MemberRepository {
 	 * @return array<int, Member>
 	 */
 	public function pending_members(): array {
-		return $this->query_members(
+		$members = $this->query_members(
 			array(
-				'meta_key'   => 'estado',
-				'meta_value' => Member::STATUS_PENDING,
+				'meta_query' => array(
+					'relation' => 'OR',
+					array(
+						'key'     => 'estado',
+						'value'   => Member::STATUS_PENDING,
+						'compare' => '=',
+					),
+					array(
+						'key'     => 'adam_correction_status',
+						'value'   => array( 'correction_requested', 'correction_submitted' ),
+						'compare' => 'IN',
+					),
+				),
 			)
 		);
+
+		$eligible = array();
+		foreach ( $members as $member ) {
+			if ( Member::STATUS_PENDING === $member->status() ) { $eligible[] = $member; continue; }
+			if ( Member::STATUS_REJECTED !== $member->status() ) { continue; }
+			$status = (string) $member->field( 'adam_correction_status' );
+			$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
+			$latest = end( $history );
+			if ( 'correction_submitted' === $status || ( is_array( $latest ) && 'correction_submitted' === (string) ( $latest['status'] ?? '' ) ) ) {
+				if ( 'correction_submitted' !== $status ) { $member->save( array( 'adam_correction_status' => 'correction_submitted' ) ); }
+				$eligible[] = $member;
+			}
+		}
+
+		return $eligible;
 	}
 
 	/**

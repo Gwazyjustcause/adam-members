@@ -627,7 +627,7 @@ final class AdminController {
 	/** @return array<int,array<string,string>> */
 	private function approval_rows(): array {
 		$rows = array();
-		foreach ( $this->members->pending_members() as $member ) { $rows[] = array( 'type' => 'registrations', 'label' => 'Inscrição', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $member->registration_date(), 'status' => 'Pendente', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'registration', 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) ) ); }
+		foreach ( $this->members->pending_members() as $member ) { $correction_received = 'correction_submitted' === (string) $member->field( 'adam_correction_status' ); $rows[] = array( 'type' => 'registrations', 'label' => 'Inscrição', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $member->registration_date(), 'status' => $correction_received ? 'Correção recebida' : 'Pendente', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'registration', 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) ) ); }
 		foreach ( $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'renewal', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'changes', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'apd', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
@@ -3035,6 +3035,18 @@ final class AdminController {
 	 *
 	 * @param Member $member Member.
 	 */
+	private function render_registration_correction_review( Member $member ): void {
+		if ( 'correction_submitted' !== (string) $member->field( 'adam_correction_status' ) ) { return; }
+		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
+		$round = null;
+		foreach ( array_reverse( $history ) as $candidate ) { if ( is_array( $candidate ) && 'correction_submitted' === (string) ( $candidate['status'] ?? '' ) ) { $round = $candidate; break; } }
+		if ( null === $round ) { return; }
+		$values = is_array( $round['values'] ?? null ) ? $round['values'] : array();
+		$previous = is_array( $round['previous_values'] ?? null ) ? $round['previous_values'] : array();
+		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'email' => 'email', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'profile_photo' => 'profile_photo', 'payment_receipt' => 'payment_receipt', 'external_association_proof' => 'adam_external_association_proof' );
+		?><div class="adam-admin-panel adam-card adam-registration-correction-review"><h2>CORREÇÃO RECEBIDA</h2><p><?php echo esc_html( (string) ( $round['submitted_at'] ?? '' ) ); ?></p><table class="widefat striped"><thead><tr><th>Campo</th><th>Valor anterior</th><th>Valor corrigido</th></tr></thead><tbody><?php foreach ( (array) ( $round['fields'] ?? array() ) as $field ) : $old = $previous[ $field ] ?? ''; $new = $values[ $map[ $field ] ?? $field ] ?? $values[ $field ] ?? ''; ?><tr><td><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?></td><td><?php echo esc_html( is_scalar( $old ) ? (string) $old : '—' ); ?></td><td><?php if ( in_array( $field, array( 'profile_photo', 'payment_receipt', 'external_association_proof' ), true ) ) : ?><?php $url = is_numeric( $new ) ? wp_get_attachment_url( absint( $new ) ) : ( is_string( $new ) ? $new : '' ); ?><?php if ( $url ) : ?><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener">Abrir documento</a><?php else : ?>—<?php endif; ?><?php else : ?><?php echo esc_html( is_scalar( $new ) ? (string) $new : '—' ); ?><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
+	}
+
 	private function render_member_detail( Member $member ): void {
 		$member_requests    = $this->renewal_repository->for_user( $member->user_id() );
 		$document_rows      = $this->member_document_rows( $member, true );
@@ -3052,6 +3064,7 @@ final class AdminController {
 
 				<?php $this->render_admin_safety_notice( $member ); ?>
 				<?php $this->render_member_status_consistency_notice( $member ); ?>
+				<?php $this->render_registration_correction_review( $member ); ?>
 
 				<div class="adam-admin-detail-grid">
 					<?php $this->render_detail_item( __( 'APD / Associação', 'adam-membership' ), (string) $member->field( 'adam_external_association_name' ) ); ?>

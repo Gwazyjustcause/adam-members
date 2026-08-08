@@ -2700,8 +2700,11 @@ final class MemberArea {
 					}
 					unset( $round );
 					$member->save( array_merge( $updates, $upload_ids, array( 'adam_correction_status' => 'correction_submitted', 'adam_correction_history' => $history ) ) );
-					wp_safe_redirect( $this->member_area_url( array( 'view' => 'correction', 'correction_complete' => '1' ) ) );
-					exit;
+					if ( 'correction_submitted' === (string) $member->field( 'adam_correction_status' ) && in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) {
+						wp_safe_redirect( $this->member_area_url( array( 'view' => 'correction', 'correction_complete' => '1' ) ) );
+						exit;
+					}
+					$message = $this->notice_markup( 'error', 'Não foi possível guardar a correção. Tente novamente.' );
 				}
 				if ( '' === $message ) { $message = $this->notice_markup( 'error', 'Corrija pelo menos um campo antes de enviar.' ); }
 			}

@@ -108,6 +108,7 @@ final class ApprovalService {
 		 */
 		$old_status = $member->status();
 		$member->approve();
+		$member->save( array( 'adam_correction_status' => '' ) );
 		$this->log_status_change( $member, $old_status, $member->status(), 'Sócio aprovado.' );
 
 		/*
@@ -202,6 +203,7 @@ final class ApprovalService {
 			$this->email->send_renewal_rejected_email( $member, $reason );
 		} else {
 			$member->reject( $reason, $note );
+			$member->save( array( 'adam_correction_status' => '' ) );
 			$this->log_status_change( $member, $old_status, $member->status(), 'Sócio rejeitado.' );
 			$this->history->member_rejected( $member, $old_status, $member->status(), $reason );
 			$this->email->send_registration_rejected_email( $member, $reason );
@@ -226,7 +228,10 @@ final class ApprovalService {
 		if ( array() === $fields ) { return new WP_Error( 'adam_membership_correction_fields_required', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
 		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
 		$round_id = count( $history ) + 1;
-		$history[] = array( 'id' => $round_id, 'status' => 'correction_requested', 'requested_at' => current_time( 'mysql' ), 'reason' => $reason, 'note' => $note, 'fields' => $fields );
+		$storage_map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'profile_photo' => 'profile_photo', 'payment_receipt' => 'payment_receipt', 'external_association_proof' => 'adam_external_association_proof' );
+		$previous_values = array();
+		foreach ( $fields as $field ) { $storage_key = $storage_map[ $field ] ?? $field; $previous_values[ $field ] = 'email' === $field ? $member->email() : $member->field( $storage_key ); }
+		$history[] = array( 'id' => $round_id, 'status' => 'correction_requested', 'requested_at' => current_time( 'mysql' ), 'reason' => $reason, 'note' => $note, 'fields' => $fields, 'previous_values' => $previous_values );
 		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note, 'adam_correction_fields' => $fields, 'adam_correction_active_round' => $round_id, 'adam_correction_history' => $history ) );
 		try {
 			$this->email->send_registration_correction_email( $member, $reason, $note );
