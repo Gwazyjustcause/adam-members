@@ -2859,6 +2859,8 @@ final class AdminController {
 				<?php $this->render_member_status_consistency_notice( $member ); ?>
 
 				<div class="adam-admin-detail-grid">
+					<?php $this->render_detail_item( __( 'APD / Associação', 'adam-membership' ), (string) $member->field( 'adam_external_association_name' ) ); ?>
+					<?php $this->render_detail_item( __( 'N.º de sócio APD', 'adam-membership' ), (string) $member->field( 'adam_external_member_number' ) ); ?>
 					<?php $this->render_detail_item( __( 'Estado da inscrição', 'adam-membership' ), $member->effective_status() ); ?>
 					<?php $this->render_detail_item( __( 'Estado guardado', 'adam-membership' ), $member->status() ); ?>
 					<?php $this->render_detail_item( __( 'N.º de sócio', 'adam-membership' ), $this->member_number_label( $member ) ); ?>
@@ -5485,7 +5487,7 @@ final class AdminController {
 			$member = $this->members->find( $request->user_id() );
 			if ( null === $member ) { continue; }
 			echo '<tr><td>' . esc_html( $member->full_name() ) . '</td><td>' . esc_html( (string) $member->field( 'numero_socio' ) ) . '</td><td>' . esc_html( $this->format_datetime( $request->requested_at() ) ) . '</td><td>' . esc_html( $request->amount() ) . ' €</td><td>' . esc_html( $request->payment_status() ) . '</td><td>' . esc_html( $request->status() ) . '</td><td>' . esc_html( $request->confirmation_date() ?: '—' ) . '</td><td>';
-			if ( $request->status() !== ApdAssociationRequest::STATUS_CONFIRMED ) { echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="adam_membership_apd_action">'; wp_nonce_field( 'adam_membership_apd_action_' . $request->id() ); echo '<input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><input type="hidden" name="apd_action" value="confirm"><input type="date" name="confirmation_date" required><button class="button button-primary">Confirmar ANA</button></form>'; }
+			if ( $request->status() !== ApdAssociationRequest::STATUS_CONFIRMED ) { echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline"><input type="hidden" name="action" value="adam_membership_apd_action">'; wp_nonce_field( 'adam_membership_apd_action_' . $request->id() ); echo '<input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><input type="hidden" name="apd_action" value="confirm"><input type="date" name="confirmation_date" required><input type="text" name="ana_member_number" placeholder="N.º ANA" required><button class="button button-primary">Confirmar ANA</button></form>'; }
 			echo '</td></tr>';
 		}
 		echo '</tbody></table></div>';
@@ -5496,7 +5498,7 @@ final class AdminController {
 		$id = absint( $_POST['request_id'] ?? 0 );
 		check_admin_referer( 'adam_membership_apd_action_' . $id );
 		$action = sanitize_key( wp_unslash( $_POST['apd_action'] ?? '' ) );
-		$result = 'confirm' === $action ? $this->apd_association->confirm( $id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ) ) : new WP_Error( 'adam_invalid_apd_action', __( 'Ação APD inválida.', 'adam-membership' ) );
+		$result = 'confirm' === $action ? $this->apd_association->confirm( $id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ), sanitize_text_field( wp_unslash( $_POST['ana_member_number'] ?? '' ) ) ) : new WP_Error( 'adam_invalid_apd_action', __( 'Ação APD inválida.', 'adam-membership' ) );
 		if ( $result instanceof WP_Error ) { $this->redirect_with_error( $result->get_error_message() ); }
 		$this->redirect_with_message( __( 'Pedido APD atualizado com sucesso.', 'adam-membership' ) );
 	}
