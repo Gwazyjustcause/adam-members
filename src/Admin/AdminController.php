@@ -468,6 +468,8 @@ final class AdminController {
 				file_exists( $script_path ) ? (string) filemtime( $script_path ) : ADAM_MEMBERSHIP_VERSION,
 				true
 			);
+			$correction_script = ADAM_MEMBERSHIP_PATH . 'assets/js/admin-correction-fields.js';
+			wp_enqueue_script( 'adam-membership-admin-correction-fields', ADAM_MEMBERSHIP_URL . 'assets/js/admin-correction-fields.js', array(), file_exists( $correction_script ) ? (string) filemtime( $correction_script ) : ADAM_MEMBERSHIP_VERSION, true );
 		}
 	}
 
@@ -3098,7 +3100,7 @@ final class AdminController {
 				<div class="adam-admin-action-stack">
 					<?php $this->render_action_form( $member, self::ACTION_APPROVE, __( 'Aprovar sócio', 'adam-membership' ), 'button-primary' ); ?>
 					<?php $this->render_rejection_form( $member ); ?>
-					<?php if ( in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) : ?><?php $this->render_registration_correction_form( $member ); ?><?php endif; ?>
+					<?php if ( in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) : ?><?php $this->render_registration_correction_selector( $member ); ?><?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
@@ -5121,6 +5123,34 @@ final class AdminController {
 			</label>
 			<button type="submit" class="button button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Rejeitar renovação', 'adam-membership' ); ?></button>
 		</form>
+		<?php
+	}
+
+	private function render_registration_correction_selector( Member $member ): void {
+		$fields = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
+		$external = 'external_association' === (string) $member->field( 'adam_membership_origin' );
+		$groups = array(
+			'Informação pessoal' => array( 'full_name', 'birth_date', 'marital_status', 'gender', 'profession', 'birthplace', 'nationality' ),
+			'Contacto e morada' => array( 'email', 'phone', 'telephone', 'address_line_1', 'address_line_2', 'city', 'municipality', 'postcode', 'country' ),
+			'Identificação' => array( 'citizen_card', 'document_expiry_date', 'document_issuing_place', 'nif' ),
+			'Associação / equipa' => array( 'team' ),
+			'Documentos' => array( 'profile_photo', 'payment_receipt' ),
+		);
+		if ( $external ) { $groups['Associação / equipa'][] = 'external_association_name'; $groups['Associação / equipa'][] = 'external_member_number'; $groups['Documentos'][] = 'external_association_proof'; }
+		$available = array();
+		foreach ( $groups as $group_keys ) { foreach ( $group_keys as $key ) { if ( 'profile_photo' === $key || ( isset( $fields[ $key ] ) && is_array( $fields[ $key ] ) && ! empty( $fields[ $key ]['enabled'] ) ) ) { $available[ $key ] = $fields[ $key ] ?? array( 'label' => DisplayLabels::field( $key ) ); } } }
+		?>
+		<div class="adam-admin-rejection-form adam-admin-correction-form" data-adam-correction-selector>
+			<h3><?php esc_html_e( 'Pedir correção', 'adam-membership' ); ?></h3>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+				<label><span><?php esc_html_e( 'Motivo da correção', 'adam-membership' ); ?></span><select name="correction_reason" required><option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option><?php foreach ( $this->correction_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label>
+				<div class="adam-correction-field-picker"><span><?php esc_html_e( 'Campos a corrigir', 'adam-membership' ); ?></span><button type="button" class="button adam-correction-field-picker__trigger" data-adam-correction-open><?php esc_html_e( 'Selecionar campos...', 'adam-membership' ); ?></button><div class="adam-correction-field-picker__summary" data-adam-correction-summary hidden><strong data-adam-correction-count></strong><div data-adam-correction-chips></div><button type="button" class="button-link" data-adam-correction-open><?php esc_html_e( 'Alterar seleção', 'adam-membership' ); ?></button></div></div>
+				<dialog class="adam-admin-correction-dialog" data-adam-correction-dialog><div class="adam-admin-correction-dialog__header"><h2><?php esc_html_e( 'Campos a corrigir', 'adam-membership' ); ?></h2><button type="button" class="button-link" data-adam-correction-close aria-label="Fechar">&times;</button></div><p><?php esc_html_e( 'Selecione apenas a informação ou os documentos que o candidato deve corrigir.', 'adam-membership' ); ?></p><div class="adam-admin-correction-dialog__groups">
+				<?php foreach ( $groups as $group_label => $group_keys ) : ?><fieldset><legend><?php echo esc_html( $group_label ); ?></legend><?php foreach ( $group_keys as $key ) : if ( ! isset( $available[ $key ] ) ) { continue; } $label = (string) ( $available[ $key ]['label'] ?? DisplayLabels::field( $key ) ); ?><label class="adam-admin-correction-option"><input type="checkbox" name="correction_fields[]" value="<?php echo esc_attr( $key ); ?>" data-adam-correction-option data-label="<?php echo esc_attr( $label ); ?>"><span><?php echo esc_html( $label ); ?></span></label><?php endforeach; ?></fieldset><?php endforeach; ?></div><div class="adam-admin-correction-dialog__actions"><button type="button" class="button" data-adam-correction-close><?php esc_html_e( 'Cancelar', 'adam-membership' ); ?></button><button type="button" class="button button-primary" data-adam-correction-apply><?php esc_html_e( 'Aplicar seleção', 'adam-membership' ); ?></button></div></dialog>
+				<label><span><?php esc_html_e( 'O que precisa de corrigir', 'adam-membership' ); ?></span><textarea name="correction_note" rows="4"></textarea></label><button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Pedir correção', 'adam-membership' ); ?></button>
+			</form>
+		</div>
 		<?php
 	}
 
