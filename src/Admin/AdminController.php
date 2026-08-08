@@ -66,6 +66,8 @@ final class AdminController {
 	private const ACTION_CONFIRM_ANA_RENEWAL = 'confirm_ana_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
 	private const RENEWAL_PAGE_SLUG      = 'adam-membership-renewal-request';
+	private const APD_PAGE_SLUG          = 'adam-membership-apd-requests';
+	private const MEMBER_CHANGES_PAGE_SLUG = 'adam-membership-member-changes';
 	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
 	private const FOUNDERS_PAGE_SLUG     = 'adam-membership-founders';
 	private const FORMS_PAGE_SLUG        = 'adam-membership-forms';
@@ -400,7 +402,7 @@ final class AdminController {
 		);
 
 		$this->renewal_page_hook = (string) add_submenu_page(
-			self::MENU_SLUG,
+			null,
 			esc_html__( 'Pedido de Renovação', 'adam-membership' ),
 			esc_html__( 'Pedido de Renovação', 'adam-membership' ),
 			self::CAPABILITY,
@@ -416,6 +418,8 @@ final class AdminController {
 			self::TEAM_PAGE_SLUG,
 			array( $this, 'render_team_page' )
 		);
+		add_submenu_page( null, 'Pedidos APD/ANA', 'Pedidos APD/ANA', self::CAPABILITY, self::APD_PAGE_SLUG, array( $this, 'render_apd_requests_page' ) );
+		add_submenu_page( null, 'Alterações de dados', 'Alterações de dados', self::CAPABILITY, self::MEMBER_CHANGES_PAGE_SLUG, array( $this, 'render_member_changes_page' ) );
 
 		if ( '' !== $this->member_page_hook ) {
 			add_action( 'load-' . $this->member_page_hook, array( $this, 'prepare_member_page_screen' ) );
@@ -612,8 +616,8 @@ final class AdminController {
 		$rows = array();
 		foreach ( $this->members->pending_members() as $member ) { $rows[] = array( 'type' => 'registrations', 'label' => 'Inscrição', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $member->registration_date(), 'status' => 'Pendente', 'url' => $this->member_url( $member ) ); }
 		foreach ( $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => self::RENEWAL_PAGE_SLUG, 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
-		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => 'adam-membership-member-changes', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
-		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-apd-requests', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => self::MEMBER_CHANGES_PAGE_SLUG, 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => self::APD_PAGE_SLUG, 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		usort( $rows, static fn( array $a, array $b ): int => strcmp( $b['date'], $a['date'] ) );
 		return $rows;
 	}
@@ -815,7 +819,7 @@ final class AdminController {
 	 * @param mixed $screen Current screen object when available.
 	 */
 	public function prepare_hidden_screen_context( mixed $screen ): void {
-		if ( ! $this->is_member_page_request() && ! $this->is_renewal_page_request() && ! $this->is_team_page_request() ) {
+		if ( ! $this->is_member_page_request() && ! $this->is_renewal_page_request() && ! $this->is_team_page_request() && ! $this->is_apd_page_request() && ! $this->is_member_changes_page_request() ) {
 			return;
 		}
 
@@ -826,6 +830,10 @@ final class AdminController {
 
 		if ( $this->is_renewal_page_request() ) {
 			$this->prepare_renewal_page_screen();
+			return;
+		}
+		if ( $this->is_apd_page_request() || $this->is_member_changes_page_request() ) {
+			$this->prime_admin_page_title( 'Aprovações' );
 			return;
 		}
 
@@ -5040,6 +5048,14 @@ final class AdminController {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
 		return self::TEAM_PAGE_SLUG === $page;
+	}
+
+	private function is_apd_page_request(): bool {
+		return self::APD_PAGE_SLUG === (string) ( $_GET['page'] ?? '' );
+	}
+
+	private function is_member_changes_page_request(): bool {
+		return self::MEMBER_CHANGES_PAGE_SLUG === (string) ( $_GET['page'] ?? '' );
 	}
 
 	/**
