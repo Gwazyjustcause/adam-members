@@ -162,6 +162,11 @@ final class SettingsRepository {
 		return is_email( $email ) ? $email : self::DEFAULT_EMAIL_FROM_ADDRESS;
 	}
 
+	/** Public member support address used in messages and email footers. */
+	public function support_email(): string {
+		return 'apoio@airsoftmondego.pt';
+	}
+
 	/**
 	 * Save branded email sender settings.
 	 *
@@ -763,7 +768,7 @@ final class SettingsRepository {
 			'member_rejected' => array(
 				'enabled' => true,
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM n\u{00E3}o foi aprovada",
-				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua inscri\u{00E7}\u{00E3}o foi analisada pela Dire\u{00E7}\u{00E3}o da ADAM e n\u{00E3}o foi aprovada.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p>Caso pretenda mais informa\u{00E7}\u{00F5}es, contacte a Dire\u{00E7}\u{00E3}o da ADAM.</p>",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua inscri\u{00E7}\u{00E3}o foi analisada pela Dire\u{00E7}\u{00E3}o da ADAM e n\u{00E3}o foi aprovada.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p>Se tiver alguma d\u{00FA}vida sobre o motivo indicado, contacte-nos atrav\u{00E9}s de <a href=\"mailto:{{support_email}}\">{{support_email}}</a>.</p>",
 			),
 			'member_change_received' => array(
 				'enabled' => true,

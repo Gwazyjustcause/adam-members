@@ -523,7 +523,7 @@ final class EmailService {
 
 		$rendered = $this->render_configured_email_template(
 			$template_key,
-			array_merge( $this->member_template_context( $member ), $extra )
+			array_merge( $this->member_template_context( $member ), array( 'support_email' => $this->settings->support_email() ), $extra )
 		);
 
 		if ( null === $rendered ) {
@@ -735,7 +735,7 @@ final class EmailService {
 </tr>
 <tr>
 <td style="padding:30px;background:#fafafa;border-top:1px solid #e4e4e4;font-size:13px;line-height:1.8;color:#666;">
-<p style="margin-top:0;"><?php esc_html_e( 'Caso necessite de apoio, contacte a Direção da ADAM.', 'adam-membership' ); ?></p>
+<p style="margin-top:0;">Caso necessite de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:<?php echo esc_attr( $this->settings->support_email() ); ?>"><?php echo esc_html( $this->settings->support_email() ); ?></a>.</p>
 <p style="margin-bottom:0;"><strong>ADAM - Associação Desportiva de Airsoft do Mondego</strong></p>
 </td>
 </tr>

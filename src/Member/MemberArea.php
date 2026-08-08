@@ -647,7 +647,7 @@ final class MemberArea {
 			<?php
 			$this->render_status_card(
 				$member->status(),
-				__( 'Infelizmente a sua inscrição não foi aprovada. Caso pretenda mais informações, contacte a ADAM.', 'adam-membership' )
+				sprintf( __( 'Infelizmente a sua inscrição não foi aprovada. Caso necessite de ajuda ou esclarecimentos, contacte-nos através de %s.', 'adam-membership' ), $this->settings->support_email() )
 			);
 
 			$this->render_notifications_card( $this->rejection_messages( $member ) );
@@ -2898,7 +2898,7 @@ final class MemberArea {
 	private function rejection_messages( Member $member ): array {
 		$messages = array(
 			__( 'A sua inscrição foi analisada e não foi aprovada pela ADAM.', 'adam-membership' ),
-			__( 'Caso pretenda mais informações, contacte a Direção da ADAM.', 'adam-membership' ),
+			sprintf( __( 'Se tiver alguma dúvida sobre o motivo indicado, contacte-nos através de %s.', 'adam-membership' ), $this->settings->support_email() ),
 		);
 
 		$reason = $member->field( 'motivo_rejeicao' );
