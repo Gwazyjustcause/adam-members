@@ -197,6 +197,13 @@ final class AdminController {
 	private MemberDeletionService $member_deletion;
 
 	/**
+	 * Complete member archive exporter.
+	 *
+	 * @var CompleteMemberExportService
+	 */
+	private CompleteMemberExportService $complete_export;
+
+	/**
 	 * Create the admin controller.
 	 *
 	 * @param MemberRepository   $members          Member repository.
@@ -215,9 +222,10 @@ final class AdminController {
 	 * @param RecognitionService  $recognition     Recognition service.
 	 * @param EmailService        $email           Email service.
 	 * @param TeamRepository      $teams           Team repository.
-	 * @param MemberDeletionService $member_deletion Permanent member deletion service.
+	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
+	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -235,6 +243,7 @@ final class AdminController {
 		$this->email               = $email;
 		$this->teams               = $teams;
 		$this->member_deletion     = $member_deletion;
+		$this->complete_export     = $complete_export;
 	}
 
 	/**
@@ -257,6 +266,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
 		add_action( 'admin_post_adam_membership_run_maintenance', array( $this, 'handle_run_maintenance' ) );
 		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
+		add_action( 'admin_post_adam_membership_export_complete_zip', array( $this, 'handle_export_complete_zip' ) );
 		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
 	}
 
@@ -576,6 +586,7 @@ final class AdminController {
 		$this->render_header( __( 'Sócios Pendentes', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_member_filters( $filters, true );
+		$this->render_complete_export_controls( $members, true );
 		$this->render_members_table( $members, true, $filters );
 		$this->render_footer();
 	}
@@ -592,6 +603,7 @@ final class AdminController {
 		$this->render_header( __( 'Sócios', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_member_filters( $filters, false );
+		$this->render_complete_export_controls( $members, false );
 		$this->render_members_table( $members, false, $filters );
 		$this->render_footer();
 	}
@@ -1516,6 +1528,82 @@ final class AdminController {
 		}
 
 		fclose( $output );
+		exit;
+	}
+
+	/**
+	 * Export complete selected, pending, or approved member records as ZIP.
+	 */
+	public function handle_export_complete_zip(): void {
+		$this->ensure_can_manage();
+		check_admin_referer( 'adam_membership_export_complete_zip' );
+
+		$scope   = isset( $_REQUEST['export_scope'] ) ? sanitize_key( wp_unslash( $_REQUEST['export_scope'] ) ) : 'selected';
+		$members = array();
+
+		if ( 'pending' === $scope ) {
+			$members = $this->members->pending_members();
+		} elseif ( 'approved' === $scope ) {
+			$members = array_values(
+				array_filter(
+					$this->members->all_members(),
+					static fn ( Member $member ): bool => ! $member->isPending()
+				)
+			);
+		} else {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Every value is sanitized on the next line.
+			$requested_ids = isset( $_REQUEST['member_ids'] ) ? (array) wp_unslash( $_REQUEST['member_ids'] ) : array();
+			$requested_ids = array_map( 'sanitize_text_field', $requested_ids );
+			$requested_ids = array_values( array_unique( array_filter( array_map( 'absint', $requested_ids ) ) ) );
+			$available     = array();
+
+			foreach ( $this->members->all_members() as $member ) {
+				$available[ $member->user_id() ] = $member;
+			}
+
+			foreach ( $requested_ids as $member_id ) {
+				if ( isset( $available[ $member_id ] ) ) {
+					$members[] = $available[ $member_id ];
+				}
+			}
+		}
+
+		if ( array() === $members ) {
+			wp_die( esc_html__( 'Selecione pelo menos um registo válido para exportar.', 'adam-membership' ), '', array( 'response' => 400 ) );
+		}
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( 0 );
+		}
+
+		$archive = $this->complete_export->create_archive( $members );
+		if ( is_wp_error( $archive ) ) {
+			wp_die( esc_html( $archive->get_error_message() ), '', array( 'response' => 500 ) );
+		}
+
+		$path     = $archive['path'];
+		$filename = $archive['filename'];
+
+		while ( 0 < ob_get_level() ) {
+			ob_end_clean();
+		}
+
+		nocache_headers();
+		header( 'Content-Type: application/zip' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		$size = filesize( $path );
+		if ( false !== $size ) {
+			header( 'Content-Length: ' . (string) $size );
+		}
+		header( 'X-Content-Type-Options: nosniff' );
+
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- Streaming a local generated download.
+			readfile( $path );
+		} finally {
+			wp_delete_file( $path );
+		}
+
 		exit;
 	}
 
@@ -2616,6 +2704,63 @@ final class AdminController {
 	}
 
 	/**
+	 * Render complete-record export controls for a member list.
+	 *
+	 * @param array<int, Member> $members Current visible members.
+	 * @param bool               $pending Whether this is the pending list.
+	 */
+	private function render_complete_export_controls( array $members, bool $pending ): void {
+		$all_scope = $pending ? 'pending' : 'approved';
+		$all_label = $pending ? __( 'Exportar todos os registos pendentes', 'adam-membership' ) : __( 'Exportar todos os sócios', 'adam-membership' );
+		$all_url   = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'       => 'adam_membership_export_complete_zip',
+					'export_scope' => $all_scope,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'adam_membership_export_complete_zip'
+		);
+		?>
+		<div class="adam-admin-panel adam-card adam-complete-export-controls">
+			<div>
+				<h2><?php esc_html_e( 'Exportar Registos Completos (ZIP)', 'adam-membership' ); ?></h2>
+				<p><?php esc_html_e( 'Inclui um ficheiro Informacao.xlsx e todos os documentos carregados, organizados numa pasta por sócio.', 'adam-membership' ); ?></p>
+			</div>
+			<div class="adam-admin-row-actions">
+				<form id="adam-complete-export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="adam_membership_export_complete_zip">
+					<input type="hidden" name="export_scope" value="selected">
+					<?php wp_nonce_field( 'adam_membership_export_complete_zip' ); ?>
+					<button type="submit" class="button button-primary" <?php disabled( array() === $members ); ?>><?php esc_html_e( 'Exportar selecionados', 'adam-membership' ); ?></button>
+				</form>
+				<a class="button" href="<?php echo esc_url( $all_url ); ?>"><?php echo esc_html( $all_label ); ?></a>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Build a nonce-protected complete export URL for one member.
+	 *
+	 * @param Member $member Member record.
+	 */
+	private function complete_export_member_url( Member $member ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'       => 'adam_membership_export_complete_zip',
+					'export_scope' => 'selected',
+					'member_ids'   => array( $member->user_id() ),
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'adam_membership_export_complete_zip'
+		);
+	}
+
+	/**
 	 * Render a member table.
 	 *
 	 * @param array<int, Member>    $members      Members to render.
@@ -2631,6 +2776,7 @@ final class AdminController {
 		<table class="widefat striped adam-admin-table adam-table">
 			<thead>
 				<tr>
+					<th class="check-column"><span class="screen-reader-text"><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></span></th>
 					<th><?php esc_html_e( 'Fotografia', 'adam-membership' ); ?></th>
 					<th><?php echo wp_kses_post( $this->sort_link( __( 'Nome', 'adam-membership' ), 'name', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->sort_link( __( 'Email', 'adam-membership' ), 'email', $filters ) ); ?></th>
@@ -2645,6 +2791,7 @@ final class AdminController {
 			<tbody>
 				<?php foreach ( $members as $member ) : ?>
 					<tr>
+						<td class="check-column"><input type="checkbox" name="member_ids[]" value="<?php echo esc_attr( (string) $member->user_id() ); ?>" form="adam-complete-export-form" aria-label="<?php echo esc_attr( __( 'Selecionar', 'adam-membership' ) . ': ' . $member->full_name() ); ?>"></td>
 						<td><?php $this->render_profile_photo( $member ); ?></td>
 						<td><strong><?php echo esc_html( $member->full_name() ); ?></strong></td>
 						<td><a href="mailto:<?php echo esc_attr( $member->email() ); ?>"><?php echo esc_html( $member->email() ); ?></a></td>
@@ -2655,6 +2802,7 @@ final class AdminController {
 						<td><?php $this->render_quota_badge( $member ); ?></td>
 						<td class="adam-admin-row-actions">
 							<a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'Ver', 'adam-membership' ); ?></a>
+							<a class="button button-small" href="<?php echo esc_url( $this->complete_export_member_url( $member ) ); ?>"><?php esc_html_e( 'Exportar ZIP', 'adam-membership' ); ?></a>
 							<?php if ( $show_actions ) : ?>
 								<?php $this->render_inline_action_form( $member, self::ACTION_APPROVE, __( 'Aprovar', 'adam-membership' ), 'button-primary' ); ?>
 								<?php $this->render_inline_rejection_form( $member ); ?>
@@ -2663,7 +2811,7 @@ final class AdminController {
 					</tr>
 					<?php if ( $show_actions ) : ?>
 						<tr class="adam-admin-documents-row">
-							<td colspan="9">
+							<td colspan="10">
 								<?php $this->render_document_warning_panel( $this->approval_service->missing_registration_documents( $member ), __( 'Documentos obrigatórios em falta antes da aprovação.', 'adam-membership' ) ); ?>
 								<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $this->member_document_rows( $member, false ) ); ?>
 							</td>

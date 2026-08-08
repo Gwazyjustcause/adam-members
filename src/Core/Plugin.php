@@ -35,6 +35,7 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Event\EventFrontend;
 use AdamMembership\Event\EventRepository;
 use AdamMembership\Event\EventService;
+use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Member\Account;
 use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\ApprovalService;
@@ -130,6 +131,7 @@ final class Plugin {
 		$reward_repository         = new RewardRepository();
 		$rewards                   = new RewardService( $reward_repository, $points, $members, $history_repository, $logger );
 		$member_deletion           = new MemberDeletionService( $renewal_repository, $history_repository, $points_repository, $reward_repository, $event_repository, $announcement_repository, $logger );
+		$complete_export           = new CompleteMemberExportService( $settings );
 		$recognition               = new RecognitionService( $members, $rewards, $history_repository, $logger );
 		$card_cosmetics            = new CardCosmeticsService( $rewards );
 		$events                    = new EventService( $event_repository, $members, $logger, $history_repository, $points );
@@ -177,7 +179,8 @@ final class Plugin {
 				$recognition,
 				$email,
 				$teams,
-				$member_deletion
+				$member_deletion,
+				$complete_export
 			);
 
 			$admin->register();
