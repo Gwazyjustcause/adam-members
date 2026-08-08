@@ -902,12 +902,30 @@ final class AdminController {
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Último número de sócio atribuído', 'adam-membership' ); ?></th>
-						<td><code><?php echo esc_html( (string) $this->settings->last_assigned_member_number() ); ?></code></td>
+						<td>
+							<label for="adam_last_assigned_member_number" class="screen-reader-text"><?php esc_html_e( "\u{00DA}ltimo n\u{00FA}mero de s\u{00F3}cio atribu\u{00ED}do", 'adam-membership' ); ?></label>
+							<input type="number" id="adam_last_assigned_member_number" name="last_assigned_member_number" class="small-text" min="0" step="1" required value="<?php echo esc_attr( (string) $this->settings->last_assigned_member_number() ); ?>">
+							<p class="description"><?php esc_html_e( "Alterar este valor afeta apenas o pr\u{00F3}ximo n\u{00FA}mero a atribuir. Os n\u{00FA}meros dos s\u{00F3}cios existentes n\u{00E3}o ser\u{00E3}o alterados.", 'adam-membership' ); ?></p>
+						</td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Próximo número de sócio', 'adam-membership' ); ?></th>
-						<td><code><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
+						<td><code id="adam-next-member-number-preview"><?php echo esc_html( $this->settings->preview_next_member_number() ); ?></code></td>
 					</tr>
+				</table>
+				<script>
+				(function () {
+					const input = document.getElementById('adam_last_assigned_member_number');
+					const preview = document.getElementById('adam-next-member-number-preview');
+					if (!input || !preview) return;
+					input.addEventListener('input', function () {
+						const value = Number.parseInt(input.value, 10);
+						if (!Number.isInteger(value) || value < 0) return;
+						preview.textContent = 'ADAM-' + String(value + 1).padStart(4, '0');
+					});
+				}());
+				</script>
+				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'URL da Área do Sócio', 'adam-membership' ); ?></th>
 						<td><a href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php echo esc_html( $this->settings->member_area_url() ); ?></a></td>
@@ -1428,6 +1446,31 @@ final class AdminController {
 	public function handle_save_settings(): void {
 		$this->ensure_can_manage();
 		check_admin_referer( 'adam_membership_save_settings' );
+
+		if ( isset( $_POST['last_assigned_member_number'] ) ) {
+			$raw_counter = trim( (string) wp_unslash( $_POST['last_assigned_member_number'] ) );
+			if ( '' === $raw_counter || ! ctype_digit( $raw_counter ) ) {
+				$this->redirect_with_error( 'O último número de sócio deve ser um número inteiro igual ou superior a zero.' );
+				return;
+			}
+
+			$counter = filter_var( $raw_counter, FILTER_VALIDATE_INT, array( 'options' => array( 'min_range' => 0 ) ) );
+			if ( false === $counter || $counter >= PHP_INT_MAX ) {
+				$this->redirect_with_error( 'O último número de sócio indicado não é válido.' );
+				return;
+			}
+
+			$next_number = $counter + 1;
+			foreach ( $this->members->all_members() as $member ) {
+				$existing_number = trim( (string) $member->field( 'numero_socio' ) );
+				if ( '' !== $existing_number && Member::member_number_numeric_value( $existing_number ) === $next_number ) {
+					$this->redirect_with_error( 'Não é possível guardar este contador: o próximo número de sócio já está atribuído a um sócio existente.' );
+					return;
+				}
+			}
+
+			$this->settings->save_last_assigned_member_number( $counter );
+		}
 
 		$url = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : $this->settings->renewal_page_url();
 		$registration_url = isset( $_POST['registration_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['registration_page_url'] ) ) : $this->settings->registration_page_url();

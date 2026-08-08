@@ -39,6 +39,18 @@ final class SettingsRepository {
 	}
 
 	/**
+	 * Set the last assigned numeric member number.
+	 *
+	 * This changes only the counter used for future assignments; existing
+	 * member numbers are never modified here.
+	 *
+	 * @param int $number Numeric member number.
+	 */
+	public function save_last_assigned_member_number( int $number ): void {
+		update_option( self::OPTION_LAST_MEMBER_NUMBER, max( 0, $number ), false );
+	}
+
+	/**
 	 * Reserve and return the next formatted member number.
 	 */
 	public function reserve_next_member_number(): string {
