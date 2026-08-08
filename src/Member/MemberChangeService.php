@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace AdamMembership\Member;
 
+use AdamMembership\Emails\EmailService;
 use WP_Error;
 
 final class MemberChangeService {
 	public function __construct(
 		private MemberChangeRepository $repository,
-		private MemberRepository $members
+		private MemberRepository $members,
+		private ?EmailService $email = null
 	) {}
 
 	public function repository(): MemberChangeRepository {
@@ -45,7 +47,9 @@ final class MemberChangeService {
 		if ( array() === $changes ) {
 			return new WP_Error( 'adam_member_change_empty', __( 'Não foram encontradas alterações.', 'adam-membership' ) );
 		}
-		return $this->repository->create( $member->user_id(), $changes );
+		$request = $this->repository->create( $member->user_id(), $changes );
+		if ( null !== $this->email ) { $this->email->send_member_change_received_email( $member ); }
+		return $request;
 	}
 
 	public function approve( int $id ): true|WP_Error {

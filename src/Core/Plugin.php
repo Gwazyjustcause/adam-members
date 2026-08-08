@@ -142,9 +142,9 @@ final class Plugin {
 		$statistics                = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
 		$approval                  = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
 		$apd_repository            = new ApdAssociationRepository();
-		$apd_association           = new ApdAssociationService( $apd_repository, $members, $settings );
+		$apd_association           = new ApdAssociationService( $apd_repository, $members, $settings, $email );
 		$member_change_repository  = new MemberChangeRepository();
-		$member_changes            = new MemberChangeService( $member_change_repository, $members );
+		$member_changes            = new MemberChangeService( $member_change_repository, $members, $email );
 		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
 		$maintenance               = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );

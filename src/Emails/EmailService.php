@@ -77,6 +77,16 @@ final class EmailService {
 				'description'  => __( 'Enviado quando uma inscrição é rejeitada.', 'adam-membership' ),
 				'placeholders' => array( 'member_name', 'reason' ),
 			),
+			'member_change_received' => array(
+				'label' => 'Pedido de atualização de dados recebido',
+				'description' => 'Enviado quando um sócio submete alterações para aprovação.',
+				'placeholders' => array( 'member_name' ),
+			),
+			'apd_association_received' => array(
+				'label' => 'Pedido de associação ANA recebido',
+				'description' => 'Enviado quando um sócio submete um pedido APD/ANA.',
+				'placeholders' => array( 'member_name', 'amount' ),
+			),
 			'renewal_submitted' => array(
 				'label'        => __( 'Renovação submetida', 'adam-membership' ),
 				'description'  => __( 'Confirma a receção da renovação e do comprovativo de pagamento.', 'adam-membership' ),
@@ -202,6 +212,22 @@ final class EmailService {
 				'reason' => '' !== trim( $reason ) ? $reason : __( 'Sem motivo adicional indicado.', 'adam-membership' ),
 			)
 		);
+	}
+
+	public function send_member_change_received_email( Member $member ): bool {
+		return $this->send_member_template_email( 'member_change_received', $member, array(), array( 'member_id' => $member->user_id() ) );
+	}
+
+	public function send_apd_association_received_email( Member $member, string $amount ): bool {
+		return $this->send_member_template_email( 'apd_association_received', $member, array( 'amount' => $amount ), array( 'member_id' => $member->user_id() ) );
+	}
+
+	public function send_apd_association_rejected_email( Member $member, string $reason = '' ): bool {
+		return $this->send_member_template_email( 'apd_association_rejected', $member, array( 'reason' => $reason ?: 'Sem motivo adicional indicado.' ) );
+	}
+
+	public function send_apd_association_approved_email( Member $member, string $ana_number = '' ): bool {
+		return $this->send_member_template_email( 'apd_association_approved', $member, array( 'ana_number' => $ana_number, 'member_area_link' => $this->settings->member_area_url() ) );
 	}
 
 	/**

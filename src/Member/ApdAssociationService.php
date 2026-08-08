@@ -4,10 +4,11 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Emails\EmailService;
 use WP_Error;
 
 final class ApdAssociationService {
-	public function __construct( private ApdAssociationRepository $repository, private MemberRepository $members, private SettingsRepository $settings ) {}
+	public function __construct( private ApdAssociationRepository $repository, private MemberRepository $members, private SettingsRepository $settings, private ?EmailService $email = null ) {}
 
 	public function repository(): ApdAssociationRepository { return $this->repository; }
 
@@ -33,6 +34,7 @@ final class ApdAssociationService {
 		$requested = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
 		$request = $this->repository->create( array( 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'amount' => $this->price_for( $member, $requested ), 'payment_status' => '' === $receipt ? 'pending' : 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
 		$member->save( array( 'adam_apd_management_status' => Member::APD_PENDING ) );
+		if ( null !== $this->email ) { $this->email->send_apd_association_received_email( $member, $request->amount() ); }
 		return $request;
 	}
 
@@ -53,6 +55,7 @@ final class ApdAssociationService {
 		}
 		$member->save( $updates );
 		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		if ( null !== $this->email ) { $this->email->send_apd_association_approved_email( $member, $ana_member_number ); }
 		return true;
 	}
 
@@ -79,6 +82,7 @@ final class ApdAssociationService {
 		$member = $this->members->find( $request->user_id() );
 		if ( null !== $member && Member::APD_PENDING === (string) $member->field( 'adam_apd_management_status' ) ) { $member->save( array( 'adam_apd_management_status' => Member::APD_EXTERNAL ) ); }
 		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_REJECTED, 'rejection_reason' => sanitize_text_field( $reason ), 'rejection_note' => sanitize_textarea_field( $note ), 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		if ( null !== $this->email && null !== $member ) { $this->email->send_apd_association_rejected_email( $member, $reason ); }
 		return true;
 	}
 }

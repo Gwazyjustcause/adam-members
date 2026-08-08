@@ -765,6 +765,26 @@ final class SettingsRepository {
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM n\u{00E3}o foi aprovada",
 				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>A sua inscri\u{00E7}\u{00E3}o foi analisada pela Dire\u{00E7}\u{00E3}o da ADAM e n\u{00E3}o foi aprovada.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p>Caso pretenda mais informa\u{00E7}\u{00F5}es, contacte a Dire\u{00E7}\u{00E3}o da ADAM.</p>",
 			),
+			'member_change_received' => array(
+				'enabled' => true,
+				'subject' => 'Pedido de atualização de dados recebido',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>Recebemos o seu pedido de atualização de dados. O pedido aguarda aprovação da ADAM; os seus dados atuais permanecem inalterados até essa aprovação.</p>',
+			),
+			'apd_association_received' => array(
+				'enabled' => true,
+				'subject' => 'Pedido de associação à ANA recebido',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>Recebemos o seu pedido de associação da APD através da ADAM.</p><p><strong>Valor:</strong> {{amount}} €</p><p>A ADAM irá verificar os dados e proceder ao registo junto da ANA. O pedido só será aprovado após confirmação da ANA. O processo poderá demorar entre 2 e 7 dias.</p>',
+			),
+			'apd_association_rejected' => array(
+				'enabled' => true,
+				'subject' => 'Pedido de associação ANA não aprovado',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>O seu pedido de associação da APD através da ADAM não foi aprovado.</p><p><strong>Motivo:</strong> {{reason}}</p>',
+			),
+			'apd_association_approved' => array(
+				'enabled' => true,
+				'subject' => 'Associação ANA aprovada',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>A ANA confirmou o seu registo e a ADAM aprovou agora a associação.</p><p><strong>N.º ANA:</strong> {{ana_number}}</p><p><a href="{{member_area_link}}">Aceder à Área de Sócio</a></p>',
+			),
 			'renewal_submitted' => array(
 				'enabled' => true,
 				'subject' => "Pedido de renova\u{00E7}\u{00E3}o recebido",
