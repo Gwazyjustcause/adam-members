@@ -261,6 +261,9 @@ final class MemberArea {
 		if ( null === $member ) {
 			return $this->render_not_found();
 		}
+		if ( is_page( ManagedPages::id( 'points_history' ) ) ) {
+			return $this->render_points_history_page( $member );
+		}
 
 		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
@@ -876,13 +879,27 @@ final class MemberArea {
 	 *
 	 * @param Member $member Member.
 	 */
+	private function render_points_history_page( Member $member ): string {
+		$balance = $this->points->current_balance( $member );
+		$total   = $this->points->total_earned( $member );
+		$entries = $this->points->member_history( $member, array( 'limit' => 0 ) );
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page adam-points-history-page">
+			<section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">PONTOS ADAM</p><h2>Histórico de Pontos</h2><p>Consulte todos os movimentos de Pontos ADAM da sua conta.</p></div></section>
+			<section class="adam-card adam-form-card"><p><a class="adam-card-link" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>">← Voltar à Área do Sócio</a></p><div class="adam-points-summary"><div class="adam-points-stat"><span>Saldo atual</span><strong><?php echo esc_html( number_format_i18n( $balance ) ); ?></strong></div><div class="adam-points-stat"><span>Total acumulado</span><strong><?php echo esc_html( number_format_i18n( $total ) ); ?></strong></div></div><div class="adam-points-history adam-points-history--complete">
+			<?php if ( array() === $entries ) : ?><div class="adam-empty-inline">Ainda não existem movimentos de pontos.</div><?php else : foreach ( $entries as $entry ) : $this->render_points_entry( $entry ); endforeach; endif; ?>
+			</div></section>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
 	private function render_points_card( Member $member ): void {
 		$balance        = $this->points->current_balance( $member );
 		$total_earned   = $this->points->total_earned( $member );
 		$recent_entries = $this->points->recent_activity( $member, 5 );
-		$show_history   = isset( $_GET['points_history'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['points_history'] ) );
-		$history_url    = add_query_arg( 'points_history', '1', ManagedPages::url( 'member_area' ) );
-		$back_url       = ManagedPages::url( 'member_area' );
+		$history_url    = ManagedPages::url( 'points_history' );
 		?>
 		<section class="adam-card adam-points-section" aria-label="<?php esc_attr_e( 'Pontos ADAM', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -891,8 +908,8 @@ final class MemberArea {
 					<h3><?php echo esc_html( sprintf( __( 'Tens %d Pontos ADAM', 'adam-membership' ), $balance ) ); ?></h3>
 				</div>
 				<div class="adam-card-actions">
-					<a class="adam-card-link" href="<?php echo esc_url( $show_history ? $back_url : $history_url ); ?>">
-						<?php echo esc_html( $show_history ? __( 'Voltar ao painel', 'adam-membership' ) : __( 'Ver histórico completo', 'adam-membership' ) ); ?>
+					<a class="adam-card-link" href="<?php echo esc_url( $history_url ); ?>">
+						<?php esc_html_e( 'Ver histórico completo', 'adam-membership' ); ?>
 					</a>
 				</div>
 			</div>
@@ -910,12 +927,12 @@ final class MemberArea {
 
 			<div class="adam-points-history">
 				<?php
-				$entries = $show_history ? $this->points->member_history( $member, array( 'limit' => 50 ) ) : $recent_entries;
+				$entries = $recent_entries;
 
 				if ( array() === $entries ) :
 					?>
 					<div class="adam-empty-inline">
-						<?php echo esc_html( $show_history ? __( 'Ainda não existem movimentos de pontos.', 'adam-membership' ) : __( 'Ainda não tens atividade de pontos registada.', 'adam-membership' ) ); ?>
+						<?php esc_html_e( 'Ainda não tens atividade de pontos registada.', 'adam-membership' ); ?>
 					</div>
 					<?php
 				else :

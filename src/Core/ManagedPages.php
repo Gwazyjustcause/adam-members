@@ -16,7 +16,7 @@ use WP_Post;
  * Creates, resolves and administers all plugin-owned public pages.
  */
 final class ManagedPages {
-	private const VERSION              = '1.0.0';
+	private const VERSION              = '1.0.1';
 	private const OPTION_IDS           = 'adam_membership_managed_page_ids';
 	private const OPTION_VER           = 'adam_membership_managed_pages_version';
 	private const META_KEY             = '_adam_membership_managed_page';
@@ -57,6 +57,12 @@ final class ManagedPages {
 				'label'   => __( 'Área de Sócio', 'adam-membership' ),
 				'title'   => __( 'Área de Sócio', 'adam-membership' ),
 				'slug'    => 'socio',
+				'content' => '[adam_member_area]',
+			),
+			'points_history'    => array(
+				'label'   => __( 'Histórico de Pontos', 'adam-membership' ),
+				'title'   => __( 'Histórico de Pontos', 'adam-membership' ),
+				'slug'    => 'socio-pontos',
 				'content' => '[adam_member_area]',
 			),
 			'account_setup'      => array(
