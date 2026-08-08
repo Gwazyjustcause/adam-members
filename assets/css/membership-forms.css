@@ -252,6 +252,15 @@
 	box-shadow: 0 16px 36px var(--adam-shadow-color, rgba(47, 107, 59, 0.12));
 }
 
+.adam-form-field input.adam-apd-field--locked,
+.adam-form-field textarea.adam-apd-field--locked,
+.adam-form-field select.adam-apd-field--locked {
+	background: #edf8f0;
+	color: var(--adam-ink, var(--adam-text, #102033));
+	opacity: 1;
+	cursor: not-allowed;
+}
+
 .adam-choice-card input,
 .adam-inline-choice input,
 .adam-checkbox-control input {

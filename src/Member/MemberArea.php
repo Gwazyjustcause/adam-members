@@ -145,6 +145,7 @@ final class MemberArea {
 	 */
 	public function enqueue_assets(): void {
 		$asset_path = ADAM_MEMBERSHIP_PATH . 'assets/css/member-area.css';
+		$form_asset_path = ADAM_MEMBERSHIP_PATH . 'assets/css/membership-forms.css';
 		$rewards_script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/member-rewards.js';
 		$preferences_script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/member-communication-preferences.js';
 
@@ -166,6 +167,7 @@ final class MemberArea {
 			file_exists( $preferences_script_path ) ? (string) filemtime( $preferences_script_path ) : ADAM_MEMBERSHIP_VERSION,
 			true
 		);
+		wp_enqueue_style( 'adam-membership-forms', ADAM_MEMBERSHIP_URL . 'assets/css/membership-forms.css', array( 'adam-member-area' ), file_exists( $form_asset_path ) ? (string) filemtime( $form_asset_path ) : ADAM_MEMBERSHIP_VERSION );
 
 		wp_add_inline_script(
 			'adam-member-communication-preferences',
@@ -2364,6 +2366,9 @@ final class MemberArea {
 			'document_expiry' => array( 'label' => 'Data de validade', 'value' => (string) $member->field( 'documento_validade' ), 'editable' => false ),
 			'document_place' => array( 'label' => 'Local de emissão', 'value' => (string) $member->field( 'documento_local_emissao' ), 'editable' => false ),
 		);
+		$fields['gender']['label'] = "G\u{00E9}nero";
+		$fields['association_name']['label'] = "Associa\u{00E7}\u{00E3}o/APD";
+		if ( 'submitted' === (string) ( $_GET['apd_message'] ?? '' ) ) { $message = $this->notice_markup( 'success', __( "Pedido de associa\u{00E7}\u{00E3}o APD submetido com sucesso.", 'adam-membership' ) ); }
 		if ( 'POST' === strtoupper( $_SERVER['REQUEST_METHOD'] ?? '' ) && isset( $_POST['adam_apd_association_submit'] ) ) {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_association' ) ) { $message = $this->notice_markup( 'error', __( 'Não foi possível validar o pedido.', 'adam-membership' ) ); }
 			elseif ( ! in_array( (string) ( $_POST['apd_information_mode'] ?? '' ), array( 'confirm', 'edit' ), true ) ) { $message = $this->notice_markup( 'error', __( 'Selecione se os seus dados estão corretos ou se precisam de alterações.', 'adam-membership' ) ); }
@@ -2396,13 +2401,13 @@ final class MemberArea {
 			<?php echo wp_kses_post( $message ); ?><p><?php esc_html_e( "Reveja os dados que a ADAM ir\u{00E1} utilizar no seu registo ANA.", 'adam-membership' ); ?></p>
 			<p><strong><?php esc_html_e( "Valor aplic\u{00E1}vel:", 'adam-membership' ); ?> <?php echo esc_html( number_format_i18n( (float) $price, 2 ) . ' ' . html_entity_decode( '&#8364;', ENT_QUOTES, 'UTF-8' ) ); ?></strong></p>
 			<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_apd_association' ); ?>
-				<div class="adam-choice-grid"><label class="adam-choice-card adam-card"><input type="radio" name="apd_information_mode" value="confirm" required> <?php esc_html_e( "Confirmo que os meus dados est\u{00E3}o corretos", 'adam-membership' ); ?></label><label class="adam-choice-card adam-card"><input type="radio" name="apd_information_mode" value="edit" required> <?php esc_html_e( 'Preciso de alterar os meus dados', 'adam-membership' ); ?></label></div>
+				<div class="adam-choice-grid"><label class="adam-choice-card adam-card"><input type="radio" name="apd_information_mode" value="confirm" required><strong><?php esc_html_e( "Confirmo que os meus dados est\u{00E3}o corretos", 'adam-membership' ); ?></strong><small><?php esc_html_e( 'Os dados abaixo serão utilizados no pedido à ANA.', 'adam-membership' ); ?></small></label><label class="adam-choice-card adam-card"><input type="radio" name="apd_information_mode" value="edit" required><strong><?php esc_html_e( 'Preciso de alterar os meus dados', 'adam-membership' ); ?></strong><small><?php esc_html_e( 'Quero corrigir ou atualizar os meus dados antes de enviar o pedido.', 'adam-membership' ); ?></small></label></div>
 				<div class="adam-form-section"><h3><?php esc_html_e( "Informa\u{00E7}\u{00E3}o pessoal e de registo", 'adam-membership' ); ?></h3><div class="adam-form-grid"><?php foreach ( $fields as $key => $field ) : ?><label class="adam-form-field"><?php echo esc_html( $field['label'] ); ?><input type="text" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $field['value'] ); ?>" <?php disabled( ! $field['editable'] ); ?>></label><?php endforeach; ?></div></div>
 				<div class="adam-form-section"><h3><?php esc_html_e( 'APD atual', 'adam-membership' ); ?></h3><div class="adam-form-grid"><label class="adam-form-field"><?php esc_html_e( "Associa\u{00E7}\u{00E3}o/APD", 'adam-membership' ); ?><input type="text" name="association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>" required></label><label class="adam-form-field"><?php esc_html_e( "N.\u{00BA} de s\u{00F3}cio APD", 'adam-membership' ); ?><input type="text" name="external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></div></div>
 				<label class="adam-form-field"><?php esc_html_e( 'Comprovativo de pagamento', 'adam-membership' ); ?><input type="file" name="payment_receipt" accept=".pdf,.jpg,.jpeg,.png"></label><button class="button button-primary" name="adam_apd_association_submit" value="1"><?php esc_html_e( 'Submeter pedido', 'adam-membership' ); ?></button>
 			</form>
 		</section>
-		<?php $html = (string) ob_get_clean(); $html .= '<script>(function(){var f=document.querySelector("[data-adam-membership-form=apd-association]"),r=f&&f.querySelectorAll("input[name=apd_information_mode]"),e=f&&f.querySelectorAll("input[name=birth_date],input[name=gender],input[name=marital_status],input[name=nationality],input[name=birthplace],input[name=profession],input[name=phone],input[name=address],input[name=postcode],input[name=city]");if(!f)return;function s(){var x=f.querySelector("input[name=apd_information_mode]:checked");e.forEach(function(i){i.readOnly=!x||x.value!=="edit";});}r.forEach(function(i){i.addEventListener("change",s);});s();}());</script>'; return $html;
+		<?php $html = (string) ob_get_clean(); $html .= '<script>(function(){var f=document.querySelector("[data-adam-membership-form=apd-association]"),r=f&&f.querySelectorAll("input[name=apd_information_mode]"),e=f&&f.querySelectorAll("input[name=birth_date],input[name=gender],input[name=marital_status],input[name=nationality],input[name=birthplace],input[name=profession],input[name=phone],input[name=address],input[name=postcode],input[name=city]");if(!f)return;var d=f.querySelector(".adam-choice-card small");if(d)d.textContent="Os dados abaixo ser\\u00e3o utilizados no pedido \\u00e0 ANA.";function s(){var x=f.querySelector("input[name=apd_information_mode]:checked"),locked=!x||x.value!=="edit";e.forEach(function(i){i.readOnly=locked;i.classList.toggle("adam-apd-field--locked",locked);});}r.forEach(function(i){i.addEventListener("change",s);});s();}());</script>'; return $html;
 	}
 
 	private function apd_association_actions( Member $member ): array {
