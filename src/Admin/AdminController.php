@@ -30,6 +30,8 @@ use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberDeletionService;
 use AdamMembership\Member\MemberRepository;
+use AdamMembership\Member\MemberChangeService;
+use AdamMembership\Member\MemberChangeRequest;
 use AdamMembership\Member\RecognitionService;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\RenewalRequest;
@@ -208,6 +210,7 @@ final class AdminController {
 	 */
 	private CompleteMemberExportService $complete_export;
 	private ApdAssociationService $apd_association;
+	private MemberChangeService $member_changes;
 
 	/**
 	 * Create the admin controller.
@@ -231,7 +234,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -251,6 +254,7 @@ final class AdminController {
 		$this->member_deletion     = $member_deletion;
 		$this->complete_export     = $complete_export;
 		$this->apd_association     = $apd_association;
+		$this->member_changes      = $member_changes;
 	}
 
 	/**
@@ -275,6 +279,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_export_members_csv', array( $this, 'handle_export_members_csv' ) );
 		add_action( 'admin_post_adam_membership_export_complete_zip', array( $this, 'handle_export_complete_zip' ) );
 		add_action( 'admin_post_adam_membership_apd_action', array( $this, 'handle_apd_action' ) );
+		add_action( 'admin_post_adam_membership_member_change_action', array( $this, 'handle_member_change_action' ) );
 		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
 	}
 
@@ -338,6 +343,7 @@ final class AdminController {
 		);
 
 		add_submenu_page( self::MENU_SLUG, esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), self::CAPABILITY, 'adam-membership-apd-requests', array( $this, 'render_apd_requests_page' ) );
+		add_submenu_page( self::MENU_SLUG, esc_html__( 'Pedidos de alteração de dados', 'adam-membership' ), esc_html__( 'Alterações de dados', 'adam-membership' ), self::CAPABILITY, 'adam-membership-member-changes', array( $this, 'render_member_changes_page' ) );
 
 		add_submenu_page(
 			self::MENU_SLUG,
@@ -3030,6 +3036,11 @@ final class AdminController {
 				<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
 
 				<div class="adam-admin-edit-grid">
+					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'Informação pessoal e contacto', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid">
+					<label><span><?php esc_html_e( 'Nome', 'adam-membership' ); ?></span><input type="text" name="member_first_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'first_name', true ) ); ?>"></label><label><span><?php esc_html_e( 'Apelido', 'adam-membership' ); ?></span><input type="text" name="member_last_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'last_name', true ) ); ?>"></label>
+					<?php foreach ( array( 'email' => array( 'Email', $member->email() ), 'data_nascimento' => array( 'Data de nascimento', $member->field( 'data_nascimento' ) ), 'genero' => array( 'G\u{00E9}nero', $member->field( 'genero' ) ), 'estado_civil' => array( 'Estado civil', $member->field( 'estado_civil' ) ), 'nacionalidade' => array( 'Nacionalidade', $member->field( 'nacionalidade' ) ), 'naturalidade' => array( 'Naturalidade', $member->field( 'naturalidade' ) ), 'profissao' => array( 'Profiss\u{00E3}o', $member->field( 'profissao' ) ), 'telefone_fixo' => array( 'Telefone fixo', $member->field( 'telefone_fixo' ) ), 'morada' => array( 'Morada', $member->field( 'morada' ) ), 'morada_linha_2' => array( 'Morada (linha 2)', $member->field( 'morada_linha_2' ) ), 'codigo_postal' => array( 'C\u{00F3}digo postal', $member->field( 'codigo_postal' ) ), 'cidade' => array( 'Localidade', $member->field( 'cidade' ) ), 'municipio' => array( 'Munic\u{00ED}pio', $member->field( 'municipio' ) ), 'pais' => array( 'Pa\u{00ED}s', $member->field( 'pais' ) ), 'nif' => array( 'NIF', $member->field( 'nif' ) ), 'cartao_cidadao' => array( 'BI / Cart\u{00E3}o de Cidad\u{00E3}o / Passaporte', $member->field( 'cartao_cidadao' ) ), 'documento_validade' => array( 'Data de validade', $member->field( 'documento_validade' ) ), 'documento_local_emissao' => array( 'Local de emiss\u{00E3}o', $member->field( 'documento_local_emissao' ) ) ) as $key => $item ) : ?><label><span><?php echo esc_html( $item[0] ); ?></span><input type="<?php echo 'data_nascimento' === $key || 'documento_validade' === $key ? 'date' : 'text'; ?>" name="member_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $item[1] ); ?>"></label><?php endforeach; ?>
+					</div></div>
+					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'APD atual', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid"><label><span><?php esc_html_e( 'APD / Associa\u{00E7}\u{00E3}o', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>"></label><label><span><?php esc_html_e( 'N.\u{00BA} de s\u{00F3}cio APD', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></div></div>
 					<label>
 						<span><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></span>
 						<input type="text" name="member_number" value="<?php echo esc_attr( (string) $member->field( 'numero_socio' ) ); ?>" placeholder="<?php esc_attr_e( 'Por atribuir', 'adam-membership' ); ?>">
@@ -3295,6 +3306,28 @@ final class AdminController {
 			'equipa'         => isset( $_POST['team'] ) ? sanitize_text_field( wp_unslash( $_POST['team'] ) ) : '',
 			'estado'         => $status,
 		);
+		foreach ( array( 'data_nascimento', 'genero', 'estado_civil', 'nacionalidade', 'naturalidade', 'profissao', 'telefone_fixo', 'morada', 'morada_linha_2', 'codigo_postal', 'cidade', 'municipio', 'pais', 'nif', 'cartao_cidadao', 'documento_validade', 'documento_local_emissao', 'adam_external_association_name', 'adam_external_member_number' ) as $field ) {
+			$key = 'member_' . $field;
+			if ( isset( $_POST[ $key ] ) ) {
+				$updates[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+			}
+		}
+		if ( isset( $_POST['member_email'] ) ) {
+			$email = sanitize_email( wp_unslash( $_POST['member_email'] ) );
+			if ( '' !== $email && $email !== $member->email() ) {
+				$disable_email = static fn(): bool => false;
+				add_filter( 'send_email_change_email', $disable_email );
+				$email_result = wp_update_user( array( 'ID' => $user_id, 'user_email' => $email ) );
+				remove_filter( 'send_email_change_email', $disable_email );
+				if ( is_wp_error( $email_result ) ) { return $email_result; }
+			}
+		}
+		if ( isset( $_POST['member_first_name'], $_POST['member_last_name'] ) ) {
+			$first_name = sanitize_text_field( wp_unslash( $_POST['member_first_name'] ) );
+			$last_name  = sanitize_text_field( wp_unslash( $_POST['member_last_name'] ) );
+			$name_result = wp_update_user( array( 'ID' => $user_id, 'first_name' => $first_name, 'last_name' => $last_name, 'display_name' => trim( $first_name . ' ' . $last_name ) ) );
+			if ( is_wp_error( $name_result ) ) { return $name_result; }
+		}
 
 		$changes = $this->changed_member_fields( $member, $updates );
 		$founder_status = isset( $_POST['founder_status'] ) ? sanitize_text_field( wp_unslash( $_POST['founder_status'] ) ) : '0';
@@ -5475,6 +5508,22 @@ final class AdminController {
 		}
 
 		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? $date : '';
+	}
+
+	public function render_member_changes_page(): void {
+		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permiss\u{00E3}o.', 'adam-membership' ) ); }
+		$requests = $this->member_changes->repository()->all();
+		?><div class="wrap"><h1><?php esc_html_e( 'Pedidos de altera\u{00E7}\u{00E3}o de dados', 'adam-membership' ); ?></h1><table class="widefat striped"><thead><tr><th><?php esc_html_e( 'S\u{00F3}cio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Data', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Diferen\u{00E7}as', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'A\u{00E7}\u{00F5}es', 'adam-membership' ); ?></th></tr></thead><tbody><?php foreach ( $requests as $request ) : $member = $this->members->find( $request->user_id() ); if ( null === $member ) { continue; } ?><tr><td><?php echo esc_html( $member->full_name() . ( $member->member_number() ? ' — ' . $member->member_number() : '' ) ); ?></td><td><?php echo esc_html( $request->submitted_at() ); ?></td><td><table><?php foreach ( $request->changes() as $field => $change ) : ?><tr><td><?php echo esc_html( $field ); ?></td><td><?php echo esc_html( (string) ( $change['old'] ?? '' ) ); ?></td><td>→ <?php echo esc_html( (string) ( $change['new'] ?? '' ) ); ?></td></tr><?php endforeach; ?></table></td><td><?php echo esc_html( $request->status() ); ?></td><td><?php if ( MemberChangeRequest::STATUS_PENDING === $request->status() ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'adam_member_change_' . $request->id() ); ?><input type="hidden" name="action" value="adam_membership_member_change_action"><input type="hidden" name="request_id" value="<?php echo esc_attr( $request->id() ); ?>"><button class="button button-primary" name="decision" value="approve"><?php esc_html_e( 'Aprovar', 'adam-membership' ); ?></button> <button class="button" name="decision" value="reject"><?php esc_html_e( 'Rejeitar', 'adam-membership' ); ?></button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
+	}
+
+	public function handle_member_change_action(): void {
+		if ( ! current_user_can( self::CAPABILITY ) ) { wp_die( esc_html__( 'Sem permiss\u{00E3}o.', 'adam-membership' ) ); }
+		$id = absint( $_POST['request_id'] ?? 0 );
+		check_admin_referer( 'adam_member_change_' . $id );
+		$result = 'approve' === sanitize_key( (string) ( $_POST['decision'] ?? '' ) ) ? $this->member_changes->approve( $id ) : $this->member_changes->reject( $id );
+		$url = add_query_arg( array( 'page' => 'adam-membership-member-changes', 'member_change_result' => is_wp_error( $result ) ? 'error' : 'ok' ), admin_url( 'admin.php' ) );
+		wp_safe_redirect( $url );
+		exit;
 	}
 
 	public function render_apd_requests_page(): void {

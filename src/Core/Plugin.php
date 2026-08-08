@@ -49,6 +49,8 @@ use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\MemberArea;
 use AdamMembership\Member\MemberDeletionService;
+use AdamMembership\Member\MemberChangeRepository;
+use AdamMembership\Member\MemberChangeService;
 use AdamMembership\Member\MemberRepository;
 use AdamMembership\Member\PasswordRecovery;
 use AdamMembership\Member\PasswordReset;
@@ -141,6 +143,8 @@ final class Plugin {
 		$approval                  = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
 		$apd_repository            = new ApdAssociationRepository();
 		$apd_association           = new ApdAssociationService( $apd_repository, $members, $settings );
+		$member_change_repository  = new MemberChangeRepository();
+		$member_changes            = new MemberChangeService( $member_change_repository, $members );
 		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
 		$maintenance               = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
@@ -184,8 +188,9 @@ final class Plugin {
 				$email,
 				$teams,
 				$member_deletion,
-				$complete_export
-				, $apd_association
+				$complete_export,
+				$apd_association,
+				$member_changes
 			);
 
 			$admin->register();
@@ -203,7 +208,7 @@ final class Plugin {
 
 		( new ConsentManager( $settings ) )->register();
 		( new RewardQrFrontend( $rewards, $members ) )->register();
-		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition, $communication_preferences, $apd_association ) )->register();
+		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition, $communication_preferences, $apd_association, $member_changes ) )->register();
 		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams ) )->register();
 		$account_setup->register();
 		( new PasswordRecovery( $email, $members, $history ) )->register();

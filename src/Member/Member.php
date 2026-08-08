@@ -380,6 +380,10 @@ final class Member {
 	/**
 	 * Get the numeric portion of the ADAM member number for sorting and duplicate checks.
 	 */
+	public function member_number(): string {
+		return (string) $this->field( 'numero_socio' );
+	}
+
 	public function member_number_value(): int {
 		return self::member_number_numeric_value( (string) $this->field( 'numero_socio' ) );
 	}

@@ -94,6 +94,7 @@ final class MemberArea {
 	 */
 	private CommunicationPreferences $communication_preferences;
 	private ApdAssociationService $apd_association;
+	private MemberChangeService $member_changes;
 
 	/**
 	 * Constructor.
@@ -110,7 +111,7 @@ final class MemberArea {
 	 * @param RecognitionService       $recognition               Recognition service.
 	 * @param CommunicationPreferences $communication_preferences Communication preferences.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences, ApdAssociationService $apd_association ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences, ApdAssociationService $apd_association, MemberChangeService $member_changes ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -123,6 +124,7 @@ final class MemberArea {
 		$this->recognition   = $recognition;
 		$this->communication_preferences = $communication_preferences;
 		$this->apd_association = $apd_association;
+		$this->member_changes = $member_changes;
 	}
 
 	/**
@@ -258,6 +260,9 @@ final class MemberArea {
 		$this->handle_reward_redemption_request( $member );
 		if ( 'apd-association' === $this->current_member_view() ) {
 			return $this->render_apd_association_page( $member );
+		}
+		if ( 'member-update' === $this->current_member_view() ) {
+			return $this->render_member_update_page( $member );
 		}
 		$this->recognition->grant_eligible_loyalty_rewards( $member );
 
@@ -2290,6 +2295,7 @@ final class MemberArea {
 			$this->render_actions(
 				array_merge(
 					$this->renewal_actions( $member ),
+					$this->member_update_actions(),
 					$this->standard_account_actions()
 				)
 			);
@@ -2441,8 +2447,79 @@ final class MemberArea {
 		return array_merge(
 			$this->renewal_actions( $member ),
 			$this->apd_association_actions( $member ),
+			$this->member_update_actions(),
 			$this->standard_account_actions()
 		);
+	}
+
+	/** @return array<int,array{label:string,description:string,url:string}> */
+	private function member_update_actions(): array {
+		return array( array( 'label' => __( 'Atualizar dados', 'adam-membership' ), 'description' => __( 'Solicitar alterações aos seus dados pessoais.', 'adam-membership' ), 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) );
+	}
+
+	private function render_member_update_page( Member $member ): string {
+		if ( ! $member->isActive() && ! $member->isExpired() ) {
+			return $this->render_not_found();
+		}
+		$fields = array(
+			'nome_completo' => array( 'label' => __( 'Nome completo', 'adam-membership' ), 'value' => $member->full_name(), 'key' => 'full_name', 'readonly' => true ),
+			'email' => array( 'label' => __( 'Email', 'adam-membership' ), 'value' => $member->email(), 'key' => 'email', 'readonly' => false ),
+			'data_nascimento' => array( 'label' => __( 'Data de nascimento', 'adam-membership' ), 'value' => $member->field( 'data_nascimento' ), 'key' => 'data_nascimento' ),
+			'genero' => array( 'label' => __( 'Género', 'adam-membership' ), 'value' => $member->field( 'genero' ), 'key' => 'genero' ),
+			'estado_civil' => array( 'label' => __( 'Estado civil', 'adam-membership' ), 'value' => $member->field( 'estado_civil' ), 'key' => 'estado_civil' ),
+			'nacionalidade' => array( 'label' => __( 'Nacionalidade', 'adam-membership' ), 'value' => $member->field( 'nacionalidade' ), 'key' => 'nacionalidade' ),
+			'naturalidade' => array( 'label' => __( 'Naturalidade', 'adam-membership' ), 'value' => $member->field( 'naturalidade' ), 'key' => 'naturalidade' ),
+			'profissao' => array( 'label' => __( 'Profissão', 'adam-membership' ), 'value' => $member->field( 'profissao' ), 'key' => 'profissao' ),
+			'telefone' => array( 'label' => __( 'Telemóvel', 'adam-membership' ), 'value' => $member->field( 'telefone' ), 'key' => 'telefone' ),
+			'telefone_fixo' => array( 'label' => __( 'Telefone', 'adam-membership' ), 'value' => $member->field( 'telefone_fixo' ), 'key' => 'telefone_fixo' ),
+			'morada' => array( 'label' => __( 'Morada', 'adam-membership' ), 'value' => $member->field( 'morada' ), 'key' => 'morada' ),
+			'morada_linha_2' => array( 'label' => __( 'Morada (linha 2)', 'adam-membership' ), 'value' => $member->field( 'morada_linha_2' ), 'key' => 'morada_linha_2' ),
+			'codigo_postal' => array( 'label' => __( 'Código postal', 'adam-membership' ), 'value' => $member->field( 'codigo_postal' ), 'key' => 'codigo_postal' ),
+			'cidade' => array( 'label' => __( 'Localidade', 'adam-membership' ), 'value' => $member->field( 'cidade' ), 'key' => 'cidade' ),
+			'municipio' => array( 'label' => __( 'Município', 'adam-membership' ), 'value' => $member->field( 'municipio' ), 'key' => 'municipio' ),
+			'pais' => array( 'label' => __( 'País', 'adam-membership' ), 'value' => $member->field( 'pais' ), 'key' => 'pais' ),
+			'nif' => array( 'label' => 'NIF', 'value' => $member->field( 'nif' ), 'key' => 'nif' ),
+			'cartao_cidadao' => array( 'label' => __( 'BI / Cartão de Cidadão / Passaporte', 'adam-membership' ), 'value' => $member->field( 'cartao_cidadao' ), 'key' => 'cartao_cidadao' ),
+			'documento_validade' => array( 'label' => __( 'Data de validade', 'adam-membership' ), 'value' => $member->field( 'documento_validade' ), 'key' => 'documento_validade' ),
+			'documento_local_emissao' => array( 'label' => __( 'Local de emissão', 'adam-membership' ), 'value' => $member->field( 'documento_local_emissao' ), 'key' => 'documento_local_emissao' ),
+		);
+		$external = Member::APD_EXTERNAL === (string) $member->field( 'adam_apd_management_status' );
+		if ( $external ) {
+			$fields['adam_external_association_name'] = array( 'label' => __( 'APD / Associação', 'adam-membership' ), 'value' => $member->field( 'adam_external_association_name' ), 'key' => 'adam_external_association_name' );
+			$fields['adam_external_member_number'] = array( 'label' => __( 'N.º de sócio APD', 'adam-membership' ), 'value' => $member->field( 'adam_external_member_number' ), 'key' => 'adam_external_member_number' );
+		}
+		$message = 'submitted' === (string) ( $_GET['member_update'] ?? '' ) ? $this->notice_markup( 'success', __( 'Pedido de alteração submetido para análise.', 'adam-membership' ) ) : '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_member_update_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_member_update' ) ) {
+				$message = $this->notice_markup( 'error', __( 'Não foi possível validar o pedido.', 'adam-membership' ) );
+			} else {
+				$submitted = array();
+				foreach ( $fields as $field ) {
+					if ( ! empty( $field['readonly'] ) || ! isset( $_POST[ $field['key'] ] ) ) { continue; }
+					$submitted[ $field['key'] ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
+				}
+				foreach ( array( 'profile_photo', 'adam_external_association_proof' ) as $upload_field ) {
+					if ( empty( $_FILES[ $upload_field ]['name'] ) ) { continue; }
+					require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
+					$attachment = media_handle_upload( $upload_field, 0, array(), array( 'test_form' => false ) );
+					if ( ! is_wp_error( $attachment ) ) { $submitted[ $upload_field ] = $attachment; }
+				}
+				$result = $this->member_changes->submit( $member, $submitted );
+				if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'member_update' => 'submitted' ) ) ); exit; }
+			}
+		}
+		ob_start(); ?>
+		<section class="adam-public-form adam-card" data-adam-membership-form="member-update">
+			<div class="adam-card-heading"><p class="adam-eyebrow">ADAM SÓCIOS</p><h2><?php esc_html_e( 'Atualizar dados', 'adam-membership' ); ?></h2></div>
+			<?php echo wp_kses_post( $message ); ?><p><?php esc_html_e( 'As alterações serão revistas por um administrador antes de serem aplicadas.', 'adam-membership' ); ?></p>
+			<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_member_update' ); ?>
+				<div class="adam-form-section"><h3><?php esc_html_e( 'Informação pessoal', 'adam-membership' ); ?></h3><div class="adam-form-grid">
+				<?php foreach ( $fields as $name => $field ) : ?><label class="adam-form-field"><?php echo esc_html( $field['label'] ); ?><input type="text" name="<?php echo esc_attr( $field['key'] ); ?>" value="<?php echo esc_attr( (string) $field['value'] ); ?>" <?php echo ! empty( $field['readonly'] ) ? 'readonly' : ''; ?>></label><?php endforeach; ?>
+				</div></div><div class="adam-form-section"><h3><?php esc_html_e( 'Documentos', 'adam-membership' ); ?></h3><div class="adam-form-grid"><label class="adam-form-field"><?php esc_html_e( 'Fotografia', 'adam-membership' ); ?><input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp"></label><?php if ( $external ) : ?><label class="adam-form-field"><?php esc_html_e( 'Comprovativo de Associação/APD', 'adam-membership' ); ?><input type="file" name="adam_external_association_proof" accept=".pdf,.jpg,.jpeg,.png"></label><?php endif; ?></div></div>
+				<button class="button button-primary" name="adam_member_update_submit" value="1"><?php esc_html_e( 'Enviar para validação', 'adam-membership' ); ?></button>
+			</form>
+		</section>
+		<?php return (string) ob_get_clean();
 	}
 
 	/**
