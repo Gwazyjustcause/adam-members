@@ -730,7 +730,7 @@ final class MemberArea {
 		$card_presentation  = $this->cards->card_presentation( $member );
 		$download_filename  = 'cartao-adam-' . sanitize_file_name( '' !== $member_number_text ? $member_number_text : (string) $member->user_id() ) . '.png';
 		?>
-		<section class="adam-card adam-digital-card-section" aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
+		<section class="adam-card adam-digital-card-section" data-adam-ui-ignore aria-label="<?php esc_attr_e( 'Digital membership card', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
