@@ -583,7 +583,7 @@ final class AdminController {
 	/**
 	 * Render the pending members page.
 	 */
-	public function render_approvals_page(): void {
+	/* public function render_approvals_page(): void {
 		$this->ensure_can_manage();
 		$selected = sanitize_key( (string) ( $_GET['approval_type'] ?? 'all' ) );
 		$rows = $this->approval_rows();
@@ -592,6 +592,18 @@ final class AdminController {
 		$this->render_header( 'Aprovações' );
 		$this->render_notices();
 		?><div class="adam-admin-panel adam-card"><nav class="adam-admin-tabs" aria-label="Tipos de aprovação"><?php foreach ( array( 'all' => 'Todos', 'registrations' => 'Inscrições', 'renewals' => 'Renovações', 'changes' => 'Alterações de dados', 'apd' => 'APD / ANA' ) as $key => $label ) : ?><a class="<?php echo $selected === $key ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'adam-membership-pending', 'approval_type' => $key ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $label ); ?> <span class="count"><?php echo esc_html( (string) $counts[ $key ] ); ?></span></a><?php endforeach; ?></nav></div><div class="adam-admin-panel adam-card"><table class="widefat striped"><thead><tr><th>Tipo</th><th>Sócio / candidato</th><th>N.º de Sócio</th><th>Data</th><th>Estado</th><th>Ação</th></tr></thead><tbody><?php foreach ( $rows as $row ) : if ( 'all' !== $selected && $row['type'] !== $selected ) { continue; } ?><tr><td><strong><?php echo esc_html( $row['label'] ); ?></strong></td><td><?php echo esc_html( $row['member_name'] ); ?></td><td><?php echo esc_html( $row['member_number'] ?: '—' ); ?></td><td><?php echo esc_html( $row['date'] ); ?></td><td><span class="adam-admin-badge pending"><?php echo esc_html( $row['status'] ); ?></span></td><td><a class="button button-small button-primary" href="<?php echo esc_url( $row['url'] ); ?>">Rever</a></td></tr><?php endforeach; ?></tbody></table><?php if ( 0 === $counts['all'] ) : ?><p>Não existem pedidos pendentes.</p><?php endif; ?></div><?php");
+		$this->render_footer();
+	} */
+
+	public function render_approvals_page(): void {
+		$this->ensure_can_manage();
+		$this->render_header( 'Aprovações' );
+		$this->render_notices();
+		echo '<div class="adam-admin-panel adam-card"><h2>Aprovações</h2><p>Selecione uma categoria para rever os pedidos pendentes.</p><p><a class="button button-primary" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=all' ) ) . '">Todos</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=registrations' ) ) . '">Inscrições</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=renewals' ) ) . '">Renovações</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=changes' ) ) . '">Alterações de dados</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=adam-membership-pending&approval_type=apd' ) ) . '">APD / ANA</a></p></div>';
+		$rows = $this->approval_rows();
+		echo '<div class="adam-admin-panel adam-card"><table class="widefat striped"><thead><tr><th>Tipo</th><th>Sócio</th><th>N.º</th><th>Data</th><th>Estado</th><th>Ação</th></tr></thead><tbody>';
+		foreach ( $rows as $row ) { echo '<tr><td>' . esc_html( $row['label'] ) . '</td><td>' . esc_html( $row['member_name'] ) . '</td><td>' . esc_html( $row['member_number'] ?: '—' ) . '</td><td>' . esc_html( $row['date'] ) . '</td><td>' . esc_html( $row['status'] ) . '</td><td><a class="button button-small button-primary" href="' . esc_url( $row['url'] ) . '">Rever</a></td></tr>'; }
+		echo '</tbody></table></div>';
 		$this->render_footer();
 	}
 
