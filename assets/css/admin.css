@@ -735,6 +735,91 @@
 	gap: 12px;
 }
 
+/* APD/ANA review: one request is one outer record. Inner sections are
+ * separators/content areas, not additional dashboard cards. */
+.adam-apd-review {
+	gap: 0;
+	padding: 32px 36px;
+}
+
+.adam-apd-review > .adam-admin-panel.adam-card {
+	height: auto;
+	min-height: 0;
+	padding: 26px 0 0;
+	border: 0;
+	border-top: 1px solid var(--adam-border, #d9e4dc);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.adam-apd-review > .adam-admin-panel.adam-card:first-of-type {
+	padding-top: 18px;
+	border-top: 0;
+}
+
+.adam-apd-review .adam-admin-detail-grid {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 24px 32px;
+	margin-top: 22px;
+}
+
+.adam-apd-review .adam-admin-detail-grid > div {
+	display: grid;
+	gap: 8px;
+	min-width: 0;
+}
+
+.adam-apd-review .adam-admin-detail-grid strong {
+	color: var(--adam-admin-muted, #68757d);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .05em;
+	text-transform: uppercase;
+}
+
+.adam-apd-review .adam-admin-detail-grid span {
+	color: var(--adam-admin-text, #172033);
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.adam-apd-review h2 {
+	margin-bottom: 8px;
+}
+
+.adam-apd-review > .adam-admin-panel.adam-card:last-of-type > p:first-of-type {
+	display: none;
+}
+
+.adam-apd-stage-current {
+	margin: 18px 0;
+	font-size: 16px;
+}
+
+.adam-apd-review label {
+	display: grid;
+	gap: 8px;
+	margin: 12px 0;
+}
+
+@media (max-width: 900px) {
+	.adam-apd-review .adam-admin-detail-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 600px) {
+	.adam-apd-review {
+		padding: 24px 20px;
+	}
+	.adam-apd-review .adam-admin-detail-grid {
+		grid-template-columns: 1fr;
+		gap: 18px;
+	}
+}
+
 .adam-admin-detail-item {
 	padding: 14px;
 	border: 1px solid var(--adam-border, #e5edf0);
