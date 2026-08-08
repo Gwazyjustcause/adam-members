@@ -306,13 +306,15 @@ final class AdminController {
 			array( $this, 'render_dashboard_page' )
 		);
 
+		$approval_count = $this->pending_approval_count();
+		$approval_label = $approval_count > 0 ? sprintf( __( 'Aprovações (%d)', 'adam-membership' ), $approval_count ) : __( 'Aprovações', 'adam-membership' );
 		add_submenu_page(
 			self::MENU_SLUG,
-			esc_html__( 'Sócios Pendentes', 'adam-membership' ),
-			esc_html__( 'Sócios Pendentes', 'adam-membership' ),
+			esc_html( $approval_label ),
+			esc_html( $approval_label ),
 			self::CAPABILITY,
 			'adam-membership-pending',
-			array( $this, 'render_pending_members_page' )
+			array( $this, 'render_approvals_page' )
 		);
 
 		add_submenu_page(
@@ -333,17 +335,6 @@ final class AdminController {
 			array( $this, 'render_history_page' )
 		);
 
-		add_submenu_page(
-			self::MENU_SLUG,
-			esc_html__( 'Pedidos de Renovação', 'adam-membership' ),
-			esc_html__( 'Pedidos de Renovação', 'adam-membership' ),
-			self::CAPABILITY,
-			'adam-membership-renewals',
-			array( $this, 'render_renewals_page' )
-		);
-
-		add_submenu_page( self::MENU_SLUG, esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), esc_html__( 'Pedidos APD/ANA', 'adam-membership' ), self::CAPABILITY, 'adam-membership-apd-requests', array( $this, 'render_apd_requests_page' ) );
-		add_submenu_page( self::MENU_SLUG, esc_html__( 'Pedidos de alteração de dados', 'adam-membership' ), esc_html__( 'Alterações de dados', 'adam-membership' ), self::CAPABILITY, 'adam-membership-member-changes', array( $this, 'render_member_changes_page' ) );
 
 		add_submenu_page(
 			self::MENU_SLUG,
@@ -592,6 +583,31 @@ final class AdminController {
 	/**
 	 * Render the pending members page.
 	 */
+	public function render_approvals_page(): void {
+		$this->ensure_can_manage();
+		$selected = sanitize_key( (string) ( $_GET['approval_type'] ?? 'all' ) );
+		$rows = $this->approval_rows();
+		$counts = array( 'all' => count( $rows ), 'registrations' => 0, 'renewals' => 0, 'changes' => 0, 'apd' => 0 );
+		foreach ( $rows as $row ) { ++$counts[ $row['type'] ]; }
+		$this->render_header( 'Aprovações' );
+		$this->render_notices();
+		?><div class="adam-admin-panel adam-card"><nav class="adam-admin-tabs" aria-label="Tipos de aprovação"><?php foreach ( array( 'all' => 'Todos', 'registrations' => 'Inscrições', 'renewals' => 'Renovações', 'changes' => 'Alterações de dados', 'apd' => 'APD / ANA' ) as $key => $label ) : ?><a class="<?php echo $selected === $key ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => 'adam-membership-pending', 'approval_type' => $key ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $label ); ?> <span class="count"><?php echo esc_html( (string) $counts[ $key ] ); ?></span></a><?php endforeach; ?></nav></div><div class="adam-admin-panel adam-card"><table class="widefat striped"><thead><tr><th>Tipo</th><th>Sócio / candidato</th><th>N.º de Sócio</th><th>Data</th><th>Estado</th><th>Ação</th></tr></thead><tbody><?php foreach ( $rows as $row ) : if ( 'all' !== $selected && $row['type'] !== $selected ) { continue; } ?><tr><td><strong><?php echo esc_html( $row['label'] ); ?></strong></td><td><?php echo esc_html( $row['member_name'] ); ?></td><td><?php echo esc_html( $row['member_number'] ?: '—' ); ?></td><td><?php echo esc_html( $row['date'] ); ?></td><td><span class="adam-admin-badge pending"><?php echo esc_html( $row['status'] ); ?></span></td><td><a class="button button-small button-primary" href="<?php echo esc_url( $row['url'] ); ?>">Rever</a></td></tr><?php endforeach; ?></tbody></table><?php if ( 0 === $counts['all'] ) : ?><p>Não existem pedidos pendentes.</p><?php endif; ?></div><?php");
+		$this->render_footer();
+	}
+
+	/** @return array<int,array<string,string>> */
+	private function approval_rows(): array {
+		$rows = array();
+		foreach ( $this->members->pending_members() as $member ) { $rows[] = array( 'type' => 'registrations', 'label' => 'Inscrição', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $member->registration_date(), 'status' => 'Pendente', 'url' => $this->member_url( $member ) ); }
+		foreach ( $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => self::RENEWAL_PAGE_SLUG, 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => 'adam-membership-member-changes', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-apd-requests', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		usort( $rows, static fn( array $a, array $b ): int => strcmp( $b['date'], $a['date'] ) );
+		return $rows;
+	}
+
+	private function pending_approval_count(): int { return count( $this->approval_rows() ); }
+
 	public function render_pending_members_page(): void {
 		$this->ensure_can_manage();
 
