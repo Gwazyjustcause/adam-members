@@ -3098,6 +3098,7 @@ final class AdminController {
 				<div class="adam-admin-action-stack">
 					<?php $this->render_action_form( $member, self::ACTION_APPROVE, __( 'Aprovar sócio', 'adam-membership' ), 'button-primary' ); ?>
 					<?php $this->render_rejection_form( $member ); ?>
+					<?php if ( Member::STATUS_REJECTED === $member->status() ) : ?><?php $this->render_correction_request_form( $member ); ?><?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
@@ -5121,6 +5122,10 @@ final class AdminController {
 			<button type="submit" class="button button-link-delete adam-button adam-button--danger"><?php esc_html_e( 'Rejeitar renovação', 'adam-membership' ); ?></button>
 		</form>
 		<?php
+	}
+
+	private function render_correction_request_form( Member $member ): void {
+		?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-rejection-form"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label><span>Motivo da correção</span><select name="rejection_reason" required><option value="">Selecionar</option><?php foreach ( $this->rejection_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label><label><span>O que precisa de corrigir</span><textarea name="rejection_note" rows="3"></textarea></label><button type="submit" class="button button-primary adam-button">Pedir correção</button></form><?php
 	}
 
 	/**

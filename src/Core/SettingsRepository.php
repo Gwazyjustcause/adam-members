@@ -426,12 +426,19 @@ final class SettingsRepository {
 	public function email_template_settings(): array {
 		$stored = get_option( self::OPTION_EMAIL_TEMPLATE_SETTINGS, array() );
 
-		return $this->normalize_membership_form_settings(
+		$settings = $this->normalize_membership_form_settings(
 			$this->merge_membership_form_settings(
 				$this->default_email_template_settings(),
 				is_array( $stored ) ? $stored : array()
 			)
 		);
+		if ( isset( $settings['member_rejected']['body'] ) ) {
+			$body = (string) $settings['member_rejected']['body'];
+			$body = (string) preg_replace( '/pela Dire.{1,3}o da ADAM/u', 'pela ADAM', $body );
+			if ( ! str_contains( $body, '{{correction_body}}' ) ) { $body = str_replace( '<p><strong>Motivo indicado:</strong>', '{{correction_body}}<p><strong>Motivo indicado:</strong>', $body ); }
+			$settings['member_rejected']['body'] = $body;
+		}
+		return $settings;
 	}
 
 	/**
@@ -783,6 +790,11 @@ final class SettingsRepository {
 				'enabled' => true,
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM n\u{00E3}o foi aprovada",
 				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p>{{correction_body}}<p>A sua inscri\u{00E7}\u{00E3}o foi analisada pela ADAM e n\u{00E3}o foi aprovada.</p><p><strong>Motivo indicado:</strong> {{reason}}</p><p>Se tiver alguma d\u{00FA}vida sobre o motivo indicado, contacte-nos atrav\u{00E9}s de <a href=\"mailto:{{support_email}}\">{{support_email}}</a>.</p>",
+			),
+			'member_correction_requested' => array(
+				'enabled' => true,
+				'subject' => 'A sua inscrição necessita de correções',
+				'body' => '<p>Olá <strong>{{member_name}}</strong>,</p><p>A sua inscrição foi analisada pela ADAM e necessita de correções.</p><p><strong>Motivo indicado:</strong> {{reason}}</p>{{correction_body}}<p>Se necessitar de ajuda ou esclarecimentos, contacte-nos através de <a href="mailto:{{support_email}}">{{support_email}}</a>.</p>',
 			),
 			'member_change_received' => array(
 				'enabled' => true,
