@@ -21,6 +21,7 @@ use AdamMembership\Event\Event;
 use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
 use AdamMembership\Export\CompleteMemberExportService;
+use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
@@ -3499,6 +3500,14 @@ final class AdminController {
 			if ( isset( $_POST[ $key ] ) ) {
 				$updates[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
 			}
+		}
+		$configs = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
+		$config_keys = array( 'data_nascimento' => 'birth_date', 'genero' => 'gender', 'estado_civil' => 'marital_status', 'nacionalidade' => 'nationality', 'profissao' => 'profession', 'telefone_fixo' => 'telephone', 'morada' => 'address_line_1', 'morada_linha_2' => 'address_line_2', 'codigo_postal' => 'postcode', 'cidade' => 'city', 'municipio' => 'municipality', 'pais' => 'country', 'cartao_cidadao' => 'citizen_card', 'documento_validade' => 'document_expiry_date', 'documento_local_emissao' => 'document_issuing_place', 'nif' => 'nif', 'telefone' => 'phone', 'equipa' => 'team' );
+		foreach ( $updates as $storage_key => $value ) {
+			$form_key = $config_keys[ $storage_key ] ?? $storage_key;
+			if ( ! isset( $configs[ $form_key ] ) || ! is_array( $configs[ $form_key ] ) ) { continue; }
+			$check = SharedFieldValidator::validate( $form_key, $value, $configs[ $form_key ], false );
+			if ( is_wp_error( $check ) ) { return $check; }
 		}
 		if ( isset( $_POST['member_email'] ) ) {
 			$email = sanitize_email( wp_unslash( $_POST['member_email'] ) );

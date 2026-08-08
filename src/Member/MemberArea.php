@@ -16,6 +16,7 @@ use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\DisplayLabels;
+use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
@@ -2380,11 +2381,26 @@ final class MemberArea {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_association' ) ) { $message = $this->notice_markup( 'error', __( 'Não foi possível validar o pedido.', 'adam-membership' ) ); }
 			elseif ( ! in_array( (string) ( $_POST['apd_information_mode'] ?? '' ), array( 'confirm', 'edit' ), true ) ) { $message = $this->notice_markup( 'error', __( 'Selecione se os seus dados estão corretos ou se precisam de alterações.', 'adam-membership' ) ); }
 			else {
-				$payload = array(); foreach ( $fields as $key => $field ) { $payload[ $key ] = 'edit' === (string) $_POST['apd_information_mode'] ? sanitize_text_field( wp_unslash( $_POST[ $key ] ?? $field['value'] ) ) : $field['value']; }
+				$payload = array(); $validation_error = null;
+				foreach ( $fields as $key => $field ) {
+					$payload[ $key ] = 'edit' === (string) $_POST['apd_information_mode'] ? sanitize_text_field( wp_unslash( $_POST[ $key ] ?? $field['value'] ) ) : $field['value'];
+					$check = SharedFieldValidator::validate( (string) $key, $payload[ $key ], $field, false );
+					if ( is_wp_error( $check ) ) { $validation_error = $check; break; }
+				}
+				if ( $validation_error instanceof \WP_Error ) { $message = $this->notice_markup( 'error', $validation_error->get_error_message() ); }
+				else {
 				$payload['remove_profile_photo'] = ! empty( $_POST['remove_profile_photo'] );
-				if ( ! empty( $_FILES['profile_photo']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $photo = media_handle_upload( 'profile_photo', 0, array(), array( 'test_form' => false ) ); if ( ! is_wp_error( $photo ) ) { $payload['profile_photo'] = $photo; } }
-				$receipt = ''; if ( ! empty( $_FILES['payment_receipt']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = wp_handle_upload( $_FILES['payment_receipt'], array( 'test_form' => false, 'mimes' => array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf' ) ) ); $receipt = is_array( $upload ) ? (string) ( $upload['url'] ?? '' ) : ''; }
-				$result = $this->apd_association->submit( $member, $payload, $receipt ); if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'apd_message' => 'submitted' ) ) ); exit; }
+				$photo_mimes = array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+				$receipt_mimes = array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf' );
+				$upload_error = SharedFieldValidator::validate_upload( $_FILES['profile_photo'] ?? null, $photo_mimes, false );
+				if ( ! is_wp_error( $upload_error ) ) { $upload_error = SharedFieldValidator::validate_upload( $_FILES['payment_receipt'] ?? null, $receipt_mimes, true ); }
+				if ( is_wp_error( $upload_error ) ) { $message = $this->notice_markup( 'error', $upload_error->get_error_message() ); }
+				else {
+					if ( ! empty( $_FILES['profile_photo']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $photo = media_handle_upload( 'profile_photo', 0, array(), array( 'test_form' => false, 'mimes' => $photo_mimes ) ); if ( ! is_wp_error( $photo ) ) { $payload['profile_photo'] = $photo; } }
+					$receipt = ''; if ( ! empty( $_FILES['payment_receipt']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = wp_handle_upload( $_FILES['payment_receipt'], array( 'test_form' => false, 'mimes' => $receipt_mimes ) ); $receipt = is_array( $upload ) ? (string) ( $upload['url'] ?? '' ) : ''; }
+					$result = $this->apd_association->submit( $member, $payload, $receipt ); if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'apd_message' => 'submitted' ) ) ); exit; }
+				}
+				}
 			}
 		}
 		return $this->render_apd_registration_form( $member, $fields, $message );
@@ -2563,14 +2579,27 @@ final class MemberArea {
 					$patch_key = $patch_keys[ $field['key'] ] ?? $field['key'];
 					$submitted[ $patch_key ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
 				}
+				$validation_error = null;
 				foreach ( array( 'profile_photo' ) as $upload_field ) {
 					if ( empty( $_FILES[ $upload_field ]['name'] ) ) { continue; }
+					$upload_check = SharedFieldValidator::validate_upload( $_FILES[ $upload_field ], array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ), false );
+					if ( is_wp_error( $upload_check ) ) { $validation_error = $upload_check; continue; }
 					require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
-					$attachment = media_handle_upload( $upload_field, 0, array(), array( 'test_form' => false ) );
+					$attachment = media_handle_upload( $upload_field, 0, array(), array( 'test_form' => false, 'mimes' => array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) ) );
 					if ( ! is_wp_error( $attachment ) ) { $submitted[ $upload_field ] = $attachment; }
 				}
-				$result = $this->member_changes->submit( $member, $submitted );
-				if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'member_update' => 'submitted' ) ) ); exit; }
+				foreach ( $fields as $field ) {
+					$key = (string) ( $field['key'] ?? '' );
+					if ( '' === $key || ! array_key_exists( $key, $_POST ) || ! empty( $field['readonly'] ) ) { continue; }
+					$check = SharedFieldValidator::validate( $key, $submitted[ $this->member_update_patch_key( $key ) ] ?? '', $field, false );
+					if ( is_wp_error( $check ) ) { $validation_error = $check; break; }
+				}
+				if ( $validation_error instanceof \WP_Error ) {
+					$message = $this->notice_markup( 'error', $validation_error->get_error_message() );
+				} else {
+					$result = $this->member_changes->submit( $member, $submitted );
+					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'member_update' => 'submitted' ) ) ); exit; }
+				}
 			}
 		}
 		ob_start(); ?>
@@ -2584,6 +2613,10 @@ final class MemberArea {
 			</form>
 		</section></div>
 		<?php return (string) ob_get_clean();
+	}
+
+	private function member_update_patch_key( string $key ): string {
+		return (array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' )[ $key ] ?? $key);
 	}
 
 	/**
