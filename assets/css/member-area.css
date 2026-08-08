@@ -3080,7 +3080,7 @@
 	padding-right: 48px !important;
 }
 
-.adam-card .adam-password-toggle {
+.adam-password-toggle {
 	position: absolute;
 	top: 50%;
 	right: 12px;
@@ -3100,9 +3100,23 @@
 	transform: translateY(-50%);
 }
 
-.adam-card .adam-password-toggle:hover {
-	color: var(--adam-primary, #16a34a);
+.adam-password-toggle:hover,
+.adam-password-toggle:focus,
+.adam-password-toggle:active,
+.adam-member-area .adam-card .adam-password-toggle:hover,
+.adam-member-area .adam-card .adam-password-toggle:focus,
+.adam-member-area .adam-card .adam-password-toggle:active {
+	top: 50%;
+	right: 12px;
+	width: 32px;
+	min-width: 0;
+	height: 32px;
+	min-height: 32px;
+	margin: 0;
+	padding: 0;
 	transform: translateY(-50%);
+	/* Keep the eye fixed; only its visual state may change. */
+	color: var(--adam-primary, #16a34a);
 }
 
 .adam-card .adam-password-toggle:focus {
