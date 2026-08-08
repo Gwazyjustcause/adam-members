@@ -65,7 +65,7 @@ final class EmailService {
 			'registration_received' => array(
 				'label'        => __( 'Inscrição recebida', 'adam-membership' ),
 				'description'  => __( 'Enviado logo após a submissão da inscrição para o novo sócio definir o utilizador e a palavra-passe.', 'adam-membership' ),
-				'placeholders' => array( 'member_name', 'member_email', 'account_setup_link' ),
+				'placeholders' => array( 'member_name', 'member_email', 'account_setup_link', 'processing_period', 'ana_processing_note' ),
 			),
 			'member_approved' => array(
 				'label'        => __( 'Sócio aprovado', 'adam-membership' ),
@@ -193,6 +193,8 @@ final class EmailService {
 			array(
 				'member_email'       => $member->email(),
 				'account_setup_link' => $setup_link,
+				'processing_period'  => 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) ? '2–7 dias' : '2–5 dias',
+				'ana_processing_note' => 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) ? 'A aprovação como sócio só será concluída após confirmação da ANA.' : '',
 			),
 			array( 'member_id' => $member->user_id() )
 		);

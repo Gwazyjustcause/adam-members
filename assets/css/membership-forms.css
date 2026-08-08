@@ -546,3 +546,11 @@
 		justify-content: flex-start;
 	}
 }
+.adam-registration-confirmation { max-width: 820px; margin-inline: auto; }
+.adam-registration-confirmation .adam-card-heading p { max-width: 62ch; }
+.adam-confirmation-success { display: flex; align-items: center; gap: .75rem; margin: 1.5rem 0; color: var(--adam-primary, #2f6b3b); }
+.adam-confirmation-success span { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--adam-success-bg, #dcfce7); font-size: 1.5rem; font-weight: 700; }
+.adam-confirmation-timing { margin: 1.5rem 0; padding: 1rem 1.25rem; border-radius: 12px; background: var(--adam-surface-2, #f4faf5); }
+.adam-confirmation-steps { display: grid; gap: .75rem; margin: 1rem 0 2rem; padding: 0; list-style: none; }
+.adam-confirmation-steps li { display: flex; align-items: center; gap: .75rem; padding: .9rem 1rem; border: 1px solid var(--adam-border, #dbe7df); border-radius: 12px; }
+.adam-confirmation-steps li span { display: grid; place-items: center; flex: 0 0 1.75rem; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--adam-primary, #2f6b3b); color: #fff; font-weight: 700; }

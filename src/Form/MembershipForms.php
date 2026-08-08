@@ -104,6 +104,9 @@ final class MembershipForms {
 		$state    = $this->handle_registration_submission();
 		$settings = $this->settings();
 		$values   = is_array( $state['values'] ?? null ) ? $state['values'] : array();
+		if ( 'registration' === (string) ( $_GET['adam_form_success'] ?? '' ) ) {
+			return $this->render_registration_confirmation( 'adam_primary' === (string) ( $_GET['adam_registration_mode'] ?? '' ) );
+		}
 
 		ob_start();
 		?>
@@ -168,6 +171,21 @@ final class MembershipForms {
 		<?php
 
 		return (string) ob_get_clean();
+	}
+
+	private function render_registration_confirmation( bool $ana_mode ): string {
+		$steps = $ana_mode
+			? array( 'Inscrição recebida', 'Verificação pela ADAM', 'Registo junto da ANA', 'Confirmação da ANA', 'Aprovação da inscrição' )
+			: array( 'Inscrição recebida', 'Verificação pela ADAM', 'Aprovação da inscrição' );
+		ob_start(); ?>
+		<section class="adam-public-form adam-card adam-registration-confirmation" data-adam-membership-confirmation="registration">
+			<div class="adam-card-heading"><div><p class="adam-eyebrow">PEDIDO RECEBIDO</p><h2><?php esc_html_e( 'A sua inscrição foi enviada', 'adam-membership' ); ?></h2><p><?php esc_html_e( 'Recebemos os seus dados e o pedido encontra-se agora em análise.', 'adam-membership' ); ?></p></div></div>
+			<div class="adam-confirmation-success"><span aria-hidden="true">✓</span><strong><?php esc_html_e( 'Inscrição submetida com sucesso', 'adam-membership' ); ?></strong></div>
+			<?php if ( $ana_mode ) : ?><div class="adam-notice adam-notice--warning"><strong><?php esc_html_e( 'Inscrição através da ANA', 'adam-membership' ); ?></strong><p><?php esc_html_e( 'A ADAM irá verificar os dados e efetuar o registo junto da ANA. A aprovação da inscrição só será concluída após recebermos a confirmação da ANA.', 'adam-membership' ); ?></p><p><strong><?php esc_html_e( 'Prazo estimado: 2–7 dias', 'adam-membership' ); ?></strong></p></div><?php else : ?><p class="adam-confirmation-timing"><strong><?php esc_html_e( 'Prazo estimado: 2–5 dias', 'adam-membership' ); ?></strong></p><?php endif; ?>
+			<h3><?php esc_html_e( 'O que acontece agora', 'adam-membership' ); ?></h3><ol class="adam-confirmation-steps"><?php foreach ( $steps as $index => $step ) : ?><li><span><?php echo esc_html( (string) ( $index + 1 ) ); ?></span><strong><?php echo esc_html( $step ); ?></strong></li><?php endforeach; ?></ol>
+			<p><a class="button button-primary adam-button" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Voltar à página inicial', 'adam-membership' ); ?></a></p>
+		</section>
+		<?php return (string) ob_get_clean();
 	}
 	/**
 	 * Render native renewal form.

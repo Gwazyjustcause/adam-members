@@ -753,7 +753,7 @@ final class SettingsRepository {
 			'registration_received' => array(
 				'enabled' => true,
 				'subject' => "Complete o acesso \u{00E0} sua conta ADAM",
-				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos a sua inscri\u{00E7}\u{00E3}o na ADAM e o processo encontra-se agora pendente de valida\u{00E7}\u{00E3}o.</p><p>Para concluir a cria\u{00E7}\u{00E3}o da sua conta, escolha o seu nome de utilizador e a sua palavra-passe atrav\u{00E9}s do link seguro abaixo:</p><p><a href=\"{{account_setup_link}}\">Definir utilizador e palavra-passe</a></p><p>Este link \u{00E9} pessoal, tem validade limitada e deixa de funcionar ap\u{00F3}s a primeira utiliza\u{00E7}\u{00E3}o.</p><p><strong>Email associado:</strong> {{member_email}}</p>",
+				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>Recebemos a sua inscri\u{00E7}\u{00E3}o na ADAM e o processo encontra-se agora pendente de valida\u{00E7}\u{00E3}o.</p><p>Para concluir a cria\u{00E7}\u{00E3}o da sua conta, escolha o seu nome de utilizador e a sua palavra-passe atrav\u{00E9}s do link seguro abaixo:</p><p><a href=\"{{account_setup_link}}\">Definir utilizador e palavra-passe</a></p><p>Este link \u{00E9} pessoal, tem validade limitada e deixa de funcionar ap\u{00F3}s a primeira utiliza\u{00E7}\u{00E3}o.</p><p><strong>Prazo estimado:</strong> {{processing_period}}</p><p>{{ana_processing_note}}</p><p><strong>Email associado:</strong> {{member_email}}</p>",
 			),
 			'member_approved' => array(
 				'enabled' => true,
