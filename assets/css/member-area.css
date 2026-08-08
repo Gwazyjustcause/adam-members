@@ -3813,3 +3813,9 @@
 		width: 100%;
 	}
 }
+.adam-confirmation-page .adam-form-card { max-width: 760px; margin: 0 auto; padding: 2rem; }
+.adam-confirmation-icon { width: 3rem; height: 3rem; display: grid; place-items: center; margin-bottom: 1rem; border-radius: 50%; background: var(--adam-success-bg, #dcfce7); color: var(--adam-primary, #2f6b3b); font-size: 1.75rem; font-weight: 700; }
+.adam-confirmation-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; padding: 1.25rem 0; border-top: 1px solid var(--adam-border, #dbe7df); border-bottom: 1px solid var(--adam-border, #dbe7df); }
+.adam-confirmation-summary dt { margin-bottom: .35rem; color: var(--adam-text-muted, #64748b); font-size: .85rem; }
+.adam-confirmation-summary dd { margin: 0; font-weight: 600; }
+.adam-confirmation-page .adam-notice--warning { margin: 1.5rem 0; }

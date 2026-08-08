@@ -272,7 +272,7 @@ final class SettingsRepository {
 	private function ensure_form_manager_settings( array $settings ): array {
 		$settings['forms'] = is_array( $settings['forms'] ?? null ) ? $settings['forms'] : array();
 		$settings['forms']['update'] = array_merge(
-			array( 'enabled' => true, 'page_url' => '', 'help' => 'Consulte e atualize os seus dados pessoais.' ),
+			array( 'enabled' => true, 'page_url' => '', 'help' => 'Consulte e atualize os seus dados pessoais.', 'confirmation_text' => 'As alterações serão verificadas pela ADAM antes de serem aplicadas à sua conta.' ),
 			is_array( $settings['forms']['update'] ?? null ) ? $settings['forms']['update'] : array()
 		);
 		$settings['forms']['apd'] = array_merge(
@@ -361,12 +361,14 @@ final class SettingsRepository {
 			'enabled'  => ! empty( $settings['forms']['update']['enabled'] ),
 			'page_url' => esc_url_raw( (string) ( $settings['forms']['update']['page_url'] ?? '' ) ),
 			'help'     => sanitize_textarea_field( (string) ( $settings['forms']['update']['help'] ?? '' ) ),
+			'confirmation_text' => sanitize_textarea_field( (string) ( $settings['forms']['update']['confirmation_text'] ?? $defaults['forms']['update']['confirmation_text'] ) ),
 			'fields'   => array_values( array_filter( array_map( 'sanitize_key', (array) ( $settings['forms']['update']['fields'] ?? array() ) ) ) ),
 		);
 		$clean['forms']['apd'] = array(
 			'enabled'  => ! empty( $settings['forms']['apd']['enabled'] ),
 			'page_url' => esc_url_raw( (string) ( $settings['forms']['apd']['page_url'] ?? '' ) ),
 			'help'     => sanitize_textarea_field( (string) ( $settings['forms']['apd']['help'] ?? '' ) ),
+			'confirmation_text' => sanitize_textarea_field( (string) ( $settings['forms']['apd']['confirmation_text'] ?? $defaults['forms']['apd']['confirmation_text'] ) ),
 			'fields'   => array_values( array_filter( array_map( 'sanitize_key', (array) ( $settings['forms']['apd']['fields'] ?? array() ) ) ) ),
 		);
 
@@ -460,6 +462,14 @@ final class SettingsRepository {
 				),
 				'renewal' => array(
 					'enabled' => true,
+				),
+				'update' => array(
+					'enabled' => true,
+					'confirmation_text' => 'As alterações serão verificadas pela ADAM antes de serem aplicadas à sua conta.',
+				),
+				'apd' => array(
+					'enabled' => true,
+					'confirmation_text' => 'A sua inscrição só será aprovada após confirmação por parte da ANA. O processo poderá demorar entre 2 e 7 dias.',
 				),
 			),
 			'fees' => array(

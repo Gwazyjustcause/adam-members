@@ -261,9 +261,11 @@ final class MemberArea {
 		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
 		if ( 'apd-association' === $this->current_member_view() ) {
+			if ( '1' === (string) ( $_GET['apd_confirmation'] ?? '' ) ) { return $this->render_apd_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_apd_association_page( $member );
 		}
 		if ( 'member-update' === $this->current_member_view() ) {
+			if ( '1' === (string) ( $_GET['member_update_confirmation'] ?? '' ) ) { return $this->render_member_update_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_member_update_page( $member );
 		}
 		$this->recognition->grant_eligible_loyalty_rewards( $member );
@@ -2398,7 +2400,7 @@ final class MemberArea {
 				else {
 					if ( ! empty( $_FILES['profile_photo']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php'; $photo = media_handle_upload( 'profile_photo', 0, array(), array( 'test_form' => false, 'mimes' => $photo_mimes ) ); if ( ! is_wp_error( $photo ) ) { $payload['profile_photo'] = $photo; } }
 					$receipt = ''; if ( ! empty( $_FILES['payment_receipt']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = wp_handle_upload( $_FILES['payment_receipt'], array( 'test_form' => false, 'mimes' => $receipt_mimes ) ); $receipt = is_array( $upload ) ? (string) ( $upload['url'] ?? '' ) : ''; }
-					$result = $this->apd_association->submit( $member, $payload, $receipt ); if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'apd_message' => 'submitted' ) ) ); exit; }
+					$result = $this->apd_association->submit( $member, $payload, $receipt ); if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'apd-association', 'apd_confirmation' => '1', 'request_id' => $result->id() ) ) ); exit; }
 				}
 				}
 			}
@@ -2513,6 +2515,25 @@ final class MemberArea {
 		return array( array( 'label' => __( 'Atualizar dados', 'adam-membership' ), 'description' => __( 'Solicitar alterações aos seus dados pessoais.', 'adam-membership' ), 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) );
 	}
 
+	private function render_member_update_confirmation_page( Member $member, int $request_id ): string {
+		$request = $request_id > 0 ? $this->member_changes->repository()->find( $request_id ) : null;
+		if ( null === $request || $request->user_id() !== $member->user_id() ) { return $this->render_not_found(); }
+		$labels = array();
+		$pretty_fields = array( 'estado_civil' => 'Estado civil', 'genero' => 'Género', 'profissao' => 'Profissão', 'data_nascimento' => 'Data de nascimento', 'nacionalidade' => 'Nacionalidade', 'naturalidade' => 'Naturalidade', 'telefone' => 'Telemóvel', 'telefone_fixo' => 'Telefone', 'morada' => 'Morada', 'codigo_postal' => 'Código postal', 'cidade' => 'Localidade', 'municipio' => 'Município', 'pais' => 'País', 'nif' => 'NIF', 'cartao_cidadao' => 'Documento de identificação', 'documento_validade' => 'Data de validade', 'documento_local_emissao' => 'Local de emissão', 'equipa' => 'Equipa', 'profile_photo' => 'Fotografia', 'email' => 'Email' );
+		foreach ( $request->changes() as $field => $change ) { $labels[] = $pretty_fields[ (string) $field ] ?? DisplayLabels::field( (string) $field ); }
+		ob_start(); ?>
+		<div class="adam-member-area adam-account-page adam-confirmation-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">PEDIDO RECEBIDO</p><h2>Alterações enviadas</h2><p>Recebemos o seu pedido de atualização de dados.</p></div></section><section class="adam-card adam-form-card"><div class="adam-confirmation-icon" aria-hidden="true">✓</div><p>As alterações serão verificadas pela ADAM antes de serem aplicadas à sua conta.</p><p>Até serem aprovadas, a informação atualmente aprovada mantém-se inalterada.</p><dl class="adam-confirmation-summary"><div><dt>Pedido</dt><dd>Atualização de dados</dd></div><div><dt>Estado</dt><dd>A aguardar aprovação</dd></div><div><dt>Data do pedido</dt><dd><?php echo esc_html( $this->format_datetime( $request->submitted_at() ) ); ?></dd></div></dl><?php if ( $labels ) : ?><h3>Alterações submetidas</h3><ul><?php foreach ( $labels as $label ) : ?><li><?php echo esc_html( $label ); ?></li><?php endforeach; ?></ul><?php endif; ?><p><a class="button button-primary" href="<?php echo esc_url( $this->member_area_url() ); ?>">Voltar à Área de Sócio</a></p></section></div>
+		<?php return (string) ob_get_clean();
+	}
+
+	private function render_apd_confirmation_page( Member $member, int $request_id ): string {
+		$request = $request_id > 0 ? $this->apd_association->repository()->find( $request_id ) : null;
+		if ( null === $request || $request->user_id() !== $member->user_id() ) { return $this->render_not_found(); }
+		ob_start(); ?>
+		<div class="adam-member-area adam-account-page adam-confirmation-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">PEDIDO RECEBIDO</p><h2>Pedido de associação à ANA enviado</h2><p>Recebemos o seu pedido para associar a sua APD através da ADAM.</p></div></section><section class="adam-card adam-form-card"><div class="adam-confirmation-icon" aria-hidden="true">✓</div><div class="adam-notice adam-notice--warning"><strong>A sua inscrição ainda não está confirmada.</strong><p>A ADAM irá verificar o pedido e proceder ao registo junto da ANA. A inscrição só será aprovada após confirmação por parte da ANA.</p><p>O processo poderá demorar entre 2 e 7 dias.</p></div><dl class="adam-confirmation-summary"><div><dt>Pedido</dt><dd>Associação APD através da ADAM</dd></div><div><dt>Valor pago</dt><dd><?php echo esc_html( number_format_i18n( (float) $request->amount(), 2 ) . ' €' ); ?></dd></div><div><dt>Estado</dt><dd>Pedido recebido / A aguardar processamento</dd></div><div><dt>Data do pedido</dt><dd><?php echo esc_html( $this->format_datetime( $request->requested_at() ) ); ?></dd></div></dl><p><a class="button button-primary" href="<?php echo esc_url( $this->member_area_url() ); ?>">Voltar à Área de Sócio</a></p></section></div>
+		<?php return (string) ob_get_clean();
+	}
+
 	private function member_update_field_definitions( Member $member ): array {
 		$form_settings = $this->settings->membership_form_settings();
 		$configs = (array) ( $form_settings['registration_fields'] ?? array() );
@@ -2598,7 +2619,7 @@ final class MemberArea {
 					$message = $this->notice_markup( 'error', $validation_error->get_error_message() );
 				} else {
 					$result = $this->member_changes->submit( $member, $submitted );
-					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'member_update' => 'submitted' ) ) ); exit; }
+					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $result->id() ) ) ); exit; }
 				}
 			}
 		}
