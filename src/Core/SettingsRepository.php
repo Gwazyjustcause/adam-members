@@ -254,9 +254,39 @@ final class SettingsRepository {
 		);
 		$settings = $this->upgrade_registration_field_labels( $settings );
 		$settings = $this->apply_registration_select_catalogs( $settings );
+		$settings = $this->ensure_form_manager_settings( $settings );
 
 		$settings['registration_fields'] = $this->enrich_form_field_settings( (array) $settings['registration_fields'], 'registration' );
 		$settings['renewal_fields']      = $this->enrich_form_field_settings( (array) $settings['renewal_fields'], 'renewal' );
+
+		return $settings;
+	}
+
+	/**
+	 * Add the form-manager configuration introduced after the native forms.
+	 * Existing registration/renewal settings remain the canonical field source.
+	 *
+	 * @param array<string, mixed> $settings Form settings.
+	 * @return array<string, mixed>
+	 */
+	private function ensure_form_manager_settings( array $settings ): array {
+		$settings['forms'] = is_array( $settings['forms'] ?? null ) ? $settings['forms'] : array();
+		$settings['forms']['update'] = array_merge(
+			array( 'enabled' => true, 'page_url' => '', 'help' => 'Consulte e atualize os seus dados pessoais.' ),
+			is_array( $settings['forms']['update'] ?? null ) ? $settings['forms']['update'] : array()
+		);
+		$settings['forms']['apd'] = array_merge(
+			array( 'enabled' => true, 'page_url' => '', 'help' => 'Confirme os seus dados para que a ADAM possa tratar da sua inscrição na ANA.' ),
+			is_array( $settings['forms']['apd'] ?? null ) ? $settings['forms']['apd'] : array()
+		);
+		$shared = array_keys( (array) ( $settings['registration_fields'] ?? array() ) );
+		foreach ( array( 'update', 'apd' ) as $form ) {
+			$selected = isset( $settings['forms'][ $form ]['fields'] ) && is_array( $settings['forms'][ $form ]['fields'] )
+				? array_values( array_intersect( $shared, array_map( 'sanitize_key', $settings['forms'][ $form ]['fields'] ) ) )
+				: $shared;
+			$settings['forms'][ $form ]['fields'] = $selected;
+		}
+		$settings['shared_fields'] = $shared;
 
 		return $settings;
 	}
@@ -325,6 +355,18 @@ final class SettingsRepository {
 
 		$clean['forms']['registration']['enabled'] = ! empty( $settings['forms']['registration']['enabled'] );
 		$clean['forms']['renewal']['enabled']      = ! empty( $settings['forms']['renewal']['enabled'] );
+		$clean['forms']['update'] = array(
+			'enabled'  => ! empty( $settings['forms']['update']['enabled'] ),
+			'page_url' => esc_url_raw( (string) ( $settings['forms']['update']['page_url'] ?? '' ) ),
+			'help'     => sanitize_textarea_field( (string) ( $settings['forms']['update']['help'] ?? '' ) ),
+			'fields'   => array_values( array_filter( array_map( 'sanitize_key', (array) ( $settings['forms']['update']['fields'] ?? array() ) ) ) ),
+		);
+		$clean['forms']['apd'] = array(
+			'enabled'  => ! empty( $settings['forms']['apd']['enabled'] ),
+			'page_url' => esc_url_raw( (string) ( $settings['forms']['apd']['page_url'] ?? '' ) ),
+			'help'     => sanitize_textarea_field( (string) ( $settings['forms']['apd']['help'] ?? '' ) ),
+			'fields'   => array_values( array_filter( array_map( 'sanitize_key', (array) ( $settings['forms']['apd']['fields'] ?? array() ) ) ) ),
+		);
 
 		$clean['fees']['primary']   = $this->sanitize_money( $settings['fees']['primary'] ?? $defaults['fees']['primary'] );
 		$clean['fees']['secondary'] = $this->sanitize_money( $settings['fees']['secondary'] ?? $defaults['fees']['secondary'] );

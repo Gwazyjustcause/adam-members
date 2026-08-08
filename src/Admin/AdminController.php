@@ -988,6 +988,66 @@ final class AdminController {
 	 */
 	public function render_forms_page(): void {
 		$this->ensure_can_manage();
+		$settings = $this->settings->membership_form_settings();
+		$selected = isset( $_GET['form_view'] ) ? sanitize_key( wp_unslash( $_GET['form_view'] ) ) : 'registration';
+		$allowed  = array( 'registration', 'renewal', 'update', 'apd', 'fields' );
+		if ( ! in_array( $selected, $allowed, true ) ) {
+			$selected = 'registration';
+		}
+
+		$this->render_header( 'Formulários ADAM' );
+		$this->render_notices();
+		$tabs = array(
+			'registration' => 'Inscrição',
+			'renewal'      => 'Renovação',
+			'update'       => 'Atualizar dados',
+			'apd'          => 'Associar APD',
+			'fields'       => 'Campos',
+		);
+		?><div class="adam-admin-panel adam-card"><nav class="adam-admin-tabs" aria-label="Formulários ADAM"><?php foreach ( $tabs as $key => $label ) : ?><a class="<?php echo $selected === $key ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( array( 'page' => self::FORMS_PAGE_SLUG, 'form_view' => $key ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html( $label ); ?></a><?php endforeach; ?></nav></div><?php
+
+		if ( 'fields' === $selected ) {
+			$this->render_shared_fields_manager( $settings );
+			$this->render_footer();
+			return;
+		}
+		if ( in_array( $selected, array( 'update', 'apd' ), true ) ) {
+			$this->render_special_form_manager( $selected, $settings );
+			$this->render_footer();
+			return;
+		}
+
+		$this->render_native_form_manager( $selected, $settings );
+		$this->render_footer();
+	}
+
+	/** Render one native form configuration view while retaining existing settings. */
+	private function render_native_form_manager( string $selected, array $settings ): void {
+		$group = 'registration' === $selected ? 'registration_fields' : 'renewal_fields';
+		$form_config = (array) ( $settings['forms'][ $selected ] ?? array() );
+		?><div class="adam-admin-panel adam-card"><h2><?php echo esc_html( 'registration' === $selected ? 'Inscrição' : 'Renovação' ); ?></h2><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_save_forms_settings"><input type="hidden" name="form_view" value="<?php echo esc_attr( $selected ); ?>"><?php wp_nonce_field( 'adam_membership_save_forms_settings' ); ?>
+		<table class="form-table" role="presentation"><tr><th>Estado</th><td><label><input type="hidden" name="membership_forms[forms][<?php echo esc_attr( $selected ); ?>][enabled]" value="0"><input type="checkbox" name="membership_forms[forms][<?php echo esc_attr( $selected ); ?>][enabled]" value="1" <?php checked( ! empty( $form_config['enabled'] ) ); ?>> Ativado</label></td></tr><tr><th><label for="adam_<?php echo esc_attr( $selected ); ?>_page_url">Página atribuída</label></th><td><input type="url" id="adam_<?php echo esc_attr( $selected ); ?>_page_url" name="membership_forms[forms][<?php echo esc_attr( $selected ); ?>][page_url]" class="regular-text" value="<?php echo esc_attr( (string) ( $form_config['page_url'] ?? ( 'registration' === $selected ? $this->settings->registration_page_url() : $this->settings->renewal_page_url() ) ) ); ?>"></td></tr></table>
+		<?php if ( 'registration' === $selected ) : ?><p><strong>Shortcode:</strong> <code>[adam_registration_form]</code></p><p><strong>Bloco genérico:</strong> <code>[adam_membership_form type="registration"]</code></p><?php else : ?><p><strong>Shortcode:</strong> <code>[adam_renewal_form]</code></p><p><strong>Bloco genérico:</strong> <code>[adam_membership_form type="renewal"]</code></p><?php endif; ?>
+		<?php if ( 'renewal' === $selected ) : ?><h3>Quotas e pagamento</h3><table class="form-table"><tr><th>Quota ADAM + ANA</th><td><input type="text" name="membership_forms[fees][primary]" class="small-text" value="<?php echo esc_attr( (string) $settings['fees']['primary'] ); ?>"> €</td></tr><tr><th>Quota apenas ADAM</th><td><input type="text" name="membership_forms[fees][secondary]" class="small-text" value="<?php echo esc_attr( (string) $settings['fees']['secondary'] ); ?>"> €</td></tr><tr><th>Instruções de pagamento</th><td><textarea name="membership_forms[payment][instructions]" class="large-text" rows="4"><?php echo esc_textarea( (string) $settings['payment']['instructions'] ); ?></textarea></td></tr></table><?php endif; ?>
+		<h3>Campos utilizados</h3><?php $this->render_membership_form_fields_table( $group, (array) $settings[ $group ] ); ?><p><button type="submit" class="button button-primary adam-button">Guardar formulário</button></p></form></div><?php
+		$this->render_membership_form_builder_script();
+	}
+
+	/** Render update/APD views using the shared registration field definitions. */
+	private function render_special_form_manager( string $form, array $settings ): void {
+		$config = (array) $settings['forms'][ $form ];
+		$fields = (array) $settings['registration_fields'];
+		?><div class="adam-admin-panel adam-card"><h2><?php echo esc_html( 'update' === $form ? 'Atualizar dados' : 'Associar APD através da ADAM' ); ?></h2><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_save_forms_settings"><input type="hidden" name="form_view" value="<?php echo esc_attr( $form ); ?>"><?php wp_nonce_field( 'adam_membership_save_forms_settings' ); ?><table class="form-table"><tr><th>Estado</th><td><label><input type="hidden" name="membership_forms[forms][<?php echo esc_attr( $form ); ?>][enabled]" value="0"><input type="checkbox" name="membership_forms[forms][<?php echo esc_attr( $form ); ?>][enabled]" value="1" <?php checked( ! empty( $config['enabled'] ) ); ?>> Ativado</label></td></tr><tr><th>Página atribuída</th><td><input type="url" class="regular-text" name="membership_forms[forms][<?php echo esc_attr( $form ); ?>][page_url]" value="<?php echo esc_attr( (string) ( $config['page_url'] ?? '' ) ); ?>"></td></tr><tr><th>Ajuda / instruções</th><td><textarea class="large-text" rows="3" name="membership_forms[forms][<?php echo esc_attr( $form ); ?>][help]"><?php echo esc_textarea( (string) ( $config['help'] ?? '' ) ); ?></textarea></td></tr></table><h3>Campos partilhados</h3><p>As definições, tipos e opções são herdadas do registo comum de campos.</p><table class="widefat striped"><thead><tr><th>Usar</th><th>Campo</th><th>Tipo</th><th>Comportamento</th></tr></thead><tbody><?php foreach ( $fields as $key => $field ) : ?><tr><td><input type="checkbox" name="membership_forms[forms][<?php echo esc_attr( $form ); ?>][fields][]" value="<?php echo esc_attr( $key ); ?>" <?php checked( in_array( $key, (array) $config['fields'], true ) ); ?>></td><td><?php echo esc_html( $field['label'] ?? $key ); ?></td><td><?php echo esc_html( $field['type'] ?? 'text' ); ?></td><td><?php echo esc_html( 'apd' === $form ? 'Pré-preenchido; editável quando autorizado' : 'Editável pelo sócio' ); ?></td></tr><?php endforeach; ?></tbody></table><p><button type="submit" class="button button-primary adam-button">Guardar formulário</button></p></form></div><?php
+	}
+
+	/** Show the canonical field registry and where each field is used. */
+	private function render_shared_fields_manager( array $settings ): void {
+		?><div class="adam-admin-panel adam-card"><h2>Campos</h2><p>Os campos abaixo são definidos uma vez e reutilizados pelos formulários. As chaves de armazenamento existentes são preservadas.</p><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_save_forms_settings"><?php wp_nonce_field( 'adam_membership_save_forms_settings' ); ?><h3>Registo comum de campos</h3><?php $this->render_membership_form_fields_table( 'registration_fields', (array) $settings['registration_fields'] ); ?><p><button type="submit" class="button button-primary adam-button">Guardar campos</button></p></form><p class="description">Os mesmos campos e opções são reutilizados em Inscrição, Atualizar dados e Associar APD. As chaves de armazenamento não são alteradas.</p></div><?php
+		$this->render_membership_form_builder_script();
+	}
+
+	public function render_legacy_forms_page(): void {
+		$this->ensure_can_manage();
 
 		$settings = $this->settings->membership_form_settings();
 
@@ -1512,6 +1572,18 @@ final class AdminController {
 		$renewal_url      = isset( $_POST['renewal_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['renewal_page_url'] ) ) : $this->settings->renewal_page_url();
 		$privacy_url      = isset( $_POST['privacy_policy_url'] ) ? esc_url_raw( wp_unslash( $_POST['privacy_policy_url'] ) ) : $this->settings->privacy_policy_url();
 		$form_settings    = isset( $_POST['membership_forms'] ) && is_array( $_POST['membership_forms'] ) ? wp_unslash( $_POST['membership_forms'] ) : $this->settings->membership_form_settings();
+		foreach ( array( 'update', 'apd' ) as $managed_form ) {
+			if ( isset( $form_settings['forms'][ $managed_form ] ) && ! isset( $form_settings['forms'][ $managed_form ]['fields'] ) ) {
+				$form_settings['forms'][ $managed_form ]['fields'] = array();
+			}
+		}
+		$form_settings    = array_replace_recursive( $this->settings->membership_form_settings(), $form_settings );
+		if ( isset( $form_settings['forms']['registration']['page_url'] ) ) {
+			$registration_url = esc_url_raw( (string) $form_settings['forms']['registration']['page_url'] );
+		}
+		if ( isset( $form_settings['forms']['renewal']['page_url'] ) ) {
+			$renewal_url = esc_url_raw( (string) $form_settings['forms']['renewal']['page_url'] );
+		}
 
 		$this->settings->save_registration_page_url( $registration_url );
 		$this->settings->save_renewal_page_url( $renewal_url );

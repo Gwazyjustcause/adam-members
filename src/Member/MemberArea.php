@@ -2351,7 +2351,7 @@ final class MemberArea {
 	}
 
 	private function render_apd_association_page( Member $member ): string {
-		if ( ! $this->apd_association->eligible( $member ) ) { return $this->render_not_found(); }
+		if ( empty( $this->settings->membership_form_settings()['forms']['apd']['enabled'] ) || ! $this->apd_association->eligible( $member ) ) { return $this->render_not_found(); }
 		$message = 'submitted' === (string) ( $_GET['apd_message'] ?? '' ) ? $this->notice_markup( 'success', __( 'Pedido de associação APD submetido com sucesso.', 'adam-membership' ) ) : '';
 		$edit_mode = 'edit' === (string) ( $_POST['apd_information_mode'] ?? '' );
 		$legacy_fields = array(
@@ -2421,6 +2421,8 @@ final class MemberArea {
 	private function apd_registration_fields( Member $member ): array {
 		$settings = $this->settings->membership_form_settings();
 		$configs  = is_array( $settings['registration_fields'] ?? null ) ? $settings['registration_fields'] : array();
+		$allowed  = (array) ( $settings['forms']['apd']['fields'] ?? array_keys( $configs ) );
+		$configs  = array_intersect_key( $configs, array_flip( $allowed ) );
 		$map = array( 'full_name' => $member->full_name(), 'birth_date' => $member->field( 'data_nascimento' ), 'marital_status' => $member->field( 'estado_civil' ), 'gender' => $member->field( 'genero' ), 'profession' => $member->field( 'profissao' ), 'birthplace' => $member->field( 'naturalidade' ), 'nationality' => $member->field( 'nacionalidade' ), 'email' => $member->email(), 'phone' => $member->field( 'telefone' ), 'telephone' => $member->field( 'telefone_fixo' ), 'address_line_1' => $member->field( 'morada' ), 'address_line_2' => $member->field( 'morada_linha_2' ), 'postcode' => $member->field( 'codigo_postal' ), 'city' => $member->field( 'cidade' ), 'municipality' => $member->field( 'municipio' ), 'country' => $member->field( 'pais' ), 'citizen_card' => $member->field( 'cartao_cidadao' ), 'document_expiry_date' => $member->field( 'documento_validade' ), 'document_issuing_place' => $member->field( 'documento_local_emissao' ), 'nif' => $member->field( 'nif' ), 'team' => $member->field( 'equipa' ) );
 		$fields = array();
 		foreach ( $configs as $key => $config ) {
@@ -2446,7 +2448,8 @@ final class MemberArea {
 	}
 
 	private function apd_association_actions( Member $member ): array {
-		if ( ! $this->apd_association->eligible( $member ) ) { return array(); }
+		$form_settings = $this->settings->membership_form_settings();
+		if ( empty( $form_settings['forms']['apd']['enabled'] ) || ! $this->apd_association->eligible( $member ) ) { return array(); }
 		return array( array( 'label' => __( "Associar APD atrav\u{00E9}s da ADAM", 'adam-membership' ), 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'apd-association' ) ) ) );
 		return array( array( 'label' => __( 'Associar APD através da ADAM', 'adam-membership' ), 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'apd-association' ) ) ) );
 	}
@@ -2483,11 +2486,15 @@ final class MemberArea {
 
 	/** @return array<int,array{label:string,description:string,url:string}> */
 	private function member_update_actions(): array {
+		if ( empty( $this->settings->membership_form_settings()['forms']['update']['enabled'] ) ) { return array(); }
 		return array( array( 'label' => __( 'Atualizar dados', 'adam-membership' ), 'description' => __( 'Solicitar alterações aos seus dados pessoais.', 'adam-membership' ), 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) );
 	}
 
 	private function member_update_field_definitions( Member $member ): array {
-		$configs = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
+		$form_settings = $this->settings->membership_form_settings();
+		$configs = (array) ( $form_settings['registration_fields'] ?? array() );
+		$allowed = (array) ( $form_settings['forms']['update']['fields'] ?? array_keys( $configs ) );
+		$configs = array_intersect_key( $configs, array_flip( $allowed ) );
 		$map = array( 'full_name' => $member->full_name(), 'birth_date' => $member->field( 'data_nascimento' ), 'marital_status' => $member->field( 'estado_civil' ), 'gender' => $member->field( 'genero' ), 'profession' => $member->field( 'profissao' ), 'birthplace' => $member->field( 'naturalidade' ), 'nationality' => $member->field( 'nacionalidade' ), 'email' => $member->email(), 'phone' => $member->field( 'telefone' ), 'telephone' => $member->field( 'telefone_fixo' ), 'address_line_1' => $member->field( 'morada' ), 'address_line_2' => $member->field( 'morada_linha_2' ), 'postcode' => $member->field( 'codigo_postal' ), 'city' => $member->field( 'cidade' ), 'municipality' => $member->field( 'municipio' ), 'country' => $member->field( 'pais' ), 'citizen_card' => $member->field( 'cartao_cidadao' ), 'document_expiry_date' => $member->field( 'documento_validade' ), 'document_issuing_place' => $member->field( 'documento_local_emissao' ), 'nif' => $member->field( 'nif' ), 'team' => $member->field( 'equipa' ) );
 		$meta_map = array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
 		$out = array();
@@ -2496,6 +2503,9 @@ final class MemberArea {
 	}
 
 	private function render_member_update_page( Member $member ): string {
+		if ( empty( $this->settings->membership_form_settings()['forms']['update']['enabled'] ) ) {
+			return $this->render_not_found();
+		}
 		if ( ! $member->isActive() && ! $member->isExpired() ) {
 			return $this->render_not_found();
 		}
