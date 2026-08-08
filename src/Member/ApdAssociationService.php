@@ -29,6 +29,7 @@ final class ApdAssociationService {
 
 	public function submit( Member $member, array $data, string $receipt = '' ): ApdAssociationRequest|WP_Error {
 		if ( ! $this->eligible( $member ) ) { return new WP_Error( 'adam_apd_not_eligible', __( 'Este pedido de associação APD não está disponível.', 'adam-membership' ) ); }
+		if ( '' === trim( $receipt ) ) { return new WP_Error( 'adam_apd_receipt_required', __( 'O comprovativo de pagamento é obrigatório.', 'adam-membership' ) ); }
 		$requested = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
 		$request = $this->repository->create( array( 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'amount' => $this->price_for( $member, $requested ), 'payment_status' => '' === $receipt ? 'pending' : 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
 		$member->save( array( 'adam_apd_management_status' => Member::APD_PENDING ) );
