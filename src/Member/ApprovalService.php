@@ -218,11 +218,13 @@ final class ApprovalService {
 		return true;
 	}
 
-	public function request_correction( int $user_id, string $reason = '', string $note = '' ): true|WP_Error {
+	public function request_correction( int $user_id, string $reason = '', string $note = '', array $fields = array() ): true|WP_Error {
 		$member = $this->members->find( $user_id );
 		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
 		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_membership_correction_reason_required', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
-		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note ) );
+		$fields = array_values( array_filter( array_map( 'sanitize_key', $fields ) ) );
+		if ( array() === $fields ) { return new WP_Error( 'adam_membership_correction_fields_required', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
+		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note, 'adam_correction_fields' => $fields ) );
 		try {
 			$this->email->send_registration_correction_email( $member, $reason, $note );
 		} catch ( \Throwable $exception ) {

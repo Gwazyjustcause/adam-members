@@ -655,7 +655,7 @@ final class MemberArea {
 		if ( $correction ) {
 			$this->render_status_card( 'Necessita de correção', 'Motivo: ' . (string) $member->field( 'adam_correction_reason' ) . ( $member->field( 'adam_correction_note' ) ? ' — ' . (string) $member->field( 'adam_correction_note' ) : '' ) );
 			$this->render_notifications_card( array( 'A sua inscrição necessita de correções.', 'O que precisa de corrigir: ' . (string) $member->field( 'adam_correction_note' ) ) );
-			$this->render_actions( array( array( 'label' => 'Corrigir pedido', 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) ) );
+			$this->render_actions( array( array( 'label' => 'Corrigir pedido', 'description' => '', 'url' => $this->member_area_url( array( 'view' => 'correction' ) ) ) ) );
 			$this->render_profile( $member );
 			return;
 		}
@@ -2547,6 +2547,7 @@ final class MemberArea {
 
 	private function render_member_correction_page( Member $member ): string {
 		$request_id = absint( $_GET['request_id'] ?? $_POST['request_id'] ?? 0 );
+		if ( 0 === $request_id && 'correction_requested' === (string) $member->field( 'adam_correction_status' ) ) { return $this->render_registration_correction_page( $member ); }
 		$request = $this->member_changes->repository()->find( $request_id );
 		if ( null === $request || $request->user_id() !== $member->user_id() || MemberChangeRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
 			return $this->render_not_found();
@@ -2570,6 +2571,19 @@ final class MemberArea {
 		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido</h2><p>Atualize a informação indicada pela ADAM e volte a enviar o pedido para análise.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div><form method="post"><?php wp_nonce_field( 'adam_member_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid">
 		<?php foreach ( $request->changes() as $field => $change ) : ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) ( $change['new'] ?? '' ) ); ?>"><small>Valor anteriormente enviado: <?php echo esc_html( DisplayLabels::value( (string) $field, $change['new'] ?? '' ) ); ?></small></label><?php endforeach; ?></div><button class="button button-primary" name="adam_member_correction_submit" value="1">Enviar correção</button></form></section></div>
 		<?php return (string) ob_get_clean();
+	}
+
+	private function render_registration_correction_page( Member $member ): string {
+		$settings = $this->settings->membership_form_settings();
+		$fields = (array) ( $settings['registration_fields'] ?? array() );
+		$allowed = array_map( 'sanitize_key', (array) $member->field( 'adam_correction_fields' ) );
+		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
+		$message = '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_registration_correction' ) ) { $message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' ); }
+			else { $updates = array(); foreach ( $allowed as $key ) { if ( array_key_exists( $key, $_POST ) && isset( $map[ $key ] ) ) { $updates[ $map[ $key ] ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) ); } } if ( isset( $_FILES['profile_photo'] ) && ! empty( $_FILES['profile_photo']['name'] ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; $upload = media_handle_upload( 'profile_photo', 0, array(), array( 'test_form' => false ) ); if ( ! is_wp_error( $upload ) ) { $updates['profile_photo'] = $upload; } } if ( array() !== $updates ) { $member->save( array_merge( $updates, array( 'adam_correction_status' => 'correction_submitted' ) ) ); wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1' ) ) ); exit; } $message = $this->notice_markup( 'error', 'Corrija pelo menos um campo antes de enviar.' ); }
+		}
+		ob_start(); ?><div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido</h2><p><?php echo esc_html( (string) $member->field( 'adam_correction_note' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Necessita de correção</strong><p>Motivo: <?php echo esc_html( (string) $member->field( 'adam_correction_reason' ) ); ?></p></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_registration_correction' ); ?><div class="adam-form-grid"><?php foreach ( $fields as $key => $field ) : $storage = $map[ $key ] ?? $key; $value = (string) $member->field( $storage ); $editable = in_array( $key, $allowed, true ); ?><label class="adam-form-field"><span><?php echo esc_html( $field['label'] ?? $key ); ?></span><input type="text" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>" <?php echo $editable ? '' : 'readonly class="adam-apd-field--locked"'; ?>></label><?php endforeach; ?><label class="adam-form-field">Fotografia<input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp" <?php disabled( ! in_array( 'profile_photo', $allowed, true ) ); ?>></label></div><button class="button button-primary" name="adam_registration_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
 	}
 
 	private function render_apd_correction_page( Member $member, int $request_id ): string {
