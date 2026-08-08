@@ -28,7 +28,7 @@ final class ApdAssociationService {
 	}
 
 	public function submit( Member $member, array $data, string $receipt = '' ): ApdAssociationRequest|WP_Error {
-		if ( ! $this->eligible( $member ) ) { return new WP_Error( 'adam_apd_not_eligible', __( 'Este pedido de associaÃ§Ã£o APD nÃ£o estÃ¡ disponÃ­vel.', 'adam-membership' ) ); }
+		if ( ! $this->eligible( $member ) ) { return new WP_Error( 'adam_apd_not_eligible', __( 'Este pedido de associação APD não está disponível.', 'adam-membership' ) ); }
 		$requested = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
 		$request = $this->repository->create( array( 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'amount' => $this->price_for( $member, $requested ), 'payment_status' => '' === $receipt ? 'pending' : 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
 		$member->save( array( 'adam_apd_management_status' => Member::APD_PENDING ) );
@@ -37,9 +37,9 @@ final class ApdAssociationService {
 
 	public function confirm( int $request_id, string $date ): true|WP_Error {
 		$request = $this->repository->find( $request_id );
-		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD nÃ£o encontrado.', 'adam-membership' ) ); }
+		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
 		$member = $this->members->find( $request->user_id() );
-		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'SÃ³cio nÃ£o encontrado.', 'adam-membership' ) ); }
+		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
 		$member->save( array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ), 'estado' => Member::STATUS_ACTIVE ) );
 		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
 		return true;

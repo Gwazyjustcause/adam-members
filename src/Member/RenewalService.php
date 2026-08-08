@@ -122,7 +122,7 @@ final class RenewalService {
 		}
 		$submitted_data = $request->data()['submitted_data'] ?? array();
 		if ( 'adam_primary' === (string) ( $submitted_data['adam_membership_origin'] ?? '' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) {
-			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmaÃ§Ã£o da ANA Ã© necessÃ¡ria antes de concluir esta renovaÃ§Ã£o.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmação da ANA é necessária antes de concluir esta renovação.', 'adam-membership' ) );
 		}
 
 		$this->audit( 'Um administrador reviu a renovação.', $member, array( 'renewal_id' => $request->id() ) );
@@ -198,9 +198,9 @@ final class RenewalService {
 
 	public function confirm_ana_and_approve( int $request_id, string $date ): true|WP_Error {
 		$request = $this->renewals->find( $request_id );
-		if ( null === $request ) { return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovaÃ§Ã£o nÃ£o encontrado.', 'adam-membership' ) ); }
+		if ( null === $request ) { return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) ); }
 		$member = $this->members->find( $request->user_id() );
-		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'SÃ³cio nÃ£o encontrado.', 'adam-membership' ) ); }
+		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
 		$member->save( array( 'adam_apd_ana_confirmation_date' => $date, 'adam_apd_management_status' => Member::APD_MANAGED ) );
 		return $this->approve( $request_id );
 	}

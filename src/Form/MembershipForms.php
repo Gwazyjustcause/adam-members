@@ -1409,11 +1409,27 @@ final class MembershipForms {
 	 */
 	private function render_submission_notice( string $form, array $state ): string {
 		$success_key = isset( $_GET['adam_form_success'] ) ? sanitize_key( wp_unslash( $_GET['adam_form_success'] ) ) : '';
+		if ( $success_key === $form ) {
+			$ana_mode = 'adam_primary' === (string) ( $_GET['adam_registration_mode'] ?? '' );
+			if ( 'registration' === $form && $ana_mode ) {
+				return '<div class="adam-notice adam-notice--warning"><strong>' . esc_html__( 'Inscrição através da ANA', 'adam-membership' ) . '</strong><p>' . esc_html__( 'A sua inscrição será submetida à ANA pela ADAM. A aprovação como sócio da ADAM será concluída após recebermos a confirmação da ANA, pelo que o processo poderá demorar até 7 dias.', 'adam-membership' ) . '</p></div>';
+			}
+			return $this->notice_markup( 'success', 'renewal' === $form ? __( 'O pedido de renovação foi submetido com sucesso e está agora em análise.', 'adam-membership' ) : __( 'A inscrição foi submetida com sucesso. Prazo estimado de processamento: 2–7 dias.', 'adam-membership' ) );
+		}
+		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
+		if ( array() === $errors ) { return ''; }
+		$list = '<ul>';
+		foreach ( $errors as $error ) { $list .= '<li>' . esc_html( (string) $error ) . '</li>'; }
+		return $this->notice_markup( 'error', $list, true );
+	}
+
+	private function render_submission_notice_legacy( string $form, array $state ): string {
+		$success_key = isset( $_GET['adam_form_success'] ) ? sanitize_key( wp_unslash( $_GET['adam_form_success'] ) ) : '';
 
 		if ( $success_key === $form ) {
 			$ana_mode = 'adam_primary' === (string) ( $_GET['adam_registration_mode'] ?? '' );
 			if ( 'registration' === $form && $ana_mode ) {
-				return '<div class="adam-notice adam-notice--success"><strong>' . esc_html__( 'InscriÃ§Ã£o atravÃ©s da ANA', 'adam-membership' ) . '</strong><p>' . esc_html__( 'A sua inscriÃ§Ã£o serÃ¡ submetida Ã  ANA pela ADAM. A aprovaÃ§Ã£o como sÃ³cio da ADAM serÃ¡ concluÃ­da apÃ³s recebermos a confirmaÃ§Ã£o da ANA, pelo que o processo poderÃ¡ demorar atÃ© 7 dias.', 'adam-membership' ) . '</p></div>';
+				return '<div class="adam-notice adam-notice--warning"><strong>' . esc_html__( 'Inscrição através da ANA', 'adam-membership' ) . '</strong><p>' . esc_html__( 'A sua inscrição será submetida à ANA pela ADAM. A aprovação como sócio da ADAM será concluída após recebermos a confirmação da ANA, pelo que o processo poderá demorar até 7 dias.', 'adam-membership' ) . '</p></div>';
 			}
 			return $this->notice_markup(
 				'success',
@@ -1423,7 +1439,7 @@ final class MembershipForms {
 			);
 		}
 
-		if ( 'registration' === $form && ! $ana_mode ) { return $this->notice_markup( 'success', __( 'A inscriÃ§Ã£o foi submetida com sucesso. Prazo estimado de processamento: 2-7 dias.', 'adam-membership' ) ); }
+		if ( 'registration' === $form && ! $ana_mode ) { return $this->notice_markup( 'success', __( 'A inscrição foi submetida com sucesso. Prazo estimado de processamento: 2–7 dias.', 'adam-membership' ) ); }
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
 
 		if ( array() === $errors ) {

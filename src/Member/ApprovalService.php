@@ -92,7 +92,7 @@ final class ApprovalService {
 		}
 
 		if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) {
-			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmaÃ§Ã£o da ANA Ã© necessÃ¡ria antes de aprovar esta inscriÃ§Ã£o.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmação da ANA é necessária antes de aprovar esta inscrição.', 'adam-membership' ) );
 		}
 		$missing_documents = $this->missing_registration_documents( $member );
 
@@ -268,7 +268,7 @@ final class ApprovalService {
 		}
 
 		if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) {
-			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmaÃ§Ã£o da ANA Ã© necessÃ¡ria antes de aprovar esta inscriÃ§Ã£o.', 'adam-membership' ) );
+			return new WP_Error( 'adam_membership_ana_confirmation_required', __( 'A confirmação da ANA é necessária antes de aprovar esta inscrição.', 'adam-membership' ) );
 		}
 
 		$base_timestamp = max( current_time( 'timestamp' ), $member->quota_expiry_timestamp() );
@@ -294,8 +294,8 @@ final class ApprovalService {
 	/** Record ANA confirmation and complete an initial ADAM/ANA registration. */
 	public function confirm_ana_and_approve( int $user_id, string $date ): true|WP_Error {
 		$member = $this->members->find( $user_id );
-		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'SÃ³cio nÃ£o encontrado.', 'adam-membership' ) ); }
-		if ( '' === $date || false === strtotime( $date ) ) { return new WP_Error( 'adam_membership_invalid_ana_date', __( 'Indique uma data de confirmaÃ§Ã£o ANA vÃ¡lida.', 'adam-membership' ) ); }
+		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
+		if ( '' === $date || false === strtotime( $date ) ) { return new WP_Error( 'adam_membership_invalid_ana_date', __( 'Indique uma data de confirmação ANA válida.', 'adam-membership' ) ); }
 		$member->save( array( 'adam_apd_ana_confirmation_date' => $date, 'adam_apd_management_status' => Member::APD_MANAGED, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ) ) );
 		return $this->approve( $user_id );
 	}
