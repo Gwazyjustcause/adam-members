@@ -251,6 +251,9 @@ final class MemberArea {
 
 			return $this->render_login( $message );
 		}
+		if ( 'correction' === $this->current_member_view() && '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
+			return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.</p><a class="button button-primary" href="' . esc_url( home_url( '/' ) ) . '">Voltar ao início</a></div></section></div>';
+		}
 
 		$member = $this->members->find( get_current_user_id() );
 
@@ -2586,7 +2589,7 @@ final class MemberArea {
 			if ( is_array( $round ) && ( 0 === $active_round || absint( $round['id'] ?? 0 ) === $active_round ) && 'correction_requested' === (string) ( $round['status'] ?? '' ) ) { $stored_fields = $round['fields'] ?? array(); break; }
 		}
 		$allowed = $this->normalize_correction_fields( $stored_fields, $fields );
-		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
+		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'external_association_proof' => 'adam_external_association_proof' );
 		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) { return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>As alterações ao seu pedido foram enviadas com sucesso. A ADAM irá agora rever novamente a informação submetida.</p></div></section></div>'; }
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) ) {
