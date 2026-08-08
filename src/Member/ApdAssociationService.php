@@ -85,4 +85,12 @@ final class ApdAssociationService {
 		if ( null !== $this->email && null !== $member ) { $this->email->send_apd_association_rejected_email( $member, $reason ); }
 		return true;
 	}
+
+	public function request_correction( int $request_id, string $reason, string $note = '' ): true|WP_Error {
+		$request = $this->repository->find( $request_id );
+		if ( null === $request || in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { return new WP_Error( 'adam_apd_request_invalid', __( 'Este pedido já não pode ser corrigido.', 'adam-membership' ) ); }
+		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_apd_correction_reason', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CORRECTION_REQUESTED, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+		return true;
+	}
 }

@@ -261,12 +261,16 @@ final class MemberArea {
 		$this->handle_card_cosmetic_selection_request( $member );
 		$this->handle_reward_redemption_request( $member );
 		if ( 'apd-association' === $this->current_member_view() ) {
+			if ( '1' === (string) ( $_GET['correction'] ?? '' ) ) { return $this->render_apd_correction_page( $member, absint( $_GET['request_id'] ?? $_POST['request_id'] ?? 0 ) ); }
 			if ( '1' === (string) ( $_GET['apd_confirmation'] ?? '' ) ) { return $this->render_apd_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_apd_association_page( $member );
 		}
 		if ( 'member-update' === $this->current_member_view() ) {
 			if ( '1' === (string) ( $_GET['member_update_confirmation'] ?? '' ) ) { return $this->render_member_update_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_member_update_page( $member );
+		}
+		if ( 'correction' === $this->current_member_view() ) {
+			return $this->render_member_correction_page( $member );
 		}
 		$this->recognition->grant_eligible_loyalty_rewards( $member );
 
@@ -2505,15 +2509,71 @@ final class MemberArea {
 		return array_merge(
 			$this->renewal_actions( $member ),
 			$this->apd_association_actions( $member ),
+			$this->correction_actions( $member ),
 			$this->member_update_actions(),
 			$this->standard_account_actions()
 		);
 	}
 
 	/** @return array<int,array{label:string,description:string,url:string}> */
+	private function correction_actions( Member $member ): array {
+		if ( empty( $this->settings->membership_form_settings()['forms']['correction']['enabled'] ) ) { return array(); }
+		$request = $this->member_changes->repository()->latest_correction_for_user( $member->user_id() );
+		if ( null !== $request ) { return array( array( 'label' => 'Corrigir pedido', 'description' => $request->correction_reason(), 'url' => $this->member_area_url( array( 'view' => 'correction', 'request_id' => $request->id() ) ) ) ); }
+		foreach ( $this->apd_association->repository()->for_user( $member->user_id() ) as $apd_request ) {
+			if ( ApdAssociationRequest::STATUS_CORRECTION_REQUESTED === $apd_request->status() ) { return array( array( 'label' => 'Corrigir pedido', 'description' => (string) ( $apd_request->data()['correction_reason'] ?? '' ), 'url' => $this->member_area_url( array( 'view' => 'apd-association', 'correction' => '1', 'request_id' => $apd_request->id() ) ) ) ); }
+		}
+		return array();
+	}
+
+	/** @return array<int,array{label:string,description:string,url:string}> */
 	private function member_update_actions(): array {
 		if ( empty( $this->settings->membership_form_settings()['forms']['update']['enabled'] ) ) { return array(); }
 		return array( array( 'label' => __( 'Atualizar dados', 'adam-membership' ), 'description' => __( 'Solicitar alterações aos seus dados pessoais.', 'adam-membership' ), 'url' => $this->member_area_url( array( 'view' => 'member-update' ) ) ) );
+	}
+
+	private function render_member_correction_page( Member $member ): string {
+		$request_id = absint( $_GET['request_id'] ?? $_POST['request_id'] ?? 0 );
+		$request = $this->member_changes->repository()->find( $request_id );
+		if ( null === $request || $request->user_id() !== $member->user_id() || MemberChangeRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+			return $this->render_not_found();
+		}
+		$message = '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_member_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_member_correction_' . $request_id ) ) {
+				$message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' );
+			} else {
+				$changes = array();
+				foreach ( $request->changes() as $field => $change ) {
+					$value = sanitize_text_field( wp_unslash( $_POST[ $field ] ?? '' ) );
+					$old = $change['old'] ?? '';
+					if ( (string) $value !== (string) ( $change['new'] ?? '' ) ) { $changes[ $field ] = array( 'old' => $old, 'new' => $value ); }
+				}
+				$result = $this->member_changes->submit_correction( $request_id, $member->user_id(), $changes );
+				if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $request_id ) ) ); exit; }
+			}
+		}
+		ob_start(); ?>
+		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido</h2><p>Atualize a informação indicada pela ADAM e volte a enviar o pedido para análise.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div><form method="post"><?php wp_nonce_field( 'adam_member_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid">
+		<?php foreach ( $request->changes() as $field => $change ) : ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) ( $change['new'] ?? '' ) ); ?>"><small>Valor anteriormente enviado: <?php echo esc_html( DisplayLabels::value( (string) $field, $change['new'] ?? '' ) ); ?></small></label><?php endforeach; ?></div><button class="button button-primary" name="adam_member_correction_submit" value="1">Enviar correção</button></form></section></div>
+		<?php return (string) ob_get_clean();
+	}
+
+	private function render_apd_correction_page( Member $member, int $request_id ): string {
+		$request = $this->apd_association->repository()->find( $request_id );
+		if ( null === $request || $request->user_id() !== $member->user_id() || ApdAssociationRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) { return $this->render_not_found(); }
+		$message = '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_apd_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_correction_' . $request_id ) ) { $message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' ); }
+			else {
+				$data = (array) ( $request->data()['submitted_data'] ?? array() );
+				foreach ( $data as $field => $value ) { if ( array_key_exists( $field, $_POST ) ) { $data[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $field ] ) ); } }
+				$this->apd_association->repository()->update( $request, array( 'status' => ApdAssociationRequest::STATUS_AWAITING_ADAM, 'submitted_data' => $data, 'correction_resubmitted_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+				wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $request_id ) ) ); exit;
+			}
+		}
+		$data = (array) ( $request->data()['submitted_data'] ?? array() ); ob_start(); ?>
+		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido APD / ANA</h2><p><?php echo esc_html( (string) ( $request->data()['correction_note'] ?? $request->data()['correction_reason'] ?? '' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><form method="post"><?php wp_nonce_field( 'adam_apd_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid"><?php foreach ( $data as $field => $value ) : if ( ! is_scalar( $value ) ) { continue; } ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) $value ); ?>"></label><?php endforeach; ?></div><button class="button button-primary" name="adam_apd_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
 	}
 
 	private function render_member_update_confirmation_page( Member $member, int $request_id ): string {

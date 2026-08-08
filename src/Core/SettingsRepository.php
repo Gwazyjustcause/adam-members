@@ -284,6 +284,10 @@ final class SettingsRepository {
 			array( 'enabled' => true, 'page_url' => '', 'help' => 'Confirme os seus dados para que a ADAM possa tratar da sua inscrição na ANA.' ),
 			is_array( $settings['forms']['apd'] ?? null ) ? $settings['forms']['apd'] : array()
 		);
+		$settings['forms']['correction'] = array_merge(
+			array( 'enabled' => true, 'page_url' => '', 'help' => 'Corrija o pedido de acordo com as indicações da ADAM.' ),
+			is_array( $settings['forms']['correction'] ?? null ) ? $settings['forms']['correction'] : array()
+		);
 		$shared = array_keys( (array) ( $settings['registration_fields'] ?? array() ) );
 		$special = array( 'payment_receipt', 'privacy_acceptance', 'external_association_name', 'external_member_number', 'external_association_proof' );
 		foreach ( array( 'update', 'apd' ) as $form ) {
@@ -376,6 +380,11 @@ final class SettingsRepository {
 			'confirmation_text' => sanitize_textarea_field( (string) ( $settings['forms']['apd']['confirmation_text'] ?? $defaults['forms']['apd']['confirmation_text'] ) ),
 			'fields'   => array_values( array_filter( array_map( 'sanitize_key', (array) ( $settings['forms']['apd']['fields'] ?? array() ) ) ) ),
 		);
+		$clean['forms']['correction'] = array(
+			'enabled'  => ! empty( $settings['forms']['correction']['enabled'] ),
+			'page_url' => esc_url_raw( (string) ( $settings['forms']['correction']['page_url'] ?? $defaults['forms']['correction']['page_url'] ) ),
+			'help'     => sanitize_textarea_field( (string) ( $settings['forms']['correction']['help'] ?? $defaults['forms']['correction']['help'] ) ),
+		);
 
 		$clean['fees']['primary']   = $this->sanitize_money( $settings['fees']['primary'] ?? $defaults['fees']['primary'] );
 		$clean['fees']['secondary'] = $this->sanitize_money( $settings['fees']['secondary'] ?? $defaults['fees']['secondary'] );
@@ -467,6 +476,11 @@ final class SettingsRepository {
 				),
 				'renewal' => array(
 					'enabled' => true,
+				),
+				'correction' => array(
+					'enabled' => true,
+					'page_url' => '',
+					'help' => 'Corrija o pedido de acordo com as indicações da ADAM.',
 				),
 				'update' => array(
 					'enabled' => true,

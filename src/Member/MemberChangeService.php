@@ -96,4 +96,27 @@ final class MemberChangeService {
 		}
 		return true;
 	}
+
+	public function request_correction( int $id, string $reason, string $note = '' ): true|WP_Error {
+		$request = $this->repository->find( $id );
+		if ( null === $request || ! in_array( $request->status(), array( MemberChangeRequest::STATUS_PENDING, MemberChangeRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
+			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
+		}
+		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) {
+			return new WP_Error( 'adam_member_change_correction_reason', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) );
+		}
+		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_CORRECTION_REQUESTED, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'correction_requested_by' => get_current_user_id() ) );
+		return true;
+	}
+
+	/** @param array<string,mixed> $changes */
+	public function submit_correction( int $id, int $user_id, array $changes ): true|WP_Error {
+		$request = $this->repository->find( $id );
+		if ( null === $request || $request->user_id() !== $user_id || MemberChangeRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+			return new WP_Error( 'adam_member_change_correction_invalid', __( 'Este pedido já não pode ser corrigido.', 'adam-membership' ) );
+		}
+		if ( array() === $changes ) { return new WP_Error( 'adam_member_change_empty', __( 'Não foram encontradas alterações.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_CORRECTION_SUBMITTED, 'changes' => $changes, 'correction_submitted_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+		return true;
+	}
 }

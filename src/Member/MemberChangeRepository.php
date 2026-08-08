@@ -48,11 +48,20 @@ final class MemberChangeRepository {
 	}
 
 	public function pending_for_user( int $user_id ): bool {
-		foreach ( $this->all( MemberChangeRequest::STATUS_PENDING ) as $request ) {
-			if ( $request->user_id() === $user_id ) {
+		foreach ( $this->all() as $request ) {
+			if ( $request->user_id() === $user_id && in_array( $request->status(), array( MemberChangeRequest::STATUS_PENDING, MemberChangeRequest::STATUS_CORRECTION_REQUESTED, MemberChangeRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	public function latest_correction_for_user( int $user_id ): ?MemberChangeRequest {
+		foreach ( $this->all() as $request ) {
+			if ( $request->user_id() === $user_id && MemberChangeRequest::STATUS_CORRECTION_REQUESTED === $request->status() ) {
+				return $request;
+			}
+		}
+		return null;
 	}
 }

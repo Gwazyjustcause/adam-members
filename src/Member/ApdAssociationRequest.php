@@ -9,6 +9,7 @@ final class ApdAssociationRequest {
 	public const STATUS_SUBMITTED_ANA = 'submitted_to_ana';
 	public const STATUS_CONFIRMED = 'ana_confirmed';
 	public const STATUS_REJECTED = 'rejected';
+	public const STATUS_CORRECTION_REQUESTED = 'correction_requested';
 
 	private array $data;
 
