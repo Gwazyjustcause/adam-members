@@ -23,6 +23,9 @@ final class SharedFieldValidator {
 	public static function validate( string $field, mixed $value, array $config, bool $required = false ): true|WP_Error {
 		$value = is_scalar( $value ) ? trim( (string) $value ) : '';
 		$label = (string) ( $config['label'] ?? $field );
+		if ( 'citizen_card' === $field ) {
+			return IdentificationValidator::validate( $value, true );
+		}
 		if ( $required && '' === $value ) {
 			return new WP_Error( 'adam_field_required', sprintf( 'O campo "%s" é obrigatório.', $label ) );
 		}

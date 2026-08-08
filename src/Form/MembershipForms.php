@@ -343,6 +343,8 @@ final class MembershipForms {
 		$this->validate_catalog_field( 'registration', 'nationality', $values, $errors );
 		$this->validate_email_field( 'registration', 'email', $values, $errors );
 		$this->validate_text_field( 'registration', 'citizen_card', $values, $errors );
+		$citizen_card = IdentificationValidator::validate( $values['citizen_card'] ?? '', true );
+		if ( $citizen_card instanceof WP_Error ) { $errors[] = $citizen_card->get_error_message(); } else { $values['citizen_card'] = IdentificationValidator::normalize( $values['citizen_card'] ?? '' ); }
 		$this->validate_date_field( 'registration', 'document_expiry_date', $values, $errors );
 		$this->validate_text_field( 'registration', 'document_issuing_place', $values, $errors );
 		$this->validate_text_field( 'registration', 'nif', $values, $errors );

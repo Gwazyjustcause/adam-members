@@ -307,7 +307,7 @@ final class SettingsRepository {
 			? $settings['registration_fields']
 			: array();
 		$replacements = array(
-			'citizen_card'   => array( 'BI / Cartão de Cidadão', 'BI / Cartão de Cidadão / Passaporte' ),
+			'citizen_card'   => array( 'BI / Cartão de Cidadão', 'BI / Cartão de Cidadão' ),
 			'phone'          => array( 'Número de Telemóvel', 'Telemóvel' ),
 			'address_line_1' => array( 'Rua', 'Morada Completa' ),
 			'city'           => array( 'Cidade', 'Localidade' ),
@@ -315,7 +315,7 @@ final class SettingsRepository {
 		);
 
 		foreach ( $replacements as $field_key => $labels ) {
-			if ( isset( $fields[ $field_key ]['label'] ) && $labels[0] === (string) $fields[ $field_key ]['label'] ) {
+			if ( isset( $fields[ $field_key ]['label'] ) && ( $labels[0] === (string) $fields[ $field_key ]['label'] || 1 === preg_match( '/pass.{4}te/i', (string) $fields[ $field_key ]['label'] ) ) ) {
 				$fields[ $field_key ]['label'] = $labels[1];
 			}
 		}
@@ -546,7 +546,7 @@ final class SettingsRepository {
 					'required' => true,
 				),
 				'citizen_card' => array(
-					'label'    => "BI / Cart\u{00E3}o de Cidad\u{00E3}o / Passaporte",
+					'label'    => "BI / Cart\u{00E3}o de Cidad\u{00E3}o",
 					'help'     => '',
 					'enabled'  => true,
 					'required' => true,

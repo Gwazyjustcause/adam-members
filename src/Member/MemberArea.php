@@ -2372,7 +2372,7 @@ final class MemberArea {
 			'postcode' => array( 'label' => 'Código postal', 'value' => (string) $member->field( 'codigo_postal' ), 'editable' => true ),
 			'city' => array( 'label' => 'Localidade', 'value' => (string) $member->field( 'cidade' ), 'editable' => true ),
 			'nif' => array( 'label' => 'NIF', 'value' => (string) $member->field( 'nif' ), 'editable' => false ),
-			'citizen_card' => array( 'label' => 'BI / Cartão de Cidadão / Passaporte', 'value' => (string) $member->field( 'cartao_cidadao' ), 'editable' => false ),
+			'citizen_card' => array( 'label' => 'BI / Cartão de Cidadão', 'value' => (string) $member->field( 'cartao_cidadao' ), 'editable' => false ),
 			'document_expiry' => array( 'label' => 'Data de validade', 'value' => (string) $member->field( 'documento_validade' ), 'editable' => false ),
 			'document_place' => array( 'label' => 'Local de emissão', 'value' => (string) $member->field( 'documento_local_emissao' ), 'editable' => false ),
 		);
@@ -2386,6 +2386,7 @@ final class MemberArea {
 				$payload = array(); $validation_error = null;
 				foreach ( $fields as $key => $field ) {
 					$payload[ $key ] = 'edit' === (string) $_POST['apd_information_mode'] ? sanitize_text_field( wp_unslash( $_POST[ $key ] ?? $field['value'] ) ) : $field['value'];
+					if ( 'citizen_card' === (string) $key ) { $payload[ $key ] = IdentificationValidator::normalize( $payload[ $key ] ); }
 					$check = SharedFieldValidator::validate( (string) $key, $payload[ $key ], $field, false );
 					if ( is_wp_error( $check ) ) { $validation_error = $check; break; }
 				}
@@ -2577,7 +2578,7 @@ final class MemberArea {
 			'municipio' => array( 'label' => __( 'Município', 'adam-membership' ), 'value' => $member->field( 'municipio' ), 'key' => 'municipio' ),
 			'pais' => array( 'label' => __( 'País', 'adam-membership' ), 'value' => $member->field( 'pais' ), 'key' => 'pais' ),
 			'nif' => array( 'label' => 'NIF', 'value' => $member->field( 'nif' ), 'key' => 'nif' ),
-			'cartao_cidadao' => array( 'label' => __( 'BI / Cartão de Cidadão / Passaporte', 'adam-membership' ), 'value' => $member->field( 'cartao_cidadao' ), 'key' => 'cartao_cidadao' ),
+			'cartao_cidadao' => array( 'label' => __( 'BI / Cartão de Cidadão', 'adam-membership' ), 'value' => $member->field( 'cartao_cidadao' ), 'key' => 'cartao_cidadao' ),
 			'documento_validade' => array( 'label' => __( 'Data de validade', 'adam-membership' ), 'value' => $member->field( 'documento_validade' ), 'key' => 'documento_validade' ),
 			'documento_local_emissao' => array( 'label' => __( 'Local de emissão', 'adam-membership' ), 'value' => $member->field( 'documento_local_emissao' ), 'key' => 'documento_local_emissao' ),
 		);
@@ -2599,6 +2600,7 @@ final class MemberArea {
 					$patch_keys = array( 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa' );
 					$patch_key = $patch_keys[ $field['key'] ] ?? $field['key'];
 					$submitted[ $patch_key ] = sanitize_text_field( wp_unslash( $_POST[ $field['key'] ] ) );
+					if ( 'citizen_card' === (string) $field['key'] ) { $submitted[ $patch_key ] = IdentificationValidator::normalize( $submitted[ $patch_key ] ); }
 				}
 				$validation_error = null;
 				foreach ( array( 'profile_photo' ) as $upload_field ) {

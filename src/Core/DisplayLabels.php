@@ -33,7 +33,7 @@ final class DisplayLabels {
 		'municipality' => 'Município',
 		'country' => 'País',
 		'nif' => 'NIF',
-		'citizen_card' => 'BI / Cartão de Cidadão / Passaporte',
+		'citizen_card' => 'BI / Cartão de Cidadão',
 		'document_expiry_date' => 'Data de validade',
 		'document_issuing_place' => 'Local de emissão',
 		'team' => 'Equipa',

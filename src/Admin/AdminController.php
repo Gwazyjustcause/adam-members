@@ -22,6 +22,7 @@ use AdamMembership\Event\EventCheckIn;
 use AdamMembership\Event\EventService;
 use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Form\SharedFieldValidator;
+use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
@@ -3057,7 +3058,7 @@ final class AdminController {
 					<?php $this->render_detail_item( __( 'Telefone', 'adam-membership' ), (string) $member->field( 'telefone_fixo' ) ); ?>
 					<?php $this->render_detail_item( __( 'Equipa', 'adam-membership' ), (string) $member->field( 'equipa' ) ); ?>
 					<?php $this->render_detail_item( __( 'NIF', 'adam-membership' ), (string) $member->field( 'nif' ) ); ?>
-					<?php $this->render_detail_item( __( 'BI / Cartão de Cidadão / Passaporte', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
+					<?php $this->render_detail_item( __( 'BI / Cartão de Cidadão', 'adam-membership' ), (string) $member->field( 'cartao_cidadao' ) ); ?>
 					<?php $this->render_detail_item( __( 'Validade do documento', 'adam-membership' ), $this->format_date( $member->field( 'documento_validade' ) ) ); ?>
 					<?php $this->render_detail_item( __( 'Local de emissão', 'adam-membership' ), (string) $member->field( 'documento_local_emissao' ) ); ?>
 					<?php $this->render_detail_item( __( 'Data de nascimento', 'adam-membership' ), $this->format_date( $member->field( 'data_nascimento' ) ) ); ?>
@@ -3218,7 +3219,7 @@ final class AdminController {
 				<div class="adam-admin-edit-grid">
 					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'Informação pessoal e contacto', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid">
 					<label><span><?php esc_html_e( 'Nome', 'adam-membership' ); ?></span><input type="text" name="member_first_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'first_name', true ) ); ?>"></label><label><span><?php esc_html_e( 'Apelido', 'adam-membership' ); ?></span><input type="text" name="member_last_name" value="<?php echo esc_attr( (string) get_user_meta( $member->user_id(), 'last_name', true ) ); ?>"></label>
-					<?php foreach ( array( 'email' => array( 'Email', $member->email() ), 'data_nascimento' => array( 'Data de nascimento', $member->field( 'data_nascimento' ) ), 'genero' => array( 'Género', $member->field( 'genero' ) ), 'estado_civil' => array( 'Estado civil', $member->field( 'estado_civil' ) ), 'nacionalidade' => array( 'Nacionalidade', $member->field( 'nacionalidade' ) ), 'naturalidade' => array( 'Naturalidade', $member->field( 'naturalidade' ) ), 'profissao' => array( 'Profissão', $member->field( 'profissao' ) ), 'telefone_fixo' => array( 'Telefone fixo', $member->field( 'telefone_fixo' ) ), 'morada' => array( 'Morada', $member->field( 'morada' ) ), 'morada_linha_2' => array( 'Morada (linha 2)', $member->field( 'morada_linha_2' ) ), 'codigo_postal' => array( 'Código postal', $member->field( 'codigo_postal' ) ), 'cidade' => array( 'Localidade', $member->field( 'cidade' ) ), 'municipio' => array( 'Município', $member->field( 'municipio' ) ), 'pais' => array( 'País', $member->field( 'pais' ) ), 'nif' => array( 'NIF', $member->field( 'nif' ) ), 'cartao_cidadao' => array( 'BI / Cartão de Cidadão / Passaporte', $member->field( 'cartao_cidadao' ) ), 'documento_validade' => array( 'Data de validade', $member->field( 'documento_validade' ) ), 'documento_local_emissao' => array( 'Local de emissão', $member->field( 'documento_local_emissao' ) ) ) as $key => $item ) : ?><label><span><?php echo esc_html( $item[0] ); ?></span><input type="<?php echo 'data_nascimento' === $key || 'documento_validade' === $key ? 'date' : 'text'; ?>" name="member_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $item[1] ); ?>"></label><?php endforeach; ?>
+					<?php foreach ( array( 'email' => array( 'Email', $member->email() ), 'data_nascimento' => array( 'Data de nascimento', $member->field( 'data_nascimento' ) ), 'genero' => array( 'Género', $member->field( 'genero' ) ), 'estado_civil' => array( 'Estado civil', $member->field( 'estado_civil' ) ), 'nacionalidade' => array( 'Nacionalidade', $member->field( 'nacionalidade' ) ), 'naturalidade' => array( 'Naturalidade', $member->field( 'naturalidade' ) ), 'profissao' => array( 'Profissão', $member->field( 'profissao' ) ), 'telefone_fixo' => array( 'Telefone fixo', $member->field( 'telefone_fixo' ) ), 'morada' => array( 'Morada', $member->field( 'morada' ) ), 'morada_linha_2' => array( 'Morada (linha 2)', $member->field( 'morada_linha_2' ) ), 'codigo_postal' => array( 'Código postal', $member->field( 'codigo_postal' ) ), 'cidade' => array( 'Localidade', $member->field( 'cidade' ) ), 'municipio' => array( 'Município', $member->field( 'municipio' ) ), 'pais' => array( 'País', $member->field( 'pais' ) ), 'nif' => array( 'NIF', $member->field( 'nif' ) ), 'cartao_cidadao' => array( 'BI / Cartão de Cidadão', $member->field( 'cartao_cidadao' ) ), 'documento_validade' => array( 'Data de validade', $member->field( 'documento_validade' ) ), 'documento_local_emissao' => array( 'Local de emissão', $member->field( 'documento_local_emissao' ) ) ) as $key => $item ) : ?><label><span><?php echo esc_html( $item[0] ); ?></span><input type="<?php echo 'data_nascimento' === $key || 'documento_validade' === $key ? 'date' : 'text'; ?>" name="member_<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( (string) $item[1] ); ?>"></label><?php endforeach; ?>
 					</div></div>
 					<div class="adam-admin-edit-section"><h3><?php esc_html_e( 'APD atual', 'adam-membership' ); ?></h3><div class="adam-admin-edit-grid"><label><span><?php esc_html_e( 'APD / Associação', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_association_name" value="<?php echo esc_attr( (string) $member->field( 'adam_external_association_name' ) ); ?>"></label><label><span><?php esc_html_e( 'N.º de sócio APD', 'adam-membership' ); ?></span><input type="text" name="member_adam_external_member_number" value="<?php echo esc_attr( (string) $member->field( 'adam_external_member_number' ) ); ?>"></label></div></div>
 					<label>
@@ -3499,6 +3500,7 @@ final class AdminController {
 			$key = 'member_' . $field;
 			if ( isset( $_POST[ $key ] ) ) {
 				$updates[ $field ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+				if ( 'cartao_cidadao' === $field ) { $updates[ $field ] = IdentificationValidator::normalize( $updates[ $field ] ); }
 			}
 		}
 		$configs = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
