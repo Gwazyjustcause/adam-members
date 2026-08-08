@@ -17,6 +17,7 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\DisplayLabels;
 use AdamMembership\Form\SharedFieldValidator;
+use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Helpers\RateLimiter;
@@ -252,7 +253,7 @@ final class MemberArea {
 			return $this->render_login( $message );
 		}
 		if ( 'correction' === $this->current_member_view() && '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
-			return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.</p><a class="button button-primary" href="' . esc_url( home_url( '/' ) ) . '">Voltar ao início</a></div></section></div>';
+			return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">PEDIDO RECEBIDO</p><h2>Correção submetida</h2><p>Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.</p><a class="button button-primary" href="' . esc_url( $this->member_area_url() ) . '">Voltar à Área de Sócio</a></div></section></div>';
 		}
 
 		$member = $this->members->find( get_current_user_id() );
@@ -276,6 +277,7 @@ final class MemberArea {
 			$correction_user = absint( $_GET['correction_user'] ?? 0 );
 			$correction_token = sanitize_text_field( wp_unslash( $_GET['correction_token'] ?? '' ) );
 			if ( $correction_user > 0 && ( $correction_user !== $member->user_id() || ! hash_equals( hash_hmac( 'sha256', (string) $member->user_id(), wp_salt( 'auth' ) ), $correction_token ) ) ) { return $this->render_not_found(); }
+			if ( 'correction_requested' === (string) $member->field( 'adam_correction_status' ) ) { return $this->render_registration_correction_v2( $member ); }
 			return $this->render_member_correction_page( $member );
 		}
 		$this->recognition->grant_eligible_loyalty_rewards( $member );
@@ -2600,10 +2602,122 @@ final class MemberArea {
 		ob_start(); ?><div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Corrigir pedido</h2><p><?php echo esc_html( (string) $member->field( 'adam_correction_note' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Necessita de correção</strong><p>Motivo: <?php echo esc_html( (string) $member->field( 'adam_correction_reason' ) ); ?></p></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_registration_correction' ); ?><div class="adam-form-grid"><?php foreach ( $allowed as $key ) : $field = $fields[ $key ] ?? array( 'label' => DisplayLabels::field( $key ) ); $storage = $map[ $key ] ?? $key; $value = (string) $member->field( $storage ); ?><label class="adam-form-field"><span><?php echo esc_html( $field['label'] ?? $key ); ?></span><input type="text" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>"></label><?php endforeach; ?><?php if ( in_array( 'profile_photo', $allowed, true ) ) : ?><label class="adam-form-field">Fotografia<input type="file" name="profile_photo" accept=".jpg,.jpeg,.png,.webp"></label><?php endif; ?></div><button class="button button-primary" name="adam_registration_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
 	}
 
+	/**
+	 * Render and process a registration correction using the canonical registration
+	 * field definitions.  This path is deliberately separate from member-change
+	 * corrections: an unapproved registration must never be sent to the normal
+	 * member dashboard after submission.
+	 */
+	private function render_registration_correction_v2( Member $member ): string {
+		$settings = $this->settings->membership_form_settings();
+		$fields   = (array) ( $settings['registration_fields'] ?? array() );
+		$stored  = $member->field( 'adam_correction_fields' );
+		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
+		$active  = absint( $member->field( 'adam_correction_active_round' ) );
+		foreach ( array_reverse( $history ) as $round ) {
+			if ( is_array( $round ) && ( 0 === $active || absint( $round['id'] ?? 0 ) === $active ) && 'correction_requested' === (string) ( $round['status'] ?? '' ) ) {
+				$stored = $round['fields'] ?? array();
+				break;
+			}
+		}
+		$allowed = $this->normalize_correction_fields( $stored, $fields );
+		$map = array(
+			'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil',
+			'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade',
+			'nationality' => 'nacionalidade', 'email' => 'email', 'phone' => 'telefone',
+			'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2',
+			'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais',
+			'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade',
+			'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa',
+			'external_association_proof' => 'adam_external_association_proof', 'profile_photo' => 'profile_photo',
+		);
+		$file_fields = array( 'profile_photo', 'external_association_proof', 'payment_receipt' );
+		$definitions = array();
+		foreach ( $allowed as $key ) {
+			$definition = is_array( $fields[ $key ] ?? null ) ? $fields[ $key ] : array();
+			$type = (string) ( $definition['type'] ?? '' );
+			if ( 'upload' === $type ) { $type = 'file'; }
+			if ( '' === $type ) {
+				$type = in_array( $key, $file_fields, true ) ? 'file' : ( in_array( $key, array( 'birth_date', 'document_expiry_date' ), true ) ? 'date' : ( 'email' === $key ? 'email' : 'text' ) );
+			}
+			$definitions[ $key ] = array(
+				'label'   => (string) ( $definition['label'] ?? DisplayLabels::field( $key ) ),
+				'help'    => (string) ( $definition['help'] ?? '' ),
+				'type'    => $type,
+				'options' => (string) ( $definition['options'] ?? '' ),
+			);
+		}
+		$message = '';
+		if ( empty( $allowed ) ) {
+			$message = $this->notice_markup( 'error', 'Não foi possível identificar os campos solicitados. Contacte-nos através de apoio@airsoftmondego.pt.' );
+		}
+		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
+			return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.</p><a class="button button-primary" href="' . esc_url( $this->member_area_url() ) . '">Voltar à Área de Sócio</a></div></section></div>';
+		}
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) && ! empty( $allowed ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_registration_correction' ) ) {
+				$message = $this->notice_markup( 'error', 'Não foi possível validar o pedido. Tente novamente.' );
+			} else {
+				$updates = array();
+				$email_update = '';
+				$upload_ids = array();
+				foreach ( $allowed as $key ) {
+					$config = $definitions[ $key ];
+					if ( 'file' === $config['type'] ) {
+						$file_key = 'profile_photo' === $key ? 'profile_photo' : $key;
+						$mimes = 'profile_photo' === $key ? array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) : array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+						$check = SharedFieldValidator::validate_upload( $_FILES[ $file_key ] ?? array(), $mimes, true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+						continue;
+					}
+					$raw = array_key_exists( $key, $_POST ) ? wp_unslash( $_POST[ $key ] ) : '';
+					if ( 'citizen_card' === $key ) { $raw = IdentificationValidator::normalize( is_scalar( $raw ) ? (string) $raw : '' ); }
+					$check = SharedFieldValidator::validate( $key, $raw, $config, true );
+					if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+					$clean_value = sanitize_text_field( is_scalar( $raw ) ? (string) $raw : '' );
+					if ( 'email' === $key ) { $email_update = $clean_value; } else { $updates[ $map[ $key ] ?? $key ] = $clean_value; }
+				}
+				if ( '' === $message ) {
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+					require_once ABSPATH . 'wp-admin/includes/media.php';
+					require_once ABSPATH . 'wp-admin/includes/image.php';
+					foreach ( $allowed as $key ) {
+						if ( 'file' !== $definitions[ $key ]['type'] ) { continue; }
+						$file_key = 'profile_photo' === $key ? 'profile_photo' : $key;
+						$upload = media_handle_upload( $file_key, 0, array(), array( 'test_form' => false ) );
+						if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+						$upload_ids[ $map[ $key ] ?? $key ] = absint( $upload );
+					}
+				}
+				if ( '' === $message && $email_update !== '' ) {
+					$email_result = wp_update_user( array( 'ID' => $member->user_id(), 'user_email' => $email_update ) );
+					if ( is_wp_error( $email_result ) ) { $message = $this->notice_markup( 'error', $email_result->get_error_message() ); }
+				}
+				if ( '' === $message && ( $updates || $upload_ids || $email_update !== '' ) ) {
+					$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
+					foreach ( $history as &$round ) {
+						if ( is_array( $round ) && absint( $round['id'] ?? 0 ) === $active ) { $round['status'] = 'correction_submitted'; $round['submitted_at'] = current_time( 'mysql' ); $round['values'] = array_merge( $updates, $upload_ids, $email_update !== '' ? array( 'email' => $email_update ) : array() ); }
+					}
+					unset( $round );
+					$member->save( array_merge( $updates, $upload_ids, array( 'adam_correction_status' => 'correction_submitted', 'adam_correction_history' => $history ) ) );
+					wp_safe_redirect( $this->member_area_url( array( 'view' => 'correction', 'correction_complete' => '1' ) ) );
+					exit;
+				}
+				if ( '' === $message ) { $message = $this->notice_markup( 'error', 'Corrija pelo menos um campo antes de enviar.' ); }
+			}
+		}
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Corrigir pedido</h2><p>Corrija os dados indicados pela ADAM e volte a submeter o seu pedido.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Necessita de correção</strong><p>Motivo: <?php echo esc_html( (string) $member->field( 'adam_correction_reason' ) ); ?></p><?php if ( $member->field( 'adam_correction_note' ) ) : ?><p>O que precisa de corrigir: <?php echo esc_html( (string) $member->field( 'adam_correction_note' ) ); ?></p><?php endif; ?></div><?php if ( ! empty( $allowed ) ) : ?><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_registration_correction' ); ?><div class="adam-form-grid">
+		<?php foreach ( $allowed as $key ) : $config = $definitions[ $key ]; $storage = $map[ $key ] ?? $key; $value = $member->field( $storage ); if ( 'file' === $config['type'] ) : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><?php if ( $member->media_url( $storage ) ) : ?><a href="<?php echo esc_url( $member->media_url( $storage ) ); ?>" target="_blank" rel="noopener">Ver documento atual</a><?php endif; ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="profile_photo" === $key ? ".jpg,.jpeg,.png,.webp" : ".pdf,.jpg,.jpeg,.png,.webp" required></label><?php elseif ( in_array( $config['type'], array( 'select', 'radio' ), true ) ) : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><select name="<?php echo esc_attr( $key ); ?>" required><option value="">Selecionar</option><?php foreach ( SharedFieldValidator::parse_options( $config['options'] ) as $option_key => $option_label ) : ?><option value="<?php echo esc_attr( $option_key ); ?>" <?php selected( (string) $value, (string) $option_key ); ?>><?php echo esc_html( $option_label ); ?></option><?php endforeach; ?></select></label><?php else : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><input type="<?php echo esc_attr( in_array( $config['type'], array( 'date', 'email', 'number', 'tel' ), true ) ? $config['type'] : 'text' ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( is_scalar( $value ) ? (string) $value : '' ); ?>" required></label><?php endif; endforeach; ?></div><button class="button button-primary" name="adam_registration_correction_submit" value="1">Enviar correção</button></form><?php endif; ?></section></div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
 	/** @param mixed $stored @param array<string,mixed> $definitions @return array<int,string> */
 	private function normalize_correction_fields( mixed $stored, array $definitions ): array {
 		$out = array();
-		$aliases = array( 'civil_status' => 'marital_status', 'estado_civil' => 'marital_status', 'telemovel' => 'phone', 'fotografia' => 'profile_photo' );
+		$aliases = array( 'civil_status' => 'marital_status', 'estado_civil' => 'marital_status', 'telemovel' => 'phone', 'fotografia' => 'profile_photo', 'comprovativo_de_associacao' => 'external_association_proof', 'comprovativo_de_associacao_apd' => 'external_association_proof', 'adam_external_association_proof' => 'external_association_proof', 'cartao_cidadao' => 'citizen_card', 'bi_cartao_de_cidadao' => 'citizen_card' );
 		$items = (array) $stored;
 		if ( is_array( $stored ) && array_keys( $stored ) !== range( 0, count( $stored ) - 1 ) ) { $items = array_keys( $stored ); }
 		foreach ( $items as $raw ) {

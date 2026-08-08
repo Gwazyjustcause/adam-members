@@ -17,6 +17,10 @@ final class SharedFieldValidator {
 		$name = sanitize_file_name( (string) ( $file['name'] ?? '' ) );
 		$type = wp_check_filetype( $name, $mimes );
 		if ( empty( $type['type'] ) ) { return new WP_Error( 'adam_file_type', 'O tipo de ficheiro enviado não é permitido.' ); }
+		if ( ! empty( $file['tmp_name'] ) && function_exists( 'wp_check_filetype_and_ext' ) ) {
+			$verified = wp_check_filetype_and_ext( (string) $file['tmp_name'], $name, $mimes );
+			if ( false === $verified['ext'] || false === $verified['type'] ) { return new WP_Error( 'adam_file_content', 'O conteúdo do ficheiro não corresponde ao tipo indicado.' ); }
+		}
 		return true;
 	}
 	/** @param array<string,mixed> $config */
