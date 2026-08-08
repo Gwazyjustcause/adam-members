@@ -45,10 +45,11 @@ final class NifValidationController {
 		$result = $this->registration->validate_nif( $nif );
 
 		if ( is_wp_error( $result ) ) {
+			$code = (string) $result->get_error_code();
 			wp_send_json_success(
 				array(
-					'status'  => 'adam_membership_duplicate_nif' === $result->get_error_code() ? 'duplicate' : 'invalid',
-					'message' => $result->get_error_message(),
+					'status'  => 'adam_membership_duplicate_nif' === $code ? 'duplicate' : ( 'adam_membership_nif_check_in_progress' === $code ? 'local_valid' : 'invalid' ),
+					'message' => 'adam_membership_nif_check_in_progress' === $code ? '' : $result->get_error_message(),
 				)
 			);
 		}

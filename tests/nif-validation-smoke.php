@@ -27,6 +27,7 @@ function adam_nif_assert( bool $condition, string $message ): void {
 
 adam_nif_assert( NifValidator::is_valid( '501964843' ), 'A valid Portuguese NIF should pass.' );
 adam_nif_assert( NifValidator::is_valid( '123456789' ), 'A checksum-valid individual NIF should pass.' );
+adam_nif_assert( NifValidator::is_valid( '233128875' ), 'The reported NIF 233128875 should pass the local checksum.' );
 adam_nif_assert( ! NifValidator::is_valid( '501964842' ), 'An invalid checksum should fail.' );
 adam_nif_assert( ! NifValidator::is_valid( '000000000' ), 'An impossible NIF prefix should fail.' );
 adam_nif_assert( ! NifValidator::is_valid( '501 964 843' ), 'Formatted values should not satisfy the nine-digit format.' );

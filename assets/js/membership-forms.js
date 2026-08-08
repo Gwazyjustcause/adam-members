@@ -193,7 +193,7 @@
 				}
 
 				setNifState( form, input, feedback, status, message );
-				if ( 'available' === status && submitAfterCheck ) {
+				if ( ( 'available' === status || 'local_valid' === status ) && submitAfterCheck ) {
 					submitAfterCheck = false;
 					if ( form.requestSubmit ) { form.requestSubmit(); }
 				}
@@ -202,13 +202,14 @@
 					return;
 				}
 
-				setNifState(
-					form,
-					input,
-					feedback,
-					'error',
-					config.nifCheckErrorMessage || ''
-				);
+				// The checksum is authoritative and is checked again on the server.
+				// Availability AJAX is only an early duplicate hint; an unavailable
+				// endpoint must never block a structurally valid registration.
+				setNifState( form, input, feedback, 'local_valid', '' );
+				if ( submitAfterCheck ) {
+					submitAfterCheck = false;
+					if ( form.requestSubmit ) { form.requestSubmit(); } else { form.submit(); }
+				}
 			} ).finally( function () {
 				if ( activeRequest === controller ) {
 					activeRequest = null;
@@ -231,7 +232,7 @@
 		input.addEventListener( 'blur', checkAvailability );
 
 		form.addEventListener( 'submit', function ( event ) {
-			if ( 'available' === input.dataset.adamNifStatus ) {
+			if ( 'available' === input.dataset.adamNifStatus || 'local_valid' === input.dataset.adamNifStatus ) {
 				return;
 			}
 

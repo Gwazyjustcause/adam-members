@@ -141,6 +141,7 @@ final class Plugin {
 		$reward_repository         = new RewardRepository();
 		$rewards                   = new RewardService( $reward_repository, $points, $members, $history_repository, $logger );
 		$member_deletion           = new MemberDeletionService( $renewal_repository, $history_repository, $points_repository, $reward_repository, $event_repository, $announcement_repository, $logger );
+		$member_deletion->register();
 		$complete_export           = new CompleteMemberExportService( $settings );
 		$recognition               = new RecognitionService( $members, $rewards, $history_repository, $logger );
 		$card_cosmetics            = new CardCosmeticsService( $rewards );

@@ -45,6 +45,15 @@ final class MemberDeletionService {
 	) {}
 
 	/**
+	 * Register cleanup for direct WordPress user deletions as well as the ADAM
+	 * administrator deletion workflow. NIF locks are transient options keyed by
+	 * the NIF, so they must not survive the user/application they protect.
+	 */
+	public function register(): void {
+		add_action( 'delete_user', array( $this, 'clear_user_nif_lock' ), 1 );
+	}
+
+	/**
 	 * Permanently delete a member.
 	 *
 	 * @param int $user_id Member user ID.
@@ -89,6 +98,7 @@ final class MemberDeletionService {
 		$this->events->delete_member_interactions( $user_id );
 		$this->announcements->remove_member_references( $user_id );
 		$this->history->delete_for_member( $user_id );
+		$this->clear_user_nif_lock( $user_id );
 
 		$deleted = $this->delete_wordpress_user( $user_id );
 
@@ -124,6 +134,20 @@ final class MemberDeletionService {
 		do_action( 'adam_membership_member_permanently_deleted', $reference, $actor_id );
 
 		return true;
+	}
+
+	/**
+	 * Remove the registration lock associated with a user NIF.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 */
+	public function clear_user_nif_lock( int $user_id ): void {
+		$nif = NifValidator::normalize( get_user_meta( $user_id, 'nif', true ) );
+		if ( '' === $nif ) {
+			return;
+		}
+
+		delete_option( 'adam_membership_nif_lock_' . hash( 'sha256', $nif ) );
 	}
 
 	/**
