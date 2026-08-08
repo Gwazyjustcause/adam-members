@@ -221,7 +221,7 @@ final class ApprovalService {
 	public function request_correction( int $user_id, string $reason = '', string $note = '', array $fields = array() ): true|WP_Error {
 		$member = $this->members->find( $user_id );
 		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
-		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_membership_correction_reason_required', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
+		if ( '' === trim( $reason ) || ( in_array( trim( $reason ), array( 'Outro', 'Outro motivo' ), true ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_membership_correction_reason_required', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
 		$fields = array_values( array_filter( array_map( 'sanitize_key', $fields ) ) );
 		if ( array() === $fields ) { return new WP_Error( 'adam_membership_correction_fields_required', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
 		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();

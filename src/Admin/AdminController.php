@@ -3098,7 +3098,7 @@ final class AdminController {
 				<div class="adam-admin-action-stack">
 					<?php $this->render_action_form( $member, self::ACTION_APPROVE, __( 'Aprovar sócio', 'adam-membership' ), 'button-primary' ); ?>
 					<?php $this->render_rejection_form( $member ); ?>
-					<?php if ( Member::STATUS_REJECTED === $member->status() ) : ?><?php $this->render_correction_fields_form( $member ); ?><?php endif; ?>
+					<?php if ( in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) : ?><?php $this->render_registration_correction_form( $member ); ?><?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
@@ -3395,7 +3395,7 @@ final class AdminController {
 			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ) ),
 			self::ACTION_REMOVE_ANA   => $this->remove_ana_for_testing( $user_id ),
 			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
-			self::ACTION_REQUEST_CORRECTION => $this->approval_service->request_correction( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note(), isset( $_POST['correction_fields'] ) && is_array( $_POST['correction_fields'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['correction_fields'] ) ) : array() ),
+			self::ACTION_REQUEST_CORRECTION => $this->approval_service->request_correction( $user_id, $this->posted_correction_reason(), $this->posted_correction_note(), isset( $_POST['correction_fields'] ) && is_array( $_POST['correction_fields'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['correction_fields'] ) ) : array() ),
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
@@ -5124,6 +5124,34 @@ final class AdminController {
 		<?php
 	}
 
+	private function render_registration_correction_form( Member $member ): void {
+		$fields = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
+		?>
+		<div class="adam-admin-rejection-form adam-admin-correction-form">
+			<h3><?php esc_html_e( 'Pedir correção', 'adam-membership' ); ?></h3>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_member_action">
+				<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>">
+				<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
+				<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+				<label><span><?php esc_html_e( 'Motivo da correção', 'adam-membership' ); ?></span>
+					<select name="correction_reason" required><option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
+					<?php foreach ( $this->correction_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?>
+					</select>
+				</label>
+				<fieldset><legend><?php esc_html_e( 'Campos a corrigir', 'adam-membership' ); ?></legend>
+					<?php foreach ( $fields as $key => $field ) : if ( ! is_array( $field ) || empty( $field['enabled'] ) || in_array( $key, array( 'profile_photo', 'external_association_proof' ), true ) ) { continue; } ?><label><input type="checkbox" name="correction_fields[]" value="<?php echo esc_attr( $key ); ?>"> <?php echo esc_html( $field['label'] ?? DisplayLabels::field( (string) $key ) ); ?></label><?php endforeach; ?>
+					<label><input type="checkbox" name="correction_fields[]" value="profile_photo"> <?php esc_html_e( 'Fotografia', 'adam-membership' ); ?></label>
+					<label><input type="checkbox" name="correction_fields[]" value="external_association_proof"> <?php esc_html_e( 'Comprovativo de Associação', 'adam-membership' ); ?></label>
+				</fieldset>
+				<label><span><?php esc_html_e( 'O que precisa de corrigir', 'adam-membership' ); ?></span><textarea name="correction_note" rows="4"></textarea></label>
+				<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Pedir correção', 'adam-membership' ); ?></button>
+			</form>
+		</div>
+		<?php
+	}
+
 	private function render_correction_fields_form( Member $member ): void {
 		$fields = (array) ( $this->settings->membership_form_settings()['registration_fields'] ?? array() );
 		?><details class="adam-admin-rejection-form"><summary class="button">Selecionar campos a corrigir</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REQUEST_CORRECTION ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Motivo da correção<select name="rejection_reason" required><option value="">Selecionar</option><?php foreach ( $this->rejection_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label><label>O que precisa de corrigir<textarea name="rejection_note" rows="3"></textarea></label><fieldset><legend>Campos a corrigir</legend><p><button type="button" class="button" onclick="this.closest('fieldset').querySelectorAll('input[type=checkbox]').forEach(function(x){x.checked=true})">Selecionar todos</button> <button type="button" class="button" onclick="this.closest('fieldset').querySelectorAll('input[type=checkbox]').forEach(function(x){x.checked=false})">Limpar seleção</button></p><?php foreach ( $fields as $key => $field ) : ?><label><input type="checkbox" name="correction_fields[]" value="<?php echo esc_attr( $key ); ?>"> <?php echo esc_html( $field['label'] ?? $key ); ?></label><br><?php endforeach; ?><label><input type="checkbox" name="correction_fields[]" value="profile_photo"> Fotografia</label></fieldset><button type="submit" class="button button-primary">Pedir correção</button></form></details><?php
@@ -5601,6 +5629,16 @@ final class AdminController {
 		return isset( $_POST['rejection_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['rejection_note'] ) ) : '';
 	}
 
+	private function posted_correction_reason(): string {
+		$reason = isset( $_POST['correction_reason'] ) ? sanitize_text_field( wp_unslash( $_POST['correction_reason'] ) ) : '';
+
+		return in_array( $reason, $this->correction_reasons(), true ) ? $reason : '';
+	}
+
+	private function posted_correction_note(): string {
+		return isset( $_POST['correction_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['correction_note'] ) ) : '';
+	}
+
 	/**
 	 * Get allowed rejection reasons.
 	 *
@@ -5612,6 +5650,18 @@ final class AdminController {
 			__( 'Não cumpre os requisitos da associação', 'adam-membership' ),
 			__( 'Informação inconsistente', 'adam-membership' ),
 			__( 'Pedido duplicado', 'adam-membership' ),
+			__( 'Outro', 'adam-membership' ),
+		);
+	}
+
+	/** @return array<int, string> */
+	private function correction_reasons(): array {
+		return array(
+			__( 'Dados incompletos', 'adam-membership' ),
+			__( 'Dados incorretos', 'adam-membership' ),
+			__( 'Documento inválido/ilegível', 'adam-membership' ),
+			__( 'Fotografia inadequada', 'adam-membership' ),
+			__( 'Comprovativo em falta/incorreto', 'adam-membership' ),
 			__( 'Outro', 'adam-membership' ),
 		);
 	}
