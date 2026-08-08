@@ -307,6 +307,20 @@
 	line-height: 1.5;
 }
 
+.adam-apd-photo-editor { max-width: 260px; }
+.adam-apd-photo-preview { position: relative; overflow: hidden; border-radius: var(--adam-radius, 12px); background: #edf8f0; aspect-ratio: 4 / 5; }
+.adam-apd-photo-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.adam-apd-photo-preview__empty { display: grid; place-items: center; height: 100%; color: var(--adam-text-muted, #667085); }
+.adam-apd-photo-preview__overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .65rem; padding: 1rem; background: rgba(15, 38, 25, .68); opacity: 0; transition: opacity .18s ease; }
+.adam-apd-photo-preview:hover .adam-apd-photo-preview__overlay,
+.adam-apd-photo-preview.is-open .adam-apd-photo-preview__overlay,
+.adam-apd-photo-preview:focus-within .adam-apd-photo-preview__overlay { opacity: 1; }
+.adam-apd-photo-preview__action { border: 1px solid rgba(255,255,255,.8); border-radius: 999px; background: rgba(255,255,255,.96); color: #173d28; padding: .55rem .85rem; cursor: pointer; font: inherit; }
+.adam-apd-photo-preview__action--remove { background: transparent; color: #fff; }
+.adam-apd-photo-preview.is-removed img { opacity: .2; filter: grayscale(1); }
+.adam-apd-photo-preview.is-removed::after { content: 'Fotografia marcada para remoção'; position: absolute; inset: 0; display: grid; place-items: center; padding: 1rem; text-align: center; color: #fff; font-weight: 600; }
+.adam-apd-photo-input { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; }
+
 .adam-ana-information[hidden] {
 	display: none !important;
 }
