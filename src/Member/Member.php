@@ -110,6 +110,8 @@ final class Member {
 		'adam_correction_status' => '',
 		'adam_correction_reason' => '',
 		'adam_correction_note' => '',
+		'adam_correction_active_round' => 0,
+		'adam_correction_history' => array(),
 	);
 
 	/**

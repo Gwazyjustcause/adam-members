@@ -224,7 +224,10 @@ final class ApprovalService {
 		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_membership_correction_reason_required', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
 		$fields = array_values( array_filter( array_map( 'sanitize_key', $fields ) ) );
 		if ( array() === $fields ) { return new WP_Error( 'adam_membership_correction_fields_required', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
-		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note, 'adam_correction_fields' => $fields ) );
+		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
+		$round_id = count( $history ) + 1;
+		$history[] = array( 'id' => $round_id, 'status' => 'correction_requested', 'requested_at' => current_time( 'mysql' ), 'reason' => $reason, 'note' => $note, 'fields' => $fields );
+		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note, 'adam_correction_fields' => $fields, 'adam_correction_active_round' => $round_id, 'adam_correction_history' => $history ) );
 		try {
 			$this->email->send_registration_correction_email( $member, $reason, $note );
 		} catch ( \Throwable $exception ) {
