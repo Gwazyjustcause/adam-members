@@ -387,6 +387,7 @@ final class MembershipForms {
 		$custom_payload = $this->custom_submission_payload( 'registration', $values, $errors, $mode, false );
 
 		if ( array() !== $errors ) {
+			$this->cleanup_registration_uploads( $profile_photo, $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
 				'errors' => $errors,
@@ -428,6 +429,7 @@ final class MembershipForms {
 		);
 
 		if ( is_wp_error( $result ) ) {
+			$this->cleanup_registration_uploads( $profile_photo, $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
 				'errors' => array( $result->get_error_message() ),
@@ -436,6 +438,38 @@ final class MembershipForms {
 
 		$this->redirect_after_success( 'registration', $mode );
 		return array( 'values' => $values );
+	}
+
+	/**
+	 * Remove media created by a registration attempt that did not create a
+	 * member. Uploads are processed before the member record so validation and
+	 * duplicate/race failures must not leave orphaned attachments behind.
+	 *
+	 * @param mixed                $profile_photo Profile attachment ID.
+	 * @param mixed                $receipt       Payment attachment ID.
+	 * @param mixed                $association   Association attachment ID.
+	 * @param array<string, mixed> $custom        Custom field payload.
+	 */
+	private function cleanup_registration_uploads( mixed $profile_photo, mixed $receipt, mixed $association, array $custom ): void {
+		$ids = array();
+		foreach ( array( $profile_photo, $receipt, $association ) as $value ) {
+			if ( is_numeric( $value ) && absint( $value ) > 0 ) {
+				$ids[] = absint( $value );
+			}
+		}
+		foreach ( $custom as $key => $value ) {
+			if ( ! is_numeric( $value ) || absint( $value ) <= 0 ) {
+				continue;
+			}
+			$field_key = str_starts_with( (string) $key, 'adam_custom_' ) ? substr( (string) $key, 12 ) : (string) $key;
+			$config = $this->field_config( 'registration', $field_key );
+			if ( 'file' === (string) ( $config['type'] ?? '' ) ) {
+				$ids[] = absint( $value );
+			}
+		}
+		foreach ( array_unique( $ids ) as $attachment_id ) {
+			wp_delete_attachment( $attachment_id, true );
+		}
 	}
 
 	/**

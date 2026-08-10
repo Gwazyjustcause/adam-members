@@ -85,7 +85,11 @@
 	}
 
 	function setNifState( form, input, feedback, status, message ) {
-		var blocked = [ 'invalid', 'duplicate', 'checking', 'error' ].includes( status );
+		// A remote availability check is only an advisory duplicate lookup. It
+		// must never leave the submit control disabled while the request is
+		// pending or when the endpoint is unavailable; the server performs the
+		// authoritative local checksum/duplicate validation.
+		var blocked = [ 'invalid', 'duplicate', 'error' ].includes( status );
 
 		input.dataset.adamNifStatus = status;
 		input.setCustomValidity(
@@ -195,7 +199,7 @@
 				setNifState( form, input, feedback, status, message );
 				if ( ( 'available' === status || 'local_valid' === status ) && submitAfterCheck ) {
 					submitAfterCheck = false;
-					if ( form.requestSubmit ) { form.requestSubmit(); }
+					if ( form.requestSubmit ) { form.requestSubmit(); } else { form.submit(); }
 				}
 			} ).catch( function ( error ) {
 				if ( 'AbortError' === error.name || input.value.trim() !== value ) {
@@ -401,4 +405,13 @@
 	} );
 
 	document.querySelectorAll( '[data-adam-searchable-select]' ).forEach( initializeSearchableSelect );
+
+	// Safari/mobile browsers may restore a submitted form from the back-forward
+	// cache with its submit control still disabled. A fresh page state must
+	// always allow the member to correct errors or retry the submission.
+	window.addEventListener( 'pageshow', function () {
+		document.querySelectorAll( '.adam-membership-native-form button[type="submit"]' ).forEach( function ( button ) {
+			button.disabled = false;
+		} );
+	} );
 }() );

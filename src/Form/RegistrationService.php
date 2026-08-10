@@ -119,6 +119,7 @@ final class RegistrationService {
 			return $lock;
 		}
 
+		$user_id = 0;
 		try {
 			if ( $this->members->nif_exists( $nif ) ) {
 				return $this->duplicate_nif_error();
@@ -132,10 +133,29 @@ final class RegistrationService {
 
 			$member = new Member( (int) $user_id );
 			$member->initialize( $this->build_member_data( $payload ) );
+		} catch ( \Throwable $exception ) {
+			// A failed initialization must not leave a user whose NIF blocks a
+			// subsequent registration attempt. Remove only the user created by
+			// this request; existing records are never touched here.
+			if ( $user_id > 0 ) {
+				if ( ! function_exists( 'wp_delete_user' ) ) {
+					require_once ABSPATH . 'wp-admin/includes/user.php';
+				}
+				wp_delete_user( $user_id );
+			}
+			$this->logger->error(
+				'Falha ao criar o registo de inscrição; criação revertida.',
+				array( 'exception' => $exception->getMessage() )
+			);
+			return new WP_Error(
+				'adam_membership_registration_failed',
+				__( 'Não foi possível concluir a inscrição. Verifique os dados e tente novamente.', 'adam-membership' )
+			);
 		} finally {
 			$this->release_nif_lock( $lock );
 		}
 
+		try {
 		$user = get_user_by( 'ID', (int) $user_id );
 
 		if ( $user instanceof \WP_User ) {
@@ -162,6 +182,20 @@ final class RegistrationService {
 			)
 		);
 		$this->history->registration_submitted( $member, $entry_id );
+		} catch ( \Throwable $exception ) {
+			if ( ! function_exists( 'wp_delete_user' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/user.php';
+			}
+			wp_delete_user( (int) $user_id );
+			$this->logger->error(
+				'Falha ao finalizar a inscrição; criação revertida.',
+				array( 'exception' => $exception->getMessage() )
+			);
+			return new WP_Error(
+				'adam_membership_registration_failed',
+				__( 'Não foi possível concluir a inscrição. Verifique os dados e tente novamente.', 'adam-membership' )
+			);
+		}
 
 		return $member;
 	}
