@@ -183,7 +183,7 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .adam-membership-landing .adam-landing-membership-card__flag{display:block!important;padding:7px 15px!important;color:#fff!important;background-color:#557d0a!important;background-image:none!important;border:0!important}
 .entry-content .adam-landing-membership-card__flag,
 .editor-styles-wrapper .adam-landing-membership-card__flag,
-.adam-membership-landing .adam-landing-membership-card__flag{left:50%;right:auto;transform:translateX(-50%)}
+.adam-membership-landing .adam-landing-membership-card__flag{top:-13px;right:22px;left:auto;transform:none;text-align:center}
 
 /* Process cards: white surfaces with the ADAM green type and numbered rings. */
 .entry-content .adam-landing-steps li,
