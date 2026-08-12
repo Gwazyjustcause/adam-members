@@ -174,6 +174,15 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .entry-content .adam-landing-membership-card--featured,
 .editor-styles-wrapper .adam-landing-membership-card--featured{border:2px solid var(--landing-green)!important;border-style:solid!important}
 
+/* Blocksy adds dark fills to details/summary in night mode. FAQ text should
+ * sit directly on the editable section background. */
+.entry-content .adam-landing-faq .adam-landing-faq-item,
+.entry-content .adam-landing-faq .adam-landing-faq-item summary,
+.entry-content .adam-landing-faq .adam-landing-faq-item p,
+.editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item,
+.editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item summary,
+.editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item p{background:transparent!important}
+
 /* Backgrounds belong to the editable Gutenberg blocks/theme. Do not impose a
  * light/dark process or FAQ background from the plugin stylesheet. */
 .editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
