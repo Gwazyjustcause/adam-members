@@ -203,6 +203,12 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item,
 .editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item summary,
 .editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item p{background:transparent!important}
+.entry-content details.adam-landing-faq-item,
+.entry-content details.adam-landing-faq-item>summary,
+.entry-content details.adam-landing-faq-item>p,
+.editor-styles-wrapper details.adam-landing-faq-item,
+.editor-styles-wrapper details.adam-landing-faq-item>summary,
+.editor-styles-wrapper details.adam-landing-faq-item>p{background-color:transparent!important;background-image:none!important}
 
 /* Backgrounds belong to the editable Gutenberg blocks/theme. Do not impose a
  * light/dark process or FAQ background from the plugin stylesheet. */
