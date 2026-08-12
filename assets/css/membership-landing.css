@@ -136,6 +136,16 @@
 .editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item p{margin:0;padding:0 42px 22px 0;color:#5f6b55!important;font-size:.95rem;line-height:1.65}
 @media(max-width:900px){.editor-styles-wrapper .adam-landing-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.editor-styles-wrapper .adam-landing-steps:before{display:none}.editor-styles-wrapper .adam-landing-steps li:not(:last-child):after{display:none}}
 @media(max-width:620px){.editor-styles-wrapper .adam-landing-steps{grid-template-columns:1fr}.editor-styles-wrapper .adam-landing-steps li{min-height:0;padding-bottom:22px;text-align:left}.editor-styles-wrapper .adam-landing-steps li:before{margin:0 0 16px}.editor-styles-wrapper .adam-landing-faq .adam-landing-faq-item{padding-inline:16px}}
+
+/* Keep the process title readable in both Blocksy theme modes. The arrow is
+ * intentionally transparent; a filled pseudo-element creates a white bar
+ * when the dark theme is active. */
+.entry-content .adam-landing-section--process .adam-landing-heading h2{color:#18220e!important}
+.entry-content .adam-landing-steps li:not(:last-child):after{background:transparent}
+.editor-styles-wrapper .adam-landing-section--process .adam-landing-heading h2{color:#18220e!important}
+.editor-styles-wrapper .adam-landing-steps li:not(:last-child):after{background:transparent}
+body.adam-theme-dark .entry-content .adam-landing-section--process .adam-landing-heading h2{color:#f7f8ee!important}
+body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):after{background:transparent}
 .editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
 .editor-styles-wrapper .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
 @media(max-width:900px){.editor-styles-wrapper .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
