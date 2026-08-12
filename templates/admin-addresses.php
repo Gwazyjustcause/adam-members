@@ -18,6 +18,7 @@ $notice = sanitize_key( $_GET['adam_notice'] ?? '' );
 	if ( 'duplicate' === $notice ) :
 		?>
 		<div class="notice notice-error"><p><?php esc_html_e( 'Cada função deve utilizar uma página WordPress diferente.', 'adam-membership' ); ?></p></div><?php endif; ?>
+	<?php if ( 'restored' === $notice ) : ?><div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'O conteúdo anterior da página Associa-te foi restaurado. A revisão do renderer ADAM continua disponível no histórico da página.', 'adam-membership' ); ?></p></div><?php endif; ?>
 	<form class="adam-card" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 		<input type="hidden" name="action" value="adam_membership_save_addresses">
 		<?php wp_nonce_field( 'adam_membership_save_addresses' ); ?>
@@ -50,7 +51,7 @@ else :
 			<?php
 			if ( $row['exists'] ) :
 				?>
-				<a class="button" href="<?php echo esc_url( get_edit_post_link( $row['id'], 'raw' ) ); ?>"><?php esc_html_e( 'Editar página', 'adam-membership' ); ?></a> <a class="button" href="<?php echo esc_url( get_permalink( $row['id'] ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir', 'adam-membership' ); ?></a>
+				<a class="button" href="<?php echo esc_url( get_edit_post_link( $row['id'], 'raw' ) ); ?>"><?php esc_html_e( 'Editar página', 'adam-membership' ); ?></a> <a class="button" href="<?php echo esc_url( get_permalink( $row['id'] ) ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Abrir', 'adam-membership' ); ?></a><?php if ( ! empty( $row['has_backup'] ) ) : ?> <a class="button" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'action', 'adam_membership_restore_landing_content', admin_url( 'admin-post.php' ) ), 'adam_membership_restore_landing_content' ) ); ?>"><?php esc_html_e( 'Restaurar conteúdo anterior', 'adam-membership' ); ?></a><?php endif; ?>
 				<?php
 else :
 				$recover = wp_nonce_url(

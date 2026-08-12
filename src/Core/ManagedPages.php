@@ -16,7 +16,7 @@ use WP_Post;
  * Creates, resolves and administers all plugin-owned public pages.
  */
 final class ManagedPages {
-	private const VERSION              = '1.0.1';
+	private const VERSION              = '1.1.0';
 	private const OPTION_IDS           = 'adam_membership_managed_page_ids';
 	private const OPTION_VER           = 'adam_membership_managed_pages_version';
 	private const META_KEY             = '_adam_membership_managed_page';
@@ -31,6 +31,7 @@ final class ManagedPages {
 		add_action( 'admin_menu', array( $this, 'register_menu' ), 20 );
 		add_action( 'admin_post_adam_membership_save_addresses', array( $this, 'save' ) );
 		add_action( 'admin_post_adam_membership_recover_page', array( $this, 'recover' ) );
+		add_action( 'admin_post_adam_membership_restore_landing_content', array( $this, 'restore_landing_content' ) );
 		add_filter( 'adam_membership_member_area_url', array( $this, 'member_area_url' ) );
 
 		if ( function_exists( 'adam_ui_register_system_pages' ) ) {
@@ -41,6 +42,12 @@ final class ManagedPages {
 	/** @return array<string,array{label:string,title:string,slug:string,content:string}> */
 	public static function definitions(): array {
 		return array(
+			'landing'            => array(
+				'label'   => __( 'Associa-te', 'adam-membership' ),
+				'title'   => __( 'Associa-te', 'adam-membership' ),
+				'slug'    => 'associa-te',
+				'content' => '[adam_membership_landing]',
+			),
 			'registration'       => array(
 				'label'   => __( 'Inscrição', 'adam-membership' ),
 				'title'   => __( 'Inscrição', 'adam-membership' ),
@@ -110,6 +117,7 @@ final class ManagedPages {
 		foreach ( array_keys( self::definitions() ) as $key ) {
 			self::ensure( $key );
 		}
+		self::migrate_landing_page();
 		update_option( self::OPTION_VER, self::VERSION, false );
 		self::$synchronizing = false;
 	}
@@ -181,6 +189,7 @@ final class ManagedPages {
 				'page'       => $page,
 				'exists'     => $page instanceof WP_Post && 'trash' !== $page->post_status,
 				'protected'  => $page_id && function_exists( 'adam_ui_is_system_page_protected' ) ? adam_ui_is_system_page_protected( $page_id ) : false,
+				'has_backup' => 'landing' === $key && '' !== (string) get_post_meta( $page_id, '_adam_membership_landing_previous_content', true ),
 			);
 		}
 
@@ -237,6 +246,22 @@ final class ManagedPages {
 			flush_rewrite_rules( false );
 		}
 		$this->redirect_with_notice( 'recovered' );
+	}
+
+	/** Restore the content captured before the landing-page migration. */
+	public function restore_landing_content(): never {
+		$this->authorize( 'adam_membership_restore_landing_content' );
+		$page_id = self::id( 'landing' );
+		$backup  = $page_id ? get_post_meta( $page_id, '_adam_membership_landing_previous_content', true ) : '';
+		if ( $page_id && is_string( $backup ) && '' !== $backup ) {
+			wp_update_post(
+				array(
+					'ID'           => $page_id,
+					'post_content' => $backup,
+				)
+			);
+		}
+		$this->redirect_with_notice( 'restored' );
 	}
 
 	/** Registers IDs and token entry points with the shared protection engine. */
@@ -313,6 +338,39 @@ final class ManagedPages {
 		update_post_meta( $page_id, self::META_KEY, $key );
 		self::store_id( $key, $page_id );
 		return $page_id;
+	}
+
+	/**
+	 * Adopt the existing landing page and replace its content with the plugin
+	 * renderer while keeping the page ID, slug and permalink intact.
+	 *
+	 * The original content is stored as post meta as an additional recovery
+	 * copy. wp_update_post() also creates a normal WordPress revision when
+	 * revisions are enabled for pages.
+	 */
+	private static function migrate_landing_page(): void {
+		$page_id = self::id( 'landing' );
+		$page    = $page_id ? get_post( $page_id ) : null;
+		if ( ! $page instanceof WP_Post || 'page' !== $page->post_type || 'trash' === $page->post_status ) {
+			return;
+		}
+
+		if ( has_shortcode( (string) $page->post_content, 'adam_membership_landing' ) ) {
+			return;
+		}
+
+		$backup_key = '_adam_membership_landing_previous_content';
+		if ( '' === (string) get_post_meta( $page_id, $backup_key, true ) ) {
+			update_post_meta( $page_id, $backup_key, (string) $page->post_content );
+			update_post_meta( $page_id, '_adam_membership_landing_previous_content_saved_at', current_time( 'mysql' ) );
+		}
+
+		wp_update_post(
+			array(
+				'ID'           => $page_id,
+				'post_content' => '[adam_membership_landing]',
+			)
+		);
 	}
 
 	/** Returns a legacy configured URL when one exists for the page. */
