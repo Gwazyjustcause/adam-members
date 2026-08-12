@@ -32,6 +32,7 @@ final class ManagedPages {
 		add_action( 'admin_post_adam_membership_save_addresses', array( $this, 'save' ) );
 		add_action( 'admin_post_adam_membership_recover_page', array( $this, 'recover' ) );
 		add_action( 'admin_post_adam_membership_restore_landing_content', array( $this, 'restore_landing_content' ) );
+		add_action( 'admin_post_adam_membership_migrate_landing_content', array( $this, 'migrate_landing_content' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_landing_styles' ) );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_landing_editor_styles' ) );
 		add_filter( 'adam_membership_member_area_url', array( $this, 'member_area_url' ) );
@@ -129,6 +130,10 @@ final class ManagedPages {
 		if ( self::VERSION !== (string) get_option( self::OPTION_VER, '' ) ) {
 			self::activate();
 		}
+
+		// Repair an interrupted migration even when the version option was
+		// already marked current before the repair code was deployed.
+		self::migrate_landing_page();
 	}
 
 	/** Returns a valid managed page ID. */
@@ -192,6 +197,7 @@ final class ManagedPages {
 				'exists'     => $page instanceof WP_Post && 'trash' !== $page->post_status,
 				'protected'  => $page_id && function_exists( 'adam_ui_is_system_page_protected' ) ? adam_ui_is_system_page_protected( $page_id ) : false,
 				'has_backup' => 'landing' === $key && '' !== (string) get_post_meta( $page_id, '_adam_membership_landing_previous_content', true ),
+				'legacy'     => 'landing' === $key && self::is_legacy_landing_content( $page ),
 			);
 		}
 
@@ -264,6 +270,13 @@ final class ManagedPages {
 			);
 		}
 		$this->redirect_with_notice( 'restored' );
+	}
+
+	/** Explicitly migrate the legacy landing shortcode from the admin screen. */
+	public function migrate_landing_content(): never {
+		$this->authorize( 'adam_membership_migrate_landing_content' );
+		self::migrate_landing_page();
+		$this->redirect_with_notice( 'migrated' );
 	}
 
 	/** Enqueue the landing stylesheet on the public landing page only. */
@@ -366,13 +379,20 @@ final class ManagedPages {
 	 * revisions are enabled for pages.
 	 */
 	private static function migrate_landing_page(): void {
-		$page_id = self::id( 'landing' );
+		$page_id = self::id( 'landing', true );
 		$page    = $page_id ? get_post( $page_id ) : null;
+		if ( ! $page instanceof WP_Post || 'page' !== $page->post_type ) {
+			$page = get_page_by_path( 'associa-te', OBJECT, 'page' );
+			if ( $page instanceof WP_Post ) {
+				$page_id = (int) $page->ID;
+				self::store_id( 'landing', $page_id );
+			}
+		}
 		if ( ! $page instanceof WP_Post || 'page' !== $page->post_type || 'trash' === $page->post_status ) {
 			return;
 		}
 
-		if ( ! has_shortcode( (string) $page->post_content, 'adam_membership_landing' ) ) {
+		if ( ! self::is_legacy_landing_content( $page ) ) {
 			return;
 		}
 
@@ -388,6 +408,11 @@ final class ManagedPages {
 				'post_content' => self::landing_block_content(),
 			)
 		);
+	}
+
+	/** Identify only the old shortcode-only page content for safe repair. */
+	private static function is_legacy_landing_content( ?WP_Post $page ): bool {
+		return $page instanceof WP_Post && 1 === preg_match( '/^\s*\[adam_membership_landing\]\s*$/', (string) $page->post_content );
 	}
 
 	/** Build the editable Gutenberg document used for the one-time migration. */
