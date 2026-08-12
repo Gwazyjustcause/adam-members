@@ -184,6 +184,7 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .entry-content .adam-landing-membership-card__flag,
 .editor-styles-wrapper .adam-landing-membership-card__flag,
 .adam-membership-landing .adam-landing-membership-card__flag{top:-13px;right:22px;left:auto;transform:none;text-align:center}
+body.page-id-1094 .adam-landing-membership-card__flag{top:-13px!important;right:22px!important;left:auto!important;transform:none!important;text-align:center!important}
 
 /* Process cards: white surfaces with the ADAM green type and numbered rings. */
 .entry-content .adam-landing-steps li,
