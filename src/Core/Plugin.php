@@ -36,7 +36,6 @@ use AdamMembership\Event\EventFrontend;
 use AdamMembership\Event\EventRepository;
 use AdamMembership\Event\EventService;
 use AdamMembership\Export\CompleteMemberExportService;
-use AdamMembership\Frontend\MembershipLanding;
 use AdamMembership\Member\Account;
 use AdamMembership\Member\AccountSetup;
 use AdamMembership\Member\ApprovalService;
@@ -218,7 +217,6 @@ final class Plugin {
 		( new RewardQrFrontend( $rewards, $members ) )->register();
 		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition, $communication_preferences, $apd_association, $member_changes ) )->register();
 		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams ) )->register();
-		( new MembershipLanding( $settings ) )->register();
 		$account_setup->register();
 		( new PasswordRecovery( $email, $members, $history ) )->register();
 		( new PasswordReset( $members, $history ) )->register();

@@ -18,7 +18,7 @@ $assert = static function ( bool $condition, string $message ): void {
 	}
 };
 
-foreach ( array( 'registration', 'renewal', 'member_area', 'account_setup', 'password_recovery', 'password_reset', 'change_email', 'change_password', 'email_confirmation' ) as $key ) {
+foreach ( array( 'registration', 'landing', 'renewal', 'member_area', 'account_setup', 'password_recovery', 'password_reset', 'change_email', 'change_password', 'email_confirmation' ) as $key ) {
 	$assert( str_contains( $managed, "'{$key}'" ), "Missing managed page definition: {$key}." );
 }
 
@@ -29,5 +29,7 @@ $assert( str_contains( $template, 'Página Protegida' ) && str_contains( $templa
 $assert( str_contains( $bootstrap, 'new ManagedPages()' ), 'Managed pages are not booted.' );
 $assert( str_contains( $activation, 'ManagedPages::activate()' ), 'Managed pages are not created during activation.' );
 $assert( str_contains( $ui, "'requires_ui' => '5.1.0'" ), 'ADAM UI 5.1.0 is not declared for the shared protection API.' );
+$assert( str_contains( $managed, 'landing_block_content' ), 'The landing page is not built from native Gutenberg blocks.' );
+$assert( ! str_contains( $managed, "'content' => '[adam_membership_landing]'" ), 'The landing page still depends on a shortcode as its stored content.' );
 
 echo "System pages feature smoke tests passed.\n";

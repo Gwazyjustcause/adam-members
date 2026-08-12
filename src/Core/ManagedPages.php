@@ -16,7 +16,7 @@ use WP_Post;
  * Creates, resolves and administers all plugin-owned public pages.
  */
 final class ManagedPages {
-	private const VERSION              = '1.1.0';
+	private const VERSION              = '1.2.0';
 	private const OPTION_IDS           = 'adam_membership_managed_page_ids';
 	private const OPTION_VER           = 'adam_membership_managed_pages_version';
 	private const META_KEY             = '_adam_membership_managed_page';
@@ -32,6 +32,8 @@ final class ManagedPages {
 		add_action( 'admin_post_adam_membership_save_addresses', array( $this, 'save' ) );
 		add_action( 'admin_post_adam_membership_recover_page', array( $this, 'recover' ) );
 		add_action( 'admin_post_adam_membership_restore_landing_content', array( $this, 'restore_landing_content' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_landing_styles' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_landing_editor_styles' ) );
 		add_filter( 'adam_membership_member_area_url', array( $this, 'member_area_url' ) );
 
 		if ( function_exists( 'adam_ui_register_system_pages' ) ) {
@@ -42,17 +44,17 @@ final class ManagedPages {
 	/** @return array<string,array{label:string,title:string,slug:string,content:string}> */
 	public static function definitions(): array {
 		return array(
-			'landing'            => array(
-				'label'   => __( 'Associa-te', 'adam-membership' ),
-				'title'   => __( 'Associa-te', 'adam-membership' ),
-				'slug'    => 'associa-te',
-				'content' => '[adam_membership_landing]',
-			),
 			'registration'       => array(
 				'label'   => __( 'Inscrição', 'adam-membership' ),
 				'title'   => __( 'Inscrição', 'adam-membership' ),
 				'slug'    => 'inscricao',
 				'content' => '[adam_registration_form]',
+			),
+			'landing'            => array(
+				'label'   => __( 'Associa-te', 'adam-membership' ),
+				'title'   => __( 'Associa-te', 'adam-membership' ),
+				'slug'    => 'associa-te',
+				'content' => self::landing_block_content(),
 			),
 			'renewal'            => array(
 				'label'   => __( 'Renovar Quota', 'adam-membership' ),
@@ -264,6 +266,21 @@ final class ManagedPages {
 		$this->redirect_with_notice( 'restored' );
 	}
 
+	/** Enqueue the landing stylesheet on the public landing page only. */
+	public function enqueue_landing_styles(): void {
+		if ( ! is_page( self::id( 'landing' ) ) ) {
+			return;
+		}
+		$style_path = ADAM_MEMBERSHIP_PATH . 'assets/css/membership-landing.css';
+		wp_enqueue_style( 'adam-membership-landing', ADAM_MEMBERSHIP_URL . 'assets/css/membership-landing.css', array(), file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION );
+	}
+
+	/** Enqueue the same scoped stylesheet inside the block editor. */
+	public function enqueue_landing_editor_styles(): void {
+		$style_path = ADAM_MEMBERSHIP_PATH . 'assets/css/membership-landing.css';
+		wp_enqueue_style( 'adam-membership-landing-editor', ADAM_MEMBERSHIP_URL . 'assets/css/membership-landing.css', array(), file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION );
+	}
+
 	/** Registers IDs and token entry points with the shared protection engine. */
 	public function protection_definitions(): array {
 		$token_pages = array(
@@ -355,7 +372,7 @@ final class ManagedPages {
 			return;
 		}
 
-		if ( has_shortcode( (string) $page->post_content, 'adam_membership_landing' ) ) {
+		if ( ! has_shortcode( (string) $page->post_content, 'adam_membership_landing' ) ) {
 			return;
 		}
 
@@ -368,9 +385,65 @@ final class ManagedPages {
 		wp_update_post(
 			array(
 				'ID'           => $page_id,
-				'post_content' => '[adam_membership_landing]',
+				'post_content' => self::landing_block_content(),
 			)
 		);
+	}
+
+	/** Build the editable Gutenberg document used for the one-time migration. */
+	private static function landing_block_content(): string {
+		$settings = new SettingsRepository();
+		$forms    = $settings->membership_form_settings();
+		$fees     = (array) ( $forms['fees'] ?? array() );
+		$secondary = number_format_i18n( (float) ( $fees['secondary'] ?? '12.00' ), 0 );
+		$primary   = number_format_i18n( (float) ( $fees['primary'] ?? '22.00' ), 0 );
+		$registration = $settings->registration_page_url();
+		$logo = esc_url( $settings->association_logo_url() );
+
+		$benefits = array(
+			array( 'title' => 'Ter voz na ADAM', 'text' => 'Participa nas Assembleias Gerais, apresenta ideias e ajuda a decidir o futuro da associação.' ),
+			array( 'title' => 'Mais airsoft na região Centro', 'text' => 'A tua quota ajuda-nos a criar atividades, estabelecer parcerias e desenvolver novos projetos.' ),
+			array( 'title' => 'Fazer parte da comunidade', 'text' => 'Conhece jogadores, equipas, campos e organizadores e aproxima o airsoft da região.' ),
+			array( 'title' => 'Vantagens para sócios', 'text' => 'Acesso às condições, benefícios, descontos e oportunidades disponibilizados pela ADAM.' ),
+			array( 'title' => 'Participar e ser reconhecido', 'text' => 'Participa nas atividades e acompanha o teu percurso enquanto membro da comunidade ADAM.' ),
+			array( 'title' => 'Apoiar um projeto que é nosso', 'text' => 'As quotas ajudam uma associação sem fins lucrativos a crescer e a criar oportunidades.' ),
+		);
+		$benefit_blocks = '';
+		foreach ( $benefits as $benefit ) {
+			$benefit_blocks .= '<!-- wp:group {"className":"adam-landing-benefit","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-benefit"><!-- wp:paragraph {"className":"adam-landing-icon"} --><p class="adam-landing-icon">✦</p><!-- /wp:paragraph --><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">' . esc_html( $benefit['title'] ) . '</h3><!-- /wp:heading --><!-- wp:paragraph --><p>' . esc_html( $benefit['text'] ) . '</p><!-- /wp:paragraph --></div><!-- /wp:group -->';
+		}
+
+		$faq_items = array(
+			array( 'question' => 'Tenho de estar inscrito através da ANA para ser sócio ADAM?', 'answer' => 'Não. O formulário permite escolher entre a inscrição ADAM com processo ANA e a adesão mantendo o enquadramento numa associação externa.' ),
+			array( 'question' => 'Já pertenço a outra APD. Posso aderir?', 'answer' => 'Sim. A inscrição suporta candidatos que já pertencem a outra APD e permite indicar essa associação no pedido.' ),
+			array( 'question' => 'Quanto custa ser sócio?', 'answer' => 'A quota configurada atualmente é de ' . $secondary . ' €/ano na modalidade ADAM e ' . $primary . ' €/ano na modalidade com processo ADAM + ANA.' ),
+			array( 'question' => 'O seguro está incluído?', 'answer' => 'Quando a inscrição na ANA é efetuada através da ADAM, o sistema informa que o seguro de responsabilidade civil já está incluído nesse processo.' ),
+			array( 'question' => 'Quanto tempo demora a inscrição?', 'answer' => 'O prazo depende do percurso escolhido: o sistema apresenta uma estimativa de 2–5 dias para o processo ADAM e de 2–7 dias quando depende da confirmação da ANA.' ),
+			array( 'question' => 'Quando tenho de renovar?', 'answer' => 'A quota é anual. A Área de Sócio mostra o estado e a validade da quota e disponibiliza o percurso de renovação quando aplicável.' ),
+		);
+		$faq_blocks = '';
+		foreach ( $faq_items as $faq ) {
+			$faq_blocks .= '<!-- wp:details {"className":"adam-landing-faq-item"} --><details class="wp-block-details adam-landing-faq-item"><summary>' . esc_html( $faq['question'] ) . '</summary><!-- wp:paragraph --><p>' . esc_html( $faq['answer'] ) . '</p><!-- /wp:paragraph --></details><!-- /wp:details -->';
+		}
+
+		return '<!-- wp:group {"metadata":{"name":"ADAM Membership Landing"},"className":"adam-membership-landing","layout":{"type":"constrained"}} --><div class="wp-block-group adam-membership-landing">'
+			. '<!-- wp:cover {"className":"adam-landing-hero","minHeight":640,"minHeightUnit":"px","isDark":true,"layout":{"type":"constrained"}} --><div class="wp-block-cover is-dark adam-landing-hero" style="min-height:640px"><span aria-hidden="true" class="wp-block-cover__background has-background-dim-60 has-background-dim"></span><div class="wp-block-cover__inner-container">'
+			. '<!-- wp:image {"className":"adam-landing-hero__logo","sizeSlug":"medium","linkDestination":"none"} --><figure class="wp-block-image size-medium adam-landing-hero__logo"><img src="' . $logo . '" alt="ADAM" /></figure><!-- /wp:image -->'
+			. '<!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Associação Desportiva de Airsoft do Mondego</p><!-- /wp:paragraph -->'
+			. '<!-- wp:heading {"level":1} --><h1 class="wp-block-heading">Faz parte da <mark style="background-color:transparent" class="has-inline-color has-adam-lime-color">ADAM</mark></h1><!-- /wp:heading -->'
+			. '<!-- wp:paragraph {"className":"adam-landing-lead"} --><p class="adam-landing-lead">Mais do que uma associação. Uma comunidade criada para fazer crescer o airsoft na região Centro.</p><!-- /wp:paragraph -->'
+			. '<!-- wp:group {"className":"adam-landing-date","layout":{"type":"flex","flexWrap":"nowrap"}} --><div class="wp-block-group adam-landing-date"><!-- wp:paragraph --><p>▣ &nbsp; Inscrições abrem<br><strong>dia 16 de agosto</strong></p><!-- /wp:paragraph --></div><!-- /wp:group -->'
+			. '<!-- wp:buttons {"className":"adam-landing-actions"} --><div class="wp-block-buttons adam-landing-actions"><!-- wp:button {"className":"adam-landing-button--primary"} --><div class="wp-block-button adam-landing-button--primary"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $registration ) . '">Quero ser sócio →</a></div><!-- /wp:button --><!-- wp:button {"className":"adam-landing-button--ghost","style":{"outline":{"width":"1px","offset":"0px","color":"#ffffff"}}} --><div class="wp-block-button adam-landing-button--ghost"><a class="wp-block-button__link wp-element-button" href="#vantagens">Conhecer as vantagens ↓</a></div><!-- /wp:button --></div><!-- /wp:buttons -->'
+			. '<!-- wp:paragraph {"className":"adam-landing-proof"} --><p class="adam-landing-proof">◉ A partir de ' . esc_html( $secondary ) . '€/ano &nbsp;&nbsp; · &nbsp;&nbsp; ▣ Inscrição 100% online</p><!-- /wp:paragraph -->'
+			. '</div></div><!-- /wp:cover -->'
+			. '<!-- wp:group {"metadata":{"name":"Vantagens"},"anchor":"vantagens","className":"adam-landing-section adam-landing-section--light","layout":{"type":"constrained"}} --><div id="vantagens" class="wp-block-group adam-landing-section adam-landing-section--light"><!-- wp:group {"className":"adam-landing-heading","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-heading"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">O que muda quando te juntas</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">Ser sócio da ADAM é...</h2><!-- /wp:heading --></div><!-- /wp:group --><!-- wp:group {"className":"adam-landing-benefits","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-benefits">' . $benefit_blocks . '</div><!-- /wp:group --></div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"ADAM + ANA"},"className":"adam-landing-section adam-landing-section--dark adam-landing-ana","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-section adam-landing-section--dark adam-landing-ana"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Parceria para a modalidade</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">ADAM <mark style="background-color:transparent" class="has-inline-color has-adam-lime-color">+</mark> ANA</h2><!-- /wp:heading --><!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Precisas de enquadramento através de uma APD?</h3><!-- /wp:heading --><!-- wp:paragraph --><p>Através da colaboração entre a ADAM e a Associação Nacional de Airsoft, podes tratar do processo através da ADAM.</p><!-- /wp:paragraph --><!-- wp:columns {"className":"adam-landing-ana__features"} --><div class="wp-block-columns adam-landing-ana__features"><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Seguro de acidentes pessoais</h4><!-- /wp:heading --><!-- wp:paragraph --><p>Informação e enquadramento apresentados no processo de inscrição.</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Processo através da ADAM</h4><!-- /wp:heading --><!-- wp:paragraph --><p>Trata dos teus dados e documentos através da plataforma.</p><!-- /wp:paragraph --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column"><!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Enquadramento para a prática</h4><!-- /wp:heading --><!-- wp:paragraph --><p>Uma solução para quem precisa de enquadramento associativo.</p><!-- /wp:paragraph --></div><!-- /wp:column --></div><!-- /wp:columns --><!-- wp:group {"className":"adam-landing-note","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-note"><!-- wp:paragraph --><p><strong>Já estás inscrito noutra APD?</strong><br>Também podes ser sócio da ADAM. Não precisas de mudar de APD para fazer parte da nossa associação.</p><!-- /wp:paragraph --></div><!-- /wp:group --></div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"Tipos de Sócio"},"className":"adam-landing-section adam-landing-section--light","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-section adam-landing-section--light"><div class="adam-landing-heading"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Escolhe o teu caminho</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">Tipos de sócio</h2><!-- /wp:heading --></div><!-- wp:columns {"className":"adam-landing-membership-cards"} --><div class="wp-block-columns adam-landing-membership-cards"><!-- wp:column --><div class="wp-block-column adam-landing-membership-card"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Sócio aderente</p><!-- /wp:paragraph --><!-- wp:heading --><h3 class="wp-block-heading">' . esc_html( $secondary ) . '€<small>/ano</small></h3><!-- /wp:heading --><!-- wp:paragraph --><p>Para quem quer fazer parte da ADAM mantendo o seu enquadramento associativo atual.</p><!-- /wp:paragraph --><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $registration ) . '">Aderir à ADAM →</a></div><!-- /wp:button --></div><!-- /wp:column --><!-- wp:column --><div class="wp-block-column adam-landing-membership-card adam-landing-membership-card--featured"><!-- wp:paragraph {"className":"adam-landing-membership-card__flag"} --><p class="adam-landing-membership-card__flag">ADAM + ANA</p><!-- /wp:paragraph --><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Sócio efetivo</p><!-- /wp:paragraph --><!-- wp:heading --><h3 class="wp-block-heading">' . esc_html( $primary ) . '€<small>/ano</small></h3><!-- /wp:heading --><!-- wp:paragraph --><p>Para quem pretende tratar da inscrição ADAM e do processo de enquadramento através da ANA.</p><!-- /wp:paragraph --><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $registration ) . '">Quero ADAM + ANA →</a></div><!-- /wp:button --></div><!-- /wp:column --></div><!-- /wp:columns --></div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"Como Funciona"},"className":"adam-landing-section adam-landing-section--process","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-section adam-landing-section--process"><div class="adam-landing-heading"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">Sem complicações</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">Tornar-te sócio é simples</h2><!-- /wp:heading --></div><!-- wp:list {"className":"adam-landing-steps"} --><ol class="wp-block-list adam-landing-steps"><li><strong>01 · Preenche a inscrição</strong><br>Faz o pedido online.</li><li><strong>02 · Envia os documentos</strong><br>Anexa o comprovativo necessário.</li><li><strong>03 · Efetua o pagamento</strong><br>Segue as instruções apresentadas.</li><li><strong>04 · Validação do pedido</strong><br>A ADAM analisa e aprova o processo.</li><li><strong>05 · Bem-vindo à ADAM</strong><br>Recebe a confirmação e acede à tua área.</li></ol><!-- /wp:list --></div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"Área de Sócio"},"className":"adam-landing-section adam-landing-section--dark adam-landing-member-area","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-section adam-landing-section--dark adam-landing-member-area"><!-- wp:paragraph {"className":"adam-landing-kicker"} --><p class="adam-landing-kicker">A tua ADAM. Sempre contigo.</p><!-- /wp:paragraph --><!-- wp:heading --><h2 class="wp-block-heading">Uma área de sócio feita para acompanhar o teu percurso.</h2><!-- /wp:heading --><!-- wp:paragraph --><p>A Área de Sócio existente reúne o cartão digital, QR de validação, histórico e gestão da tua conta num só lugar.</p><!-- /wp:paragraph --><!-- wp:button --><div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="' . esc_url( home_url( '/socio/' ) ) . '">Conhecer a Área de Sócio →</a></div><!-- /wp:button --></div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"FAQ"},"className":"adam-landing-section adam-landing-section--light adam-landing-faq","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-section adam-landing-section--light adam-landing-faq"><!-- wp:heading --><h2 class="wp-block-heading">Perguntas frequentes</h2><!-- /wp:heading -->' . $faq_blocks . '</div><!-- /wp:group -->'
+			. '<!-- wp:group {"metadata":{"name":"CTA Final"},"className":"adam-landing-final","layout":{"type":"constrained"}} --><div class="wp-block-group adam-landing-final"><!-- wp:heading --><h2 class="wp-block-heading">Pronto para fazer parte?</h2><!-- /wp:heading --><!-- wp:paragraph --><p>As inscrições abrem domingo, 16 de agosto.</p><!-- /wp:paragraph --><!-- wp:button {"className":"adam-landing-button--primary"} --><div class="wp-block-button adam-landing-button--primary"><a class="wp-block-button__link wp-element-button" href="' . esc_url( $registration ) . '">Quero ser sócio →</a></div><!-- /wp:button --></div><!-- /wp:group -->'
+			. '</div><!-- /wp:group -->';
 	}
 
 	/** Returns a legacy configured URL when one exists for the page. */
