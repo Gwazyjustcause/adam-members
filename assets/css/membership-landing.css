@@ -73,6 +73,44 @@
 .entry-content .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
 @media(max-width:900px){.entry-content .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
 @media(max-width:620px){.entry-content .adam-landing-benefits{grid-template-columns:1fr;grid-auto-rows:auto}.entry-content .adam-landing-benefit{height:auto}}
+
+/* Give the process section a visual journey instead of a plain text list. */
+.entry-content .adam-landing-section--process{position:relative;overflow:hidden;background:linear-gradient(135deg,#edf0df 0%,#f8f9f0 58%,#e6ecd0 100%)}
+.entry-content .adam-landing-section--process:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;background:radial-gradient(circle at 12% 25%,rgba(85,125,10,.14) 0 2px,transparent 3px),radial-gradient(circle at 86% 74%,rgba(85,125,10,.12) 0 2px,transparent 3px);background-size:34px 34px,42px 42px}
+.entry-content .adam-landing-section--process > *{position:relative;z-index:1}
+.entry-content .adam-landing-section--process .adam-landing-heading{margin-bottom:42px}
+.entry-content .adam-landing-section--process .adam-landing-heading h2{font-size:clamp(2.3rem,5vw,4.4rem);color:var(--landing-ink)}
+.entry-content .adam-landing-steps{position:relative;counter-reset:list-item;grid-template-columns:repeat(5,minmax(0,1fr));gap:18px;margin:0;padding:0!important}
+.entry-content .adam-landing-steps:before{content:"";position:absolute;top:43px;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,var(--landing-lime) 8%,var(--landing-lime) 92%,transparent);opacity:.8}
+.entry-content .adam-landing-steps li{z-index:1;min-height:188px;padding:0 14px 24px;text-align:center;background:rgba(255,255,255,.52);border:1px solid rgba(61,87,20,.14);box-shadow:0 12px 28px rgba(24,34,14,.06)}
+.entry-content .adam-landing-steps li:before{position:relative;z-index:2;width:86px;height:86px;margin:-1px auto 22px;color:#fff;border:8px solid #edf0df;background:var(--landing-green);box-shadow:0 0 0 1px rgba(85,125,10,.25),0 8px 18px rgba(24,34,14,.14);font-size:1rem}
+.entry-content .adam-landing-steps li:not(:last-child):after{content:"→";top:34px;right:-19px;z-index:3;width:38px;height:20px;color:var(--landing-green);font-size:1.4rem;line-height:20px;background:#edf0df}
+.entry-content .adam-landing-steps li strong{display:block;min-height:38px;margin:0 0 10px;color:var(--landing-ink);font-size:.9rem;line-height:1.25;letter-spacing:.02em}
+.entry-content .adam-landing-steps li br+*{display:block;color:#657158;font-size:.88rem;line-height:1.45}
+
+/* Turn FAQ rows into clear, tactile questions while retaining native Details blocks. */
+.entry-content .adam-landing-faq{background:#f7f8ee}
+.entry-content .adam-landing-faq > h2{font-size:clamp(2.3rem,5vw,4.4rem);color:var(--landing-ink)}
+.entry-content .adam-landing-faq .adam-landing-faq-item{margin:0 0 12px;padding:0 22px;background:#fff;border:1px solid rgba(61,87,20,.16);border-radius:2px;box-shadow:0 8px 20px rgba(24,34,14,.045);transition:border-color .2s,box-shadow .2s,transform .2s}
+.entry-content .adam-landing-faq .adam-landing-faq-item:hover{border-color:rgba(85,125,10,.55);box-shadow:0 12px 26px rgba(24,34,14,.09);transform:translateY(-2px)}
+.entry-content .adam-landing-faq .adam-landing-faq-item[open]{border-color:var(--landing-green);box-shadow:0 14px 28px rgba(24,34,14,.1)}
+.entry-content .adam-landing-faq .adam-landing-faq-item summary{position:relative;padding:21px 42px 21px 0;color:var(--landing-ink);font-size:1rem;line-height:1.35;list-style:none}
+.entry-content .adam-landing-faq .adam-landing-faq-item summary:after{content:"+";position:absolute;top:50%;right:0;display:grid;place-items:center;width:28px;height:28px;margin-top:-14px;color:#fff;background:var(--landing-green);border-radius:50%;font-size:1.25rem;font-weight:400;line-height:1;transition:transform .2s,background .2s}
+.entry-content .adam-landing-faq .adam-landing-faq-item[open] summary:after{content:"−";transform:rotate(180deg);background:var(--landing-deep)}
+.entry-content .adam-landing-faq .adam-landing-faq-item p{margin:0;padding:0 42px 22px 0;color:#5f6b55;font-size:.95rem;line-height:1.65}
+
+@media(max-width:900px){
+ .entry-content .adam-landing-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+ .entry-content .adam-landing-steps:before{display:none}
+ .entry-content .adam-landing-steps li:not(:last-child):after{display:none}
+}
+@media(max-width:620px){
+ .entry-content .adam-landing-steps{display:grid!important;grid-template-columns:1fr}
+ .entry-content .adam-landing-steps li{min-height:0;padding-bottom:22px;text-align:left}
+ .entry-content .adam-landing-steps li:before{margin:0 0 16px}
+ .entry-content .adam-landing-steps li strong,.entry-content .adam-landing-steps li br+*{margin-left:12px}
+ .entry-content .adam-landing-faq .adam-landing-faq-item{padding-inline:16px}
+}
 .editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
 .editor-styles-wrapper .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
 @media(max-width:900px){.editor-styles-wrapper .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
