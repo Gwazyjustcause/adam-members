@@ -34,7 +34,10 @@ final class ManagedPages {
 		add_action( 'admin_post_adam_membership_restore_landing_content', array( $this, 'restore_landing_content' ) );
 		add_action( 'admin_post_adam_membership_migrate_landing_content', array( $this, 'migrate_landing_content' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_landing_styles' ) );
-		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_landing_editor_styles' ) );
+		// enqueue_block_assets is loaded into the editor iframe as well as the
+		// frontend. This keeps the shared landing stylesheet in the same CSS
+		// context Gutenberg actually uses to render block content.
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_landing_editor_styles' ) );
 		add_filter( 'adam_membership_member_area_url', array( $this, 'member_area_url' ) );
 
 		if ( function_exists( 'adam_ui_register_system_pages' ) ) {
@@ -288,10 +291,13 @@ final class ManagedPages {
 		wp_enqueue_style( 'adam-membership-landing', ADAM_MEMBERSHIP_URL . 'assets/css/membership-landing.css', array(), file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION );
 	}
 
-	/** Enqueue the same scoped stylesheet inside the block editor. */
+	/** Enqueue the shared landing stylesheet for block content and the editor iframe. */
 	public function enqueue_landing_editor_styles(): void {
+		if ( ! is_admin() && ! is_page( self::id( 'landing' ) ) ) {
+			return;
+		}
 		$style_path = ADAM_MEMBERSHIP_PATH . 'assets/css/membership-landing.css';
-		wp_enqueue_style( 'adam-membership-landing-editor', ADAM_MEMBERSHIP_URL . 'assets/css/membership-landing.css', array(), file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION );
+		wp_enqueue_style( 'adam-membership-landing', ADAM_MEMBERSHIP_URL . 'assets/css/membership-landing.css', array(), file_exists( $style_path ) ? (string) filemtime( $style_path ) : ADAM_MEMBERSHIP_VERSION );
 	}
 
 	/** Registers IDs and token entry points with the shared protection engine. */
