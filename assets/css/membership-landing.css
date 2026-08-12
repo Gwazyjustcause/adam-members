@@ -66,6 +66,18 @@
  .adam-membership-landing .adam-landing-membership-card{min-height:0;padding:34px 26px}
 }
 
+/* The page remains editable even if an administrator removes the optional
+ * outer Group wrapper. The stylesheet is enqueued only on Associa-te, so this
+ * entry-content fallback remains page-scoped without styling other content. */
+.entry-content .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
+.entry-content .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
+@media(max-width:900px){.entry-content .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
+@media(max-width:620px){.entry-content .adam-landing-benefits{grid-template-columns:1fr;grid-auto-rows:auto}.entry-content .adam-landing-benefit{height:auto}}
+.editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
+.editor-styles-wrapper .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
+@media(max-width:900px){.editor-styles-wrapper .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
+@media(max-width:620px){.editor-styles-wrapper .adam-landing-benefits{grid-template-columns:1fr;grid-auto-rows:auto}.editor-styles-wrapper .adam-landing-benefit{height:auto}}
+
 /* Shared native-block hero composition. The same rules run on the frontend
  * and in Gutenberg; the editor-only rules below only neutralize editor canvas
  * constraints and never redefine the design. */
