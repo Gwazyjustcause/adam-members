@@ -179,7 +179,8 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .entry-content .adam-landing-membership-card,
 .editor-styles-wrapper .adam-landing-membership-card{border-width:2px!important;border-style:solid!important}
 .entry-content .adam-landing-membership-card__flag,
-.editor-styles-wrapper .adam-landing-membership-card__flag{display:block!important;padding:7px 15px!important;color:#fff!important;background:var(--landing-green)!important;border:0!important}
+.editor-styles-wrapper .adam-landing-membership-card__flag,
+.adam-membership-landing .adam-landing-membership-card__flag{display:block!important;padding:7px 15px!important;color:#fff!important;background-color:#557d0a!important;background-image:none!important;border:0!important}
 
 /* Blocksy adds dark fills to details/summary in night mode. FAQ text should
  * sit directly on the editable section background. */
