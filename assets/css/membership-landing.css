@@ -6,3 +6,62 @@
 @media(max-width:900px){.adam-landing-hero__inner,.adam-landing-member-area__inner{grid-template-columns:1fr}.adam-landing-hero__art{position:absolute;inset:0;opacity:.45}.adam-landing-hero__copy{position:relative;z-index:1}.adam-landing-benefits{grid-template-columns:repeat(2,1fr)}.adam-landing-faq{grid-template-columns:1fr;gap:35px}.adam-landing-faq .adam-landing-heading{text-align:center}.adam-landing-steps{grid-template-columns:repeat(5,1fr)}.adam-landing-steps li{padding:10px 7px}.adam-landing-steps li:not(:last-child):after{display:none}}
 @media(max-width:620px){.adam-landing-shell{width:min(100% - 32px,1180px)}.adam-landing-section{padding:64px 0}.adam-landing-hero,.adam-landing-hero__inner{min-height:710px}.adam-landing-hero__copy{padding:45px 0}.adam-landing-hero h1{font-size:clamp(3.5rem,17vw,6rem)}.adam-landing-actions,.adam-landing-button{width:100%}.adam-landing-proof{display:grid;gap:10px}.adam-landing-benefits,.adam-landing-membership-cards,.adam-landing-ana__features{grid-template-columns:1fr}.adam-landing-benefit{min-height:0}.adam-landing-note{display:block}.adam-landing-note strong,.adam-landing-note span{display:block}.adam-landing-note span{margin-top:8px}.adam-landing-steps{display:block!important;text-align:left}.adam-landing-steps li{display:grid;grid-template-columns:52px 1fr;gap:3px 15px;padding:16px 0;text-align:left;border-bottom:1px solid rgba(61,87,20,.14)}.adam-landing-steps li:before{grid-row:span 2;width:46px;height:46px;margin:0}.adam-landing-steps li strong{align-self:end}.adam-landing-steps li br+*{align-self:start}.adam-landing-member-area__inner{gap:40px}.adam-landing-member-tools{grid-template-columns:1fr}.adam-landing-membership-card{padding:30px 24px}}
 @media(prefers-color-scheme:dark){.adam-membership-landing{background:#11180d;color:#f0f3e7}.adam-landing-section--light,.adam-landing-benefit,.adam-landing-membership-card{background:#11180d}.adam-landing-benefit,.adam-landing-membership-card{border-color:rgba(180,213,59,.18)}.adam-landing-section--process{background:#18220f}.adam-landing-benefit p,.adam-landing-membership-card>p:not(.adam-landing-kicker),.adam-landing-faq details p{color:#b9c4aa}}
+
+/* Native Gutenberg landing page corrections. Keep the editable block structure,
+ * but give each section a predictable reading width and explicit contrast. */
+.adam-membership-landing .adam-landing-section,
+.adam-membership-landing .adam-landing-final{width:100%;padding-inline:24px}
+.adam-membership-landing .adam-landing-section > *,
+.adam-membership-landing .adam-landing-final > *{width:100%;max-width:1180px;margin-inline:auto}
+.adam-membership-landing .adam-landing-heading{padding-top:8px}
+
+.adam-membership-landing .adam-landing-section--light,
+.adam-membership-landing .adam-landing-section--light h2,
+.adam-membership-landing .adam-landing-section--light h3,
+.adam-membership-landing .adam-landing-section--light p{color:var(--landing-ink)}
+.adam-membership-landing .adam-landing-section--light{background:var(--landing-paper)}
+.adam-membership-landing .adam-landing-section--process{background:#edf0df;color:var(--landing-ink)}
+
+.adam-membership-landing .adam-landing-benefits{display:grid;width:100%;max-width:1180px;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.adam-membership-landing .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;gap:10px 18px;min-height:200px;padding:28px 26px;background:#fbfcf4;color:var(--landing-ink);border:1px solid rgba(62,87,24,.16)}
+.adam-membership-landing .adam-landing-benefit > .adam-landing-icon{grid-row:span 2;margin:0}
+.adam-membership-landing .adam-landing-benefit > .wp-block-heading{align-self:end;margin:0;color:var(--landing-ink);font-size:clamp(1.05rem,1.5vw,1.25rem);line-height:1.15}
+.adam-membership-landing .adam-landing-benefit > p:not(.adam-landing-icon){align-self:start;margin:0;color:#4f5b45;font-size:1rem;line-height:1.6}
+
+.adam-membership-landing .adam-landing-ana{padding-top:clamp(72px,8vw,108px);padding-bottom:clamp(72px,8vw,108px)}
+.adam-membership-landing .adam-landing-ana > *{max-width:1180px}
+.adam-membership-landing .adam-landing-ana__features{width:100%;max-width:1180px;margin:54px auto 34px}
+.adam-membership-landing .adam-landing-ana__features h4,
+.adam-membership-landing .adam-landing-ana__features strong{display:block;margin:0 0 10px;color:#fff!important;font-size:1.05rem;line-height:1.25;text-transform:uppercase}
+.adam-membership-landing .adam-landing-ana__features p{margin:0;color:rgba(255,255,255,.78)!important;font-size:.98rem;line-height:1.6}
+
+.adam-membership-landing .adam-landing-membership-cards{width:100%;max-width:1040px;margin-inline:auto;gap:28px}
+.adam-membership-landing .adam-landing-membership-card{min-height:360px;padding:46px 42px;background:#eef1df;color:var(--landing-ink);border-color:rgba(61,87,20,.18)}
+.adam-membership-landing .adam-landing-membership-card--featured{background:#f9faef;border-color:var(--landing-green)}
+.adam-membership-landing .adam-landing-membership-card h3{margin:18px 0 18px;color:var(--landing-green)!important;font-size:clamp(3.5rem,6vw,5.5rem);line-height:.92}
+.adam-membership-landing .adam-landing-membership-card h3 small{font-size:1.1rem}
+.adam-membership-landing .adam-landing-membership-card > p:not(.adam-landing-kicker){min-height:72px;margin:0;color:#4f5b45!important;font-size:1rem;line-height:1.6}
+.adam-membership-landing .adam-landing-membership-card .wp-block-button__link{font-size:.82rem}
+
+/* The landing page owns its contrast; do not let the active OS theme turn
+ * light editable sections into dark-on-dark content. */
+@media(prefers-color-scheme:dark){
+ .adam-membership-landing{background:var(--landing-paper);color:var(--landing-ink)}
+ .adam-membership-landing .adam-landing-section--light{background:var(--landing-paper)!important;color:var(--landing-ink)!important}
+ .adam-membership-landing .adam-landing-benefit{background:#fbfcf4!important;color:var(--landing-ink)!important;border-color:rgba(62,87,24,.16)!important}
+ .adam-membership-landing .adam-landing-membership-card{background:#eef1df!important;color:var(--landing-ink)!important;border-color:rgba(61,87,20,.18)!important}
+ .adam-membership-landing .adam-landing-membership-card--featured{background:#f9faef!important;border-color:var(--landing-green)!important}
+ .adam-membership-landing .adam-landing-benefit h3,.adam-membership-landing .adam-landing-section--light h2,.adam-membership-landing .adam-landing-section--light h3{color:var(--landing-ink)!important}
+ .adam-membership-landing .adam-landing-benefit > p:not(.adam-landing-icon),.adam-membership-landing .adam-landing-membership-card > p:not(.adam-landing-kicker),.adam-membership-landing .adam-landing-faq details p{color:#4f5b45!important}
+ .adam-membership-landing .adam-landing-section--process{background:#edf0df!important;color:var(--landing-ink)!important}
+}
+
+@media(max-width:900px){
+ .adam-membership-landing .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .adam-membership-landing .adam-landing-benefit{min-height:190px}
+}
+@media(max-width:620px){
+ .adam-membership-landing .adam-landing-section,.adam-membership-landing .adam-landing-final{padding-inline:16px}
+ .adam-membership-landing .adam-landing-benefits{grid-template-columns:1fr}
+ .adam-membership-landing .adam-landing-membership-card{min-height:0;padding:34px 26px}
+}
