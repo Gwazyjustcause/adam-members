@@ -146,6 +146,18 @@
 .editor-styles-wrapper .adam-landing-steps li:not(:last-child):after{background:transparent}
 body.adam-theme-dark .entry-content .adam-landing-section--process .adam-landing-heading .wp-block-heading{color:#f7f8ee!important}
 body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):after{background:transparent}
+
+/* Backgrounds belong to the editable Gutenberg blocks/theme. Do not impose a
+ * light/dark process or FAQ background from the plugin stylesheet. */
+.entry-content .adam-landing-section--process,
+.entry-content .adam-landing-faq{background:revert}
+.editor-styles-wrapper .adam-landing-section--process,
+.editor-styles-wrapper .adam-landing-faq{background:revert!important}
+
+/* Pale light-mode circles need dark numerals; dark mode can use white. */
+.entry-content .adam-landing-steps li:before{color:#18220e!important}
+.editor-styles-wrapper .adam-landing-steps li:before{color:#18220e!important}
+body.adam-theme-dark .entry-content .adam-landing-steps li:before{color:#fff!important}
 .editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
 .editor-styles-wrapper .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px}
 @media(max-width:900px){.editor-styles-wrapper .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}}
