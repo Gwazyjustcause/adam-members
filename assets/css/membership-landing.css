@@ -185,6 +185,16 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .editor-styles-wrapper .adam-landing-membership-card__flag,
 .adam-membership-landing .adam-landing-membership-card__flag{left:50%;right:auto;transform:translateX(-50%)}
 
+/* Process cards: white surfaces with the ADAM green type and numbered rings. */
+.entry-content .adam-landing-steps li,
+.editor-styles-wrapper .adam-landing-steps li{background:#fff!important;color:#557d0a!important}
+.entry-content .adam-landing-steps li strong,
+.entry-content .adam-landing-steps li br+*,
+.editor-styles-wrapper .adam-landing-steps li strong,
+.editor-styles-wrapper .adam-landing-steps li br+*{color:#557d0a!important}
+.entry-content .adam-landing-steps li:before,
+.editor-styles-wrapper .adam-landing-steps li:before{color:#557d0a!important;border-color:#557d0a!important;background:#fff!important}
+
 /* Blocksy adds dark fills to details/summary in night mode. FAQ text should
  * sit directly on the editable section background. */
 .entry-content .adam-landing-faq .adam-landing-faq-item,
