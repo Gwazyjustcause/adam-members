@@ -170,6 +170,10 @@ body.adam-theme-dark .entry-content .adam-landing-steps li:not(:last-child):afte
 .entry-content .adam-landing-faq,
 .editor-styles-wrapper .adam-landing-faq{background:inherit;color:inherit}
 
+/* Keep the featured Sócio Efetivo option visibly selected in light mode. */
+.entry-content .adam-landing-membership-card--featured,
+.editor-styles-wrapper .adam-landing-membership-card--featured{border:2px solid var(--landing-green)!important;border-style:solid!important}
+
 /* Backgrounds belong to the editable Gutenberg blocks/theme. Do not impose a
  * light/dark process or FAQ background from the plugin stylesheet. */
 .editor-styles-wrapper .adam-landing-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
