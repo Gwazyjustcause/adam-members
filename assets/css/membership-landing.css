@@ -22,8 +22,8 @@
 .adam-membership-landing .adam-landing-section--light{background:var(--landing-paper)}
 .adam-membership-landing .adam-landing-section--process{background:#edf0df;color:var(--landing-ink)}
 
-.adam-membership-landing .adam-landing-benefits{display:grid;width:100%;max-width:1180px;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.adam-membership-landing .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;gap:10px 18px;min-height:200px;padding:28px 26px;background:#fbfcf4;color:var(--landing-ink);border:1px solid rgba(62,87,24,.16)}
+.adam-membership-landing .adam-landing-benefits{display:grid;width:100%;max-width:1180px;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:16px}
+.adam-membership-landing .adam-landing-benefit{display:grid;grid-template-columns:48px minmax(0,1fr);grid-template-rows:auto 1fr;align-content:start;align-self:stretch;min-height:0!important;height:100%;margin:0!important;padding:28px 26px;background:#fbfcf4;color:var(--landing-ink);border:1px solid rgba(62,87,24,.16)}
 .adam-membership-landing .adam-landing-benefit > .adam-landing-icon{grid-row:span 2;margin:0}
 .adam-membership-landing .adam-landing-benefit > .wp-block-heading{align-self:end;margin:0;color:var(--landing-ink);font-size:clamp(1.05rem,1.5vw,1.25rem);line-height:1.15}
 .adam-membership-landing .adam-landing-benefit > p:not(.adam-landing-icon){align-self:start;margin:0;color:#4f5b45;font-size:1rem;line-height:1.6}
@@ -57,12 +57,12 @@
 }
 
 @media(max-width:900px){
- .adam-membership-landing .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr))}
- .adam-membership-landing .adam-landing-benefit{min-height:190px}
+ .adam-membership-landing .adam-landing-benefits{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr}
 }
 @media(max-width:620px){
  .adam-membership-landing .adam-landing-section,.adam-membership-landing .adam-landing-final{padding-inline:16px}
- .adam-membership-landing .adam-landing-benefits{grid-template-columns:1fr}
+ .adam-membership-landing .adam-landing-benefits{grid-template-columns:1fr;grid-auto-rows:auto}
+ .adam-membership-landing .adam-landing-benefit{height:auto}
  .adam-membership-landing .adam-landing-membership-card{min-height:0;padding:34px 26px}
 }
 
