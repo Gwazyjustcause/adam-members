@@ -28,6 +28,7 @@ use AdamMembership\Emails\EmailService;
 use AdamMembership\Form\MembershipForms;
 use AdamMembership\Form\NifValidationController;
 use AdamMembership\Form\RegistrationService;
+use AdamMembership\GoogleSheets\GoogleSheetsClient;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
@@ -197,7 +198,8 @@ final class Plugin {
 				$member_deletion,
 				$complete_export,
 				$apd_association,
-				$member_changes
+				$member_changes,
+				new GoogleSheetsClient( $settings )
 			);
 
 			$admin->register();

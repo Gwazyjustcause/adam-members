@@ -23,6 +23,7 @@ use AdamMembership\Event\EventService;
 use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Form\IdentificationValidator;
+use AdamMembership\GoogleSheets\GoogleSheetsClient;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
@@ -218,6 +219,7 @@ final class AdminController {
 	private CompleteMemberExportService $complete_export;
 	private ApdAssociationService $apd_association;
 	private MemberChangeService $member_changes;
+	private GoogleSheetsClient $google_sheets;
 
 	/**
 	 * Create the admin controller.
@@ -241,7 +243,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -262,6 +264,7 @@ final class AdminController {
 		$this->complete_export     = $complete_export;
 		$this->apd_association     = $apd_association;
 		$this->member_changes      = $member_changes;
+		$this->google_sheets      = $google_sheets;
 	}
 
 	/**
@@ -279,6 +282,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_delete_member_permanently', array( $this, 'handle_permanent_member_deletion' ) );
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
+		add_action( 'admin_post_adam_membership_test_google_sheets', array( $this, 'handle_test_google_sheets' ) );
 		add_action( 'admin_post_adam_membership_save_forms_settings', array( $this, 'handle_save_forms_settings' ) );
 		add_action( 'admin_post_adam_membership_save_email_settings', array( $this, 'handle_save_email_settings' ) );
 		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
@@ -981,6 +985,39 @@ final class AdminController {
 			</form>
 		</div>
 		<div class="adam-admin-panel adam-card">
+			<h2><?php esc_html_e( 'Integração Google Sheets', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'A integração usa a API Google Sheets no servidor. As credenciais nunca são guardadas no WordPress nem mostradas nesta página.', 'adam-membership' ); ?></p>
+			<?php $google_sheets = $this->settings->google_sheets_settings(); ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_save_settings">
+				<?php wp_nonce_field( 'adam_membership_save_settings' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Ativar integração', 'adam-membership' ); ?></th>
+						<td><input type="hidden" name="google_sheets_enabled" value="0"><label><input type="checkbox" name="google_sheets_enabled" value="1" <?php checked( $google_sheets['enabled'] ); ?>> <?php esc_html_e( 'Ativada', 'adam-membership' ); ?></label></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_google_sheets_spreadsheet_id"><?php esc_html_e( 'Spreadsheet ID', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_google_sheets_spreadsheet_id" name="google_sheets_spreadsheet_id" class="regular-text" value="<?php echo esc_attr( $google_sheets['spreadsheet_id'] ); ?>" autocomplete="off"><p class="description"><?php esc_html_e( 'O identificador existente na URL da spreadsheet.', 'adam-membership' ); ?></p></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="adam_google_sheets_sheet_name"><?php esc_html_e( 'Nome da página', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_google_sheets_sheet_name" name="google_sheets_sheet_name" class="regular-text" value="<?php echo esc_attr( $google_sheets['sheet_name'] ); ?>"><p class="description"><?php esc_html_e( 'Por defeito: Quotas. Nesta fase, o teste é exclusivamente de leitura.', 'adam-membership' ); ?></p></td>
+					</tr>
+				</table>
+				<p><button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar configurações', 'adam-membership' ); ?></button></p>
+			</form>
+			<hr>
+			<p><strong><?php esc_html_e( 'Credenciais do servidor:', 'adam-membership' ); ?></strong> <code>ADAM_GOOGLE_SERVICE_ACCOUNT_JSON</code></p>
+			<p class="description"><?php esc_html_e( 'Configure esta constante ou variável de ambiente no servidor com o caminho absoluto para o JSON da conta de serviço. O conteúdo do JSON não é apresentado.', 'adam-membership' ); ?></p>
+			<p><strong><?php esc_html_e( 'Estado:', 'adam-membership' ); ?></strong> <?php echo esc_html( $this->google_sheets_status_label( $google_sheets['status'] ) ); ?><?php if ( '' !== $google_sheets['last_test_at'] ) : ?> — <?php echo esc_html( sprintf( __( 'último teste: %s', 'adam-membership' ), $google_sheets['last_test_at'] ) ); ?><?php endif; ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_test_google_sheets">
+				<?php wp_nonce_field( 'adam_membership_test_google_sheets' ); ?>
+				<button type="submit" class="button button-secondary adam-button adam-button--secondary"><?php esc_html_e( 'Testar ligação (read-only)', 'adam-membership' ); ?></button>
+			</form>
+		</div>
+		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Manutenção agendada', 'adam-membership' ); ?></h2>
 			<p><?php esc_html_e( 'A manutenção de sócios é executada diariamente através do WP-Cron. Utilize este botão para executar o mesmo processo imediatamente para testes.', 'adam-membership' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -1578,6 +1615,11 @@ final class AdminController {
 		$this->settings->save_compliance_pages( $privacy_policy_url, $cookie_policy_url, $membership_terms_url );
 		$membership_forms = isset( $_POST['membership_forms'] ) && is_array( $_POST['membership_forms'] ) ? wp_unslash( $_POST['membership_forms'] ) : $this->settings->membership_form_settings();
 		$this->settings->save_membership_form_settings( $membership_forms );
+		$this->settings->save_google_sheets_settings(
+			! empty( $_POST['google_sheets_enabled'] ),
+			sanitize_text_field( wp_unslash( $_POST['google_sheets_spreadsheet_id'] ?? '' ) ),
+			sanitize_text_field( wp_unslash( $_POST['google_sheets_sheet_name'] ?? 'Quotas' ) )
+		);
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -1589,6 +1631,22 @@ final class AdminController {
 			)
 		);
 		exit;
+	}
+
+	/** Test the configured Google Sheets connection without writing spreadsheet data. */
+	public function handle_test_google_sheets(): void {
+		$this->ensure_can_manage();
+		$this->verify_admin_nonce( 'adam_membership_test_google_sheets' );
+		$result = $this->google_sheets->test_connection();
+
+		if ( is_wp_error( $result ) ) {
+			$this->settings->save_google_sheets_test_result( 'failed' );
+			$this->redirect_with_error( $result->get_error_message() );
+			return;
+		}
+
+		$this->settings->save_google_sheets_test_result( 'connected', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
+		$this->redirect_with_message( __( 'A ligação Google Sheets foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 	}
 
 	/**
@@ -5728,6 +5786,15 @@ final class AdminController {
 			self::ACTION_REMOVE_ANA       => __( 'Associação ANA removida com sucesso.', 'adam-membership' ),
 			self::ACTION_REQUEST_CORRECTION => __( 'Pedido de correção enviado com sucesso.', 'adam-membership' ),
 			default                   => __( 'Member updated successfully.', 'adam-membership' ),
+		};
+	}
+
+	/** Get a safe label for the Google Sheets connection state. */
+	private function google_sheets_status_label( string $status ): string {
+		return match ( $status ) {
+			'connected' => __( 'Ligação confirmada', 'adam-membership' ),
+			'failed'    => __( 'Falhou — consulte a mensagem do teste', 'adam-membership' ),
+			default     => __( 'Ainda não testada', 'adam-membership' ),
 		};
 	}
 

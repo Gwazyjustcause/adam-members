@@ -26,10 +26,72 @@ final class SettingsRepository {
 	private const OPTION_MEMBERSHIP_TERMS_URL      = 'adam_membership_membership_terms_url';
 	private const OPTION_MEMBERSHIP_FORM_SETTINGS  = 'adam_membership_form_settings';
 	private const OPTION_EMAIL_TEMPLATE_SETTINGS   = 'adam_membership_email_template_settings';
+	private const OPTION_GOOGLE_SHEETS_SETTINGS    = 'adam_membership_google_sheets_settings';
 	private const DEFAULT_EMAIL_FROM_NAME          = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
 	private const DEFAULT_EMAIL_FROM_ADDRESS       = 'geral@airsoftmondego.pt';
 	private const DEFAULT_ASSOCIATION_NAME         = "ADAM - Associa\u{00E7}\u{00E3}o Desportiva de Airsoft do Mondego";
 	private const DEFAULT_ASSOCIATION_LOGO         = 'https://airsoftmondego.pt/wp-content/uploads/2026/06/ADAM.png';
+
+	/**
+	 * Return Google Sheets integration settings without ever storing credentials.
+	 *
+	 * @return array{enabled:bool,spreadsheet_id:string,sheet_name:string,status:string,last_test_at:string}
+	 */
+	public function google_sheets_settings(): array {
+		$stored = get_option( self::OPTION_GOOGLE_SHEETS_SETTINGS, array() );
+		$stored = is_array( $stored ) ? $stored : array();
+
+		return array(
+			'enabled'        => ! empty( $stored['enabled'] ),
+			'spreadsheet_id' => sanitize_text_field( (string) ( $stored['spreadsheet_id'] ?? '' ) ),
+			'sheet_name'     => '' !== trim( (string) ( $stored['sheet_name'] ?? '' ) ) ? sanitize_text_field( (string) $stored['sheet_name'] ) : 'Quotas',
+			'status'         => sanitize_key( (string) ( $stored['status'] ?? 'not_tested' ) ),
+			'last_test_at'   => sanitize_text_field( (string) ( $stored['last_test_at'] ?? '' ) ),
+		);
+	}
+
+	/**
+	 * Save non-secret Google Sheets settings.
+	 *
+	 * @param bool   $enabled        Whether synchronization is enabled.
+	 * @param string $spreadsheet_id Spreadsheet ID.
+	 * @param string $sheet_name     Worksheet title.
+	 */
+	public function save_google_sheets_settings( bool $enabled, string $spreadsheet_id, string $sheet_name ): void {
+		$current = $this->google_sheets_settings();
+		update_option(
+			self::OPTION_GOOGLE_SHEETS_SETTINGS,
+			array(
+				'enabled'        => $enabled,
+				'spreadsheet_id' => sanitize_text_field( trim( $spreadsheet_id ) ),
+				'sheet_name'     => '' !== trim( $sheet_name ) ? sanitize_text_field( trim( $sheet_name ) ) : 'Quotas',
+				'status'         => $current['status'],
+				'last_test_at'   => $current['last_test_at'],
+			),
+			false
+		);
+	}
+
+	/**
+	 * Save a safe connection-test result.
+	 *
+	 * @param string $status      Result status.
+	 * @param string $tested_at   Site-local test timestamp, or empty on failure.
+	 */
+	public function save_google_sheets_test_result( string $status, string $tested_at = '' ): void {
+		$current = $this->google_sheets_settings();
+		update_option(
+			self::OPTION_GOOGLE_SHEETS_SETTINGS,
+		array_merge(
+			$current,
+			array(
+				'status'       => sanitize_key( $status ),
+				'last_test_at' => sanitize_text_field( $tested_at ),
+			)
+		),
+		false
+		);
+	}
 
 	/**
 	 * Get the last assigned numeric member number.
