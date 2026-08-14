@@ -18,8 +18,8 @@ This initial release contains the production plugin skeleton only. Business logi
 
 == Installation ==
 
-1. Upload the `adam-membership` directory to `/wp-content/plugins/`.
-2. Run `composer install --no-dev` in the plugin directory when installing from source.
+1. Deploy the repository contents to `/wp-content/plugins/adam-membership/`.
+2. No Composer command is required on the production server. The plugin uses its own PSR-4 autoloader; Composer files are development tooling only.
 3. Activate ADAM Membership through the WordPress Plugins screen.
 
 == Google Sheets connection (Phase 2) ==
@@ -35,6 +35,22 @@ The WordPress settings page does not store or display the JSON, private key, acc
 After creating the service account, copy its `client_email` from the JSON key and share the existing spreadsheet with that address as an Editor. That is the email address which must receive access; it is not necessarily the Google Cloud project owner’s email. Never commit the JSON key or private key to Git.
 
 == Changelog ==
+
+== Google Sheets setup and testing (Phase 5) ==
+
+For production, define `ADAM_GOOGLE_SERVICE_ACCOUNT_JSON` in `wp-config.php` before WordPress loads, pointing to a readable JSON file outside the webroot. Keep the file owned by the web-server account with restrictive permissions. Do not place the JSON, private key, access token, or JWT in the repository or WordPress settings.
+
+In Google Cloud, enable the Google Sheets API for the project that owns the service account, create a service-account JSON key, and share the private spreadsheet directly with the JSON `client_email` as Editor. Keep general access set to Restricted. In ADAM Socios -> Configuracoes, enter the Spreadsheet ID and worksheet name (`Quotas`), enable the integration, and use the read-only connection test before approving live synchronization.
+
+Phase 5 automated smoke tests run locally with PHP and do not boot WordPress, contact Google, or write to any spreadsheet. Run:
+
+`php tests/google-sheets-table-planner-smoke.php`
+
+`php tests/google-sheets-approval-integration-smoke.php`
+
+`php tests/google-sheets-phase5-smoke.php`
+
+The tests cover registration and renewal approval hooks, ANA delegation, duplicate request IDs, payment validation, Google failures, safe retry behavior, atomic request locking, and production-spreadsheet isolation. The complete export smoke test is independent of this feature.
 
 = 0.1.0 =
 * Initial plugin skeleton.
