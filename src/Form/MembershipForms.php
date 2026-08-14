@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Form;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\AdminPreview;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\MemberRepository;
@@ -26,18 +27,20 @@ final class MembershipForms {
 	private RegistrationService $registration;
 	private RenewalService $renewals;
 	private TeamRepository $teams;
+	private Logger $logger;
 
 	/**
 	 * @var array<string, mixed>|null
 	 */
 	private ?array $form_settings = null;
 
-	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals, TeamRepository $teams ) {
+	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals, TeamRepository $teams, Logger $logger ) {
 		$this->settings     = $settings;
 		$this->members      = $members;
 		$this->registration = $registration;
 		$this->renewals     = $renewals;
 		$this->teams        = $teams;
+		$this->logger       = $logger;
 	}
 
 	/**

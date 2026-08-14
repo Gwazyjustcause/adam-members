@@ -254,7 +254,7 @@ final class Plugin {
 		( new ConsentManager( $settings ) )->register();
 		( new RewardQrFrontend( $rewards, $members ) )->register();
 		( new MemberArea( $members, $renewals, $settings, $cards, $announcements, $documents, $points, $rewards, $account_setup, $recognition, $communication_preferences, $apd_association, $member_changes ) )->register();
-		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams ) )->register();
+		( new MembershipForms( $settings, $members, $registration_service, $renewals, $teams, $logger ) )->register();
 		$account_setup->register();
 		( new PasswordRecovery( $email, $members, $history ) )->register();
 		( new PasswordReset( $members, $history ) )->register();
