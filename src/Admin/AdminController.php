@@ -1819,36 +1819,30 @@ final class AdminController {
 
 	/** Retry one manually selected Google Sheets movement without changing approval state. */
 	public function handle_retry_google_sheets(): void {
-		$this->logger->info( 'financial_retry_post_received.' );
 		$type = '';
 		$id = 0;
 		$member = null;
 		$request = null;
 		try {
 		$this->ensure_can_manage();
-		$this->logger->info( 'financial_retry_handler_entered.' );
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
 		$this->verify_admin_nonce( 'adam_membership_retry_google_sheets_' . $type . '_' . $id );
-		$this->logger->info( 'financial_retry_validation_passed.' );
 
 		if ( 'registration' === $type ) {
 			$member = $this->members->find( $id );
 			if ( null !== $member ) {
-				$this->logger->info( 'financial_retry_sync_service_called.' );
 			}
 			$result = null !== $member ? $this->google_sheets_sync->sync_registration( $member ) : new WP_Error( 'adam_google_sheets_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		} elseif ( 'renewal' === $type ) {
 			$request = $this->renewal_repository->find( $id );
 			$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
 			if ( null !== $request && null !== $member ) {
-				$this->logger->info( 'financial_retry_sync_service_called.' );
 			}
 			$result  = null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		} else {
 			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
 		}
-		$this->logger->info( 'financial_retry_sync_service_returned.', array( 'result' => is_wp_error( $result ) ? 'error' : 'success', 'error_code' => is_wp_error( $result ) ? sanitize_key( (string) $result->get_error_code() ) : '' ) );
 
 		if ( is_wp_error( $result ) ) {
 			$this->redirect_with_error( $result->get_error_message() );
@@ -1863,7 +1857,6 @@ final class AdminController {
 				$request_id = (string) $request->request_uuid();
 			}
 			$this->google_sheets->log_exception( $request_id, 'retry_handler', $exception );
-			$this->logger->info( 'financial_retry_sync_service_returned.', array( 'result' => 'error', 'error_code' => 'adam_google_sheets_unexpected' ) );
 			$this->redirect_with_error( 'A Google Sheets synchronization failed. You can retry the operation.' );
 		}
 	}
@@ -1889,6 +1882,12 @@ final class AdminController {
 				$this->redirect_with_error( __( 'Sócio não encontrado.', 'adam-membership' ) );
 				return;
 			}
+			$sync_data = (array) get_user_meta( $member->user_id(), 'adam_membership_google_sheets_sync', true );
+			$stored_year = absint( $sync_data['membership_year'] ?? get_user_meta( $member->user_id(), 'adam_membership_year', true ) );
+			if ( absint( $sync_data['row_number'] ?? 0 ) > 0 && $stored_year !== $year ) {
+				$this->redirect_with_error( 'O ano de uma transação já sincronizada não pode ser alterado. Crie uma renovação para um novo ano.' );
+				return;
+			}
 			update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', number_format( (float) $amount, 2, '.', '' ) );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
@@ -1900,6 +1899,13 @@ final class AdminController {
 			$request = $this->renewal_repository->find( $id );
 			if ( null === $request ) {
 				$this->redirect_with_error( __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+				return;
+			}
+			$request_data = $request->data();
+			$sync_data = (array) ( $request_data['google_sheets_sync'] ?? array() );
+			$stored_year = absint( $sync_data['membership_year'] ?? ( $request_data['membership_year'] ?? 0 ) );
+			if ( absint( $sync_data['row_number'] ?? 0 ) > 0 && $stored_year !== $year ) {
+				$this->redirect_with_error( 'O ano de uma transação já sincronizada não pode ser alterado. Crie uma nova renovação para um novo ano.' );
 				return;
 			}
 			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );

@@ -36,6 +36,7 @@ adam_phase5_assert( str_contains( $plugin, 'catch ( \\Throwable $exception )' ),
 adam_phase5_assert( str_contains( $sync, 'STATUS_INACTIVE' ) && str_contains( $sync, 'is_configured' ), 'Disabled Google integration is explicitly inactive.' );
 adam_phase5_assert( str_contains( $sync, 'adam_google_sheets_payment_data_missing' ) && str_contains( $sync, 'append_table_row' ), 'Missing payment data is validated before an append.' );
 adam_phase5_assert( str_contains( $sync, 'update_table_row' ) && str_contains( $sync, 'same_row' ), 'Changed data updates the existing canonical movement row.' );
+adam_phase5_assert( str_contains( $sync, "'membership_year'" ) && str_contains( $admin, 'já sincronizada não pode ser alterado' ), 'A synchronized quota year is persisted and cannot be changed through the payment editor.' );
 adam_phase5_assert( str_contains( $sync, 'add_option( $lock_key, $lock_token' ) && str_contains( $sync, 'finally' ), 'Concurrent retries use an atomic request lock.' );
 adam_phase5_assert( str_contains( $client, '401 === $status' ) && str_contains( $client, 'adam_google_sheets_unavailable' ), 'Google failures use safe errors.' );
 

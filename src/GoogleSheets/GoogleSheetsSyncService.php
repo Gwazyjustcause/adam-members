@@ -173,7 +173,7 @@ final class GoogleSheetsSyncService {
 			if ( $this->same_row( $values, $row ) ) {
 				return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $plan['duplicate_row'] );
 			}
-			return $this->finish( $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'O ID do pedido já existe na spreadsheet com dados diferentes.', 'adam-membership' ) ), $member, $renewal_id );
+			return $this->finish( $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'Não foi possível atualizar o movimento existente.', 'adam-membership' ) ), $member, $renewal_id );
 		}
 		$appended = $this->client->append_table_row( $row, (string) $movement['request_id'] );
 		if ( is_wp_error( $appended ) ) {
@@ -203,7 +203,8 @@ final class GoogleSheetsSyncService {
 	/** Persist status metadata and a safe audit entry. */
 	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0, array $missing_fields = array() ): true|WP_Error {
 		$previous = $renewal_id > 0 ? (array) ( $this->renewals->find( $renewal_id )?->data()[ self::RENEWAL_SYNC ] ?? array() ) : (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
-		$meta = array( 'state' => $status, 'request_id' => $request_id, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'missing_fields' => $missing_fields, 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
+		$membership_year = $renewal_id > 0 ? absint( $this->renewals->find( $renewal_id )?->data()['membership_year'] ?? 0 ) : absint( get_user_meta( $member->user_id(), 'adam_membership_year', true ) );
+		$meta = array( 'state' => $status, 'request_id' => $request_id, 'membership_year' => $membership_year, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'missing_fields' => $missing_fields, 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
 		if ( $renewal_id <= 0 ) {
 			update_user_meta( $member->user_id(), self::REGISTRATION_DATA, $meta );
 		}
