@@ -43,7 +43,13 @@ final class GoogleSheetsSyncService {
 		$this->renewals = $renewals;
 	}
 
-	/** Return or create the permanent registration request ID. */
+	/**
+	 * Return or create the permanent registration request ID.
+	 *
+	 * The current registration lifecycle stores one ID per user; renewals use
+	 * independent request UUIDs. Keep this limitation explicit until a future
+	 * registration-request repository can provide one ID per registration.
+	 */
 	public function registration_request_id( int $user_id ): string {
 		$current = (string) get_user_meta( $user_id, self::REGISTRATION_UUID, true );
 		if ( '' !== $current ) {
@@ -107,7 +113,6 @@ final class GoogleSheetsSyncService {
 
 	/** Append idempotently after checking column J. */
 	private function sync( array $movement, Member $member, int $renewal_id = 0 ): true|WP_Error {
-		$this->logger->info( 'sync_service_entered.' );
 		$lock_key = 'adam_google_sheets_lock_' . md5( (string) $movement['request_id'] );
 		$lock_token = time() . ':' . wp_generate_uuid4();
 		$existing_lock = (string) get_option( $lock_key, '' );
@@ -149,14 +154,20 @@ final class GoogleSheetsSyncService {
 			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
 		}
 		$row = $this->row( $movement );
-		$this->logger->info( 'read_values_started.' );
 		$existing = $this->client->read_values( 'A5:K', (string) $movement['request_id'] );
-		$this->logger->info( 'read_values_completed.', array( 'result' => is_wp_error( $existing ) ? 'error' : 'success' ) );
 		if ( is_wp_error( $existing ) ) {
 			$this->client->log_failure( (string) $movement['request_id'], 'read_values', $existing );
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $existing, $member, $renewal_id );
 		}
 		$plan = GoogleSheetsTablePlanner::plan( (array) ( $existing['values'] ?? array() ), (string) $movement['request_id'] );
+		if ( $plan['duplicate_row'] > 0 && ! $this->same_row( $plan['duplicate_values'], $row ) ) {
+			$updated = $this->client->update_table_row( $row, (string) $movement['request_id'] );
+			if ( is_wp_error( $updated ) ) {
+				$this->client->log_failure( (string) $movement['request_id'], 'update', $updated );
+				return $this->finish( $movement['request_id'], self::STATUS_FAILED, $updated, $member, $renewal_id );
+			}
+			return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, absint( $updated['row_number'] ?? $plan['duplicate_row'] ) );
+		}
 		if ( $plan['duplicate_row'] > 0 ) {
 			$values = $plan['duplicate_values'];
 			if ( $this->same_row( $values, $row ) ) {
@@ -164,7 +175,6 @@ final class GoogleSheetsSyncService {
 			}
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'O ID do pedido já existe na spreadsheet com dados diferentes.', 'adam-membership' ) ), $member, $renewal_id );
 		}
-		$this->logger->info( 'append_started.' );
 		$appended = $this->client->append_table_row( $row, (string) $movement['request_id'] );
 		if ( is_wp_error( $appended ) ) {
 			$this->client->log_failure( (string) $movement['request_id'], 'append_or_confirmation', $appended );

@@ -30,7 +30,9 @@ adam_write_path_assert( 'quotas-table-real-id' !== (string) $metadata_fixture['s
 adam_write_path_assert( str_contains( $block, "table_metadata( \$request_id, 'table_metadata_before_write' )" ), 'Metadata is read before writing.' );
 adam_write_path_assert( str_contains( $block, "'appendCells'" ) && str_contains( $block, "':batchUpdate'" ), 'AppendCells batchUpdate payload remains present.' );
 adam_write_path_assert( str_contains( $block, "'sheetId' => \$table['sheetId']" ), 'AppendCells uses the resolved sheet ID.' );
-adam_write_path_assert( str_contains( $client, "metadata_quotas_resolved" ) && str_contains( $block, "append_cells_request_prepared" ), 'Technical sheet and table IDs are logged at both boundaries.' );
+adam_write_path_assert( str_contains( $client, 'public function update_table_row' ) && str_contains( $client, "'updateCells'" ), 'Existing rows use the updateCells path.' );
+adam_write_path_assert( str_contains( $client, "'update_metadata'" ) && str_contains( $client, "'update_confirmation'" ), 'Updates resolve and confirm current metadata.' );
+adam_write_path_assert( ! str_contains( $client, 'metadata_quotas_resolved' ) && ! str_contains( $client, 'append_cells_request_prepared' ), 'Temporary sheet ID tracing was removed.' );
 adam_write_path_assert( ! str_contains( $block, "'sheetId' => 0" ) && ! str_contains( $block, "'sheetId' => 0," ), 'AppendCells does not assume sheet ID zero.' );
 adam_write_path_assert( ! str_contains( $block, "'tableId' => \$table['tableId']" ), 'AppendCells does not confuse table ID with sheet ID.' );
 adam_write_path_assert( str_contains( $block, "self::WRITE_SCOPE,\n\t\t\tarray(),\n\t\t\t\$request_id,\n\t\t\t'append'" ), 'request_json receives an array query before request ID and stage.' );

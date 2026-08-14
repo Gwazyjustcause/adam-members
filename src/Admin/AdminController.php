@@ -1590,11 +1590,22 @@ final class AdminController {
 			$this->redirect_with_error( $reference->get_error_message() );
 		}
 
-		$result = match ( $action ) {
-			self::ACTION_PRIVATE_DOCUMENT_UPLOAD => $this->upload_private_document( $reference, $type ),
-			self::ACTION_PRIVATE_DOCUMENT_REMOVE => $this->remove_private_document( $reference ),
-			default => new WP_Error( 'adam_membership_invalid_private_document_action', __( 'Ação de documento inválida.', 'adam-membership' ) ),
-		};
+		try {
+			$result = match ( $action ) {
+				self::ACTION_PRIVATE_DOCUMENT_UPLOAD => $this->upload_private_document( $reference, $type ),
+				self::ACTION_PRIVATE_DOCUMENT_REMOVE => $this->remove_private_document( $reference ),
+				default => new WP_Error( 'adam_membership_invalid_private_document_action', __( 'Ação de documento inválida.', 'adam-membership' ) ),
+			};
+		} catch ( \Throwable $exception ) {
+			$this->logger->error( 'Private document replacement failed with an unexpected Throwable.', array(
+				'stage'          => 'admin.private_document_action.throwable',
+				'exception_class' => get_class( $exception ),
+				'exception_code'  => $exception->getCode(),
+				'exception_file'  => basename( $exception->getFile() ),
+				'exception_line'  => $exception->getLine(),
+			) );
+			$this->redirect_with_error( __( 'Não foi possível concluir a operação do documento privado. Tente novamente.', 'adam-membership' ) );
+		}
 
 		if ( $result instanceof WP_Error ) {
 			$this->redirect_with_error( $result->get_error_message() );

@@ -113,11 +113,6 @@ final class Plugin {
 		}
 
 		$this->booted = true;
-		if ( is_admin() && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			( new Logger() )->log( 'debug', 'Google Sheets diagnostics build loaded.' );
-			( new Logger() )->log( 'debug', 'Google Sheets sheet-id-fix-v2 loaded.' );
-		}
-
 		$this->register_modules();
 	}
 

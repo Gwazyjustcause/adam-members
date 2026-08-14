@@ -35,7 +35,7 @@ adam_phase5_assert( str_contains( $renewal, 'RenewalRequest::STATUS_PENDING !== 
 adam_phase5_assert( str_contains( $plugin, 'catch ( \\Throwable $exception )' ), 'Google failures are isolated from approval.' );
 adam_phase5_assert( str_contains( $sync, 'STATUS_INACTIVE' ) && str_contains( $sync, 'is_configured' ), 'Disabled Google integration is explicitly inactive.' );
 adam_phase5_assert( str_contains( $sync, 'adam_google_sheets_payment_data_missing' ) && str_contains( $sync, 'append_table_row' ), 'Missing payment data is validated before an append.' );
-adam_phase5_assert( str_contains( $sync, 'adam_google_sheets_conflict' ) && str_contains( $sync, 'same_row' ), 'Duplicate IDs are idempotent when identical and fail on conflict.' );
+adam_phase5_assert( str_contains( $sync, 'update_table_row' ) && str_contains( $sync, 'same_row' ), 'Changed data updates the existing canonical movement row.' );
 adam_phase5_assert( str_contains( $sync, 'add_option( $lock_key, $lock_token' ) && str_contains( $sync, 'finally' ), 'Concurrent retries use an atomic request lock.' );
 adam_phase5_assert( str_contains( $client, '401 === $status' ) && str_contains( $client, 'adam_google_sheets_unavailable' ), 'Google failures use safe errors.' );
 
@@ -53,6 +53,6 @@ $row = array( '42', 'Member', 2027, 'Inscricao', 'Efetivo', 25.0, '2026-12-15', 
 $plan = GoogleSheetsTablePlanner::plan( array( $row ), 'registration:test' );
 adam_phase5_assert( 5 === $plan['duplicate_row'], 'A repeated registration ID is detected at its existing row.' );
 adam_phase5_assert( GoogleSheetsTablePlanner::rows_match( $row, $plan['duplicate_values'] ), 'An identical repeated approval is idempotent.' );
-adam_phase5_assert( ! GoogleSheetsTablePlanner::rows_match( $row, array_replace( $row, array( 5 => 30.0 ) ) ), 'A repeated ID with a changed amount is a conflict.' );
+adam_phase5_assert( ! GoogleSheetsTablePlanner::rows_match( $row, array_replace( $row, array( 5 => 30.0 ) ) ), 'A repeated ID with changed data is detected for update.' );
 
 echo "Google Sheets Phase 5 smoke tests passed.\n";

@@ -141,26 +141,11 @@ final class GoogleSheetsClient {
 
 	/** Append into the real Google Sheets table, not merely into a formatted range. */
 	public function append_table_row( array $row, string $request_id = '' ): array|WP_Error {
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'metadata_read_started.' );
-		}
 		$table = $this->table_metadata( $request_id, 'table_metadata_before_write' );
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'metadata_read_completed.', array( 'result' => is_wp_error( $table ) ? 'error' : 'success' ) );
-		}
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'append_cells_metadata_resolved.', array( 'sheet_name' => (string) $this->settings->google_sheets_settings()['sheet_name'], 'sheet_id_existing' => absint( $table['sheetId'] ?? 0 ), 'table_id' => sanitize_text_field( (string) ( $table['tableId'] ?? '' ) ) ) );
-		}
-		$values = array();
-		foreach ( array_values( $row ) as $index => $value ) {
-			$values[] = array( 'userEnteredValue' => in_array( $index, array( 2, 5 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
-		}
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'append_cells_request_prepared.', array( 'sheet_id_effective' => absint( $table['sheetId'] ?? 0 ), 'table_id' => sanitize_text_field( (string) ( $table['tableId'] ?? '' ) ) ) );
-		}
+		$values = $this->cell_values( $row );
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
@@ -170,20 +155,61 @@ final class GoogleSheetsClient {
 			$request_id,
 			'append'
 		);
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'append_completed.', array( 'result' => is_wp_error( $result ) ? 'error' : 'success' ) );
-		}
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'confirmation_started.' );
-		}
 		$after = $this->table_metadata( $request_id, 'table_metadata_after_write' );
-		if ( null !== $this->logger ) {
-			$this->logger->info( 'confirmation_completed.', array( 'result' => is_wp_error( $after ) ? 'error' : 'success' ) );
-		}
 		return is_wp_error( $after ) ? $after : array( 'table' => $after );
+	}
+
+	/** Update the current row identified by its canonical ID, never by a stored row number. */
+	public function update_table_row( array $row, string $request_id = '' ): array|WP_Error {
+		$expected = array_pad( array_values( $row ), 11, '' );
+		if ( $request_id !== (string) $expected[9] ) {
+			return new WP_Error( 'adam_google_sheets_id_mismatch', __( 'O ID canónico do movimento não coincide com a linha a atualizar.', 'adam-membership' ) );
+		}
+		$current = $this->read_values( 'A5:K', $request_id );
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+		$row_number = 0;
+		foreach ( (array) ( $current['values'] ?? array() ) as $index => $stored ) {
+			$stored_row = array_pad( (array) $stored, 11, '' );
+			if ( $request_id === (string) $stored_row[9] ) {
+				$row_number = 5 + (int) $index;
+				break;
+			}
+		}
+		if ( 0 === $row_number ) {
+			return new WP_Error( 'adam_google_sheets_row_missing', __( 'A linha do movimento não foi encontrada na spreadsheet. Pode repetir a operação.', 'adam-membership' ) );
+		}
+		$table = $this->table_metadata( $request_id, 'update_metadata' );
+		if ( is_wp_error( $table ) ) {
+			return $table;
+		}
+		$result = $this->request_json(
+			'POST',
+			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
+			array( 'requests' => array( array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $row_number - 1, 'endRowIndex' => $row_number, 'startColumnIndex' => 0, 'endColumnIndex' => 11 ), 'rows' => array( array( 'values' => $this->cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ) ) ),
+			self::WRITE_SCOPE,
+			array(),
+			$request_id,
+			'update'
+		);
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$after = $this->table_metadata( $request_id, 'update_confirmation' );
+		return is_wp_error( $after ) ? $after : array( 'table' => $after, 'row_number' => $row_number );
+	}
+
+	/** Convert ordered A:K values to Sheets user-entered cell values. */
+	private function cell_values( array $row ): array {
+		$values = array();
+		foreach ( array_values( $row ) as $index => $value ) {
+			$values[] = array( 'userEnteredValue' => in_array( $index, array( 2, 5 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
+		}
+		return $values;
 	}
 
 
@@ -241,9 +267,6 @@ final class GoogleSheetsClient {
 			}
 			foreach ( (array) ( $sheet['tables'] ?? array() ) as $table ) {
 				if ( self::TABLE_NAME === (string) ( $table['name'] ?? '' ) && '' !== (string) ( $table['tableId'] ?? '' ) && isset( $sheet['properties']['sheetId'] ) ) {
-					if ( null !== $this->logger ) {
-						$this->logger->info( 'metadata_quotas_resolved.', array( 'sheet_name' => (string) ( $sheet['properties']['title'] ?? '' ), 'sheet_id_returned' => (string) $sheet['properties']['sheetId'], 'sheet_id_normalized' => absint( $sheet['properties']['sheetId'] ), 'table_id' => sanitize_text_field( (string) $table['tableId'] ) ) );
-					}
 					return array( 'tableId' => (string) $table['tableId'], 'sheetId' => absint( $sheet['properties']['sheetId'] ), 'range' => (array) ( $table['range'] ?? array() ) );
 				}
 			}

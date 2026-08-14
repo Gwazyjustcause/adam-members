@@ -42,7 +42,7 @@ $plan = GoogleSheetsTablePlanner::plan( array( $row( 'renewal:existing' ) ), 're
 adam_sheets_assert( 5 === $plan['duplicate_row'], 'An existing identical request ID is detected.' );
 adam_sheets_assert( 'renewal:existing' !== (string) $row( 'renewal:other' )[9], 'A renewal for the same member can have a different request ID.' );
 adam_sheets_assert( GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same' ) ), 'An existing ID with identical data is idempotent.' );
-adam_sheets_assert( ! GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same', 'Changed' ) ), 'An existing ID with different data is a conflict.' );
+adam_sheets_assert( ! GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same', 'Changed' ) ), 'An existing ID with different data requires an update.' );
 adam_sheets_assert( 'A4:K25' === GoogleSheetsTablePlanner::expanded_range( 'A4:K24' ), 'The first table expansion ends at row 25.' );
 adam_sheets_assert( 'A4:K26' === GoogleSheetsTablePlanner::expanded_range( GoogleSheetsTablePlanner::expanded_range( 'A4:K24' ) ), 'The second table expansion ends at row 26.' );
 
@@ -51,7 +51,7 @@ $client_source  = (string) file_get_contents( __DIR__ . '/../src/GoogleSheets/Go
 adam_sheets_assert( str_contains( $service_source, 'add_option( $lock_key, $lock_token' ), 'Synchronization uses an atomic WordPress lock.' );
 adam_sheets_assert( str_contains( $service_source, "'payment_date'" ) && str_contains( $service_source, "'method'" ), 'Payment date and method are required.' );
 adam_sheets_assert( str_contains( $service_source, 'adam_google_sheets_payment_data_missing' ), 'Missing required data stays pending and does not write.' );
-adam_sheets_assert( str_contains( $service_source, 'adam_google_sheets_conflict' ), 'An existing ID with different data is rejected.' );
+adam_sheets_assert( str_contains( $service_source, 'update_table_row' ), 'An existing ID with different data is updated.' );
 adam_sheets_assert( str_contains( $service_source, 'finally' ) && str_contains( $service_source, 'delete_option( $lock_key )' ), 'The per-request lock is released after concurrent attempts.' );
 adam_sheets_assert( str_contains( $service_source, "'Pago'" ), 'Financial status is Pago.' );
 adam_sheets_assert( str_contains( $service_source, '(float) str_replace' ), 'Amount is sent as a numeric value.' );

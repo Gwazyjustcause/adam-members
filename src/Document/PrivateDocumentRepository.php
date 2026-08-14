@@ -77,10 +77,12 @@ final class PrivateDocumentRepository {
 	public function create_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
 		$this->trace( 'Private document replacement trace v1: create_from_upload entered.', array( 'stage' => 'repository.create_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
 		$stored = $storage->store_upload( $file );
+		$this->trace( 'Private document replacement trace v1: returned immediately after store_upload.', array( 'stage' => 'repository.after_store_upload.raw', 'stored_type' => get_debug_type( $stored ) ) );
 		if ( is_wp_error( $stored ) ) {
 			$this->trace( 'Private document replacement trace v1: create_from_upload storage failed.', array( 'stage' => 'repository.create_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
 			return $stored;
 		}
+		$this->trace( 'Private document replacement trace v1: store_upload result accepted as metadata.', array( 'stage' => 'repository.after_store_upload.accepted', 'stored_is_array' => is_array( $stored ), 'identifier_key_present' => is_array( $stored ) && array_key_exists( 'identifier', $stored ) ) );
 		$this->trace( 'Private document replacement trace v1: create_from_upload storage returned.', array_merge( array( 'stage' => 'repository.create_from_upload.storage_return' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ) ) );
 
 		return $this->persist_stored( $data, $stored, $storage );
@@ -98,19 +100,27 @@ final class PrivateDocumentRepository {
 
 	/** Replace the active document while preserving the previous version. */
 	public function replace_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+		$stored              = null;
+		$transaction_started = false;
+		try {
 		$this->trace( 'Private document replacement trace v1: replace_from_upload entered.', array( 'stage' => 'repository.replace_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
 		$stored = $storage->store_upload( $file );
+		$this->trace( 'Private document replacement trace v1: returned immediately after store_upload.', array( 'stage' => 'repository.replace_after_store_upload.raw', 'stored_type' => get_debug_type( $stored ) ) );
 		if ( is_wp_error( $stored ) ) {
 			$this->trace( 'Private document replacement trace v1: replacement storage failed.', array( 'stage' => 'repository.replace_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
 			return $stored;
 		}
+		$this->trace( 'Private document replacement trace v1: store_upload result accepted as metadata.', array( 'stage' => 'repository.replace_after_store_upload.accepted', 'stored_is_array' => is_array( $stored ), 'identifier_key_present' => is_array( $stored ) && array_key_exists( 'identifier', $stored ) ) );
 		$this->trace( 'Private document replacement trace v1: replacement storage returned.', array_merge( array( 'stage' => 'repository.replace_from_upload.storage_return' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ) ) );
 
 		global $wpdb;
 		$reference = (string) ( $data['request_reference'] ?? '' );
 		$wpdb->query( 'START TRANSACTION' );
+		$transaction_started = true;
 		$current = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1 FOR UPDATE', $reference ), ARRAY_A );
+		$this->trace( 'Private document replacement trace v1: before reading stored identifier.', array( 'stage' => 'repository.replace_before_identifier_read', 'stored_is_array' => is_array( $stored ) ) );
 		$file_identifier = (string) ( $stored['identifier'] ?? '' );
+		$this->trace( 'Private document replacement trace v1: stored identifier read.', array_merge( array( 'stage' => 'repository.replace_after_identifier_read' ), $this->identifier_diagnostic( $file_identifier, 'identifier' ) ) );
 		$this->trace( 'Private document replacement trace v1: identifier mapped to file_identifier.', array_merge( array( 'stage' => 'repository.identifier_mapping' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
 		$result = $this->create( array_merge( $data, $stored, array( 'file_identifier' => $file_identifier, 'active_key' => is_array( $current ) ? null : $reference ) ) );
 		if ( is_wp_error( $result ) ) {
@@ -141,6 +151,22 @@ final class PrivateDocumentRepository {
 		$this->trace( 'Private document replacement trace v1: replacement committed.', array( 'stage' => 'repository.replace_from_upload.commit', 'document_id' => $result->id() ) );
 
 		return $result;
+		} catch ( \Throwable $exception ) {
+			if ( $transaction_started ) {
+				$wpdb->query( 'ROLLBACK' );
+			}
+			if ( is_array( $stored ) ) {
+				$storage->delete_identifier( (string) ( $stored['identifier'] ?? '' ) );
+			}
+			$this->trace( 'Private document replacement trace v1: unexpected Throwable caught; replacement rolled back.', array(
+				'stage'          => 'repository.replace_from_upload.throwable',
+				'exception_class' => get_class( $exception ),
+				'exception_code'  => $exception->getCode(),
+				'exception_file'  => basename( $exception->getFile() ),
+				'exception_line'  => $exception->getLine(),
+			) );
+			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível substituir o documento privado.', 'adam-membership' ) );
+		}
 	}
 
 	/** @param array<string, mixed> $stored */
