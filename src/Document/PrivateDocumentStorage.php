@@ -15,6 +15,41 @@ use WP_Error;
 final class PrivateDocumentStorage {
 	private const PDF_SIGNATURE = '%PDF';
 
+	/** @return array{state:string,message:string,can_create:bool} */
+	public function configuration_status(): array {
+		if ( ! defined( 'ADAM_PRIVATE_DOCUMENTS_PATH' ) || '' === trim( (string) ADAM_PRIVATE_DOCUMENTS_PATH ) ) {
+			return array( 'state' => 'not_configured', 'message' => __( 'Diretório não configurado.', 'adam-membership' ), 'can_create' => false );
+		}
+
+		$configured = rtrim( (string) ADAM_PRIVATE_DOCUMENTS_PATH, '\\/ ' );
+		if ( ! $this->is_absolute_path( $configured ) ) {
+			return array( 'state' => 'unsafe', 'message' => __( 'O caminho configurado não é absoluto e não é seguro.', 'adam-membership' ), 'can_create' => false );
+		}
+
+		$webroot = defined( 'ABSPATH' ) ? realpath( ABSPATH ) : false;
+		$parent  = realpath( dirname( $configured ) );
+		if ( false === $parent || ! is_dir( $parent ) || ! is_readable( $parent ) || ! is_writable( $parent ) ) {
+			return array( 'state' => 'parent_unavailable', 'message' => __( 'O diretório pai não existe ou não permite criação pelo PHP.', 'adam-membership' ), 'can_create' => false );
+		}
+		if ( false !== $webroot && $this->is_within( $parent, $webroot ) ) {
+			return array( 'state' => 'unsafe', 'message' => __( 'O armazenamento está dentro de uma localização publicamente acessível.', 'adam-membership' ), 'can_create' => false );
+		}
+
+		if ( ! is_dir( $configured ) ) {
+			return array( 'state' => 'directory_missing', 'message' => __( 'Diretório ainda não criado; o plugin poderá criá-lo quando o pai for válido.', 'adam-membership' ), 'can_create' => true );
+		}
+		if ( ! is_readable( $configured ) || ! is_writable( $configured ) ) {
+			return array( 'state' => 'not_writable', 'message' => __( 'O diretório existe, mas o PHP não tem permissões de leitura e escrita.', 'adam-membership' ), 'can_create' => false );
+		}
+
+		$resolved = realpath( $configured );
+		if ( false === $resolved || ( false !== $webroot && $this->is_within( $resolved, $webroot ) ) ) {
+			return array( 'state' => 'unsafe', 'message' => __( 'O caminho resolvido está numa localização publicamente acessível.', 'adam-membership' ), 'can_create' => false );
+		}
+
+		return array( 'state' => 'operational', 'message' => __( 'Configurado e operacional.', 'adam-membership' ), 'can_create' => false );
+	}
+
 	/** @return array{identifier:string,original_name:string,mime:string,file_size:int,sha256:string}|WP_Error */
 	public function store_upload( array $file ): array|WP_Error {
 		$directory = $this->directory();

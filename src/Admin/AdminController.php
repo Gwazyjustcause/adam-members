@@ -564,6 +564,25 @@ final class AdminController {
 		$this->render_footer();
 	}
 
+	/** Render a safe diagnostic for private document storage. */
+	private function render_private_document_storage_status(): void {
+		$status  = $this->private_document_storage->configuration_status();
+		$classes = array( 'adam-private-document-storage-status', 'adam-private-document-storage-status--' . sanitize_html_class( $status['state'] ) );
+		?>
+		<div class="adam-admin-panel adam-card <?php echo esc_attr( implode( ' ', $classes ) ); ?>">
+			<h2><?php esc_html_e( 'Armazenamento de documentos privados', 'adam-membership' ); ?></h2>
+			<p><strong><?php echo esc_html( $status['message'] ); ?></strong></p>
+			<?php if ( 'not_configured' === $status['state'] ) : ?>
+				<p class="description"><?php esc_html_e( 'Defina ADAM_PRIVATE_DOCUMENTS_PATH no wp-config.php com um caminho absoluto fora da webroot. O plugin não usa a Media Library nem uploads públicos.', 'adam-membership' ); ?></p>
+			<?php elseif ( 'directory_missing' === $status['state'] ) : ?>
+				<p class="description"><?php esc_html_e( 'O diretório será criado apenas porque o diretório pai configurado é válido e está fora da webroot.', 'adam-membership' ); ?></p>
+			<?php elseif ( 'operational' !== $status['state'] ) : ?>
+				<p class="description"><?php esc_html_e( 'Corrija o caminho ou as permissões no servidor. Nenhum documento será guardado enquanto esta verificação falhar.', 'adam-membership' ); ?></p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
 	/**
 	 * Render the founders page.
 	 */
@@ -923,6 +942,7 @@ final class AdminController {
 
 		$this->render_header( __( 'Configurações ADAM', 'adam-membership' ) );
 		$this->render_notices();
+		$this->render_private_document_storage_status();
 		?>
 		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Numeração de Sócios', 'adam-membership' ); ?></h2>
