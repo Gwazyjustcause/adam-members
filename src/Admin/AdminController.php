@@ -3302,10 +3302,13 @@ final class AdminController {
 		$data = null === $request ? array( 'membership_year' => get_user_meta( $member->user_id(), 'adam_membership_year', true ), 'payment_amount' => get_user_meta( $member->user_id(), 'adam_membership_payment_amount', true ), 'payment_date' => get_user_meta( $member->user_id(), 'adam_membership_payment_date', true ), 'payment_method' => get_user_meta( $member->user_id(), 'adam_membership_payment_method', true ) ) : $request->data();
 		$sync = null === $request ? get_user_meta( $member->user_id(), 'adam_membership_google_sheets_sync', true ) : ( $data['google_sheets_sync'] ?? array() );
 		$sync = is_array( $sync ) ? $sync : array();
+		$sync_labels = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' );
+		$sync_state = (string) ( $sync['state'] ?? 'pending' );
 		?>
 		<div class="adam-admin-panel adam-card">
 			<h2>Google Sheets — movimento financeiro</h2>
-			<p><?php echo esc_html( sprintf( 'Estado: %s. ID: %s', (string) ( $sync['state'] ?? 'Pendente' ), null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid() ) ); ?></p>
+			<p><?php echo esc_html( sprintf( 'Estado: %s. ID: %s', $sync_labels[ $sync_state ] ?? $sync_state, null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid() ) ); ?></p>
+			<?php if ( ! empty( $sync['missing_fields'] ) && is_array( $sync['missing_fields'] ) ) : ?><p><strong>Dados em falta:</strong> <?php echo esc_html( implode( ', ', array_map( 'strval', $sync['missing_fields'] ) ) ); ?></p><?php endif; ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id ); ?>
 				<label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="<?php echo esc_attr( (string) ( $data['membership_year'] ?? '' ) ); ?>"></label>

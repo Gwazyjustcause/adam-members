@@ -184,7 +184,7 @@ final class RenewalService {
 		delete_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_sent' );
 		delete_user_meta( $member->user_id(), 'adam_membership_renewal_reminder_date' );
 
-		$this->renewals->update(
+		$approved_request = $this->renewals->update(
 			$request,
 			array(
 				'status'      => RenewalRequest::STATUS_APPROVED,
@@ -198,6 +198,7 @@ final class RenewalService {
 		$this->recognition->handle_renewal_approved( $member );
 		$this->history->renewal_approved( $member, $request->id(), $old_expiry, $new_expiry, $field_changes );
 		$this->email->send_renewal_approved_email( $member, $request->id() );
+		do_action( 'adam_membership_renewal_approved', $approved_request, $member );
 
 		return true;
 	}

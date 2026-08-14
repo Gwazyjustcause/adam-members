@@ -23,6 +23,7 @@ final class GoogleSheetsSyncService {
 	public const STATUS_PENDING = 'pending';
 	public const STATUS_SYNCED  = 'synchronized';
 	public const STATUS_FAILED  = 'failed';
+	public const STATUS_INACTIVE = 'inactive';
 	public const PAYMENT_METHODS = array( 'Transferência bancária', 'MB WAY', 'Cartão', 'Numerário', 'Outro' );
 
 	private const REGISTRATION_UUID = 'adam_membership_registration_request_uuid';
@@ -126,6 +127,9 @@ final class GoogleSheetsSyncService {
 
 	/** Perform validation, duplicate detection and a bounded table write while locked. */
 	private function sync_locked( array $movement, Member $member, int $renewal_id = 0 ): true|WP_Error {
+		if ( ! $this->client->is_configured() ) {
+			return $this->finish( $movement['request_id'], self::STATUS_INACTIVE, true, $member, $renewal_id );
+		}
 		$missing = array_filter( array( 'year', 'amount', 'payment_date', 'method' ), static fn ( string $key ): bool => '' === trim( (string) ( $movement[ $key ] ?? '' ) ) );
 		if ( '' !== trim( (string) ( $movement['amount'] ?? '' ) ) && ! is_numeric( str_replace( ',', '.', (string) $movement['amount'] ) ) ) {
 			$missing['amount'] = true;
@@ -138,7 +142,7 @@ final class GoogleSheetsSyncService {
 			$missing['method'] = true;
 		}
 		if ( array() !== $missing ) {
-			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id );
+			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
 		}
 		$row = $this->row( $movement );
 		$existing = $this->client->read_values( 'A5:K' );
@@ -178,9 +182,9 @@ final class GoogleSheetsSyncService {
 	}
 
 	/** Persist status metadata and a safe audit entry. */
-	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0 ): true|WP_Error {
+	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0, array $missing_fields = array() ): true|WP_Error {
 		$previous = $renewal_id > 0 ? (array) ( $this->renewals->find( $renewal_id )?->data()[ self::RENEWAL_SYNC ] ?? array() ) : (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
-		$meta = array( 'state' => $status, 'request_id' => $request_id, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
+		$meta = array( 'state' => $status, 'request_id' => $request_id, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'missing_fields' => $missing_fields, 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
 		if ( $renewal_id <= 0 ) {
 			update_user_meta( $member->user_id(), self::REGISTRATION_DATA, $meta );
 		}
@@ -192,7 +196,8 @@ final class GoogleSheetsSyncService {
 				$this->renewals->update( $request, array( self::RENEWAL_SYNC => $meta ) );
 			}
 		}
-		$this->history->create( array( 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_email' => sanitize_email( $member->email() ), 'action_key' => 'google_sheets_sync_' . $status, 'action_label' => 'Google Sheets sync', 'actor_type' => 'system', 'actor_id' => 0, 'actor_name' => 'Sistema', 'description' => is_wp_error( $result ) ? 'Google Sheets synchronization failed.' : 'Google Sheets synchronization completed.', 'details' => array( 'request_id' => $request_id, 'row_number' => $row_number, 'renewal_id' => $renewal_id ), 'created_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+		$description = self::STATUS_INACTIVE === $status ? 'Google Sheets synchronization is not active.' : ( is_wp_error( $result ) ? 'Google Sheets synchronization failed.' : 'Google Sheets synchronization completed.' );
+		$this->history->create( array( 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_email' => sanitize_email( $member->email() ), 'action_key' => 'google_sheets_sync_' . $status, 'action_label' => 'Google Sheets sync', 'actor_type' => 'system', 'actor_id' => 0, 'actor_name' => 'Sistema', 'description' => $description, 'details' => array( 'request_id' => $request_id, 'row_number' => $row_number, 'renewal_id' => $renewal_id ), 'created_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
 		if ( is_wp_error( $result ) ) {
 			$this->logger->error( 'Google Sheets synchronization failed.', array( 'request_id' => $request_id, 'status' => $status, 'error_code' => $result->get_error_code() ) );
 			return $result;

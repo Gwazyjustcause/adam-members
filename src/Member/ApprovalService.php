@@ -158,6 +158,11 @@ final class ApprovalService {
 		$this->history->member_approved( $member, $old_status, $member->status() );
 
 		$this->email->send_approval_email( $member );
+		/**
+		 * The WordPress approval is complete. Integrations must treat failures
+		 * from this notification as independent from the approval result.
+		 */
+		do_action( 'adam_membership_member_approved', $member );
 
 		return true;
 	}

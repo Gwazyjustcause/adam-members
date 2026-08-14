@@ -98,6 +98,12 @@ final class GoogleSheetsClient {
 		return new WP_Error( 'adam_google_sheets_sheet_missing', __( 'A página configurada não foi encontrada na spreadsheet.', 'adam-membership' ) );
 	}
 
+	/** Return whether an approved movement should attempt Google synchronization. */
+	public function is_configured(): bool {
+		$config = $this->settings->google_sheets_settings();
+		return ! empty( $config['enabled'] ) && '' !== trim( (string) ( $config['spreadsheet_id'] ?? '' ) ) && '' !== trim( (string) ( $config['sheet_name'] ?? '' ) );
+	}
+
 	/**
 	 * Read a range from the configured worksheet.
 	 *
