@@ -1,6 +1,9 @@
 
 # Playwright
 node_modules/
+/vendor/
+/playwright/
+*.zip
 /test-results/
 /playwright-report/
 /blob-report/
