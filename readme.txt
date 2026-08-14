@@ -10,6 +10,19 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Membership management for ADAM (Associacao Desportiva de Airsoft do Mondego).
 
+== Private billing documents ==
+
+Optional billing/payment PDFs are stored outside the public webroot and are never added to the Media Library. Define these constants in `wp-config.php` before enabling uploads:
+
+    define( 'ADAM_PRIVATE_DOCUMENTS_PATH', '/home/example/private-documents/adam-membership' );
+    define( 'ADAM_PRIVATE_DOCUMENT_MAX_BYTES', 10 * 1024 * 1024 );
+
+The configured directory must be outside the webroot, writable by PHP, and protected by the server filesystem. The plugin may create the final directory only when its parent already exists and is valid. Do not point it at `wp-content/uploads` or commit the directory contents. Include this directory and the WordPress database in encrypted backups with restricted access.
+
+The document table is installed and upgraded idempotently with `dbDelta()`; uninstall does not remove the table or private PDFs. Deleting a member or request does not remove financial documents. Replacements preserve prior versions, and removal archives the association. Retention and deletion must follow a future accounting policy.
+
+Administrative downloads require `manage_options` and a document-specific nonce. Email attachments use the sanitized original filename while the physical file remains randomly identified.
+
 == Description ==
 
 ADAM Membership will manage member workflows for ADAM and integrate with Forminator and Advanced Custom Fields.

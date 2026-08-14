@@ -82,6 +82,8 @@ $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminContr
 $email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
 $approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );
 $renewal = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/RenewalService.php' );
+$uninstall = (string) file_get_contents( dirname( __DIR__ ) . '/uninstall.php' );
+$gitignore = (string) file_get_contents( dirname( __DIR__ ) . '/.gitignore' );
 
 adam_private_documents_assert( str_contains( $schema, 'dbDelta( $sql )' ), 'Schema must use dbDelta().' );
 adam_private_documents_assert( str_contains( $schema, 'adam_membership_private_documents_schema_version' ), 'Schema must have a version option.' );
@@ -105,6 +107,8 @@ adam_private_documents_assert( str_contains( $admin, 'ACTION_RESEND_RENEWAL_EMAI
 adam_private_documents_assert( str_contains( $admin, "'sha256'" ) && str_contains( $admin, 'Private document uploaded.' ) && str_contains( $admin, 'Private document association removed.' ), 'Administrative document lifecycle actions must be audited without paths or contents.' );
 adam_private_documents_assert( str_contains( $email, 'Private document email sent.' ) && str_contains( $email, 'Private document email failed.' ) && str_contains( $email, "'sha256'" ), 'Document delivery success and failure must be audited safely.' );
 adam_private_documents_assert( str_contains( $approval, 'Private document sent to member.' ) && str_contains( $renewal, 'Renewal confirmation email resent.' ) && str_contains( $renewal, 'Private renewal document sent to member.' ), 'Independent document operations must be auditable.' );
+adam_private_documents_assert( ! str_contains( strtolower( $uninstall ), 'drop table' ) && ! str_contains( strtolower( $uninstall ), 'unlink' ), 'Uninstall must not delete private-document data.' );
+adam_private_documents_assert( str_contains( $gitignore, '/private-documents/' ) && str_contains( $gitignore, '/.private-documents/' ), 'Common local private-document directories must be excluded from Git.' );
 
 $document = new PrivateDocument(
 	array(
