@@ -100,9 +100,20 @@ final class PrivateDocumentStorage {
 		if ( is_wp_error( $directory ) ) {
 			return $directory;
 		}
-		$identifier = basename( $document->file_identifier() );
-		if ( '' === $identifier || $identifier !== $document->file_identifier() || ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ) ) {
-			return new WP_Error( 'adam_private_document_invalid_identifier', __( 'O identificador do documento não é válido.', 'adam-membership' ) );
+		$raw_identifier = $document->file_identifier();
+		$identifier     = basename( $raw_identifier );
+		if ( '' === $identifier || $identifier !== $raw_identifier || ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ) ) {
+			return new WP_Error(
+				'adam_private_document_invalid_identifier',
+				__( 'O identificador do documento não é válido.', 'adam-membership' ),
+				array(
+					'document_id'            => $document->id(),
+					'identifier_fingerprint' => hash( 'sha256', $raw_identifier ),
+					'identifier_length'       => strlen( $raw_identifier ),
+					'has_path_separator'      => $identifier !== $raw_identifier,
+					'has_pdf_shape'           => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+				)
+			);
 		}
 		$path = $directory . DIRECTORY_SEPARATOR . $identifier;
 		$resolved_path = realpath( $path );

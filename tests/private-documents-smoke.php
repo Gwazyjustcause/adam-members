@@ -95,6 +95,7 @@ adam_private_documents_assert( str_contains( $storage, 'ADAM_PRIVATE_DOCUMENTS_P
 adam_private_documents_assert( str_contains( $storage, 'new \\finfo' ) && str_contains( $storage, "'%PDF'" ), 'Storage must validate real MIME and PDF signature.' );
 adam_private_documents_assert( ! str_contains( $storage, 'media_handle_upload' ) && ! str_contains( $storage, 'wp_upload_dir' ), 'Private storage must not fall back to public WordPress uploads.' );
 adam_private_documents_assert( str_contains( $storage, 'rename( $temp, $target )' ) && str_contains( $storage, 'file_exists( $target )' ), 'Storage must finalize through a non-overwriting rename.' );
+adam_private_documents_assert( str_contains( $storage, 'identifier_fingerprint' ) && str_contains( $storage, 'has_path_separator' ), 'Invalid storage identifiers must expose only safe shape diagnostics.' );
 adam_private_documents_assert( str_contains( $storage, 'delete_identifier' ), 'Storage must support rollback after a metadata failure.' );
 adam_private_documents_assert( str_contains( $schema, 'get_charset_collate' ), 'Schema must use WordPress charset and collation.' );
 adam_private_documents_assert( str_contains( $download, 'Cache-Control: no-store, private' ), 'Downloads must disable caching.' );
@@ -154,6 +155,11 @@ file_put_contents( $valid_source, "%PDF-1.7\nvalid test document" );
 $stored = $storage_service->store_source( $valid_source, 'invoice.pdf' );
 if ( class_exists( 'finfo' ) ) {
 	adam_private_documents_assert( is_array( $stored ) && 'application/pdf' === $stored['mime'], 'A valid PDF must be stored.' );
+	$stored_document = new PrivateDocument( array_merge( $document->data(), $stored, array( 'id' => 10, 'original_name' => 'invoice.pdf' ) ) );
+	$attachment_path = $storage_service->path( $stored_document );
+	adam_private_documents_assert( is_string( $attachment_path ) && is_file( $attachment_path ), 'A valid stored document must resolve to a readable attachment path.' );
+	$attachment = array( $stored_document->original_name() => $attachment_path );
+	adam_private_documents_assert( 1 === count( $attachment ) && $attachment['invoice.pdf'] === $attachment_path, 'A valid private document must prepare an attachment using the physical path and readable name.' );
 	$stored_again = $storage_service->store_source( $valid_source, 'invoice.pdf' );
 	adam_private_documents_assert( is_array( $stored_again ) && $stored['identifier'] !== $stored_again['identifier'], 'A second upload must not overwrite the first file.' );
 } else {

@@ -631,7 +631,8 @@ final class EmailService {
 		}
 		$path = $this->private_document_storage->path( $document );
 		if ( is_wp_error( $path ) ) {
-			$this->logger->error( 'Private document attachment unavailable.', array( 'document_id' => $document->id(), 'error_code' => $path->get_error_code() ) );
+			$error_data = $path->get_error_data();
+			$this->logger->error( 'Private document attachment unavailable.', array( 'document_id' => $document->id(), 'error_code' => $path->get_error_code(), 'diagnostic' => is_array( $error_data ) ? $error_data : array() ) );
 			return array( 'attachments' => array(), 'note' => '', 'available' => false, 'error' => (string) $path->get_error_code() );
 		}
 
