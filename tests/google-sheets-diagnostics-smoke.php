@@ -25,6 +25,14 @@ foreach ( array( 'financial_sync', 'request_id', 'stage', 'exception_class', 'ht
 adam_diagnostics_assert( str_contains( $client, 'sanitize_diagnostic_message' ), 'Technical messages are sanitized before logging.' );
 adam_diagnostics_assert( str_contains( $client, 'log_exception' ) && str_contains( $plugin, 'log_exception' ), 'Hook exceptions are recorded safely.' );
 adam_diagnostics_assert( str_contains( $sync, "'read_values'" ) && str_contains( $sync, "'append_or_confirmation'" ), 'Synchronization failures identify their stage.' );
+foreach ( array( 'sync_service_entered', 'read_values_started', 'read_values_completed', 'append_started', 'append_completed' ) as $marker ) {
+	adam_diagnostics_assert( str_contains( $sync, $marker ) || str_contains( $client, $marker ), "Sync marker {$marker} is present." );
+}
+foreach ( array( 'metadata_read_started', 'metadata_read_completed', 'confirmation_started', 'confirmation_completed' ) as $marker ) {
+	adam_diagnostics_assert( str_contains( $client, $marker ), "Client marker {$marker} is present." );
+}
+adam_diagnostics_assert( str_contains( $sync, 'catch ( \\Throwable $exception )' ), 'Unexpected sync exceptions are converted to retryable failures.' );
+adam_diagnostics_assert( str_contains( $admin, 'catch ( \\Throwable $exception )' ) && str_contains( $admin, "'retry_handler'" ), 'Retry handler catches unexpected exceptions and redirects safely.' );
 foreach ( array( 'financial_retry_post_received', 'financial_retry_handler_entered', 'financial_retry_validation_passed', 'financial_retry_sync_service_called', 'financial_retry_sync_service_returned' ) as $marker ) {
 	adam_diagnostics_assert( str_contains( $admin, $marker ), "Retry marker {$marker} is present." );
 }

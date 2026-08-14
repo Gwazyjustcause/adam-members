@@ -141,7 +141,13 @@ final class GoogleSheetsClient {
 
 	/** Append into the real Google Sheets table, not merely into a formatted range. */
 	public function append_table_row( array $row, string $request_id = '' ): array|WP_Error {
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'metadata_read_started.' );
+		}
 		$table = $this->table_metadata( $request_id, 'table_metadata_before_write' );
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'metadata_read_completed.', array( 'result' => is_wp_error( $table ) ? 'error' : 'success' ) );
+		}
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
@@ -157,10 +163,19 @@ final class GoogleSheetsClient {
 			$request_id,
 			'append'
 		);
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'append_completed.', array( 'result' => is_wp_error( $result ) ? 'error' : 'success' ) );
+		}
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'confirmation_started.' );
+		}
 		$after = $this->table_metadata( $request_id, 'table_metadata_after_write' );
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'confirmation_completed.', array( 'result' => is_wp_error( $after ) ? 'error' : 'success' ) );
+		}
 		return is_wp_error( $after ) ? $after : array( 'table' => $after );
 	}
 

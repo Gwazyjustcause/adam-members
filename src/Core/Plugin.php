@@ -74,6 +74,7 @@ use AdamMembership\Team\TeamRepository;
  * Coordinates plugin services.
  */
 final class Plugin {
+	private const BUILD_ID = 'private-document-trace-v2';
 	/**
 	 * Singleton instance.
 	 *
@@ -97,6 +98,10 @@ final class Plugin {
 		}
 
 		return self::$instance;
+	}
+
+	public static function build_id(): string {
+		return self::BUILD_ID;
 	}
 
 	/**
@@ -214,7 +219,12 @@ final class Plugin {
 		$documents->register();
 		( new CommunicationPreferencesController( $communication_preferences, $members ) )->register();
 
-		if ( is_admin() || $this->is_adam_admin_post_request() ) {
+		$is_adam_admin_post = $this->is_adam_admin_post_request();
+		if ( $is_adam_admin_post ) {
+			$logger->info( 'Private document bootstrap trace v2: plugin modules reached admin-post routing.', array( 'build' => self::BUILD_ID ) );
+		}
+
+		if ( is_admin() || $is_adam_admin_post ) {
 			$admin = new AdminController(
 				$members,
 				$approval,
@@ -243,6 +253,16 @@ final class Plugin {
 			);
 
 			$admin->register();
+			if ( $is_adam_admin_post ) {
+				$logger->info(
+					'Private document bootstrap trace v2: admin-post hooks registered.',
+					array(
+						'build'           => self::BUILD_ID,
+						'member_handler'  => false !== has_action( 'admin_post_adam_membership_member_action' ),
+						'renewal_handler' => false !== has_action( 'admin_post_adam_membership_renewal_action' ),
+					)
+				);
+			}
 			if ( is_admin() ) {
 				( new AnnouncementController( $announcements ) )->register();
 				( new DocumentController( $documents ) )->register();

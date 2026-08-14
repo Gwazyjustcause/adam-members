@@ -15,6 +15,7 @@ use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\DisplayLabels;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\MaintenanceService;
+use AdamMembership\Core\Plugin;
 use AdamMembership\Document\DocumentService;
 use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Document\PrivateDocumentStorage;
@@ -538,6 +539,17 @@ final class AdminController {
 		$this->render_header( __( 'Diagnósticos ADAM', 'adam-membership' ) );
 		$this->render_notices();
 		?>
+		<div class="adam-admin-panel adam-card">
+			<h2><?php esc_html_e( 'Diagnóstico do plugin', 'adam-membership' ); ?></h2>
+			<table class="widefat striped">
+				<tbody>
+					<tr><th scope="row">Build</th><td><code><?php echo esc_html( Plugin::build_id() ); ?></code></td></tr>
+					<tr><th scope="row">Admin-post handlers</th><td><?php esc_html_e( 'Registados', 'adam-membership' ); ?></td></tr>
+					<tr><th scope="row">Member action handler</th><td><?php echo false !== has_action( 'admin_post_adam_membership_member_action' ) ? esc_html__( 'Registado', 'adam-membership' ) : esc_html__( 'Não registado', 'adam-membership' ); ?></td></tr>
+					<tr><th scope="row">Renewal action handler</th><td><?php echo false !== has_action( 'admin_post_adam_membership_renewal_action' ) ? esc_html__( 'Registado', 'adam-membership' ) : esc_html__( 'Não registado', 'adam-membership' ); ?></td></tr>
+				</tbody>
+			</table>
+		</div>
 		<div class="adam-admin-cards">
 			<div class="adam-admin-card adam-card"><span><?php esc_html_e( 'Sócios', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( $counts['total'] ?? 0 ) ); ?></strong></div>
 			<div class="adam-admin-card adam-card"><span><?php esc_html_e( 'Avisos', 'adam-membership' ); ?></span><strong><?php echo esc_html( number_format_i18n( count( $all_announcements ) ) ); ?></strong></div>
@@ -1779,6 +1791,11 @@ final class AdminController {
 	/** Retry one manually selected Google Sheets movement without changing approval state. */
 	public function handle_retry_google_sheets(): void {
 		$this->logger->info( 'financial_retry_post_received.' );
+		$type = '';
+		$id = 0;
+		$member = null;
+		$request = null;
+		try {
 		$this->ensure_can_manage();
 		$this->logger->info( 'financial_retry_handler_entered.' );
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
@@ -1809,6 +1826,17 @@ final class AdminController {
 			return;
 		}
 		$this->redirect_with_message( __( 'Sincronização Google Sheets concluída.', 'adam-membership' ) );
+		} catch ( \Throwable $exception ) {
+			$request_id = '';
+			if ( 'registration' === $type && null !== $member ) {
+				$request_id = (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true );
+			} elseif ( 'renewal' === $type && null !== $request ) {
+				$request_id = (string) $request->request_uuid();
+			}
+			$this->google_sheets->log_exception( $request_id, 'retry_handler', $exception );
+			$this->logger->info( 'financial_retry_sync_service_returned.', array( 'result' => 'error', 'error_code' => 'adam_google_sheets_unexpected' ) );
+			$this->redirect_with_error( 'A Google Sheets synchronization failed. You can retry the operation.' );
+		}
 	}
 
 	/** Save payment data required for a quota movement and leave approval unchanged. */
