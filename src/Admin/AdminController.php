@@ -5072,7 +5072,8 @@ final class AdminController {
 				<p><?php esc_html_e( 'Sem documento — a aprovação será enviada sem anexo.', 'adam-membership' ); ?></p>
 			<?php else : ?>
 				<p><strong><?php esc_html_e( 'Documento associado:', 'adam-membership' ); ?></strong> <?php echo esc_html( $document->original_name() ); ?></p>
-				<p><strong><?php esc_html_e( 'Estado:', 'adam-membership' ); ?></strong> <?php echo esc_html( $document->document_status() ); ?> · <?php echo esc_html( $document->send_status() ); ?></p>
+				<p><strong><?php esc_html_e( 'Documento:', 'adam-membership' ); ?></strong> <?php echo esc_html( $this->private_document_status_label( $document->document_status() ) ); ?></p>
+				<p><strong><?php esc_html_e( 'Último envio:', 'adam-membership' ); ?></strong> <?php echo esc_html( $this->private_document_send_status_label( $document->send_status() ) ); ?></p>
 				<p><a class="button button-small" href="<?php echo esc_url( $this->private_document_download_url( $document->id() ) ); ?>"><?php esc_html_e( 'Descarregar PDF', 'adam-membership' ); ?></a></p>
 			<?php endif; ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -5151,6 +5152,23 @@ final class AdminController {
 			),
 			'adam_membership_download_private_document_' . $document_id
 		);
+	}
+
+	private function private_document_status_label( string $status ): string {
+		return array(
+			'active'     => __( 'Ativo', 'adam-membership' ),
+			'archived'   => __( 'Arquivado', 'adam-membership' ),
+			'orphaned'   => __( 'Órfão', 'adam-membership' ),
+			'superseded' => __( 'Substituído', 'adam-membership' ),
+		)[ $status ] ?? $status;
+	}
+
+	private function private_document_send_status_label( string $status ): string {
+		return array(
+			'not_sent' => __( 'Não enviado', 'adam-membership' ),
+			'sent'     => __( 'Enviado', 'adam-membership' ),
+			'failed'   => __( 'Falhou', 'adam-membership' ),
+		)[ $status ] ?? $status;
 	}
 
 	/**

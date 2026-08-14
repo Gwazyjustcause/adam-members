@@ -48,6 +48,8 @@ final class EmailService {
 	private Logger $logger;
 	private PrivateDocumentRepository $private_documents;
 	private PrivateDocumentStorage $private_document_storage;
+	private string $last_mail_error_code = '';
+	private string $last_mail_error_message = '';
 
 	/**
 	 * Constructor.
@@ -188,6 +190,9 @@ final class EmailService {
 			$delivery['attachments'],
 			$delivery['note']
 		);
+		if ( ! $sent && '' === $delivery['error'] ) {
+			$delivery['error'] = $this->last_mail_error_code ?: 'email_send_failed';
+		}
 		$this->record_document_delivery( $document, $delivery, $sent );
 
 		return $sent;
@@ -315,6 +320,9 @@ final class EmailService {
 			$delivery['attachments'],
 			$delivery['note']
 		);
+		if ( ! $sent && '' === $delivery['error'] ) {
+			$delivery['error'] = $this->last_mail_error_code ?: 'email_send_failed';
+		}
 		$this->record_document_delivery( $document, $delivery, $sent );
 
 		return $sent;
@@ -328,6 +336,9 @@ final class EmailService {
 			return false;
 		}
 		$sent = $this->send( $member->email(), __( 'Documento referente ao pagamento da sua quota', 'adam-membership' ), '<p>Segue em anexo o documento referente ao pagamento da sua quota.</p>', 'private_document', array( 'member_id' => $member->user_id(), 'document_id' => $document->id() ), $delivery['attachments'] );
+		if ( ! $sent && '' === $delivery['error'] ) {
+			$delivery['error'] = $this->last_mail_error_code ?: 'email_send_failed';
+		}
 		$this->record_document_delivery( $document, $delivery, $sent );
 
 		return $sent;
@@ -477,6 +488,8 @@ final class EmailService {
 	 * @param array<string, mixed> $context    Log context.
 	 */
 	private function send( string $recipient, string $subject, string $message, string $email_type = 'generic', array $context = array(), array $attachments = array() ): bool {
+		$this->last_mail_error_code = '';
+		$this->last_mail_error_message = '';
 		$headers = array(
 			'Content-Type: text/html; charset=UTF-8',
 		);
@@ -484,12 +497,39 @@ final class EmailService {
 		add_filter( 'wp_mail_from', array( $this, 'mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 
+		$mail_error_code = '';
+		$mail_failure_listener = static function ( $error ) use ( &$mail_error_code ): void {
+			if ( $error instanceof \WP_Error ) {
+				$mail_error_code = (string) $error->get_error_code();
+			}
+		};
+		$mail_failure_message_listener = function ( $error ) use ( &$mail_error_message ): void {
+			if ( $error instanceof \WP_Error ) {
+				$mail_error_message = substr( wp_strip_all_tags( (string) $error->get_error_message() ), 0, 500 );
+			}
+		};
+		add_action( 'wp_mail_failed', $mail_failure_listener, 10, 1 );
+		$mail_error_message = '';
+		add_action( 'wp_mail_failed', $mail_failure_message_listener, 10, 1 );
+		$sent = false;
 		try {
-			$sent = wp_mail( $recipient, $subject, $message, $headers, $attachments );
+			if ( ! is_email( $recipient ) ) {
+				$mail_error_code = 'invalid_recipient';
+			} else {
+				$sent = wp_mail( $recipient, $subject, $message, $headers, $attachments );
+			}
+		} catch ( \Throwable $exception ) {
+			$mail_error_code = 'mail_exception';
+			$mail_error_message = substr( wp_strip_all_tags( $exception->getMessage() ), 0, 500 );
+			$this->logger->error( 'Email transport threw an exception.', array_merge( $context, array( 'email_type' => $email_type, 'exception_class' => get_class( $exception ), 'error_message' => $mail_error_message ) ) );
 		} finally {
+			remove_action( 'wp_mail_failed', $mail_failure_listener, 10 );
+			remove_action( 'wp_mail_failed', $mail_failure_message_listener, 10 );
 			remove_filter( 'wp_mail_from', array( $this, 'mail_from' ) );
 			remove_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 		}
+		$this->last_mail_error_code = $sent ? '' : ( $mail_error_code ?: 'email_send_failed' );
+		$this->last_mail_error_message = $sent ? '' : $mail_error_message;
 
 		$log_context = array_merge(
 			$context,
@@ -501,7 +541,7 @@ final class EmailService {
 		);
 
 		if ( ! $sent ) {
-			$this->logger->error( 'Email failed.', $log_context );
+			$this->logger->error( 'Email failed.', array_merge( $log_context, array( 'error_code' => $this->last_mail_error_code, 'error_message' => $this->last_mail_error_message ) ) );
 			return false;
 		}
 
