@@ -95,6 +95,10 @@ foreach ( array(
 }
 adam_private_documents_assert( str_contains( $repository_source, "'file_identifier' => " ) && str_contains( $repository_source, '$file_identifier' ), 'Replacement must map the generated identifier before repository validation.' );
 adam_private_documents_assert( str_contains( $repository_source, "'_fingerprint'" ) && str_contains( $repository_source, "'file_identifier'" ), 'Identifier diagnostics must be fingerprinted without logging raw values.' );
+adam_private_documents_assert( substr_count( $repository_source . $admin_source, 'Private document replacement trace v2: throwable caught.' ) >= 2, 'Throwable catches must emit the replacement trace v2 marker.' );
+foreach ( array( 'cleanup_attempted', 'rollback_attempted', 'exception_class', 'exception_file', 'exception_line', 'exception_code' ) as $safe_field ) {
+	adam_private_documents_assert( str_contains( $repository_source . $admin_source, "'" . $safe_field . "'" ), 'Throwable trace field is missing: ' . $safe_field );
+}
 $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
 $email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
 $approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );

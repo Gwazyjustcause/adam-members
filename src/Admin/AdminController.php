@@ -1597,12 +1597,14 @@ final class AdminController {
 				default => new WP_Error( 'adam_membership_invalid_private_document_action', __( 'Ação de documento inválida.', 'adam-membership' ) ),
 			};
 		} catch ( \Throwable $exception ) {
-			$this->logger->error( 'Private document replacement failed with an unexpected Throwable.', array(
-				'stage'          => 'admin.private_document_action.throwable',
-				'exception_class' => get_class( $exception ),
-				'exception_code'  => $exception->getCode(),
-				'exception_file'  => basename( $exception->getFile() ),
-				'exception_line'  => $exception->getLine(),
+			$this->logger->error( 'Private document replacement trace v2: throwable caught.', array(
+				'stage'             => 'admin.private_document_action.catch',
+				'exception_class'    => get_class( $exception ),
+				'exception_file'     => basename( $exception->getFile() ),
+				'exception_line'     => $exception->getLine(),
+				'exception_code'     => (string) $exception->getCode(),
+				'cleanup_attempted'  => false,
+				'rollback_attempted' => false,
 			) );
 			$this->redirect_with_error( __( 'Não foi possível concluir a operação do documento privado. Tente novamente.', 'adam-membership' ) );
 		}

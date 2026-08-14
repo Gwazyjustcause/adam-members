@@ -158,12 +158,14 @@ final class PrivateDocumentRepository {
 			if ( is_array( $stored ) ) {
 				$storage->delete_identifier( (string) ( $stored['identifier'] ?? '' ) );
 			}
-			$this->trace( 'Private document replacement trace v1: unexpected Throwable caught; replacement rolled back.', array(
-				'stage'          => 'repository.replace_from_upload.throwable',
-				'exception_class' => get_class( $exception ),
-				'exception_code'  => $exception->getCode(),
-				'exception_file'  => basename( $exception->getFile() ),
-				'exception_line'  => $exception->getLine(),
+			$this->logger?->error( 'Private document replacement trace v2: throwable caught.', array(
+				'stage'             => 'repository.replace_from_upload.catch',
+				'exception_class'    => get_class( $exception ),
+				'exception_file'     => basename( $exception->getFile() ),
+				'exception_line'     => $exception->getLine(),
+				'exception_code'     => (string) $exception->getCode(),
+				'cleanup_attempted'  => is_array( $stored ),
+				'rollback_attempted' => $transaction_started,
 			) );
 			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível substituir o documento privado.', 'adam-membership' ) );
 		}
