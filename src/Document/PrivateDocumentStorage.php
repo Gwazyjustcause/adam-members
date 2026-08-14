@@ -9,11 +9,18 @@ declare(strict_types=1);
 
 namespace AdamMembership\Document;
 
+use AdamMembership\Helpers\Logger;
 use WP_Error;
 
 /** Stores PDF files outside the public uploads directory. */
 final class PrivateDocumentStorage {
 	private const PDF_SIGNATURE = '%PDF';
+
+	private ?Logger $logger;
+
+	public function __construct( ?Logger $logger = null ) {
+		$this->logger = $logger;
+	}
 
 	/** @return array{state:string,message:string,can_create:bool} */
 	public function configuration_status(): array {
@@ -52,21 +59,31 @@ final class PrivateDocumentStorage {
 
 	/** @return array{identifier:string,original_name:string,mime:string,file_size:int,sha256:string}|WP_Error */
 	public function store_upload( array $file ): array|WP_Error {
+		$this->trace( 'Private document replacement trace v1: storage store_upload entered.', array(
+			'upload_present' => true,
+			'upload_error'   => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ),
+		) );
 		$directory = $this->directory();
 		if ( is_wp_error( $directory ) ) {
+			$this->trace_error( 'Private document replacement trace v1: storage directory rejected.', $directory, 'storage.directory' );
 			return $directory;
 		}
 
 		if ( ! isset( $file['tmp_name'], $file['error'], $file['name'] ) || UPLOAD_ERR_OK !== (int) $file['error'] || ! is_uploaded_file( (string) $file['tmp_name'] ) ) {
+			$this->trace_error( 'Private document replacement trace v1: upload rejected before temporary storage.', new WP_Error( 'adam_private_document_upload_invalid' ), 'storage.upload_validation' );
 			return new WP_Error( 'adam_private_document_upload_invalid', __( 'O upload do documento não é válido.', 'adam-membership' ) );
 		}
 
 		$temp = $this->temporary_path( $directory );
 		if ( ! move_uploaded_file( (string) $file['tmp_name'], $temp ) ) {
+			$this->trace( 'Private document replacement trace v1: move to private temporary file failed.', array( 'stage' => 'storage.move_uploaded_file' ) );
 			return new WP_Error( 'adam_private_document_store_failed', __( 'Não foi possível guardar temporariamente o documento privado.', 'adam-membership' ) );
 		}
+		$this->trace( 'Private document replacement trace v1: private temporary file created.', array( 'stage' => 'storage.temporary_file' ) );
 
-		return $this->finalize_temp_file( $temp, (string) $file['name'], $directory );
+		$result = $this->finalize_temp_file( $temp, (string) $file['name'], $directory );
+		$this->trace_result( 'Private document replacement trace v1: store_upload returned.', $result, 'storage.store_upload.return' );
+		return $result;
 	}
 
 	/** Store a local source file for controlled tests and maintenance tooling. */
@@ -128,12 +145,15 @@ final class PrivateDocumentStorage {
 	private function finalize_temp_file( string $temp, string $original_name, string $directory ): array|WP_Error {
 		$validation = $this->validate_file( $temp, $original_name );
 		if ( is_wp_error( $validation ) ) {
+			$this->trace_error( 'Private document replacement trace v1: PDF validation rejected upload.', $validation, 'storage.pdf_validation' );
 			unlink( $temp );
 			return $validation;
 		}
 		$identifier = wp_generate_uuid4() . '.pdf';
+		$this->trace_identifier( 'Private document replacement trace v1: identifier generated.', $identifier, 'storage.identifier_generated' );
 		$target     = $directory . DIRECTORY_SEPARATOR . $identifier;
 		if ( file_exists( $target ) || ! rename( $temp, $target ) ) {
+			$this->trace_identifier( 'Private document replacement trace v1: final rename failed or collided.', $identifier, 'storage.rename' );
 			unlink( $temp );
 			return new WP_Error( 'adam_private_document_store_failed', __( 'Não foi possível finalizar o documento privado.', 'adam-membership' ) );
 		}
@@ -147,7 +167,35 @@ final class PrivateDocumentStorage {
 			return new WP_Error( 'adam_private_document_pdf_invalid', __( 'O documento excede o tamanho permitido.', 'adam-membership' ) );
 		}
 
-		return array( 'identifier' => $identifier, 'original_name' => sanitize_file_name( $original_name ), 'mime' => 'application/pdf', 'file_size' => $final_size, 'sha256' => (string) hash_file( 'sha256', $target ) );
+		$result = array( 'identifier' => $identifier, 'original_name' => sanitize_file_name( $original_name ), 'mime' => 'application/pdf', 'file_size' => $final_size, 'sha256' => (string) hash_file( 'sha256', $target ) );
+		$this->trace_identifier( 'Private document replacement trace v1: storage finalization returned identifier.', $identifier, 'storage.finalize.return' );
+		return $result;
+	}
+
+	private function trace( string $message, array $context = array() ): void {
+		if ( null !== $this->logger ) {
+			$this->logger->info( $message, $context );
+		}
+	}
+
+	private function trace_error( string $message, WP_Error $error, string $stage ): void {
+		if ( null !== $this->logger ) {
+			$this->logger->error( $message, array( 'stage' => $stage, 'error_code' => $error->get_error_code() ) );
+		}
+	}
+
+	private function trace_identifier( string $message, string $identifier, string $stage ): void {
+		$this->trace( $message, array_merge( array( 'stage' => $stage ), $this->identifier_diagnostic( $identifier ) ) );
+	}
+
+	/** @return array<string, bool|int|string> */
+	private function identifier_diagnostic( string $identifier ): array {
+		return array(
+			'identifier_present'     => '' !== $identifier,
+			'identifier_length'      => strlen( $identifier ),
+			'identifier_fingerprint' => hash( 'sha256', $identifier ),
+			'has_pdf_shape'          => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+		);
 	}
 
 	/** @return true|WP_Error */

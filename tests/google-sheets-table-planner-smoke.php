@@ -55,6 +55,6 @@ adam_sheets_assert( str_contains( $service_source, 'adam_google_sheets_conflict'
 adam_sheets_assert( str_contains( $service_source, 'finally' ) && str_contains( $service_source, 'delete_option( $lock_key )' ), 'The per-request lock is released after concurrent attempts.' );
 adam_sheets_assert( str_contains( $service_source, "'Pago'" ), 'Financial status is Pago.' );
 adam_sheets_assert( str_contains( $service_source, '(float) str_replace' ), 'Amount is sent as a numeric value.' );
-adam_sheets_assert( str_contains( $client_source, 'appendCells' ) && str_contains( $client_source, "'tableId' => \$table['tableId']" ), 'Writes target the real Google Sheets table by tableId.' );
+adam_sheets_assert( str_contains( $client_source, 'appendCells' ) && str_contains( $client_source, "'sheetId' => \$table['sheetId']" ), 'Writes target the real Google Sheets grid by sheetId.' );
 
 echo "Google Sheets table planner smoke tests passed.\n";

@@ -37,7 +37,7 @@ foreach ( array( 'financial_retry_post_received', 'financial_retry_handler_enter
 	adam_diagnostics_assert( str_contains( $admin, $marker ), "Retry marker {$marker} is present." );
 }
 adam_diagnostics_assert( str_contains( $admin, "admin_post_adam_membership_retry_google_sheets" ) && str_contains( $admin, 'adam_membership_retry_google_sheets_' ), 'Retry action and nonce remain connected to the canonical handler.' );
-adam_diagnostics_assert( str_contains( $plugin, 'Google Sheets diagnostics build loaded.' ) && str_contains( $plugin, "defined( 'WP_DEBUG' )" ), 'The temporary admin-only build marker is guarded by WP_DEBUG.' );
+adam_diagnostics_assert( str_contains( $plugin, 'Google Sheets diagnostics build loaded.' ) && str_contains( $plugin, 'Google Sheets sheet-id-fix-v2 loaded.' ) && str_contains( $plugin, "defined( 'WP_DEBUG' )" ), 'The temporary admin-only build markers are guarded by WP_DEBUG.' );
 foreach ( array( 'private_key', 'access_token', 'Authorization', 'client_secret' ) as $secret ) {
 	adam_diagnostics_assert( ! str_contains( $block, $secret ), "Diagnostic context does not include {$secret}." );
 }

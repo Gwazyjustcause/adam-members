@@ -9,10 +9,17 @@ declare(strict_types=1);
 
 namespace AdamMembership\Document;
 
+use AdamMembership\Helpers\Logger;
 use WP_Error;
 
 /** Persists document metadata without storing file contents in WordPress options. */
 final class PrivateDocumentRepository {
+	private ?Logger $logger;
+
+	public function __construct( ?Logger $logger = null ) {
+		$this->logger = $logger;
+	}
+
 	/** @return PrivateDocument|WP_Error */
 	public function create( array $data ): PrivateDocument|WP_Error {
 		global $wpdb;
@@ -20,19 +27,26 @@ final class PrivateDocumentRepository {
 		$reference = sanitize_text_field( (string) ( $data['request_reference'] ?? '' ) );
 		$type      = sanitize_key( (string) ( $data['request_type'] ?? '' ) );
 		$file_identifier = sanitize_text_field( (string) ( $data['file_identifier'] ?? '' ) );
+		$this->trace( 'Private document replacement trace v1: repository create entered.', array_merge( array( 'stage' => 'repository.create' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
 		if ( ! preg_match( '/^(registration|renewal):[A-Za-z0-9-]+$/', $reference ) || ! in_array( $type, array( 'registration', 'renewal' ), true ) || ! str_starts_with( $reference, $type . ':' ) ) {
+			$this->trace( 'Private document replacement trace v1: repository request validation rejected.', array( 'stage' => 'repository.request_validation', 'error_code' => 'adam_private_document_invalid_request' ) );
 			return new WP_Error( 'adam_private_document_invalid_request', __( 'A referência do pedido não é válida.', 'adam-membership' ) );
 		}
 
 		if ( ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $file_identifier ) ) {
+			$this->trace( 'Private document replacement trace v1: file_identifier validation rejected.', array_merge( array( 'stage' => 'repository.file_identifier_validation', 'error_code' => 'adam_private_document_invalid_identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
 			return new WP_Error( 'adam_private_document_invalid_identifier', __( 'O identificador físico do documento não é válido.', 'adam-membership' ) );
 		}
 
 		$now = current_time( 'mysql' );
+		$active_key = array_key_exists( 'active_key', $data ) ? $data['active_key'] : $reference;
+		if ( null !== $active_key && (string) $active_key !== $reference ) {
+			return new WP_Error( 'adam_private_document_invalid_request', __( 'A associação ativa do documento não é válida.', 'adam-membership' ) );
+		}
 		$row = array(
 			'request_reference' => $reference,
 			'request_type'      => $type,
-			'active_key'        => $reference,
+			'active_key'        => $active_key,
 			'file_identifier'   => $file_identifier,
 			'original_name'     => sanitize_file_name( (string) ( $data['original_name'] ?? '' ) ),
 			'mime'              => sanitize_text_field( (string) ( $data['mime'] ?? '' ) ),
@@ -50,19 +64,24 @@ final class PrivateDocumentRepository {
 
 		$format = array( '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%d' );
 		if ( false === $wpdb->insert( PrivateDocumentSchema::table_name(), $row, $format ) ) {
+			$this->trace( 'Private document replacement trace v1: repository INSERT failed.', array( 'stage' => 'repository.insert', 'error_code' => 'adam_private_document_create_failed' ) );
 			return new WP_Error( 'adam_private_document_create_failed', __( 'Não foi possível guardar os metadados do documento.', 'adam-membership' ) );
 		}
 
 		$row['id'] = (int) $wpdb->insert_id;
+		$this->trace( 'Private document replacement trace v1: repository INSERT succeeded.', array( 'stage' => 'repository.insert', 'document_id' => (int) $wpdb->insert_id ) );
 		return new PrivateDocument( $row );
 	}
 
 	/** Store a file and create metadata, rolling the file back if the DB insert fails. */
 	public function create_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+		$this->trace( 'Private document replacement trace v1: create_from_upload entered.', array( 'stage' => 'repository.create_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
 		$stored = $storage->store_upload( $file );
 		if ( is_wp_error( $stored ) ) {
+			$this->trace( 'Private document replacement trace v1: create_from_upload storage failed.', array( 'stage' => 'repository.create_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
 			return $stored;
 		}
+		$this->trace( 'Private document replacement trace v1: create_from_upload storage returned.', array_merge( array( 'stage' => 'repository.create_from_upload.storage_return' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ) ) );
 
 		return $this->persist_stored( $data, $stored, $storage );
 	}
@@ -79,45 +98,78 @@ final class PrivateDocumentRepository {
 
 	/** Replace the active document while preserving the previous version. */
 	public function replace_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+		$this->trace( 'Private document replacement trace v1: replace_from_upload entered.', array( 'stage' => 'repository.replace_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
 		$stored = $storage->store_upload( $file );
 		if ( is_wp_error( $stored ) ) {
+			$this->trace( 'Private document replacement trace v1: replacement storage failed.', array( 'stage' => 'repository.replace_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
 			return $stored;
 		}
+		$this->trace( 'Private document replacement trace v1: replacement storage returned.', array_merge( array( 'stage' => 'repository.replace_from_upload.storage_return' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ) ) );
 
 		global $wpdb;
 		$reference = (string) ( $data['request_reference'] ?? '' );
 		$wpdb->query( 'START TRANSACTION' );
 		$current = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1 FOR UPDATE', $reference ), ARRAY_A );
-		if ( is_array( $current ) && false === $wpdb->update( PrivateDocumentSchema::table_name(), array( 'active_key' => null, 'document_status' => 'superseded', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => absint( $current['id'] ) ) ) ) {
-			$wpdb->query( 'ROLLBACK' );
-			$storage->delete_identifier( (string) $stored['identifier'] );
-			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível substituir o documento privado.', 'adam-membership' ) );
-		}
-
-		$result = $this->create( array_merge( $data, $stored ) );
+		$file_identifier = (string) ( $stored['identifier'] ?? '' );
+		$this->trace( 'Private document replacement trace v1: identifier mapped to file_identifier.', array_merge( array( 'stage' => 'repository.identifier_mapping' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
+		$result = $this->create( array_merge( $data, $stored, array( 'file_identifier' => $file_identifier, 'active_key' => is_array( $current ) ? null : $reference ) ) );
 		if ( is_wp_error( $result ) ) {
+			$this->trace( 'Private document replacement trace v1: new metadata INSERT rejected; rolling back.', array( 'stage' => 'repository.replace_from_upload.rollback', 'error_code' => $result->get_error_code() ) );
 			$wpdb->query( 'ROLLBACK' );
 			$storage->delete_identifier( (string) $stored['identifier'] );
 			return $result;
 		}
+		if ( is_array( $current ) && false === $wpdb->update( PrivateDocumentSchema::table_name(), array( 'active_key' => null, 'document_status' => 'superseded', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => absint( $current['id'] ) ) ) ) {
+			$this->trace( 'Private document replacement trace v1: previous document update failed; rolling back.', array( 'stage' => 'repository.replace_from_upload.supersede.rollback' ) );
+			$wpdb->query( 'ROLLBACK' );
+			$storage->delete_identifier( (string) $stored['identifier'] );
+			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível substituir o documento privado.', 'adam-membership' ) );
+		}
 		if ( is_array( $current ) && false === $wpdb->update( PrivateDocumentSchema::table_name(), array( 'superseded_by' => $result->id() ), array( 'id' => absint( $current['id'] ) ) ) ) {
+			$this->trace( 'Private document replacement trace v1: superseded_by update failed; rolling back.', array( 'stage' => 'repository.replace_from_upload.history.rollback' ) );
 			$wpdb->query( 'ROLLBACK' );
 			$storage->delete_identifier( (string) $stored['identifier'] );
 			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível concluir a substituição do documento privado.', 'adam-membership' ) );
 		}
+		if ( is_array( $current ) && is_wp_error( $this->update( $result, array( 'active_key' => $reference ) ) ) ) {
+			$this->trace( 'Private document replacement trace v1: new document activation failed; rolling back.', array( 'stage' => 'repository.replace_from_upload.activation.rollback' ) );
+			$wpdb->query( 'ROLLBACK' );
+			$storage->delete_identifier( (string) $stored['identifier'] );
+			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível ativar o novo documento privado.', 'adam-membership' ) );
+		}
 		$wpdb->query( 'COMMIT' );
+		$this->trace( 'Private document replacement trace v1: replacement committed.', array( 'stage' => 'repository.replace_from_upload.commit', 'document_id' => $result->id() ) );
 
 		return $result;
 	}
 
 	/** @param array<string, mixed> $stored */
 	private function persist_stored( array $data, array $stored, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
-		$result = $this->create( array_merge( $data, $stored ) );
+		$file_identifier = (string) ( $stored['identifier'] ?? '' );
+		$this->trace( 'Private document replacement trace v1: identifier mapped to file_identifier.', array_merge( array( 'stage' => 'repository.persist_stored.identifier_mapping' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
+		$result = $this->create( array_merge( $data, $stored, array( 'file_identifier' => $file_identifier ) ) );
 		if ( is_wp_error( $result ) ) {
 			$storage->delete_identifier( (string) $stored['identifier'] );
 		}
 
 		return $result;
+	}
+
+	/** @param mixed $value @return array<string, bool|int|string> */
+	private function identifier_diagnostic( mixed $value, string $field ): array {
+		$identifier = is_string( $value ) ? $value : '';
+		return array(
+			$field . '_present'     => '' !== $identifier,
+			$field . '_length'      => strlen( $identifier ),
+			$field . '_fingerprint' => hash( 'sha256', $identifier ),
+			$field . '_has_pdf_shape' => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+		);
+	}
+
+	private function trace( string $message, array $context = array() ): void {
+		if ( null !== $this->logger ) {
+			$this->logger->info( $message, $context );
+		}
 	}
 
 	public function find( int $id ): ?PrivateDocument {

@@ -151,14 +151,20 @@ final class GoogleSheetsClient {
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'append_cells_metadata_resolved.', array( 'sheet_name' => (string) $this->settings->google_sheets_settings()['sheet_name'], 'sheet_id_existing' => absint( $table['sheetId'] ?? 0 ), 'table_id' => sanitize_text_field( (string) ( $table['tableId'] ?? '' ) ) ) );
+		}
 		$values = array();
 		foreach ( array_values( $row ) as $index => $value ) {
 			$values[] = array( 'userEnteredValue' => in_array( $index, array( 2, 5 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
 		}
+		if ( null !== $this->logger ) {
+			$this->logger->info( 'append_cells_request_prepared.', array( 'sheet_id_effective' => absint( $table['sheetId'] ?? 0 ), 'table_id' => sanitize_text_field( (string) ( $table['tableId'] ?? '' ) ) ) );
+		}
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
-			array( 'requests' => array( array( 'appendCells' => array( 'tableId' => $table['tableId'], 'rows' => array( array( 'values' => $values ) ), 'fields' => 'userEnteredValue' ) ) ) ),
+			array( 'requests' => array( array( 'appendCells' => array( 'sheetId' => $table['sheetId'], 'rows' => array( array( 'values' => $values ) ), 'fields' => 'userEnteredValue' ) ) ) ),
 			self::WRITE_SCOPE,
 			array(),
 			$request_id,
@@ -234,8 +240,11 @@ final class GoogleSheetsClient {
 				continue;
 			}
 			foreach ( (array) ( $sheet['tables'] ?? array() ) as $table ) {
-				if ( self::TABLE_NAME === (string) ( $table['name'] ?? '' ) && '' !== (string) ( $table['tableId'] ?? '' ) ) {
-					return array( 'tableId' => (string) $table['tableId'], 'range' => (array) ( $table['range'] ?? array() ) );
+				if ( self::TABLE_NAME === (string) ( $table['name'] ?? '' ) && '' !== (string) ( $table['tableId'] ?? '' ) && isset( $sheet['properties']['sheetId'] ) ) {
+					if ( null !== $this->logger ) {
+						$this->logger->info( 'metadata_quotas_resolved.', array( 'sheet_name' => (string) ( $sheet['properties']['title'] ?? '' ), 'sheet_id_returned' => (string) $sheet['properties']['sheetId'], 'sheet_id_normalized' => absint( $sheet['properties']['sheetId'] ), 'table_id' => sanitize_text_field( (string) $table['tableId'] ) ) );
+					}
+					return array( 'tableId' => (string) $table['tableId'], 'sheetId' => absint( $sheet['properties']['sheetId'] ), 'range' => (array) ( $table['range'] ?? array() ) );
 				}
 			}
 		}

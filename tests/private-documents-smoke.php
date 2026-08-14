@@ -77,7 +77,24 @@ function adam_private_documents_assert( bool $condition, string $message ): void
 
 $schema = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentSchema.php' );
 $storage = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentStorage.php' );
+$repository_source = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentRepository.php' );
+$admin_source = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
 $download = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/PrivateDocumentDownloadController.php' );
+
+foreach ( array(
+	'Private document replacement trace v1: storage store_upload entered.',
+	'Private document replacement trace v1: identifier generated.',
+	'Private document replacement trace v1: store_upload returned.',
+	'Private document replacement trace v1: replace_from_upload entered.',
+	'Private document replacement trace v1: identifier mapped to file_identifier.',
+	'Private document replacement trace v1: file_identifier validation rejected.',
+	'Private document replacement trace v1: repository INSERT succeeded.',
+	'Private document replacement trace v1: replacement committed.',
+) as $trace_marker ) {
+	adam_private_documents_assert( str_contains( $storage . $repository_source . $admin_source, $trace_marker ), 'Replacement trace marker is missing: ' . $trace_marker );
+}
+adam_private_documents_assert( str_contains( $repository_source, "'file_identifier' => " ) && str_contains( $repository_source, '$file_identifier' ), 'Replacement must map the generated identifier before repository validation.' );
+adam_private_documents_assert( str_contains( $repository_source, "'_fingerprint'" ) && str_contains( $repository_source, "'file_identifier'" ), 'Identifier diagnostics must be fingerprinted without logging raw values.' );
 $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
 $email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
 $approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );
@@ -176,6 +193,25 @@ if ( class_exists( 'finfo' ) ) {
 	adam_private_documents_assert( null !== $reloaded_document && $stored['identifier'] === $reloaded_document->file_identifier(), 'A fresh repository hydration must preserve file_identifier from the database row.' );
 	$reloaded_path = $storage_service->path( $reloaded_document );
 	adam_private_documents_assert( is_string( $reloaded_path ) && is_file( $reloaded_path ), 'A freshly hydrated document must resolve for download and attachment.' );
+	$GLOBALS['wpdb'] = new class {
+		public string $prefix = 'wp_';
+		public int $insert_id = 11;
+		/** @var array<string, mixed> */
+		public array $row = array();
+		public function prepare( string $query, mixed ...$args ): string { unset( $args ); return $query; }
+		public function insert( string $table, array $data, array $format ): bool { unset( $table, $format ); $this->row = $data; $this->row['id'] = $this->insert_id; return true; }
+		public function get_row( string $query, mixed $output = null ): array { unset( $query, $output ); return $this->row; }
+	};
+	$created_from_source = ( new PrivateDocumentRepository() )->create_from_source(
+		array( 'request_reference' => 'renewal:replacement', 'request_type' => 'renewal' ),
+		$valid_source,
+		'replacement.pdf',
+		$storage_service
+	);
+	adam_private_documents_assert( $created_from_source instanceof PrivateDocument && '' !== $created_from_source->file_identifier(), 'Storage identifier must be mapped to file_identifier before INSERT.' );
+	$reloaded_created = ( new PrivateDocumentRepository() )->find( 11 );
+	adam_private_documents_assert( null !== $reloaded_created && $created_from_source->file_identifier() === $reloaded_created->file_identifier(), 'A newly persisted replacement must retain its identifier after reload.' );
+	adam_private_documents_assert( is_string( $storage_service->path( $reloaded_created ) ), 'A reloaded replacement must remain downloadable/attachable.' );
 } else {
 	adam_private_documents_assert( is_wp_error( $stored ), 'Missing MIME validation support must fail safely.' );
 }

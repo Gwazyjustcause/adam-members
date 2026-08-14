@@ -115,6 +115,7 @@ final class Plugin {
 		$this->booted = true;
 		if ( is_admin() && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			( new Logger() )->log( 'debug', 'Google Sheets diagnostics build loaded.' );
+			( new Logger() )->log( 'debug', 'Google Sheets sheet-id-fix-v2 loaded.' );
 		}
 
 		$this->register_modules();
@@ -141,8 +142,8 @@ final class Plugin {
 		$renewal_repository        = new RenewalRepository();
 		$history_repository        = new HistoryRepository();
 		$history                   = new HistoryService( $history_repository, $members );
-		$private_document_repository = new PrivateDocumentRepository();
-		$private_document_storage    = new PrivateDocumentStorage();
+		$private_document_repository = new PrivateDocumentRepository( $logger );
+		$private_document_storage    = new PrivateDocumentStorage( $logger );
 		$email                     = new EmailService( $settings, $logger, $private_document_repository, $private_document_storage );
 		$communication_categories  = new CommunicationCategoryRegistry();
 		$communication_preferences = new CommunicationPreferences( $communication_categories );

@@ -1574,6 +1574,14 @@ final class AdminController {
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['document_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
+		$this->logger->info( 'Private document replacement trace v1: POST replacement handler received.', array(
+			'stage'          => 'admin.handler.received',
+			'document_type'  => $type,
+			'request_id'     => $id,
+			'action_present' => isset( $_POST['private_document_action'] ),
+			'file_present'   => isset( $_FILES['private_document_file'] ) && is_array( $_FILES['private_document_file'] ),
+			'upload_error'   => (int) ( $_FILES['private_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ),
+		) );
 		$this->verify_admin_nonce( 'adam_membership_private_document_' . $type . '_' . $id );
 
 		$action = sanitize_key( (string) ( $_POST['private_document_action'] ?? '' ) );
@@ -1598,14 +1606,22 @@ final class AdminController {
 	/** @return true|WP_Error */
 	private function upload_private_document( string $reference, string $type ): true|WP_Error {
 		if ( ! isset( $_FILES['private_document_file'] ) || ! is_array( $_FILES['private_document_file'] ) ) {
+			$this->logger->info( 'Private document replacement trace v1: upload missing.', array( 'stage' => 'admin.upload_received', 'document_type' => $type ) );
 			return new WP_Error( 'adam_private_document_missing', __( 'Selecione um PDF.', 'adam-membership' ) );
 		}
+		$this->logger->info( 'Private document replacement trace v1: upload received.', array(
+			'stage'        => 'admin.upload_received',
+			'document_type' => $type,
+			'upload_error' => (int) ( $_FILES['private_document_file']['error'] ?? UPLOAD_ERR_NO_FILE ),
+			'upload_size'  => absint( $_FILES['private_document_file']['size'] ?? 0 ),
+		) );
 		$data = array(
 			'request_reference' => $reference,
 			'request_type'      => $type,
 			'uploaded_by'       => get_current_user_id(),
 		);
 		$current = $this->private_documents->find_active( $reference );
+		$this->logger->info( 'Private document replacement trace v1: replacement mode selected.', array( 'stage' => 'admin.mode_selected', 'has_current_document' => null !== $current ) );
 		$result  = null === $current
 			? $this->private_documents->create_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage )
 			: $this->private_documents->replace_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage );
