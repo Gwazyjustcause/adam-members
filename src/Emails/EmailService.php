@@ -337,7 +337,10 @@ final class EmailService {
 			$this->record_document_delivery( $document, $delivery, false );
 			return false;
 		}
-		$sent = $this->send( $member->email(), __( 'Documento referente ao pagamento da sua quota', 'adam-membership' ), '<p>Segue em anexo o documento referente ao pagamento da sua quota.</p>', 'private_document', array( 'member_id' => $member->user_id(), 'document_id' => $document->id() ), $delivery['attachments'] );
+		$title = __( 'Documento referente ao pagamento da sua quota', 'adam-membership' );
+		$content = '<p>Olá <strong>' . esc_html( $member->full_name() ) . '</strong>,</p>'
+			. '<p>Segue em anexo o documento referente ao pagamento da sua quota ADAM.</p>';
+		$sent = $this->send( $member->email(), $title, $this->render_template( $title, $content ), 'private_document', array( 'member_id' => $member->user_id(), 'document_id' => $document->id() ), $delivery['attachments'] );
 		if ( ! $sent && '' === $delivery['error'] ) {
 			$delivery['error'] = $this->last_mail_error_code ?: 'email_send_failed';
 		}
