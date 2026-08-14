@@ -99,6 +99,7 @@ adam_private_documents_assert( substr_count( $repository_source . $admin_source,
 foreach ( array( 'cleanup_attempted', 'rollback_attempted', 'exception_class', 'exception_file', 'exception_line', 'exception_code' ) as $safe_field ) {
 	adam_private_documents_assert( str_contains( $repository_source . $admin_source, "'" . $safe_field . "'" ), 'Throwable trace field is missing: ' . $safe_field );
 }
+adam_private_documents_assert( str_contains( $storage, 'private function trace_result(' ), 'Storage must define the result trace helper used after finalization.' );
 $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
 $email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
 $approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );

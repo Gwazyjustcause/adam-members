@@ -188,6 +188,16 @@ final class PrivateDocumentStorage {
 		$this->trace( $message, array_merge( array( 'stage' => $stage ), $this->identifier_diagnostic( $identifier ) ) );
 	}
 
+	/** Log the safe shape of the value returned by storage without exposing its contents. */
+	private function trace_result( string $message, array|WP_Error $result, string $stage ): void {
+		if ( is_wp_error( $result ) ) {
+			$this->trace_error( $message, $result, $stage );
+			return;
+		}
+
+		$this->trace_identifier( $message, (string) ( $result['identifier'] ?? '' ), $stage );
+	}
+
 	/** @return array<string, bool|int|string> */
 	private function identifier_diagnostic( string $identifier ): array {
 		return array(
