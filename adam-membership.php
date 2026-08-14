@@ -56,6 +56,10 @@ register_activation_hook(
 			Team\TeamSchema::install();
 		}
 
+		if ( class_exists( Document\PrivateDocumentSchema::class ) ) {
+			Document\PrivateDocumentSchema::install();
+		}
+
 		if ( class_exists( Core\MaintenanceService::class ) ) {
 			Core\MaintenanceService::activate();
 		}
@@ -88,6 +92,10 @@ add_action(
 	static function (): void {
 		if ( class_exists( Team\TeamSchema::class ) ) {
 			Team\TeamSchema::maybe_install();
+		}
+
+		if ( class_exists( Document\PrivateDocumentSchema::class ) ) {
+			Document\PrivateDocumentSchema::maybe_install();
 		}
 	},
 	1

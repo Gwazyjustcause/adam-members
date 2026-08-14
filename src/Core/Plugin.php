@@ -16,6 +16,7 @@ use AdamMembership\Admin\DocumentController;
 use AdamMembership\Admin\EventController;
 use AdamMembership\Admin\PointsController;
 use AdamMembership\Admin\RewardController;
+use AdamMembership\Admin\PrivateDocumentDownloadController;
 use AdamMembership\Announcement\AnnouncementRepository;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Admin\AdminController;
@@ -24,6 +25,8 @@ use AdamMembership\Communication\CommunicationPreferences;
 use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Document\DocumentRepository;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Document\PrivateDocumentRepository;
+use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Form\MembershipForms;
 use AdamMembership\Form\NifValidationController;
@@ -137,6 +140,8 @@ final class Plugin {
 		$announcements             = new AnnouncementService( $announcement_repository, $members, $email, $logger, $communication_preferences, $teams );
 		$document_repository       = new DocumentRepository();
 		$documents                 = new DocumentService( $document_repository, $members, $logger, $history_repository );
+		$private_document_repository = new PrivateDocumentRepository();
+		$private_document_storage    = new PrivateDocumentStorage();
 		$event_repository          = new EventRepository();
 		$points_repository         = new PointsRepository();
 		$points                    = new PointsService( $points_repository, $members, $history_repository, $logger );
@@ -233,6 +238,7 @@ final class Plugin {
 			$admin->register();
 			( new AnnouncementController( $announcements ) )->register();
 			( new DocumentController( $documents ) )->register();
+			( new PrivateDocumentDownloadController( $private_document_repository, $private_document_storage ) )->register();
 			if ( ! function_exists( '\adam_comunidade_events' ) ) {
 				( new EventController( $events ) )->register();
 			}
