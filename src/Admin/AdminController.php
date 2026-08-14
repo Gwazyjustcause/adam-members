@@ -2304,9 +2304,11 @@ final class AdminController {
 		</div>
 
 		<?php $this->render_document_warning_panel( $document_warnings, __( 'Documentos obrigatórios em falta nesta renovação.', 'adam-membership' ) ); ?>
-		<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
+		<div class="adam-admin-financial-document-stack">
+			<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
+			<?php if ( null !== $member ) : ?><?php $this->render_google_sheets_payment_panel( $member, $request ); ?><?php endif; ?>
+		</div>
 		<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, null, $request, true ); ?>
-		<?php if ( null !== $member ) : ?><?php $this->render_google_sheets_payment_panel( $member, $request ); ?><?php endif; ?>
 
 		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Submitted changes', 'adam-membership' ); ?></h2>
@@ -3349,8 +3351,10 @@ final class AdminController {
 
 			<?php $this->render_document_warning_panel( $document_warnings, __( 'Existem documentos obrigatórios em falta para aprovar este sócio.', 'adam-membership' ) ); ?>
 			<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, $member, null, true ); ?>
-			<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
-			<?php $this->render_google_sheets_payment_panel( $member ); ?>
+			<div class="adam-admin-financial-document-stack">
+				<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
+				<?php $this->render_google_sheets_payment_panel( $member ); ?>
+			</div>
 			<?php foreach ( $member_requests as $request ) : ?>
 				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
 				<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
