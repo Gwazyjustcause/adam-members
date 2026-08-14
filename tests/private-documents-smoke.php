@@ -78,6 +78,7 @@ function adam_private_documents_assert( bool $condition, string $message ): void
 $schema = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentSchema.php' );
 $storage = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentStorage.php' );
 $download = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/PrivateDocumentDownloadController.php' );
+$admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
 
 adam_private_documents_assert( str_contains( $schema, 'dbDelta( $sql )' ), 'Schema must use dbDelta().' );
 adam_private_documents_assert( str_contains( $schema, 'adam_membership_private_documents_schema_version' ), 'Schema must have a version option.' );
@@ -91,6 +92,9 @@ adam_private_documents_assert( str_contains( $storage, 'delete_identifier' ), 'S
 adam_private_documents_assert( str_contains( $schema, 'get_charset_collate' ), 'Schema must use WordPress charset and collation.' );
 adam_private_documents_assert( str_contains( $download, 'Cache-Control: no-store, private' ), 'Downloads must disable caching.' );
 adam_private_documents_assert( str_contains( $download, "current_user_can( 'manage_options' )" ) && str_contains( $download, 'check_admin_referer' ), 'Downloads must require capability and nonce.' );
+adam_private_documents_assert( str_contains( $admin, 'handle_private_document_action' ) && str_contains( $admin, 'enctype="multipart/form-data"' ), 'Admin detail pages must expose a private document upload operation.' );
+adam_private_documents_assert( str_contains( $admin, 'Sem documento' ) && str_contains( $admin, 'anexo' ), 'Admin UI must make approval without a document explicit.' );
+adam_private_documents_assert( str_contains( $admin, 'replace_from_upload' ) && str_contains( $admin, 'mark_orphaned' ), 'Admin replacement and removal must preserve document history.' );
 
 $document = new PrivateDocument(
 	array(

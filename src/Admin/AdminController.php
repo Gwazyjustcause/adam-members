@@ -16,6 +16,8 @@ use AdamMembership\Core\DisplayLabels;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Document\PrivateDocumentRepository;
+use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Event\Event;
 use AdamMembership\Event\EventCheckIn;
@@ -69,6 +71,8 @@ final class AdminController {
 	private const ACTION_REMOVE_DOCUMENT = 'remove_document';
 	private const ACTION_REPLACE_RENEWAL_DOCUMENT = 'replace_renewal_document';
 	private const ACTION_REMOVE_RENEWAL_DOCUMENT  = 'remove_renewal_document';
+	private const ACTION_PRIVATE_DOCUMENT_UPLOAD  = 'upload_private_document';
+	private const ACTION_PRIVATE_DOCUMENT_REMOVE  = 'remove_private_document';
 	private const ACTION_APPROVE_RENEWAL = 'approve_renewal';
 	private const ACTION_CONFIRM_ANA_RENEWAL = 'confirm_ana_renewal';
 	private const ACTION_REJECT_RENEWAL  = 'reject_renewal';
@@ -222,6 +226,8 @@ final class AdminController {
 	private MemberChangeService $member_changes;
 	private GoogleSheetsClient $google_sheets;
 	private GoogleSheetsSyncService $google_sheets_sync;
+	private PrivateDocumentRepository $private_documents;
+	private PrivateDocumentStorage $private_document_storage;
 
 	/**
 	 * Create the admin controller.
@@ -245,7 +251,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -268,6 +274,8 @@ final class AdminController {
 		$this->member_changes      = $member_changes;
 		$this->google_sheets      = $google_sheets;
 		$this->google_sheets_sync = $google_sheets_sync;
+		$this->private_documents = $private_documents;
+		$this->private_document_storage = $private_document_storage;
 	}
 
 	/**
@@ -297,6 +305,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_apd_action', array( $this, 'handle_apd_action' ) );
 		add_action( 'admin_post_adam_membership_member_change_action', array( $this, 'handle_member_change_action' ) );
 		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
+		add_action( 'admin_post_adam_membership_private_document_action', array( $this, 'handle_private_document_action' ) );
 	}
 
 	/**
@@ -1522,6 +1531,87 @@ final class AdminController {
 		$this->redirect_with_message( __( 'Pedido de renovação atualizado com sucesso.', 'adam-membership' ) );
 	}
 
+	/** Handle private financial document upload/removal without changing workflow state. */
+	public function handle_private_document_action(): void {
+		$this->ensure_can_manage();
+		$type = sanitize_key( (string) ( $_POST['document_type'] ?? '' ) );
+		$id   = absint( $_POST['request_id'] ?? 0 );
+		$this->verify_admin_nonce( 'adam_membership_private_document_' . $type . '_' . $id );
+
+		$action = sanitize_key( (string) ( $_POST['private_document_action'] ?? '' ) );
+		$reference = $this->private_document_reference( $type, $id );
+		if ( is_wp_error( $reference ) ) {
+			$this->redirect_with_error( $reference->get_error_message() );
+		}
+
+		$result = match ( $action ) {
+			self::ACTION_PRIVATE_DOCUMENT_UPLOAD => $this->upload_private_document( $reference, $type ),
+			self::ACTION_PRIVATE_DOCUMENT_REMOVE => $this->remove_private_document( $reference ),
+			default => new WP_Error( 'adam_membership_invalid_private_document_action', __( 'Ação de documento inválida.', 'adam-membership' ) ),
+		};
+
+		if ( $result instanceof WP_Error ) {
+			$this->redirect_with_error( $result->get_error_message() );
+		}
+
+		$this->redirect_with_message( __( 'Documento privado atualizado com sucesso.', 'adam-membership' ) );
+	}
+
+	/** @return true|WP_Error */
+	private function upload_private_document( string $reference, string $type ): true|WP_Error {
+		if ( ! isset( $_FILES['private_document_file'] ) || ! is_array( $_FILES['private_document_file'] ) ) {
+			return new WP_Error( 'adam_private_document_missing', __( 'Selecione um PDF.', 'adam-membership' ) );
+		}
+		$data = array(
+			'request_reference' => $reference,
+			'request_type'      => $type,
+			'uploaded_by'       => get_current_user_id(),
+		);
+		$current = $this->private_documents->find_active( $reference );
+		$result  = null === $current
+			? $this->private_documents->create_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage )
+			: $this->private_documents->replace_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage );
+
+		return is_wp_error( $result ) ? $result : true;
+	}
+
+	/** @return true|WP_Error */
+	private function remove_private_document( string $reference ): true|WP_Error {
+		$current = $this->private_documents->find_active( $reference );
+		if ( null === $current ) {
+			return true;
+		}
+
+		$result = $this->private_documents->mark_orphaned( $current );
+
+		return is_wp_error( $result ) ? $result : true;
+	}
+
+	/** @return string|WP_Error */
+	private function private_document_reference( string $type, int $id ): string|WP_Error {
+		if ( 'registration' === $type ) {
+			$member = $this->members->find( $id );
+			if ( null === $member ) {
+				return new WP_Error( 'adam_private_document_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+			}
+			$reference = (string) get_user_meta( $id, 'adam_membership_registration_request_uuid', true );
+
+			return str_starts_with( $reference, 'registration:' ) ? $reference : 'registration:legacy-' . $id;
+		}
+		if ( 'renewal' === $type ) {
+			$request = $this->renewal_repository->find( $id );
+
+			if ( null === $request ) {
+				return new WP_Error( 'adam_private_document_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+			}
+			$reference = $request->request_uuid();
+
+			return str_starts_with( $reference, 'renewal:' ) ? $reference : 'renewal:legacy-' . $id;
+		}
+
+		return new WP_Error( 'adam_private_document_invalid_type', __( 'Tipo de pedido inválido.', 'adam-membership' ) );
+	}
+
 	/**
 	 * Handle team administration actions.
 	 */
@@ -2188,6 +2278,7 @@ final class AdminController {
 		</div>
 
 		<?php $this->render_document_warning_panel( $document_warnings, __( 'Documentos obrigatórios em falta nesta renovação.', 'adam-membership' ) ); ?>
+		<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
 		<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, null, $request, true ); ?>
 		<?php if ( null !== $member ) : ?><?php $this->render_google_sheets_payment_panel( $member, $request ); ?><?php endif; ?>
 
@@ -3232,9 +3323,11 @@ final class AdminController {
 
 			<?php $this->render_document_warning_panel( $document_warnings, __( 'Existem documentos obrigatórios em falta para aprovar este sócio.', 'adam-membership' ) ); ?>
 			<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, $member, null, true ); ?>
+			<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
 			<?php $this->render_google_sheets_payment_panel( $member ); ?>
 			<?php foreach ( $member_requests as $request ) : ?>
 				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
+				<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
 			<?php endforeach; ?>
 
 			<?php $this->render_member_edit_form( $member ); ?>
@@ -4915,6 +5008,59 @@ final class AdminController {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	/** Render the optional private billing-document controls for one request. */
+	private function render_private_document_panel( string $type, int $id, string $reference, string $redirect ): void {
+		$document = $this->private_documents->find_active( $reference );
+		$nonce    = 'adam_membership_private_document_' . $type . '_' . $id;
+		?>
+		<div class="adam-admin-panel adam-card adam-private-document-panel">
+			<h2><?php esc_html_e( 'Documento de faturação/recibo (opcional)', 'adam-membership' ); ?></h2>
+			<?php if ( null === $document ) : ?>
+				<p><?php esc_html_e( 'Sem documento — a aprovação será enviada sem anexo.', 'adam-membership' ); ?></p>
+			<?php else : ?>
+				<p><strong><?php esc_html_e( 'Documento associado:', 'adam-membership' ); ?></strong> <?php echo esc_html( $document->original_name() ); ?></p>
+				<p><strong><?php esc_html_e( 'Estado:', 'adam-membership' ); ?></strong> <?php echo esc_html( $document->document_status() ); ?> · <?php echo esc_html( $document->send_status() ); ?></p>
+				<p><a class="button button-small" href="<?php echo esc_url( $this->private_document_download_url( $document->id() ) ); ?>"><?php esc_html_e( 'Descarregar PDF', 'adam-membership' ); ?></a></p>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+				<input type="hidden" name="action" value="adam_membership_private_document_action">
+				<input type="hidden" name="private_document_action" value="<?php echo esc_attr( self::ACTION_PRIVATE_DOCUMENT_UPLOAD ); ?>">
+				<input type="hidden" name="document_type" value="<?php echo esc_attr( $type ); ?>">
+				<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>">
+				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+				<?php wp_nonce_field( $nonce ); ?>
+				<label for="adam-private-document-<?php echo esc_attr( $type . '-' . $id ); ?>"><?php esc_html_e( 'Selecionar PDF', 'adam-membership' ); ?></label>
+				<input id="adam-private-document-<?php echo esc_attr( $type . '-' . $id ); ?>" type="file" name="private_document_file" accept=".pdf,application/pdf" required>
+				<button type="submit" class="button button-primary"><?php echo null === $document ? esc_html__( 'Carregar documento', 'adam-membership' ) : esc_html__( 'Substituir documento', 'adam-membership' ); ?></button>
+			</form>
+			<?php if ( null !== $document ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Remover a associação deste documento? O histórico privado será preservado.', 'adam-membership' ) ); ?>');">
+					<input type="hidden" name="action" value="adam_membership_private_document_action">
+					<input type="hidden" name="private_document_action" value="<?php echo esc_attr( self::ACTION_PRIVATE_DOCUMENT_REMOVE ); ?>">
+					<input type="hidden" name="document_type" value="<?php echo esc_attr( $type ); ?>">
+					<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>">
+					<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+					<?php wp_nonce_field( $nonce ); ?>
+					<button type="submit" class="button button-link-delete"><?php esc_html_e( 'Remover associação', 'adam-membership' ); ?></button>
+				</form>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	private function private_document_download_url( int $document_id ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'      => 'adam_membership_download_private_document',
+					'document_id' => $document_id,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'adam_membership_download_private_document_' . $document_id
+		);
 	}
 
 	/**

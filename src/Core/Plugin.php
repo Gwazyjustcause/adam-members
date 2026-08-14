@@ -232,7 +232,9 @@ final class Plugin {
 				$apd_association,
 				$member_changes,
 				$google_sheets_client,
-				$google_sheets_sync
+				$google_sheets_sync,
+				$private_document_repository,
+				$private_document_storage
 			);
 
 			$admin->register();

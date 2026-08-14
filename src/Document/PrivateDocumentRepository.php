@@ -72,6 +72,39 @@ final class PrivateDocumentRepository {
 		return $this->persist_stored( $data, $stored, $storage );
 	}
 
+	/** Replace the active document while preserving the previous version. */
+	public function replace_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+		$stored = $storage->store_upload( $file );
+		if ( is_wp_error( $stored ) ) {
+			return $stored;
+		}
+
+		global $wpdb;
+		$reference = (string) ( $data['request_reference'] ?? '' );
+		$wpdb->query( 'START TRANSACTION' );
+		$current = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1 FOR UPDATE', $reference ), ARRAY_A );
+		if ( is_array( $current ) && false === $wpdb->update( PrivateDocumentSchema::table_name(), array( 'active_key' => null, 'document_status' => 'superseded', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => absint( $current['id'] ) ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			$storage->delete_identifier( (string) $stored['identifier'] );
+			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível substituir o documento privado.', 'adam-membership' ) );
+		}
+
+		$result = $this->create( array_merge( $data, $stored ) );
+		if ( is_wp_error( $result ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			$storage->delete_identifier( (string) $stored['identifier'] );
+			return $result;
+		}
+		if ( is_array( $current ) && false === $wpdb->update( PrivateDocumentSchema::table_name(), array( 'superseded_by' => $result->id() ), array( 'id' => absint( $current['id'] ) ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			$storage->delete_identifier( (string) $stored['identifier'] );
+			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível concluir a substituição do documento privado.', 'adam-membership' ) );
+		}
+		$wpdb->query( 'COMMIT' );
+
+		return $result;
+	}
+
 	/** @param array<string, mixed> $stored */
 	private function persist_stored( array $data, array $stored, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
 		$result = $this->create( array_merge( $data, $stored ) );
