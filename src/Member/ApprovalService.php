@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\Logger;
 use WP_Error;
@@ -54,6 +55,7 @@ final class ApprovalService {
 	 */
 	private HistoryService $history;
 	private RecognitionService $recognition;
+	private PrivateDocumentRepository $private_documents;
 
 	/**
 	 * Constructor.
@@ -64,7 +66,8 @@ final class ApprovalService {
 		EmailService $email,
 		Logger $logger,
 		HistoryService $history,
-		RecognitionService $recognition
+		RecognitionService $recognition,
+		PrivateDocumentRepository $private_documents
 	) {
 		$this->members  = $members;
 		$this->settings = $settings;
@@ -72,6 +75,7 @@ final class ApprovalService {
 		$this->logger   = $logger;
 		$this->history  = $history;
 		$this->recognition = $recognition;
+		$this->private_documents = $private_documents;
 	}
 
 	/**
@@ -157,7 +161,7 @@ final class ApprovalService {
 		$this->recognition->handle_member_approved( $member );
 		$this->history->member_approved( $member, $old_status, $member->status() );
 
-		$this->email->send_approval_email( $member );
+		$this->email->send_approval_email( $member, $this->private_document( $member ) );
 		/**
 		 * The WordPress approval is complete. Integrations must treat failures
 		 * from this notification as independent from the approval result.
@@ -389,7 +393,7 @@ final class ApprovalService {
 			);
 		}
 
-		if ( ! $this->email->send_approval_email( $member ) ) {
+		if ( ! $this->email->send_approval_email( $member, $this->private_document( $member ) ) ) {
 			return new WP_Error(
 				'adam_membership_approval_email_failed',
 				__( 'Não foi possível enviar o email de aprovação.', 'adam-membership' )
@@ -400,6 +404,29 @@ final class ApprovalService {
 		$this->history->approval_email_resent( $member );
 
 		return true;
+	}
+
+	/** Send only the registration document without repeating approval. */
+	public function send_private_document( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+		if ( null === $member ) {
+			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+		}
+		$document = $this->private_document( $member );
+		if ( null === $document || ! $this->email->send_private_document_email( $member, $document ) ) {
+			return new WP_Error( 'adam_private_document_email_failed', __( 'Não foi possível enviar o documento ao sócio.', 'adam-membership' ) );
+		}
+
+		return true;
+	}
+
+	private function private_document( Member $member ): ?\AdamMembership\Document\PrivateDocument {
+		$reference = (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true );
+		if ( ! str_starts_with( $reference, 'registration:' ) ) {
+			$reference = 'registration:legacy-' . $member->user_id();
+		}
+
+		return $this->private_documents->find_active( $reference );
 	}
 
 	/**

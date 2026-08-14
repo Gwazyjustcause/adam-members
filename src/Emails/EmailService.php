@@ -12,6 +12,9 @@ namespace AdamMembership\Emails;
 use AdamMembership\Announcement\Announcement;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\ManagedPages;
+use AdamMembership\Document\PrivateDocument;
+use AdamMembership\Document\PrivateDocumentRepository;
+use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use WP_User;
@@ -43,6 +46,8 @@ final class EmailService {
 	 * @var Logger
 	 */
 	private Logger $logger;
+	private PrivateDocumentRepository $private_documents;
+	private PrivateDocumentStorage $private_document_storage;
 
 	/**
 	 * Constructor.
@@ -50,9 +55,11 @@ final class EmailService {
 	 * @param SettingsRepository $settings Settings repository.
 	 * @param Logger             $logger   Logger helper.
 	 */
-	public function __construct( SettingsRepository $settings, Logger $logger ) {
+	public function __construct( SettingsRepository $settings, Logger $logger, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage ) {
 		$this->settings = $settings;
 		$this->logger   = $logger;
+		$this->private_documents = $private_documents;
+		$this->private_document_storage = $private_document_storage;
 	}
 
 	/**
@@ -168,16 +175,22 @@ final class EmailService {
 	 *
 	 * @param Member $member Member.
 	 */
-	public function send_approval_email( Member $member ): bool {
-		return $this->send_member_template_email(
+	public function send_approval_email( Member $member, ?PrivateDocument $document = null ): bool {
+		$delivery = $this->document_delivery( $document );
+		$sent = $this->send_member_template_email(
 			'member_approved',
 			$member,
 			array(
 				'member_area_link' => $this->settings->member_area_url(),
 				'login_link'       => $this->settings->member_area_url(),
 			),
-			array( 'member_id' => $member->user_id() )
+			array( 'member_id' => $member->user_id() ),
+			$delivery['attachments'],
+			$delivery['note']
 		);
+		$this->record_document_delivery( $document, $delivery, $sent );
+
+		return $sent;
 	}
 
 	/**
@@ -290,15 +303,34 @@ final class EmailService {
 	 * @param Member $member     Member.
 	 * @param int    $renewal_id Renewal request ID.
 	 */
-	public function send_renewal_approved_email( Member $member, int $renewal_id = 0 ): bool {
-		return $this->send_member_template_email(
+	public function send_renewal_approved_email( Member $member, int $renewal_id = 0, ?PrivateDocument $document = null ): bool {
+		$delivery = $this->document_delivery( $document );
+		$sent = $this->send_member_template_email(
 			'renewal_approved',
 			$member,
 			array(
 				'member_area_link' => $this->settings->member_area_url(),
 			),
-			array( 'renewal_id' => $renewal_id )
+			array( 'renewal_id' => $renewal_id ),
+			$delivery['attachments'],
+			$delivery['note']
 		);
+		$this->record_document_delivery( $document, $delivery, $sent );
+
+		return $sent;
+	}
+
+	/** Send only a private document in a short message. */
+	public function send_private_document_email( Member $member, PrivateDocument $document ): bool {
+		$delivery = $this->document_delivery( $document );
+		if ( array() === $delivery['attachments'] ) {
+			$this->record_document_delivery( $document, $delivery, false );
+			return false;
+		}
+		$sent = $this->send( $member->email(), __( 'Documento referente ao pagamento da sua quota', 'adam-membership' ), '<p>Segue em anexo o documento referente ao pagamento da sua quota.</p>', 'private_document', array( 'member_id' => $member->user_id(), 'document_id' => $document->id() ), $delivery['attachments'] );
+		$this->record_document_delivery( $document, $delivery, $sent );
+
+		return $sent;
 	}
 
 	/**
@@ -444,7 +476,7 @@ final class EmailService {
 	 * @param string               $email_type Email type.
 	 * @param array<string, mixed> $context    Log context.
 	 */
-	private function send( string $recipient, string $subject, string $message, string $email_type = 'generic', array $context = array() ): bool {
+	private function send( string $recipient, string $subject, string $message, string $email_type = 'generic', array $context = array(), array $attachments = array() ): bool {
 		$headers = array(
 			'Content-Type: text/html; charset=UTF-8',
 		);
@@ -453,7 +485,7 @@ final class EmailService {
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 
 		try {
-			$sent = wp_mail( $recipient, $subject, $message, $headers );
+			$sent = wp_mail( $recipient, $subject, $message, $headers, $attachments );
 		} finally {
 			remove_filter( 'wp_mail_from', array( $this, 'mail_from' ) );
 			remove_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
@@ -500,7 +532,7 @@ final class EmailService {
 	 * @param array<string, mixed> $extra        Additional context.
 	 * @param array<string, mixed> $context      Log context.
 	 */
-	private function send_member_template_email( string $template_key, Member $member, array $extra = array(), array $context = array() ): bool {
+	private function send_member_template_email( string $template_key, Member $member, array $extra = array(), array $context = array(), array $attachments = array(), string $append_html = '' ): bool {
 		$recipient = $member->email();
 
 		if ( '' === $recipient ) {
@@ -538,13 +570,50 @@ final class EmailService {
 		if ( null === $rendered ) {
 			return false;
 		}
+		$rendered['html'] .= $append_html;
 
 		return $this->send(
 			$recipient,
 			$rendered['subject'],
 			$rendered['html'],
 			$template_key,
-			array_merge( $context, array( 'member_id' => $member->user_id() ) )
+			array_merge( $context, array( 'member_id' => $member->user_id() ) ),
+			$attachments
+		);
+	}
+
+	/** @return array{attachments:array<int,string>,note:string,available:bool,error:string} */
+	private function document_delivery( ?PrivateDocument $document ): array {
+		if ( null === $document ) {
+			return array( 'attachments' => array(), 'note' => '', 'available' => false, 'error' => '' );
+		}
+		$path = $this->private_document_storage->path( $document );
+		if ( is_wp_error( $path ) ) {
+			$this->logger->error( 'Private document attachment unavailable.', array( 'document_id' => $document->id(), 'error_code' => $path->get_error_code() ) );
+			return array( 'attachments' => array(), 'note' => '', 'available' => false, 'error' => (string) $path->get_error_code() );
+		}
+
+		return array(
+			'attachments' => array( $path ),
+			'note'        => '<p>Segue em anexo o documento referente ao pagamento da sua quota.</p>',
+			'available'   => true,
+			'error'       => '',
+		);
+	}
+
+	/** @param array{attachments:array<int,string>,note:string,available:bool,error:string} $delivery */
+	private function record_document_delivery( ?PrivateDocument $document, array $delivery, bool $email_sent ): void {
+		if ( null === $document ) {
+			return;
+		}
+		$now = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
+		$this->private_documents->update(
+			$document,
+			array(
+				'send_status'   => $email_sent && $delivery['available'] ? 'sent' : 'failed',
+				'last_sent_at'  => $email_sent && $delivery['available'] ? $now : null,
+				'last_error'    => $email_sent && $delivery['available'] ? null : ( $delivery['error'] ?: 'email_send_failed' ),
+			)
 		);
 	}
 

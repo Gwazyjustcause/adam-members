@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Emails\EmailService;
+use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Team\TeamRepository;
 use WP_Error;
@@ -25,11 +26,12 @@ final class RenewalService {
 	private HistoryService $history;
 	private RecognitionService $recognition;
 	private TeamRepository $teams;
+	private PrivateDocumentRepository $private_documents;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history, RecognitionService $recognition, TeamRepository $teams ) {
+	public function __construct( MemberRepository $members, RenewalRepository $renewals, EmailService $email, Logger $logger, HistoryService $history, RecognitionService $recognition, TeamRepository $teams, PrivateDocumentRepository $private_documents ) {
 		$this->members  = $members;
 		$this->renewals = $renewals;
 		$this->email    = $email;
@@ -37,6 +39,7 @@ final class RenewalService {
 		$this->history  = $history;
 		$this->recognition = $recognition;
 		$this->teams    = $teams;
+		$this->private_documents = $private_documents;
 	}
 
 	/**
@@ -197,8 +200,37 @@ final class RenewalService {
 		$this->audit( 'Renovação aprovada.', $member, array( 'renewal_id' => $request->id() ) );
 		$this->recognition->handle_renewal_approved( $member );
 		$this->history->renewal_approved( $member, $request->id(), $old_expiry, $new_expiry, $field_changes );
-		$this->email->send_renewal_approved_email( $member, $request->id() );
+		$this->email->send_renewal_approved_email( $member, $request->id(), $this->private_documents->find_active( $request->request_uuid() ) );
 		do_action( 'adam_membership_renewal_approved', $approved_request, $member );
+
+		return true;
+	}
+
+	/** Resend only the renewal confirmation email. */
+	public function resend_approval_email( int $request_id ): true|WP_Error {
+		$request = $this->renewals->find( $request_id );
+		if ( null === $request ) {
+			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+		}
+		$member = $this->members->find( $request->user_id() );
+		if ( null === $member || ! $member->isActive() ) {
+			return new WP_Error( 'adam_membership_member_not_active', __( 'Apenas sócios ativos podem receber o email de confirmação.', 'adam-membership' ) );
+		}
+		if ( ! $this->email->send_renewal_approved_email( $member, $request->id(), $this->private_documents->find_active( $request->request_uuid() ) ) ) {
+			return new WP_Error( 'adam_membership_approval_email_failed', __( 'Não foi possível enviar o email de confirmação.', 'adam-membership' ) );
+		}
+
+		return true;
+	}
+
+	/** Send only the renewal document without repeating approval. */
+	public function send_private_document( int $request_id ): true|WP_Error {
+		$request = $this->renewals->find( $request_id );
+		$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
+		$document = null !== $request ? $this->private_documents->find_active( $request->request_uuid() ) : null;
+		if ( null === $request || null === $member || null === $document || ! $this->email->send_private_document_email( $member, $document ) ) {
+			return new WP_Error( 'adam_private_document_email_failed', __( 'Não foi possível enviar o documento ao sócio.', 'adam-membership' ) );
+		}
 
 		return true;
 	}

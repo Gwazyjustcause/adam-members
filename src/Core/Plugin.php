@@ -133,15 +133,15 @@ final class Plugin {
 		$renewal_repository        = new RenewalRepository();
 		$history_repository        = new HistoryRepository();
 		$history                   = new HistoryService( $history_repository, $members );
-		$email                     = new EmailService( $settings, $logger );
+		$private_document_repository = new PrivateDocumentRepository();
+		$private_document_storage    = new PrivateDocumentStorage();
+		$email                     = new EmailService( $settings, $logger, $private_document_repository, $private_document_storage );
 		$communication_categories  = new CommunicationCategoryRegistry();
 		$communication_preferences = new CommunicationPreferences( $communication_categories );
 		$announcement_repository   = new AnnouncementRepository();
 		$announcements             = new AnnouncementService( $announcement_repository, $members, $email, $logger, $communication_preferences, $teams );
 		$document_repository       = new DocumentRepository();
 		$documents                 = new DocumentService( $document_repository, $members, $logger, $history_repository );
-		$private_document_repository = new PrivateDocumentRepository();
-		$private_document_storage    = new PrivateDocumentStorage();
 		$event_repository          = new EventRepository();
 		$points_repository         = new PointsRepository();
 		$points                    = new PointsService( $points_repository, $members, $history_repository, $logger );
@@ -154,12 +154,12 @@ final class Plugin {
 		$card_cosmetics            = new CardCosmeticsService( $rewards );
 		$events                    = new EventService( $event_repository, $members, $logger, $history_repository, $points );
 		$statistics                = new StatisticsService( $members, $renewal_repository, $announcements, $events, $points, $rewards );
-		$approval                  = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition );
+		$approval                  = new ApprovalService( $members, $settings, $email, $logger, $history, $recognition, $private_document_repository );
 		$apd_repository            = new ApdAssociationRepository();
 		$apd_association           = new ApdAssociationService( $apd_repository, $members, $settings, $email );
 		$member_change_repository  = new MemberChangeRepository();
 		$member_changes            = new MemberChangeService( $member_change_repository, $members, $email );
-		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
+		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams, $private_document_repository );
 		$google_sheets_client      = new GoogleSheetsClient( $settings );
 		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository );
 		add_action(

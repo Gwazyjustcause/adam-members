@@ -79,6 +79,9 @@ $schema = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/Privat
 $storage = (string) file_get_contents( dirname( __DIR__ ) . '/src/Document/PrivateDocumentStorage.php' );
 $download = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/PrivateDocumentDownloadController.php' );
 $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminController.php' );
+$email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
+$approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );
+$renewal = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/RenewalService.php' );
 
 adam_private_documents_assert( str_contains( $schema, 'dbDelta( $sql )' ), 'Schema must use dbDelta().' );
 adam_private_documents_assert( str_contains( $schema, 'adam_membership_private_documents_schema_version' ), 'Schema must have a version option.' );
@@ -95,6 +98,10 @@ adam_private_documents_assert( str_contains( $download, "current_user_can( 'mana
 adam_private_documents_assert( str_contains( $admin, 'handle_private_document_action' ) && str_contains( $admin, 'enctype="multipart/form-data"' ), 'Admin detail pages must expose a private document upload operation.' );
 adam_private_documents_assert( str_contains( $admin, 'Sem documento' ) && str_contains( $admin, 'anexo' ), 'Admin UI must make approval without a document explicit.' );
 adam_private_documents_assert( str_contains( $admin, 'replace_from_upload' ) && str_contains( $admin, 'mark_orphaned' ), 'Admin replacement and removal must preserve document history.' );
+adam_private_documents_assert( str_contains( $email, 'wp_mail( $recipient, $subject, $message, $headers, $attachments )' ), 'Document delivery must use wp_mail attachments.' );
+adam_private_documents_assert( str_contains( $email, 'Segue em anexo o documento referente ao pagamento da sua quota.' ), 'Approval emails must mention the attachment only when available.' );
+adam_private_documents_assert( str_contains( $email, 'send_private_document_email' ) && str_contains( $approval, 'send_private_document' ) && str_contains( $renewal, 'send_private_document' ), 'Private-document delivery must be independently callable.' );
+adam_private_documents_assert( str_contains( $admin, 'ACTION_RESEND_RENEWAL_EMAIL' ) && str_contains( $admin, 'Reenviar email de confirma' ), 'Renewal confirmation resend must be exposed separately.' );
 
 $document = new PrivateDocument(
 	array(

@@ -65,6 +65,8 @@ final class AdminController {
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
+	private const ACTION_RESEND_RENEWAL_EMAIL = 'resend_renewal_approval_email';
+	private const ACTION_SEND_PRIVATE_DOCUMENT = 'send_private_document';
 	private const ACTION_SAVE_MEMBER  = 'save_member';
 	private const ACTION_REGENERATE_CARD_TOKEN = 'regenerate_card_token';
 	private const ACTION_REPLACE_DOCUMENT = 'replace_document';
@@ -1519,6 +1521,8 @@ final class AdminController {
 			self::ACTION_APPROVE_RENEWAL          => $this->renewal_service->approve( $request_id ),
 			self::ACTION_CONFIRM_ANA_RENEWAL     => $this->renewal_service->confirm_ana_and_approve( $request_id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ) ),
 			self::ACTION_REJECT_RENEWAL           => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
+			self::ACTION_RESEND_RENEWAL_EMAIL     => $this->renewal_service->resend_approval_email( $request_id ),
+			self::ACTION_SEND_PRIVATE_DOCUMENT    => $this->renewal_service->send_private_document( $request_id ),
 			self::ACTION_REPLACE_RENEWAL_DOCUMENT => $this->replace_renewal_document( $request_id ),
 			self::ACTION_REMOVE_RENEWAL_DOCUMENT  => $this->remove_renewal_document( $request_id ),
 			default                               => new WP_Error( 'adam_membership_invalid_renewal_action', __( 'Ação de renovação inválida.', 'adam-membership' ) ),
@@ -3667,6 +3671,7 @@ final class AdminController {
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
+			self::ACTION_SEND_PRIVATE_DOCUMENT => $this->approval_service->send_private_document( $user_id ),
 			self::ACTION_SAVE_MEMBER  => $this->save_member_fields( $user_id ),
 			self::ACTION_REGENERATE_CARD_TOKEN => $this->regenerate_card_token( $user_id ),
 			self::ACTION_REPLACE_DOCUMENT => $this->replace_member_document( $user_id ),
@@ -5035,6 +5040,45 @@ final class AdminController {
 				<input id="adam-private-document-<?php echo esc_attr( $type . '-' . $id ); ?>" type="file" name="private_document_file" accept=".pdf,application/pdf" required>
 				<button type="submit" class="button button-primary"><?php echo null === $document ? esc_html__( 'Carregar documento', 'adam-membership' ) : esc_html__( 'Substituir documento', 'adam-membership' ); ?></button>
 			</form>
+			<?php if ( 'renewal' === $type && null === $document ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+					<input type="hidden" name="action" value="adam_membership_renewal_action">
+					<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_RESEND_RENEWAL_EMAIL ); ?>">
+					<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>">
+					<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+					<?php wp_nonce_field( 'adam_membership_renewal_action_' . $id ); ?>
+					<button type="submit" class="button"><?php esc_html_e( 'Reenviar email de confirmação', 'adam-membership' ); ?></button>
+				</form>
+			<?php endif; ?>
+			<?php if ( null !== $document ) : ?>
+				<?php if ( 'registration' === $type ) : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+						<input type="hidden" name="action" value="adam_membership_member_action">
+						<input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_SEND_PRIVATE_DOCUMENT ); ?>">
+						<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $id ); ?>">
+						<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+						<?php wp_nonce_field( 'adam_membership_member_action_' . $id ); ?>
+						<button type="submit" class="button"><?php esc_html_e( 'Enviar documento ao sócio', 'adam-membership' ); ?></button>
+					</form>
+				<?php else : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+						<input type="hidden" name="action" value="adam_membership_renewal_action">
+						<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_SEND_PRIVATE_DOCUMENT ); ?>">
+						<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>">
+						<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+						<?php wp_nonce_field( 'adam_membership_renewal_action_' . $id ); ?>
+						<button type="submit" class="button"><?php esc_html_e( 'Enviar documento ao sócio', 'adam-membership' ); ?></button>
+					</form>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-inline-form">
+						<input type="hidden" name="action" value="adam_membership_renewal_action">
+						<input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_RESEND_RENEWAL_EMAIL ); ?>">
+						<input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>">
+						<input type="hidden" name="redirect_to" value="<?php echo esc_url( $redirect ); ?>">
+						<?php wp_nonce_field( 'adam_membership_renewal_action_' . $id ); ?>
+						<button type="submit" class="button"><?php esc_html_e( 'Reenviar email de confirmação', 'adam-membership' ); ?></button>
+					</form>
+				<?php endif; ?>
+			<?php endif; ?>
 			<?php if ( null !== $document ) : ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('<?php echo esc_js( __( 'Remover a associação deste documento? O histórico privado será preservado.', 'adam-membership' ) ); ?>');">
 					<input type="hidden" name="action" value="adam_membership_private_document_action">
@@ -6027,6 +6071,7 @@ final class AdminController {
 			self::ACTION_RENEW        => __( 'Quota renewed successfully.', 'adam-membership' ),
 			self::ACTION_CHANGE_QUOTA => __( 'Validade da quota atualizada com sucesso.', 'adam-membership' ),
 			self::ACTION_RESEND_EMAIL => __( 'Email de aprovação reenviado com sucesso.', 'adam-membership' ),
+			self::ACTION_SEND_PRIVATE_DOCUMENT => __( 'Documento enviado ao sócio com sucesso.', 'adam-membership' ),
 			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
 			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
 			self::ACTION_REPLACE_DOCUMENT => __( 'Documento carregado com sucesso.', 'adam-membership' ),
