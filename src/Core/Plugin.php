@@ -108,6 +108,9 @@ final class Plugin {
 		}
 
 		$this->booted = true;
+		if ( is_admin() && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			( new Logger() )->log( 'debug', 'Google Sheets diagnostics build loaded.' );
+		}
 
 		$this->register_modules();
 	}
@@ -211,7 +214,7 @@ final class Plugin {
 		$documents->register();
 		( new CommunicationPreferencesController( $communication_preferences, $members ) )->register();
 
-		if ( is_admin() ) {
+		if ( is_admin() || $this->is_adam_admin_post_request() ) {
 			$admin = new AdminController(
 				$members,
 				$approval,
@@ -240,15 +243,19 @@ final class Plugin {
 			);
 
 			$admin->register();
-			( new AnnouncementController( $announcements ) )->register();
-			( new DocumentController( $documents ) )->register();
+			if ( is_admin() ) {
+				( new AnnouncementController( $announcements ) )->register();
+				( new DocumentController( $documents ) )->register();
+			}
 			( new PrivateDocumentDownloadController( $private_document_repository, $private_document_storage ) )->register();
-			if ( ! function_exists( '\adam_comunidade_events' ) ) {
+			if ( is_admin() && ! function_exists( '\adam_comunidade_events' ) ) {
 				( new EventController( $events ) )->register();
 			}
-			( new PointsController( $points, $members, $events ) )->register();
-			( new RewardController( $rewards, $members, $cards ) )->register();
-			( new StatisticsController( $statistics, $events, $points ) )->register();
+			if ( is_admin() ) {
+				( new PointsController( $points, $members, $events ) )->register();
+				( new RewardController( $rewards, $members, $cards ) )->register();
+				( new StatisticsController( $statistics, $events, $points ) )->register();
+			}
 
 			return;
 		}
@@ -264,6 +271,13 @@ final class Plugin {
 		$email_change = new EmailChangeConfirmation( $members, $history );
 		$email_change->register();
 		( new EmailConfirmation( $email_change ) )->register();
+	}
+
+	/** Detect plugin admin-post requests before relying on is_admin(). */
+	private function is_adam_admin_post_request(): bool {
+		$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( (string) $_REQUEST['action'] ) ) : '';
+
+		return str_starts_with( $action, 'adam_membership_' );
 	}
 
 	/**

@@ -1778,21 +1778,31 @@ final class AdminController {
 
 	/** Retry one manually selected Google Sheets movement without changing approval state. */
 	public function handle_retry_google_sheets(): void {
+		$this->logger->info( 'financial_retry_post_received.' );
 		$this->ensure_can_manage();
+		$this->logger->info( 'financial_retry_handler_entered.' );
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
 		$this->verify_admin_nonce( 'adam_membership_retry_google_sheets_' . $type . '_' . $id );
+		$this->logger->info( 'financial_retry_validation_passed.' );
 
 		if ( 'registration' === $type ) {
 			$member = $this->members->find( $id );
+			if ( null !== $member ) {
+				$this->logger->info( 'financial_retry_sync_service_called.' );
+			}
 			$result = null !== $member ? $this->google_sheets_sync->sync_registration( $member ) : new WP_Error( 'adam_google_sheets_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		} elseif ( 'renewal' === $type ) {
 			$request = $this->renewal_repository->find( $id );
 			$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
+			if ( null !== $request && null !== $member ) {
+				$this->logger->info( 'financial_retry_sync_service_called.' );
+			}
 			$result  = null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		} else {
 			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
 		}
+		$this->logger->info( 'financial_retry_sync_service_returned.', array( 'result' => is_wp_error( $result ) ? 'error' : 'success', 'error_code' => is_wp_error( $result ) ? sanitize_key( (string) $result->get_error_code() ) : '' ) );
 
 		if ( is_wp_error( $result ) ) {
 			$this->redirect_with_error( $result->get_error_message() );

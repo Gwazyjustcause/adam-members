@@ -82,6 +82,8 @@ $admin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Admin/AdminContr
 $email = (string) file_get_contents( dirname( __DIR__ ) . '/src/Emails/EmailService.php' );
 $approval = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/ApprovalService.php' );
 $renewal = (string) file_get_contents( dirname( __DIR__ ) . '/src/Member/RenewalService.php' );
+$plugin = (string) file_get_contents( dirname( __DIR__ ) . '/src/Core/Plugin.php' );
+$rewards = (string) file_get_contents( dirname( __DIR__ ) . '/src/Reward/RewardService.php' );
 $uninstall = (string) file_get_contents( dirname( __DIR__ ) . '/uninstall.php' );
 $gitignore = (string) file_get_contents( dirname( __DIR__ ) . '/.gitignore' );
 
@@ -108,6 +110,8 @@ adam_private_documents_assert( str_contains( $admin, "'sha256'" ) && str_contain
 adam_private_documents_assert( str_contains( $email, 'Private document email sent.' ) && str_contains( $email, 'Private document email failed.' ) && str_contains( $email, "'sha256'" ), 'Document delivery success and failure must be audited safely.' );
 adam_private_documents_assert( str_contains( $email, "wp_mail_failed" ) && str_contains( $email, 'last_mail_error_code' ) && str_contains( $email, 'error_message' ) && str_contains( $email, 'mail_exception' ), 'Email delivery must preserve a safe technical failure code and diagnostic message.' );
 adam_private_documents_assert( str_contains( $admin, 'Private document send trace v1' ) && str_contains( $approval, 'Private document send trace v1' ) && str_contains( $renewal, 'Private document send trace v1' ) && str_contains( $email, 'Private document send trace v1' ), 'Private document sending must expose a safe end-to-end diagnostic trace.' );
+adam_private_documents_assert( str_contains( $plugin, 'is_adam_admin_post_request' ) && str_contains( $admin, 'admin_post_adam_membership_member_action' ), 'Admin-post handlers must be registered for processing requests, not only admin screens.' );
+adam_private_documents_assert( str_contains( $rewards, 'catalogue_data_changed' ) && str_contains( $rewards, 'if ( $created > 0 || $updated > 0 )' ), 'Reward catalogue synchronization must skip unchanged rows and avoid log spam.' );
 adam_private_documents_assert( str_contains( $admin, 'private_document_status_label' ) && str_contains( $admin, 'private_document_send_status_label' ) && str_contains( $admin, 'Último envio:' ), 'Private-document states must be shown with administrative Portuguese labels.' );
 adam_private_documents_assert( str_contains( $approval, 'Private document sent to member.' ) && str_contains( $renewal, 'Renewal confirmation email resent.' ) && str_contains( $renewal, 'Private renewal document sent to member.' ), 'Independent document operations must be auditable.' );
 adam_private_documents_assert( ! str_contains( strtolower( $uninstall ), 'drop table' ) && ! str_contains( strtolower( $uninstall ), 'unlink' ), 'Uninstall must not delete private-document data.' );

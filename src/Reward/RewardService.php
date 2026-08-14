@@ -63,6 +63,9 @@ final class RewardService {
 				$prepared               = $this->merge_catalogue_reward( $current, $prepared );
 				$prepared['created_at'] = $current->created_at();
 				$prepared['updated_at'] = $now;
+				if ( ! $this->catalogue_data_changed( $current->data(), $prepared ) ) {
+					continue;
+				}
 				$this->repository->update_reward( $current, $prepared );
 				++$updated;
 				continue;
@@ -2242,6 +2245,23 @@ final class RewardService {
 		$merged['active'] = $current->active();
 
 		return $merged;
+	}
+
+	/** Compare catalogue payloads without treating associative-key order as a change. */
+	private function catalogue_data_changed( array $current, array $candidate ): bool {
+		$normalize = static function ( mixed $value ) use ( &$normalize ): mixed {
+			if ( ! is_array( $value ) ) {
+				return $value;
+			}
+			foreach ( $value as $key => $item ) {
+				$value[ $key ] = $normalize( $item );
+			}
+			ksort( $value );
+
+			return $value;
+		};
+
+		return $normalize( $current ) !== $normalize( $candidate );
 	}
 
 	private function member_reward_rank( Member $member, Reward $reward ): int {
