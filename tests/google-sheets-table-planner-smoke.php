@@ -17,7 +17,7 @@ function adam_sheets_assert( bool $condition, string $message ): void {
 	}
 }
 
-$row = static fn ( string $id, string $name = 'Member' ): array => array( '42', $name, '2027', 'Inscrição', 'Efetivo', '25.00', '2026-12-15', 'MB WAY', 'Pago', $id, '' );
+$row = static fn ( string $id, string $name = 'Member' ): array => array( 'Inscrição ADAM', '42', $name, '2027', 'Inscrição', 'Efetivo', '25.00', '2026-12-15', 'MB WAY', 'Pago', $id, '' );
 
 $plan = GoogleSheetsTablePlanner::plan( array(), 'registration:test-1' );
 adam_sheets_assert( 5 === $plan['target_row'] && ! $plan['requires_insert'], 'An empty table starts at row 5.' );
@@ -40,11 +40,11 @@ adam_sheets_assert( 26 === $plan['target_row'] && $plan['requires_insert'], 'Lat
 
 $plan = GoogleSheetsTablePlanner::plan( array( $row( 'renewal:existing' ) ), 'renewal:existing' );
 adam_sheets_assert( 5 === $plan['duplicate_row'], 'An existing identical request ID is detected.' );
-adam_sheets_assert( 'renewal:existing' !== (string) $row( 'renewal:other' )[9], 'A renewal for the same member can have a different request ID.' );
+adam_sheets_assert( 'renewal:existing' !== (string) $row( 'renewal:other' )[10], 'A renewal for the same member can have a different request ID.' );
 adam_sheets_assert( GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same' ) ), 'An existing ID with identical data is idempotent.' );
 adam_sheets_assert( ! GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same', 'Changed' ) ), 'An existing ID with different data requires an update.' );
-adam_sheets_assert( 'A4:K25' === GoogleSheetsTablePlanner::expanded_range( 'A4:K24' ), 'The first table expansion ends at row 25.' );
-adam_sheets_assert( 'A4:K26' === GoogleSheetsTablePlanner::expanded_range( GoogleSheetsTablePlanner::expanded_range( 'A4:K24' ) ), 'The second table expansion ends at row 26.' );
+adam_sheets_assert( 'A4:L25' === GoogleSheetsTablePlanner::expanded_range( 'A4:L24' ), 'The first table expansion ends at row 25.' );
+adam_sheets_assert( 'A4:L26' === GoogleSheetsTablePlanner::expanded_range( GoogleSheetsTablePlanner::expanded_range( 'A4:L24' ) ), 'The second table expansion ends at row 26.' );
 
 $service_source = (string) file_get_contents( __DIR__ . '/../src/GoogleSheets/GoogleSheetsSyncService.php' );
 $client_source  = (string) file_get_contents( __DIR__ . '/../src/GoogleSheets/GoogleSheetsClient.php' );

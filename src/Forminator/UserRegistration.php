@@ -108,13 +108,18 @@ final class UserRegistration {
 			$this->logger->info( 'Registration skipped because the submitted email already exists.', array( 'email_hash' => wp_hash( $email ) ) );
 			return;
 		}
+		$membership_mode = $this->submitted_membership_mode( $field_data_array );
+		if ( '' === $membership_mode ) {
+			$this->logger->error( 'Registration failed because the membership choice was not preserved by Forminator.', array( 'entry_id' => $entry_id ) );
+			return;
+		}
 
 		if ( username_exists( $email ) ) {
 			$this->logger->error( 'Registration failed because the submitted email is already used as a username.', array( 'email_hash' => wp_hash( $email ) ) );
 			return;
 		}
 
-		$result = $this->registration->register( $this->build_payload( $submission, $email ), absint( $entry_id ) );
+		$result = $this->registration->register( $this->build_payload( $submission, $email, $membership_mode ), absint( $entry_id ) );
 
 		if ( is_wp_error( $result ) ) {
 			$this->logger->error(
@@ -135,7 +140,7 @@ final class UserRegistration {
 	 * @param string         $email      Submitted email address.
 	 * @return array<string, mixed>
 	 */
-	private function build_payload( SubmissionData $submission, string $email ): array {
+	private function build_payload( SubmissionData $submission, string $email, string $mode ): array {
 		return array(
 			'email'             => $email,
 			'full_name'         => $this->build_display_name( $submission->get_string( 'first_name' ), $submission->get_string( 'last_name' ), $email ),
@@ -147,9 +152,32 @@ final class UserRegistration {
 			'team'              => $submission->get_string( 'team' ),
 			'profile_photo'     => $submission->get( 'profile_photo' ),
 			'payment_receipt'   => $submission->get( 'payment_receipt' ),
-			'membership_mode'   => 'adam_primary',
+			'membership_mode'   => $mode,
 			'membership_fee'    => '',
 		);
+	}
+
+	/** Read only explicit Forminator choice fields; never infer from price/profile data. */
+	private function submitted_membership_mode( array $field_data ): string {
+		foreach ( $field_data as $field ) {
+			if ( ! is_array( $field ) ) {
+				continue;
+			}
+			$name  = sanitize_key( (string) ( $field['name'] ?? '' ) );
+			$value = sanitize_key( is_scalar( $field['value'] ?? null ) ? (string) $field['value'] : '' );
+			if ( in_array( $name, array( 'membership_mode', 'adam_membership_origin' ), true ) && in_array( $value, array( 'adam_primary', 'external_association' ), true ) ) {
+				return $value;
+			}
+		}
+		foreach ( array( 'membership_mode', 'adam_membership_origin' ) as $name ) {
+			if ( isset( $field_data[ $name ] ) ) {
+				$value = sanitize_key( (string) $field_data[ $name ] );
+				if ( in_array( $value, array( 'adam_primary', 'external_association' ), true ) ) {
+					return $value;
+				}
+			}
+		}
+		return '';
 	}
 
 	/**

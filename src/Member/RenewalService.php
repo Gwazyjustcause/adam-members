@@ -56,7 +56,13 @@ final class RenewalService {
 			return new WP_Error( 'adam_membership_renewal_member_not_found', __( 'Sócio da renovação não encontrado.', 'adam-membership' ) );
 		}
 
-		return $this->submit( $member, $this->submitted_profile_data( $field_data ), $this->proof_of_payment( $field_data ), $entry_id );
+		$profile = $this->submitted_profile_data( $field_data );
+		$origin = $this->submitted_origin( $field_data );
+		if ( '' === $origin ) {
+			return new WP_Error( 'adam_membership_renewal_choice_missing', __( 'A escolha do tipo de renovação não foi preservada.', 'adam-membership' ) );
+		}
+		$profile['adam_membership_origin'] = $origin;
+		return $this->submit( $member, $profile, $this->proof_of_payment( $field_data ), $entry_id );
 	}
 
 	/**
@@ -524,6 +530,21 @@ final class RenewalService {
 		}
 
 		return $data;
+	}
+
+	/** Read only explicit renewal choice fields; never infer from fee or member state. */
+	private function submitted_origin( array $field_data ): string {
+		foreach ( $field_data as $field ) {
+			if ( ! is_array( $field ) ) {
+				continue;
+			}
+			$name  = sanitize_key( (string) ( $field['name'] ?? '' ) );
+			$value = sanitize_key( is_scalar( $field['value'] ?? null ) ? (string) $field['value'] : '' );
+			if ( in_array( $name, array( 'renewal_mode', 'membership_mode', 'adam_membership_origin' ), true ) && in_array( $value, array( 'adam_primary', 'external_association' ), true ) ) {
+				return $value;
+			}
+		}
+		return '';
 	}
 
 	/**

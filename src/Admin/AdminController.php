@@ -1823,6 +1823,7 @@ final class AdminController {
 		$id = 0;
 		$member = null;
 		$request = null;
+		$apd_request = null;
 		try {
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
@@ -1840,6 +1841,10 @@ final class AdminController {
 			if ( null !== $request && null !== $member ) {
 			}
 			$result  = null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+		} elseif ( 'apd' === $type ) {
+			$apd_request = $this->apd_association->repository()->find( $id );
+			$member = null !== $apd_request ? $this->members->find( $apd_request->user_id() ) : null;
+			$result = null !== $apd_request && null !== $member ? $this->google_sheets_sync->sync_apd_association( $apd_request, $member ) : new WP_Error( 'adam_google_sheets_apd_not_found', __( 'Pedido APD nÃ£o encontrado.', 'adam-membership' ) );
 		} else {
 			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
 		}
@@ -1855,6 +1860,8 @@ final class AdminController {
 				$request_id = (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true );
 			} elseif ( 'renewal' === $type && null !== $request ) {
 				$request_id = (string) $request->request_uuid();
+			} elseif ( 'apd' === $type && null !== $apd_request ) {
+				$request_id = (string) $apd_request->request_uuid();
 			}
 			$this->google_sheets->log_exception( $request_id, 'retry_handler', $exception );
 			$this->redirect_with_error( 'A Google Sheets synchronization failed. You can retry the operation.' );
@@ -3514,6 +3521,14 @@ final class AdminController {
 	}
 
 	/** Render editable payment data and the manual retry action. */
+	private function render_apd_google_sheets_panel( Member $member, ApdAssociationRequest $request ): void {
+		if ( ApdAssociationRequest::STATUS_CONFIRMED !== $request->status() ) { return; }
+		$sync = (array) ( $request->data()['google_sheets_sync'] ?? array() );
+		echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets</h2><p>Estado: ' . esc_html( (string) ( $sync['state'] ?? 'pending' ) ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'adam_membership_retry_google_sheets_apd_' . $request->id() );
+		echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="apd"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div>';
+	}
+
 	private function render_google_sheets_payment_panel( Member $member, ?RenewalRequest $request = null ): void {
 		$type = null === $request ? 'registration' : 'renewal';
 		$id = null === $request ? $member->user_id() : $request->id();
@@ -6402,6 +6417,7 @@ final class AdminController {
 			$member = $this->members->find( $request->user_id() );
 			if ( null === $member ) { $this->render_empty_state( 'Sócio não encontrado.' ); $this->render_footer(); return; }
 			$data = (array) ( $request->data()['submitted_data'] ?? array() );
+			$this->render_apd_google_sheets_panel( $member, $request );
 			$proof = (string) ( $request->data()['proof_of_payment'] ?? '' );
 			$back = admin_url( 'admin.php?page=adam-membership-pending&approval_type=apd' );
 			echo '<div class="adam-apd-review adam-admin-panel adam-card">';

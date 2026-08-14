@@ -192,6 +192,19 @@ final class Plugin {
 			10,
 			2
 		);
+		add_action(
+			'adam_membership_apd_association_approved',
+			static function ( \AdamMembership\Member\ApdAssociationRequest $request, \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $google_sheets_client, $logger ): void {
+				try {
+					$google_sheets_sync->sync_apd_association( $request, $member );
+				} catch ( \Throwable $exception ) {
+					$google_sheets_client->log_exception( $request->request_uuid(), 'approval_hook', $exception );
+					$logger->error( 'Google Sheets APD synchronization threw an exception.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) );
+				}
+			},
+			10,
+			2
+		);
 		$maintenance               = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
 		$config                    = new RegistrationFormConfig();

@@ -120,13 +120,13 @@ final class GoogleSheetsClient {
 	/**
 	 * Append one row to the configured worksheet.
 	 *
-	 * @param array<int, string|int|float> $row Ordered values for columns A:K.
+	 * @param array<int, string|int|float> $row Ordered values for columns A:L.
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public function append_row( array $row ): array|WP_Error {
 		return $this->request_values(
 			'POST',
-			'A:K',
+			'A:L',
 			array(
 				'values' => array( array_values( $row ) ),
 			),
@@ -164,18 +164,18 @@ final class GoogleSheetsClient {
 
 	/** Update the current row identified by its canonical ID, never by a stored row number. */
 	public function update_table_row( array $row, string $request_id = '' ): array|WP_Error {
-		$expected = array_pad( array_values( $row ), 11, '' );
-		if ( $request_id !== (string) $expected[9] ) {
+		$expected = array_pad( array_values( $row ), 12, '' );
+		if ( $request_id !== (string) $expected[10] ) {
 			return new WP_Error( 'adam_google_sheets_id_mismatch', __( 'O ID canónico do movimento não coincide com a linha a atualizar.', 'adam-membership' ) );
 		}
-		$current = $this->read_values( 'A5:K', $request_id );
+		$current = $this->read_values( 'A5:L', $request_id );
 		if ( is_wp_error( $current ) ) {
 			return $current;
 		}
 		$row_number = 0;
 		foreach ( (array) ( $current['values'] ?? array() ) as $index => $stored ) {
-			$stored_row = array_pad( (array) $stored, 11, '' );
-			if ( $request_id === (string) $stored_row[9] ) {
+			$stored_row = array_pad( (array) $stored, 12, '' );
+			if ( $request_id === (string) $stored_row[10] ) {
 				$row_number = 5 + (int) $index;
 				break;
 			}
@@ -190,7 +190,7 @@ final class GoogleSheetsClient {
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
-			array( 'requests' => array( array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $row_number - 1, 'endRowIndex' => $row_number, 'startColumnIndex' => 0, 'endColumnIndex' => 11 ), 'rows' => array( array( 'values' => $this->cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ) ) ),
+			array( 'requests' => array( array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $row_number - 1, 'endRowIndex' => $row_number, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'rows' => array( array( 'values' => $this->cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ) ) ),
 			self::WRITE_SCOPE,
 			array(),
 			$request_id,
@@ -203,7 +203,7 @@ final class GoogleSheetsClient {
 		return is_wp_error( $after ) ? $after : array( 'table' => $after, 'row_number' => $row_number );
 	}
 
-	/** Convert ordered A:K values to Sheets user-entered cell values. */
+	/** Convert ordered A:L values to Sheets user-entered cell values. */
 	private function cell_values( array $row ): array {
 		$values = array();
 		foreach ( array_values( $row ) as $index => $value ) {

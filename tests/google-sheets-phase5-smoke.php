@@ -50,7 +50,7 @@ adam_phase5_assert( ! str_contains( $approval, "do_action( 'adam_membership_memb
 adam_phase5_assert( ! str_contains( $approval, "do_action( 'adam_membership_member_correction'" ), 'Registration correction has no Google event.' );
 adam_phase5_assert( ! str_contains( $renewal, "do_action( 'adam_membership_renewal_rejected'" ), 'Renewal rejection has no Google event.' );
 
-$row = array( '42', 'Member', 2027, 'Inscricao', 'Efetivo', 25.0, '2026-12-15', 'MB WAY', 'Pago', 'registration:test', '' );
+$row = array( 'Inscrição ADAM', '42', 'Member', 2027, 'Inscricao', 'Efetivo', 25.0, '2026-12-15', 'MB WAY', 'Pago', 'registration:test', '' );
 $plan = GoogleSheetsTablePlanner::plan( array( $row ), 'registration:test' );
 adam_phase5_assert( 5 === $plan['duplicate_row'], 'A repeated registration ID is detected at its existing row.' );
 adam_phase5_assert( GoogleSheetsTablePlanner::rows_match( $row, $plan['duplicate_values'] ), 'An identical repeated approval is idempotent.' );

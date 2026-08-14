@@ -31,8 +31,17 @@ final class ApdAssociationService {
 	public function submit( Member $member, array $data, string $receipt = '' ): ApdAssociationRequest|WP_Error {
 		if ( ! $this->eligible( $member ) ) { return new WP_Error( 'adam_apd_not_eligible', __( 'Este pedido de associação APD não está disponível.', 'adam-membership' ) ); }
 		if ( '' === trim( $receipt ) ) { return new WP_Error( 'adam_apd_receipt_required', __( 'O comprovativo de pagamento é obrigatório.', 'adam-membership' ) ); }
+		$year = absint( $data['membership_year'] ?? 0 );
+		$amount = str_replace( ',', '.', sanitize_text_field( (string) ( $data['payment_amount'] ?? '' ) ) );
+		$date = sanitize_text_field( (string) ( $data['payment_date'] ?? '' ) );
+		$method = sanitize_text_field( (string) ( $data['payment_method'] ?? '' ) );
+		$parsed_date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date );
+		$methods = array( 'Transferência bancária', 'MB WAY', 'Cartão', 'Numerário', 'Outro' );
+		if ( $year < 2000 || $year > 2100 || ! is_numeric( $amount ) || (float) $amount <= 0 || false === $parsed_date || $parsed_date->format( 'Y-m-d' ) !== $date || ! in_array( $method, $methods, true ) ) {
+			return new WP_Error( 'adam_apd_payment_data_required', __( 'Indique o ano, valor efetivamente pago, data e método de pagamento.', 'adam-membership' ) );
+		}
 		$requested = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
-		$request = $this->repository->create( array( 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'amount' => $this->price_for( $member, $requested ), 'payment_status' => '' === $receipt ? 'pending' : 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
+		$request = $this->repository->create( array( 'request_uuid' => 'apd:' . wp_generate_uuid4(), 'quota_type' => 'Associar APD/ANA', 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_status' => 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
 		$member->save( array( 'adam_apd_management_status' => Member::APD_PENDING ) );
 		if ( null !== $this->email ) { $this->email->send_apd_association_received_email( $member, $request->amount() ); }
 		return $request;
@@ -45,7 +54,7 @@ final class ApdAssociationService {
 		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
 		$member = $this->members->find( $request->user_id() );
 		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
-		$updates = array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'adam_external_association_name' => 'ANA', 'adam_external_member_number' => $ana_member_number, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ), 'estado' => Member::STATUS_ACTIVE );
+		$updates = array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'adam_external_association_name' => 'ANA', 'adam_external_member_number' => $ana_member_number, 'estado' => Member::STATUS_ACTIVE );
 		$submitted = $request->data()['submitted_data'] ?? array();
 		if ( is_array( $submitted ) ) {
 			foreach ( array( 'data_nascimento' => 'birth_date', 'genero' => 'gender', 'estado_civil' => 'marital_status', 'profissao' => 'profession', 'naturalidade' => 'birthplace', 'nacionalidade' => 'nationality', 'telefone' => 'phone', 'telefone_fixo' => 'telephone', 'morada' => 'address_line_1', 'morada_linha_2' => 'address_line_2', 'codigo_postal' => 'postcode', 'cidade' => 'city', 'municipio' => 'municipality', 'pais' => 'country', 'cartao_cidadao' => 'citizen_card', 'documento_validade' => 'document_expiry_date', 'documento_local_emissao' => 'document_issuing_place', 'nif' => 'nif', 'equipa' => 'team' ) as $member_field => $submitted_field ) {
@@ -54,7 +63,8 @@ final class ApdAssociationService {
 			if ( ! empty( $submitted['remove_profile_photo'] ) ) { $updates['profile_photo'] = ''; } elseif ( ! empty( $submitted['profile_photo'] ) ) { $updates['profile_photo'] = absint( $submitted['profile_photo'] ); }
 		}
 		$member->save( $updates );
-		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		$confirmed = $this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
+		do_action( 'adam_membership_apd_association_approved', $confirmed, $member );
 		if ( null !== $this->email ) { $this->email->send_apd_association_approved_email( $member, $ana_member_number ); }
 		return true;
 	}

@@ -12,8 +12,10 @@ namespace AdamMembership\GoogleSheets;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\HistoryRepository;
 use AdamMembership\Member\Member;
+use AdamMembership\Member\ApdAssociationRequest;
 use AdamMembership\Member\RenewalRequest;
 use AdamMembership\Member\RenewalRepository;
+use AdamMembership\Member\ApdAssociationRepository;
 use WP_Error;
 
 /**
@@ -35,12 +37,15 @@ final class GoogleSheetsSyncService {
 	private HistoryRepository $history;
 	private Logger $logger;
 	private RenewalRepository $renewals;
+	private ApdAssociationRepository $apd_repository;
+	private ?ApdAssociationRequest $active_apd_request = null;
 
 	public function __construct( GoogleSheetsClient $client, HistoryRepository $history, Logger $logger, RenewalRepository $renewals ) {
 		$this->client  = $client;
 		$this->history = $history;
 		$this->logger  = $logger;
 		$this->renewals = $renewals;
+		$this->apd_repository = new ApdAssociationRepository();
 	}
 
 	/**
@@ -77,6 +82,7 @@ final class GoogleSheetsSyncService {
 		}
 		$data = $request->data();
 		$movement = array(
+			'quota_type'     => $this->quota_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' ), 'renewal' ),
 			'request_id'     => $request->request_uuid(),
 			'member_number'  => (string) $member->field( 'numero_socio' ),
 			'name'           => $member->full_name(),
@@ -93,9 +99,26 @@ final class GoogleSheetsSyncService {
 		return $this->sync( $movement, $member, $request->id() );
 	}
 
+	/** Synchronize a confirmed APD/ANA financial movement. */
+	public function sync_apd_association( ApdAssociationRequest $request, Member $member ): true|WP_Error {
+		if ( ApdAssociationRequest::STATUS_CONFIRMED !== $request->status() ) {
+			return new WP_Error( 'adam_google_sheets_not_approved', __( 'O movimento APD sÃ³ pode ser sincronizado depois de confirmado.', 'adam-membership' ) );
+		}
+		$movement = array(
+			'quota_type' => 'Associar APD/ANA', 'request_id' => $request->request_uuid(),
+			'member_number' => (string) $member->field( 'numero_socio' ), 'name' => $member->full_name(),
+			'year' => (string) $request->membership_year(), 'movement' => 'Associar APD/ANA',
+			'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ),
+			'amount' => $request->payment_amount(), 'payment_date' => $request->payment_date(),
+			'method' => $request->payment_method(), 'status' => 'Pago', 'order_id' => (string) $request->id(), 'note' => '',
+		);
+		return $this->sync( $movement, $member, 0, $request );
+	}
+
 	/** Build the canonical row data for a registration. */
 	private function registration_movement( Member $member ): array {
 		return array(
+			'quota_type'    => $this->quota_type( (string) $member->field( 'adam_membership_origin' ), 'registration' ),
 			'request_id'    => $this->registration_request_id( $member->user_id() ),
 			'member_number' => (string) $member->field( 'numero_socio' ),
 			'name'          => $member->full_name(),
@@ -111,8 +134,8 @@ final class GoogleSheetsSyncService {
 		);
 	}
 
-	/** Append idempotently after checking column J. */
-	private function sync( array $movement, Member $member, int $renewal_id = 0 ): true|WP_Error {
+	/** Append or update idempotently after checking canonical ID in column K. */
+	private function sync( array $movement, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
 		$lock_key = 'adam_google_sheets_lock_' . md5( (string) $movement['request_id'] );
 		$lock_token = time() . ':' . wp_generate_uuid4();
 		$existing_lock = (string) get_option( $lock_key, '' );
@@ -123,11 +146,13 @@ final class GoogleSheetsSyncService {
 			return new WP_Error( 'adam_google_sheets_sync_in_progress', __( 'Este movimento já está a ser sincronizado. Tente novamente dentro de alguns segundos.', 'adam-membership' ) );
 		}
 		try {
-			return $this->sync_locked( $movement, $member, $renewal_id );
+			$this->active_apd_request = $apd_request;
+			return $this->sync_locked( $movement, $member, $renewal_id, $apd_request );
 		} catch ( \Throwable $exception ) {
 			$this->client->log_exception( (string) $movement['request_id'], 'sync_service', $exception );
 			return $this->finish( (string) $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_unexpected', __( 'A sincronizaÃ§Ã£o Google Sheets falhou. Pode repetir a operaÃ§Ã£o.', 'adam-membership' ) ), $member, $renewal_id );
 		} finally {
+			$this->active_apd_request = null;
 			if ( $lock_token === (string) get_option( $lock_key, '' ) ) {
 				delete_option( $lock_key );
 			}
@@ -135,7 +160,7 @@ final class GoogleSheetsSyncService {
 	}
 
 	/** Perform validation, duplicate detection and a bounded table write while locked. */
-	private function sync_locked( array $movement, Member $member, int $renewal_id = 0 ): true|WP_Error {
+	private function sync_locked( array $movement, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
 		if ( ! $this->client->is_configured() ) {
 			return $this->finish( $movement['request_id'], self::STATUS_INACTIVE, true, $member, $renewal_id );
 		}
@@ -154,7 +179,7 @@ final class GoogleSheetsSyncService {
 			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
 		}
 		$row = $this->row( $movement );
-		$existing = $this->client->read_values( 'A5:K', (string) $movement['request_id'] );
+		$existing = $this->client->read_values( 'A5:L', (string) $movement['request_id'] );
 		if ( is_wp_error( $existing ) ) {
 			$this->client->log_failure( (string) $movement['request_id'], 'read_values', $existing );
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $existing, $member, $renewal_id );
@@ -185,9 +210,9 @@ final class GoogleSheetsSyncService {
 		return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $row_number );
 	}
 
-	/** Convert canonical movement data into columns A:K. */
+	/** Convert canonical movement data into columns A:L. */
 	private function row( array $movement ): array {
-		return array( $movement['member_number'], $movement['name'], absint( $movement['year'] ), $movement['movement'], $movement['type'], (float) str_replace( ',', '.', (string) $movement['amount'] ), $movement['payment_date'], $movement['method'], $movement['status'], $movement['request_id'], $movement['note'] );
+		return array( $movement['quota_type'], $movement['member_number'], $movement['name'], absint( $movement['year'] ), $movement['movement'], $movement['type'], (float) str_replace( ',', '.', (string) $movement['amount'] ), $movement['payment_date'], $movement['method'], $movement['status'], $movement['request_id'], $movement['note'] );
 	}
 
 	/** Compare existing and expected rows without treating formatting as data. */
@@ -200,12 +225,23 @@ final class GoogleSheetsSyncService {
 		return 'external_association' === $origin ? 'Aderente' : 'Efetivo';
 	}
 
+	/** Map the persisted workflow choice to the transaction classification. */
+	private function quota_type( string $origin, string $movement ): string {
+		if ( 'registration' === $movement ) {
+			return 'external_association' === $origin ? 'Inscrição ADAM' : 'Inscrição ADAM/ANA';
+		}
+		return 'external_association' === $origin ? 'Renovação ADAM' : 'Renovação ADAM/ANA';
+	}
+
 	/** Persist status metadata and a safe audit entry. */
-	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0, array $missing_fields = array() ): true|WP_Error {
+	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0, array $missing_fields = array(), ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
+		$apd_request = $apd_request ?? $this->active_apd_request;
 		$previous = $renewal_id > 0 ? (array) ( $this->renewals->find( $renewal_id )?->data()[ self::RENEWAL_SYNC ] ?? array() ) : (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
-		$membership_year = $renewal_id > 0 ? absint( $this->renewals->find( $renewal_id )?->data()['membership_year'] ?? 0 ) : absint( get_user_meta( $member->user_id(), 'adam_membership_year', true ) );
+		$membership_year = null !== $apd_request ? $apd_request->membership_year() : ( $renewal_id > 0 ? absint( $this->renewals->find( $renewal_id )?->data()['membership_year'] ?? 0 ) : absint( get_user_meta( $member->user_id(), 'adam_membership_year', true ) ) );
 		$meta = array( 'state' => $status, 'request_id' => $request_id, 'membership_year' => $membership_year, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'missing_fields' => $missing_fields, 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
-		if ( $renewal_id <= 0 ) {
+		if ( null !== $apd_request ) {
+			$this->apd_repository->save_sync_state( $apd_request, $meta );
+		} elseif ( $renewal_id <= 0 ) {
 			update_user_meta( $member->user_id(), self::REGISTRATION_DATA, $meta );
 		}
 		if ( $renewal_id > 0 ) {

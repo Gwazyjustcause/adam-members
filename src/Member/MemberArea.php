@@ -2434,6 +2434,10 @@ final class MemberArea {
 				}
 				if ( $validation_error instanceof \WP_Error ) { $message = $this->notice_markup( 'error', $validation_error->get_error_message() ); }
 				else {
+				$payload['membership_year'] = absint( $_POST['membership_year'] ?? 0 );
+				$payload['payment_amount'] = str_replace( ',', '.', sanitize_text_field( wp_unslash( (string) ( $_POST['payment_amount'] ?? '' ) ) ) );
+				$payload['payment_date'] = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_date'] ?? '' ) ) );
+				$payload['payment_method'] = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_method'] ?? '' ) ) );
 				$payload['remove_profile_photo'] = ! empty( $_POST['remove_profile_photo'] );
 				$photo_mimes = array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
 				$receipt_mimes = array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'pdf' => 'application/pdf' );
@@ -2502,6 +2506,10 @@ final class MemberArea {
 
 	private function render_apd_registration_form( Member $member, array $fields, string $message ): string {
 		$price = $this->apd_association->price_for( $member );
+		$fields['membership_year'] = array( 'label' => 'Ano da quota', 'type' => 'number', 'options' => '', 'help' => 'Indique o ano a que o pagamento se aplica.', 'value' => '', 'editable' => true );
+		$fields['payment_amount'] = array( 'label' => 'Valor efetivamente pago', 'type' => 'number', 'options' => '', 'help' => 'Não use o preço atual se o valor pago for diferente.', 'value' => '', 'editable' => true );
+		$fields['payment_date'] = array( 'label' => 'Data de pagamento', 'type' => 'date', 'options' => '', 'help' => 'Não use a data de aprovação.', 'value' => '', 'editable' => true );
+		$fields['payment_method'] = array( 'label' => 'Método de pagamento', 'type' => 'select', 'options' => "Transferência bancária|Transferência bancária\nMB WAY|MB WAY\nCartão|Cartão\nNumerário|Numerário\nOutro|Outro", 'help' => '', 'value' => '', 'editable' => true );
 		$mode  = (string) ( $_POST['apd_information_mode'] ?? '' );
 		$parse_options = static function ( string $raw ): array { $out = array(); foreach ( preg_split( '/\r\n|\r|\n/', $raw ) ?: array() as $line ) { $parts = array_map( 'trim', explode( '|', (string) $line, 2 ) ); if ( '' !== $parts[0] ) { $out[ $parts[0] ] = $parts[1] ?? $parts[0]; } } return $out; };
 		$photo_id = absint( $member->field( 'profile_photo' ) );

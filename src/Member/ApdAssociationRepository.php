@@ -34,6 +34,10 @@ final class ApdAssociationRepository {
 		return new ApdAssociationRequest( $data );
 	}
 
+	public function save_sync_state( ApdAssociationRequest $request, array $state ): ApdAssociationRequest {
+		return $this->update( $request, array( 'google_sheets_sync' => $state ) );
+	}
+
 	public function for_user( int $user_id ): array {
 		$rows = get_option( self::OPTION, array() );
 		$out = array();

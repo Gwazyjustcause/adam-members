@@ -17,7 +17,7 @@ function adam_deletion_safety_assert( bool $condition, string $message ): void {
 	}
 }
 
-$row = static fn ( string $id, string $name ): array => array( '42', $name, 2027, 'Inscricao', 'Efetivo', 25.0, '2026-12-15', 'MB WAY', 'Pago', $id, '' );
+$row = static fn ( string $id, string $name ): array => array( 'Inscrição ADAM', '42', $name, 2027, 'Inscricao', 'Efetivo', 25.0, '2026-12-15', 'MB WAY', 'Pago', $id, '' );
 $member_a = $row( 'registration:member-a', 'Member A' );
 $member_b = $row( 'registration:member-b', 'Member B' );
 $member_c = $row( 'registration:member-c', 'Member C' );
@@ -26,13 +26,13 @@ $member_c = $row( 'registration:member-c', 'Member C' );
 $after_delete = array( $member_a, array(), $member_c );
 $plan = GoogleSheetsTablePlanner::plan( $after_delete, 'registration:member-new' );
 adam_deletion_safety_assert( 6 === $plan['target_row'] && ! $plan['requires_insert'], 'The next synchronization reuses the first empty row after a deleted table row.' );
-adam_deletion_safety_assert( 'registration:member-c' === $after_delete[2][9], 'The member after the deleted row is not overwritten.' );
+adam_deletion_safety_assert( 'registration:member-c' === $after_delete[2][10], 'The member after the deleted row is not overwritten.' );
 
 $after_sync = $after_delete;
 $after_sync[1] = $row( 'registration:member-new', 'New Member' );
-$ids = array_map( static fn ( array $value ): string => (string) ( $value[9] ?? '' ), $after_sync );
+$ids = array_map( static fn ( array $value ): string => (string) ( $value[10] ?? '' ), $after_sync );
 adam_deletion_safety_assert( 3 === count( array_unique( $ids ) ), 'The synchronization does not duplicate a canonical request ID.' );
-adam_deletion_safety_assert( 'registration:member-a' === $after_sync[0][9] && 'registration:member-c' === $after_sync[2][9], 'Existing member IDs remain unchanged.' );
+adam_deletion_safety_assert( 'registration:member-a' === $after_sync[0][10] && 'registration:member-c' === $after_sync[2][10], 'Existing member IDs remain unchanged.' );
 
 $full = array();
 for ( $index = 1; $index <= 20; $index++ ) {
@@ -40,7 +40,7 @@ for ( $index = 1; $index <= 20; $index++ ) {
 }
 $expansion = GoogleSheetsTablePlanner::plan( $full, 'registration:after-delete' );
 adam_deletion_safety_assert( 25 === $expansion['target_row'] && $expansion['requires_insert'], 'A genuinely full table still expands after earlier row reuse.' );
-adam_deletion_safety_assert( 'A4:K25' === GoogleSheetsTablePlanner::expanded_range( 'A4:K24' ), 'The first expansion remains part of the real table range.' );
+adam_deletion_safety_assert( 'A4:L25' === GoogleSheetsTablePlanner::expanded_range( 'A4:L24' ), 'The first expansion remains part of the real table range.' );
 
 $sync_source = (string) file_get_contents( __DIR__ . '/../src/GoogleSheets/GoogleSheetsSyncService.php' );
 $client_source = (string) file_get_contents( __DIR__ . '/../src/GoogleSheets/GoogleSheetsClient.php' );
