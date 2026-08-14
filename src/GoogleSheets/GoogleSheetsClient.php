@@ -160,6 +160,7 @@ final class GoogleSheetsClient {
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
 			array( 'requests' => array( array( 'appendCells' => array( 'tableId' => $table['tableId'], 'rows' => array( array( 'values' => $values ) ), 'fields' => 'userEnteredValue' ) ) ) ),
 			self::WRITE_SCOPE,
+			array(),
 			$request_id,
 			'append'
 		);

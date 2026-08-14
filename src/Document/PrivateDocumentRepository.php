@@ -19,8 +19,13 @@ final class PrivateDocumentRepository {
 
 		$reference = sanitize_text_field( (string) ( $data['request_reference'] ?? '' ) );
 		$type      = sanitize_key( (string) ( $data['request_type'] ?? '' ) );
+		$file_identifier = sanitize_text_field( (string) ( $data['file_identifier'] ?? '' ) );
 		if ( ! preg_match( '/^(registration|renewal):[A-Za-z0-9-]+$/', $reference ) || ! in_array( $type, array( 'registration', 'renewal' ), true ) || ! str_starts_with( $reference, $type . ':' ) ) {
 			return new WP_Error( 'adam_private_document_invalid_request', __( 'A referência do pedido não é válida.', 'adam-membership' ) );
+		}
+
+		if ( ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $file_identifier ) ) {
+			return new WP_Error( 'adam_private_document_invalid_identifier', __( 'O identificador físico do documento não é válido.', 'adam-membership' ) );
 		}
 
 		$now = current_time( 'mysql' );
@@ -28,7 +33,7 @@ final class PrivateDocumentRepository {
 			'request_reference' => $reference,
 			'request_type'      => $type,
 			'active_key'        => $reference,
-			'file_identifier'   => sanitize_text_field( (string) ( $data['file_identifier'] ?? '' ) ),
+			'file_identifier'   => $file_identifier,
 			'original_name'     => sanitize_file_name( (string) ( $data['original_name'] ?? '' ) ),
 			'mime'              => sanitize_text_field( (string) ( $data['mime'] ?? '' ) ),
 			'file_size'         => absint( $data['file_size'] ?? 0 ),

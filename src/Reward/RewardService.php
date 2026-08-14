@@ -62,10 +62,11 @@ final class RewardService {
 				$current                = $existing_rewards[ $reward_value ];
 				$prepared               = $this->merge_catalogue_reward( $current, $prepared );
 				$prepared['created_at'] = $current->created_at();
-				$prepared['updated_at'] = $now;
+				$prepared['updated_at'] = $current->updated_at();
 				if ( ! $this->catalogue_data_changed( $current->data(), $prepared ) ) {
 					continue;
 				}
+				$prepared['updated_at'] = $now;
 				$this->repository->update_reward( $current, $prepared );
 				++$updated;
 				continue;

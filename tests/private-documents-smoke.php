@@ -162,6 +162,20 @@ if ( class_exists( 'finfo' ) ) {
 	adam_private_documents_assert( 1 === count( $attachment ) && $attachment['invoice.pdf'] === $attachment_path, 'A valid private document must prepare an attachment using the physical path and readable name.' );
 	$stored_again = $storage_service->store_source( $valid_source, 'invoice.pdf' );
 	adam_private_documents_assert( is_array( $stored_again ) && $stored['identifier'] !== $stored_again['identifier'], 'A second upload must not overwrite the first file.' );
+	if ( ! defined( 'ARRAY_A' ) ) {
+		define( 'ARRAY_A', 'ARRAY_A' );
+	}
+	$reloaded_row = array_merge( $stored_document->data(), array( 'id' => 10, 'file_identifier' => $stored['identifier'] ) );
+	$GLOBALS['wpdb'] = new class( $reloaded_row ) {
+		public string $prefix = 'wp_';
+		public function __construct( private array $row ) {}
+		public function prepare( string $query, mixed ...$args ): string { unset( $args ); return $query; }
+		public function get_row( string $query, mixed $output = null ): array { unset( $query, $output ); return $this->row; }
+	};
+	$reloaded_document = ( new PrivateDocumentRepository() )->find( 10 );
+	adam_private_documents_assert( null !== $reloaded_document && $stored['identifier'] === $reloaded_document->file_identifier(), 'A fresh repository hydration must preserve file_identifier from the database row.' );
+	$reloaded_path = $storage_service->path( $reloaded_document );
+	adam_private_documents_assert( is_string( $reloaded_path ) && is_file( $reloaded_path ), 'A freshly hydrated document must resolve for download and attachment.' );
 } else {
 	adam_private_documents_assert( is_wp_error( $stored ), 'Missing MIME validation support must fail safely.' );
 }
