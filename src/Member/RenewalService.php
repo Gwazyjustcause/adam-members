@@ -79,6 +79,7 @@ final class RenewalService {
 		$normalized_data = $this->sanitize_submitted_data( $submitted_data );
 		$request         = $this->renewals->create(
 			array(
+				'request_uuid'         => 'renewal:' . wp_generate_uuid4(),
 				'user_id'              => $member->user_id(),
 				'member_id'            => $member->user_id(),
 				'member_number'        => (string) $member->field( 'numero_socio' ),
@@ -86,6 +87,11 @@ final class RenewalService {
 				'submitted_at'         => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
 				'current_quota_expiry' => (string) $member->field( 'validade_quota' ),
 				'proof_of_payment'     => $proof_of_payment,
+				'payment_amount'       => '',
+				'payment_date'         => '',
+				'payment_method'       => '',
+				'membership_year'      => (string) wp_date( 'Y', current_time( 'timestamp' ) ),
+				'source_order_id'      => (string) $entry_id,
 				'submitted_data'       => $normalized_data,
 			)
 		);

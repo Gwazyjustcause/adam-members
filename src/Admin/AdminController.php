@@ -24,6 +24,7 @@ use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\GoogleSheets\GoogleSheetsClient;
+use AdamMembership\GoogleSheets\GoogleSheetsSyncService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
@@ -220,6 +221,7 @@ final class AdminController {
 	private ApdAssociationService $apd_association;
 	private MemberChangeService $member_changes;
 	private GoogleSheetsClient $google_sheets;
+	private GoogleSheetsSyncService $google_sheets_sync;
 
 	/**
 	 * Create the admin controller.
@@ -243,7 +245,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -265,6 +267,7 @@ final class AdminController {
 		$this->apd_association     = $apd_association;
 		$this->member_changes      = $member_changes;
 		$this->google_sheets      = $google_sheets;
+		$this->google_sheets_sync = $google_sheets_sync;
 	}
 
 	/**
@@ -283,6 +286,8 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'admin_post_adam_membership_test_google_sheets', array( $this, 'handle_test_google_sheets' ) );
+		add_action( 'admin_post_adam_membership_retry_google_sheets', array( $this, 'handle_retry_google_sheets' ) );
+		add_action( 'admin_post_adam_membership_save_google_sheets_payment', array( $this, 'handle_save_google_sheets_payment' ) );
 		add_action( 'admin_post_adam_membership_save_forms_settings', array( $this, 'handle_save_forms_settings' ) );
 		add_action( 'admin_post_adam_membership_save_email_settings', array( $this, 'handle_save_email_settings' ) );
 		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
@@ -1633,6 +1638,72 @@ final class AdminController {
 		exit;
 	}
 
+	/** Retry one manually selected Google Sheets movement without changing approval state. */
+	public function handle_retry_google_sheets(): void {
+		$this->ensure_can_manage();
+		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
+		$id   = absint( $_POST['request_id'] ?? 0 );
+		$this->verify_admin_nonce( 'adam_membership_retry_google_sheets_' . $type . '_' . $id );
+
+		if ( 'registration' === $type ) {
+			$member = $this->members->find( $id );
+			$result = null !== $member ? $this->google_sheets_sync->sync_registration( $member ) : new WP_Error( 'adam_google_sheets_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+		} elseif ( 'renewal' === $type ) {
+			$request = $this->renewal_repository->find( $id );
+			$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
+			$result  = null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+		} else {
+			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
+		}
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_with_error( $result->get_error_message() );
+			return;
+		}
+		$this->redirect_with_message( __( 'Sincronização Google Sheets concluída.', 'adam-membership' ) );
+	}
+
+	/** Save payment data required for a quota movement and leave approval unchanged. */
+	public function handle_save_google_sheets_payment(): void {
+		$this->ensure_can_manage();
+		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
+		$id   = absint( $_POST['request_id'] ?? 0 );
+		$this->verify_admin_nonce( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id );
+		$year   = absint( $_POST['membership_year'] ?? 0 );
+		$amount = str_replace( ',', '.', sanitize_text_field( wp_unslash( (string) ( $_POST['payment_amount'] ?? '' ) ) ) );
+		$date   = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_date'] ?? '' ) ) );
+		$method = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_method'] ?? '' ) ) );
+		$payment_date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date );
+		if ( $year < 2000 || $year > 2100 || ! is_numeric( $amount ) || (float) $amount <= 0 || false === $payment_date || $payment_date->format( 'Y-m-d' ) !== $date || ! in_array( $method, GoogleSheetsSyncService::PAYMENT_METHODS, true ) ) {
+			$this->redirect_with_error( __( 'Indique um ano, valor pago, data e método de pagamento válidos.', 'adam-membership' ) );
+			return;
+		}
+		if ( 'registration' === $type ) {
+			$member = $this->members->find( $id );
+			if ( null === $member ) {
+				$this->redirect_with_error( __( 'Sócio não encontrado.', 'adam-membership' ) );
+				return;
+			}
+			update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
+			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', number_format( (float) $amount, 2, '.', '' ) );
+			update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
+			update_user_meta( $member->user_id(), 'adam_membership_payment_method', $method );
+			$this->redirect_with_message( __( 'Dados de pagamento guardados. Pode repetir a sincronização.', 'adam-membership' ) );
+			return;
+		}
+		if ( 'renewal' === $type ) {
+			$request = $this->renewal_repository->find( $id );
+			if ( null === $request ) {
+				$this->redirect_with_error( __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+				return;
+			}
+			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
+			$this->redirect_with_message( __( 'Dados de pagamento guardados. Pode repetir a sincronização.', 'adam-membership' ) );
+			return;
+		}
+		$this->redirect_with_error( __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
+	}
+
 	/** Test the configured Google Sheets connection without writing spreadsheet data. */
 	public function handle_test_google_sheets(): void {
 		$this->ensure_can_manage();
@@ -2118,6 +2189,7 @@ final class AdminController {
 
 		<?php $this->render_document_warning_panel( $document_warnings, __( 'Documentos obrigatórios em falta nesta renovação.', 'adam-membership' ) ); ?>
 		<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, null, $request, true ); ?>
+		<?php if ( null !== $member ) : ?><?php $this->render_google_sheets_payment_panel( $member, $request ); ?><?php endif; ?>
 
 		<div class="adam-admin-panel adam-card">
 			<h2><?php esc_html_e( 'Submitted changes', 'adam-membership' ); ?></h2>
@@ -3160,6 +3232,7 @@ final class AdminController {
 
 			<?php $this->render_document_warning_panel( $document_warnings, __( 'Existem documentos obrigatórios em falta para aprovar este sócio.', 'adam-membership' ) ); ?>
 			<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, $member, null, true ); ?>
+			<?php $this->render_google_sheets_payment_panel( $member ); ?>
 			<?php foreach ( $member_requests as $request ) : ?>
 				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
 			<?php endforeach; ?>
@@ -3218,6 +3291,32 @@ final class AdminController {
 			</div>
 
 			<?php $this->render_member_diagnostics( $member ); ?>
+		</div>
+		<?php
+	}
+
+	/** Render editable payment data and the manual retry action. */
+	private function render_google_sheets_payment_panel( Member $member, ?RenewalRequest $request = null ): void {
+		$type = null === $request ? 'registration' : 'renewal';
+		$id = null === $request ? $member->user_id() : $request->id();
+		$data = null === $request ? array( 'membership_year' => get_user_meta( $member->user_id(), 'adam_membership_year', true ), 'payment_amount' => get_user_meta( $member->user_id(), 'adam_membership_payment_amount', true ), 'payment_date' => get_user_meta( $member->user_id(), 'adam_membership_payment_date', true ), 'payment_method' => get_user_meta( $member->user_id(), 'adam_membership_payment_method', true ) ) : $request->data();
+		$sync = null === $request ? get_user_meta( $member->user_id(), 'adam_membership_google_sheets_sync', true ) : ( $data['google_sheets_sync'] ?? array() );
+		$sync = is_array( $sync ) ? $sync : array();
+		?>
+		<div class="adam-admin-panel adam-card">
+			<h2>Google Sheets — movimento financeiro</h2>
+			<p><?php echo esc_html( sprintf( 'Estado: %s. ID: %s', (string) ( $sync['state'] ?? 'Pendente' ), null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid() ) ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id ); ?>
+				<label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="<?php echo esc_attr( (string) ( $data['membership_year'] ?? '' ) ); ?>"></label>
+				<label>Valor pago <input type="number" name="payment_amount" min="0.01" step="0.01" required value="<?php echo esc_attr( (string) ( $data['payment_amount'] ?? '' ) ); ?>"></label>
+				<label>Data de pagamento <input type="date" name="payment_date" required value="<?php echo esc_attr( (string) ( $data['payment_date'] ?? '' ) ); ?>"></label>
+				<label>Método <select name="payment_method" required><option value="">Selecionar</option><?php foreach ( GoogleSheetsSyncService::PAYMENT_METHODS as $method ) : ?><option value="<?php echo esc_attr( $method ); ?>" <?php selected( $method, (string) ( $data['payment_method'] ?? '' ) ); ?>><?php echo esc_html( $method ); ?></option><?php endforeach; ?></select></label>
+				<button type="submit" class="button button-primary">Guardar dados de pagamento</button>
+			</form>
+			<?php if ( ( null === $request && Member::STATUS_ACTIVE === $member->status() ) || ( null !== $request && RenewalRequest::STATUS_APPROVED === $request->status() ) ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-actions"><input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_retry_google_sheets_' . $type . '_' . $id ); ?><button type="submit" class="button">Repetir sincronização</button></form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

@@ -63,6 +63,12 @@ final class RenewalRequest {
 		return absint( $this->data['submission_id'] ?? 0 );
 	}
 
+	/** Get the permanent canonical request identifier. */
+	public function request_uuid(): string {
+		$value = is_scalar( $this->data['request_uuid'] ?? '' ) ? (string) $this->data['request_uuid'] : '';
+		return '' !== $value ? $value : 'legacy-renewal:' . $this->id();
+	}
+
 	/**
 	 * Get the submitted date.
 	 */

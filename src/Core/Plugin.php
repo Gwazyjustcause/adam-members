@@ -29,6 +29,7 @@ use AdamMembership\Form\MembershipForms;
 use AdamMembership\Form\NifValidationController;
 use AdamMembership\Form\RegistrationService;
 use AdamMembership\GoogleSheets\GoogleSheetsClient;
+use AdamMembership\GoogleSheets\GoogleSheetsSyncService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
@@ -154,6 +155,8 @@ final class Plugin {
 		$member_change_repository  = new MemberChangeRepository();
 		$member_changes            = new MemberChangeService( $member_change_repository, $members, $email );
 		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams );
+		$google_sheets_client      = new GoogleSheetsClient( $settings );
+		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository );
 		$maintenance               = new MaintenanceService( $members, $renewal_repository, $renewals, $logger, $history );
 		$cards                     = new CardService( $members, $settings, $logger, $card_cosmetics, $rewards );
 		$config                    = new RegistrationFormConfig();
@@ -199,7 +202,8 @@ final class Plugin {
 				$complete_export,
 				$apd_association,
 				$member_changes,
-				new GoogleSheetsClient( $settings )
+				$google_sheets_client,
+				$google_sheets_sync
 			);
 
 			$admin->register();
