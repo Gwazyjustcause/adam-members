@@ -20,7 +20,7 @@ final class ApdAssociationRequest {
 	public function payment_status(): string { return (string) ( $this->data['payment_status'] ?? 'pending' ); }
 	public function amount(): string { return (string) ( $this->data['amount'] ?? '0.00' ); }
 	public function request_uuid(): string { $value = (string) ( $this->data['request_uuid'] ?? '' ); return '' !== $value ? $value : ( $this->id() > 0 ? 'legacy-apd:' . $this->id() : '' ); }
-	public function quota_type(): string { return (string) ( $this->data['quota_type'] ?? 'Associar APD/ANA' ); }
+	public function quota_type(): string { return (string) ( $this->data['quota_type'] ?? '' ); }
 	public function membership_year(): int { return absint( $this->data['membership_year'] ?? 0 ); }
 	public function payment_amount(): string { return (string) ( $this->data['payment_amount'] ?? '' ); }
 	public function payment_date(): string { return (string) ( $this->data['payment_date'] ?? '' ); }

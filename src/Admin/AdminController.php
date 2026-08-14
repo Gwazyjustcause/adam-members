@@ -3524,7 +3524,9 @@ final class AdminController {
 	private function render_apd_google_sheets_panel( Member $member, ApdAssociationRequest $request ): void {
 		if ( ApdAssociationRequest::STATUS_CONFIRMED !== $request->status() ) { return; }
 		$sync = (array) ( $request->data()['google_sheets_sync'] ?? array() );
-		echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets</h2><p>Estado: ' . esc_html( (string) ( $sync['state'] ?? 'pending' ) ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		$quota_type = $request->quota_type();
+		$request_id = $request->request_uuid();
+		echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets — movimento financeiro</h2><p>Estado: ' . esc_html( (string) ( $sync['state'] ?? 'pending' ) ) . '</p><p>Tipo de quota: ' . esc_html( '' !== $quota_type ? $quota_type : 'Não resolvido' ) . '</p><p>ID: ' . esc_html( '' !== $request_id ? $request_id : 'Não resolvido' ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'adam_membership_retry_google_sheets_apd_' . $request->id() );
 		echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="apd"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div>';
 	}
@@ -3537,10 +3539,14 @@ final class AdminController {
 		$sync = is_array( $sync ) ? $sync : array();
 		$sync_labels = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' );
 		$sync_state = (string) ( $sync['state'] ?? 'pending' );
+		$quota_type = $this->google_sheets_quota_type( $member, $request );
+		$request_id = null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid();
 		?>
 		<div class="adam-admin-panel adam-card">
 			<h2>Google Sheets — movimento financeiro</h2>
-			<p><?php echo esc_html( sprintf( 'Estado: %s. ID: %s', $sync_labels[ $sync_state ] ?? $sync_state, null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid() ) ); ?></p>
+			<p>Estado: <?php echo esc_html( $sync_labels[ $sync_state ] ?? $sync_state ); ?></p>
+			<p>Tipo de quota: <?php echo esc_html( $quota_type ); ?></p>
+			<p>ID: <?php echo esc_html( '' !== $request_id ? $request_id : 'Não resolvido' ); ?></p>
 			<?php if ( ! empty( $sync['missing_fields'] ) && is_array( $sync['missing_fields'] ) ) : ?><p><strong>Dados em falta:</strong> <?php echo esc_html( implode( ', ', array_map( 'strval', $sync['missing_fields'] ) ) ); ?></p><?php endif; ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id ); ?>
@@ -3555,6 +3561,16 @@ final class AdminController {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	private function google_sheets_quota_type( Member $member, ?RenewalRequest $request = null ): string {
+		if ( null === $request ) {
+			$origin = (string) $member->field( 'adam_membership_origin' );
+			return array( 'adam_primary' => 'Inscrição ADAM/ANA', 'external_association' => 'Inscrição ADAM' )[ $origin ] ?? 'Não resolvido';
+		}
+		$data = $request->data();
+		$origin = (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' );
+		return array( 'adam_primary' => 'Renovação ADAM/ANA', 'external_association' => 'Renovação ADAM' )[ $origin ] ?? 'Não resolvido';
 	}
 
 	/**
