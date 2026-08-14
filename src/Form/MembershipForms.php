@@ -323,8 +323,10 @@ final class MembershipForms {
 
 		$errors = array();
 
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'adam_membership_registration_form' ) ) {
-			$errors[] = __( "N\u{00E3}o foi poss\u{00ED}vel validar a submiss\u{00E3}o da inscri\u{00E7}\u{00E3}o.", 'adam-membership' );
+		$registration_nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( '' === $registration_nonce || ! wp_verify_nonce( $registration_nonce, 'adam_membership_registration_form' ) ) {
+			$errors[] = __( 'A sessão do formulário expirou ou é inválida. Atualize a página e tente novamente.', 'adam-membership' );
+			$this->logger->error( 'Registration validation failed: invalid nonce.', array( 'has_nonce' => '' !== $registration_nonce ) );
 		}
 
 		$mode     = (string) ( $values['membership_mode'] ?? '' );
@@ -353,6 +355,7 @@ final class MembershipForms {
 
 		if ( $nif instanceof WP_Error ) {
 			$errors[] = $nif->get_error_message();
+			$this->logger->info( 'Registration validation failed: invalid or duplicate NIF.', array( 'error_code' => $nif->get_error_code() ) );
 
 			return array(
 				'values' => $values,
@@ -387,6 +390,7 @@ final class MembershipForms {
 		$custom_payload = $this->custom_submission_payload( 'registration', $values, $errors, $mode, false );
 
 		if ( array() !== $errors ) {
+			$this->logger->info( 'Registration validation failed.', array( 'error_count' => count( $errors ) ) );
 			$this->cleanup_registration_uploads( $profile_photo, $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
@@ -429,6 +433,7 @@ final class MembershipForms {
 		);
 
 		if ( is_wp_error( $result ) ) {
+			$this->logger->error( 'Registration creation failed.', array( 'error_code' => $result->get_error_code() ) );
 			$this->cleanup_registration_uploads( $profile_photo, $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
