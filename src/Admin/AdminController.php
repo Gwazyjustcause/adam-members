@@ -1575,6 +1575,17 @@ final class AdminController {
 		$result  = null === $current
 			? $this->private_documents->create_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage )
 			: $this->private_documents->replace_from_upload( $data, $_FILES['private_document_file'], $this->private_document_storage );
+		if ( ! is_wp_error( $result ) ) {
+			$this->logger->info(
+				null === $current ? 'Private document uploaded.' : 'Private document replaced.',
+				array(
+					'document_id'      => $result->id(),
+					'request_reference' => $result->request_reference(),
+					'sha256'           => $result->sha256(),
+					'uploaded_by'      => get_current_user_id(),
+				)
+			);
+		}
 
 		return is_wp_error( $result ) ? $result : true;
 	}
@@ -1587,6 +1598,17 @@ final class AdminController {
 		}
 
 		$result = $this->private_documents->mark_orphaned( $current );
+		if ( ! is_wp_error( $result ) ) {
+			$this->logger->info(
+				'Private document association removed.',
+				array(
+					'document_id'       => $current->id(),
+					'request_reference' => $current->request_reference(),
+					'sha256'            => $current->sha256(),
+					'admin_id'          => get_current_user_id(),
+				)
+			);
+		}
 
 		return is_wp_error( $result ) ? $result : true;
 	}

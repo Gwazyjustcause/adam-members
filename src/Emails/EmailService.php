@@ -582,7 +582,7 @@ final class EmailService {
 		);
 	}
 
-	/** @return array{attachments:array<int,string>,note:string,available:bool,error:string} */
+	/** @return array{attachments:array<string,string>,note:string,available:bool,error:string} */
 	private function document_delivery( ?PrivateDocument $document ): array {
 		if ( null === $document ) {
 			return array( 'attachments' => array(), 'note' => '', 'available' => false, 'error' => '' );
@@ -594,14 +594,14 @@ final class EmailService {
 		}
 
 		return array(
-			'attachments' => array( $path ),
+			'attachments' => array( $document->original_name() => $path ),
 			'note'        => '<p>Segue em anexo o documento referente ao pagamento da sua quota.</p>',
 			'available'   => true,
 			'error'       => '',
 		);
 	}
 
-	/** @param array{attachments:array<int,string>,note:string,available:bool,error:string} $delivery */
+	/** @param array{attachments:array<string,string>,note:string,available:bool,error:string} $delivery */
 	private function record_document_delivery( ?PrivateDocument $document, array $delivery, bool $email_sent ): void {
 		if ( null === $document ) {
 			return;
@@ -613,6 +613,15 @@ final class EmailService {
 				'send_status'   => $email_sent && $delivery['available'] ? 'sent' : 'failed',
 				'last_sent_at'  => $email_sent && $delivery['available'] ? $now : null,
 				'last_error'    => $email_sent && $delivery['available'] ? null : ( $delivery['error'] ?: 'email_send_failed' ),
+			)
+		);
+		$this->logger->info(
+			$email_sent && $delivery['available'] ? 'Private document email sent.' : 'Private document email failed.',
+			array(
+				'document_id' => $document->id(),
+				'sha256'      => $document->sha256(),
+				'send_status' => $email_sent && $delivery['available'] ? 'sent' : 'failed',
+				'error_code'  => $email_sent && $delivery['available'] ? '' : ( $delivery['error'] ?: 'email_send_failed' ),
 			)
 		);
 	}

@@ -98,10 +98,13 @@ adam_private_documents_assert( str_contains( $download, "current_user_can( 'mana
 adam_private_documents_assert( str_contains( $admin, 'handle_private_document_action' ) && str_contains( $admin, 'enctype="multipart/form-data"' ), 'Admin detail pages must expose a private document upload operation.' );
 adam_private_documents_assert( str_contains( $admin, 'Sem documento' ) && str_contains( $admin, 'anexo' ), 'Admin UI must make approval without a document explicit.' );
 adam_private_documents_assert( str_contains( $admin, 'replace_from_upload' ) && str_contains( $admin, 'mark_orphaned' ), 'Admin replacement and removal must preserve document history.' );
-adam_private_documents_assert( str_contains( $email, 'wp_mail( $recipient, $subject, $message, $headers, $attachments )' ), 'Document delivery must use wp_mail attachments.' );
+adam_private_documents_assert( str_contains( $email, 'wp_mail( $recipient, $subject, $message, $headers, $attachments )' ) && str_contains( $email, "'attachments' => array( " . '$document->original_name()' . ' => ' . '$path' . ' )' ), 'Document delivery must use a readable attachment name without exposing the physical identifier.' );
 adam_private_documents_assert( str_contains( $email, 'Segue em anexo o documento referente ao pagamento da sua quota.' ), 'Approval emails must mention the attachment only when available.' );
 adam_private_documents_assert( str_contains( $email, 'send_private_document_email' ) && str_contains( $approval, 'send_private_document' ) && str_contains( $renewal, 'send_private_document' ), 'Private-document delivery must be independently callable.' );
 adam_private_documents_assert( str_contains( $admin, 'ACTION_RESEND_RENEWAL_EMAIL' ) && str_contains( $admin, 'Reenviar email de confirma' ), 'Renewal confirmation resend must be exposed separately.' );
+adam_private_documents_assert( str_contains( $admin, "'sha256'" ) && str_contains( $admin, 'Private document uploaded.' ) && str_contains( $admin, 'Private document association removed.' ), 'Administrative document lifecycle actions must be audited without paths or contents.' );
+adam_private_documents_assert( str_contains( $email, 'Private document email sent.' ) && str_contains( $email, 'Private document email failed.' ) && str_contains( $email, "'sha256'" ), 'Document delivery success and failure must be audited safely.' );
+adam_private_documents_assert( str_contains( $approval, 'Private document sent to member.' ) && str_contains( $renewal, 'Renewal confirmation email resent.' ) && str_contains( $renewal, 'Private renewal document sent to member.' ), 'Independent document operations must be auditable.' );
 
 $document = new PrivateDocument(
 	array(

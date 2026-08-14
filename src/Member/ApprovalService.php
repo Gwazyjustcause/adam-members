@@ -417,6 +417,8 @@ final class ApprovalService {
 			return new WP_Error( 'adam_private_document_email_failed', __( 'Não foi possível enviar o documento ao sócio.', 'adam-membership' ) );
 		}
 
+		$this->logger->info( 'Private document sent to member.', array( 'member_id' => $user_id, 'document_id' => $document->id(), 'sha256' => $document->sha256() ) );
+
 		return true;
 	}
 
