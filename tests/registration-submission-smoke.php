@@ -24,6 +24,11 @@ adam_registration_assert( str_contains( $forms, 'IdentificationValidator::valida
 adam_registration_assert( str_contains( $forms, 'validate_email_field' ) && str_contains( $registration, 'is_email( $email )' ), 'Email validation must remain active.' );
 adam_registration_assert( str_contains( $forms, 'validate_date_field' ), 'Date validation must remain active.' );
 adam_registration_assert( str_contains( $forms, 'process_upload' ) && str_contains( $forms, 'media_handle_upload' ), 'Registration uploads must use the protected upload path.' );
+adam_registration_assert( str_contains( $forms, 'Registration upload processing failed.' ) && str_contains( $forms, 'media_handle_upload' ) && str_contains( $forms, 'Não foi possível guardar o ficheiro' ), 'Upload exceptions and WP_Error results must return a safe form error.' );
+adam_registration_assert( str_contains( $forms, 'cleanup_registration_uploads' ) && str_contains( $forms, 'cleanup_renewal_uploads' ), 'Failed upload pipelines must clean up media created before the failure.' );
+adam_registration_assert( str_contains( $forms, 'Registration rendering recovered from an unexpected submission failure.' ), 'Unexpected submission failures must not produce an empty shortcode.' );
+adam_registration_assert( str_contains( $forms, 'cleanup_pending_uploads' ) && str_contains( $forms, 'safe_registration_error_message' ), 'Unexpected failures must clean tracked uploads and hide internal service errors.' );
+adam_registration_assert( str_contains( $forms, 'adam_membership_duplicate_nif' ) && str_contains( $forms, 'erro interno' ), 'Known validation errors remain specific while internal errors stay generic.' );
 adam_registration_assert( str_contains( $forms, '$this->registration->register(' ), 'A valid submission must reach RegistrationService.' );
 adam_registration_assert( str_contains( $forms, 'Registration validation failed' ) && str_contains( $forms, 'error_count' ), 'Validation failures must be logged without submitted PII.' );
 adam_registration_assert( str_contains( $forms, 'private Logger $logger' ) && str_contains( $forms, 'Logger $logger' ) && str_contains( $plugin, 'MembershipForms( $settings, $members, $registration_service, $renewals, $teams, $logger )' ), 'MembershipForms must receive the logger used by its validation error path.' );

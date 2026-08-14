@@ -28,6 +28,8 @@ final class MembershipForms {
 	private RenewalService $renewals;
 	private TeamRepository $teams;
 	private Logger $logger;
+	/** @var array<int, int> Attachments created during the current request. */
+	private array $pending_upload_ids = array();
 
 	/**
 	 * @var array<string, mixed>|null
@@ -104,7 +106,16 @@ final class MembershipForms {
 			return $this->notice_markup( 'info', __( "J\u{00E1} existe uma sess\u{00E3}o iniciada. Caso pretenda renovar ou gerir a sua conta, utilize a \u{00C1}rea do S\u{00F3}cio.", 'adam-membership' ) );
 		}
 
-		$state    = $this->handle_registration_submission();
+		try {
+			$state = $this->handle_registration_submission();
+		} catch ( \Throwable $exception ) {
+			$this->cleanup_pending_uploads();
+			$this->logger->error( 'Registration rendering recovered from an unexpected submission failure.', array( 'error_code' => 'adam_registration_unexpected_failure', 'exception_class' => get_class( $exception ) ) );
+			$state = array(
+				'values' => $this->posted_values(),
+				'errors' => array( __( 'Não foi possível guardar a inscrição. Verifique os dados e tente novamente.', 'adam-membership' ) ),
+			);
+		}
 		$settings = $this->settings();
 		$values   = is_array( $state['values'] ?? null ) ? $state['values'] : array();
 		if ( 'registration' === (string) ( $_GET['adam_form_success'] ?? '' ) ) {
@@ -219,7 +230,16 @@ final class MembershipForms {
 			return $this->notice_markup( 'info', __( "A renova\u{00E7}\u{00E3}o n\u{00E3}o est\u{00E1} dispon\u{00ED}vel para o estado atual da conta.", 'adam-membership' ) );
 		}
 
-		$state    = $this->handle_renewal_submission( $member );
+		try {
+			$state = $this->handle_renewal_submission( $member );
+		} catch ( \Throwable $exception ) {
+			$this->cleanup_pending_uploads();
+			$this->logger->error( 'Renewal rendering recovered from an unexpected submission failure.', array( 'error_code' => 'adam_renewal_unexpected_failure', 'exception_class' => get_class( $exception ) ) );
+			$state = array(
+				'values' => $this->posted_values(),
+				'errors' => array( __( 'Não foi possível guardar a renovação. Verifique os dados e tente novamente.', 'adam-membership' ) ),
+			);
+		}
 		$settings = $this->settings();
 		$values   = is_array( $state['values'] ?? null ) ? $state['values'] : $this->default_renewal_values( $member );
 
@@ -440,10 +460,11 @@ final class MembershipForms {
 			$this->cleanup_registration_uploads( $profile_photo, $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
-				'errors' => array( $result->get_error_message() ),
+				'errors' => array( $this->safe_registration_error_message( $result ) ),
 			);
 		}
 
+		$this->pending_upload_ids = array();
 		$this->redirect_after_success( 'registration', $mode );
 		return array( 'values' => $values );
 	}
@@ -478,6 +499,7 @@ final class MembershipForms {
 		foreach ( array_unique( $ids ) as $attachment_id ) {
 			wp_delete_attachment( $attachment_id, true );
 		}
+		$this->pending_upload_ids = array();
 	}
 
 	/**
@@ -529,6 +551,7 @@ final class MembershipForms {
 		$custom_payload    = $this->custom_submission_payload( 'renewal', $values, $errors, $renewal_mode, $profile_changed );
 
 		if ( array() !== $errors ) {
+			$this->cleanup_renewal_uploads( $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
 				'errors' => $errors,
@@ -562,14 +585,35 @@ final class MembershipForms {
 		$result = $this->renewals->submit( $member, $submitted_data, $receipt, 0 );
 
 		if ( is_wp_error( $result ) ) {
+			$this->cleanup_renewal_uploads( $receipt, $association_proof, $custom_payload );
 			return array(
 				'values' => $values,
-				'errors' => array( $result->get_error_message() ),
+				'errors' => array( __( 'Não foi possível concluir a renovação. Verifique os dados e tente novamente.', 'adam-membership' ) ),
 			);
 		}
 
+		$this->pending_upload_ids = array();
 		$this->redirect_after_success( 'renewal' );
 		return array( 'values' => $values );
+	}
+
+	/** Remove renewal uploads when validation or request creation fails. */
+	private function cleanup_renewal_uploads( mixed $receipt, mixed $association, array $custom ): void {
+		$ids = array();
+		foreach ( array( $receipt, $association ) as $value ) {
+			if ( is_numeric( $value ) && absint( $value ) > 0 ) {
+				$ids[] = absint( $value );
+			}
+		}
+		foreach ( $custom as $value ) {
+			if ( is_numeric( $value ) && absint( $value ) > 0 ) {
+				$ids[] = absint( $value );
+			}
+		}
+		foreach ( array_unique( $ids ) as $attachment_id ) {
+			wp_delete_attachment( $attachment_id, true );
+		}
+		$this->pending_upload_ids = array();
 	}
 
 	/**
@@ -897,26 +941,63 @@ final class MembershipForms {
 			return '';
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-
-		$attachment_id = media_handle_upload(
-			$field,
-			0,
-			array(),
-			array(
-				'test_form' => false,
-				'mimes'     => $mimes,
-			)
-		);
-
-		if ( is_wp_error( $attachment_id ) ) {
-			$errors[] = $attachment_id->get_error_message();
+		try {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			$attachment_id = media_handle_upload(
+				$field,
+				0,
+				array(),
+				array(
+					'test_form' => false,
+					'mimes'     => $mimes,
+				)
+			);
+		} catch ( \Throwable $exception ) {
+			$this->logger->error( 'Registration upload processing failed.', array( 'field' => $field, 'error_code' => 'adam_registration_upload_processing_failed', 'exception_class' => get_class( $exception ) ) );
+			$errors[] = sprintf( __( 'Não foi possível guardar o ficheiro "%s". Tente novamente.', 'adam-membership' ), $config['label'] );
 			return '';
 		}
 
+		if ( is_wp_error( $attachment_id ) ) {
+			$this->logger->error( 'Registration upload was rejected.', array( 'field' => $field, 'error_code' => $attachment_id->get_error_code() ) );
+			$errors[] = sprintf( __( 'O ficheiro "%s" não é válido ou não pôde ser guardado.', 'adam-membership' ), $config['label'] );
+			return '';
+		}
+		if ( is_numeric( $attachment_id ) && absint( $attachment_id ) > 0 ) {
+			$this->pending_upload_ids[] = absint( $attachment_id );
+		}
+
 		return $attachment_id;
+	}
+
+	/** Return a safe user-facing message for a registration service failure. */
+	private function safe_registration_error_message( WP_Error $error ): string {
+		$known = array(
+			'adam_membership_invalid_email'   => __( 'Introduza um endereço de email válido.', 'adam-membership' ),
+			'adam_membership_email_exists'    => __( 'Já existe uma conta com este endereço de email.', 'adam-membership' ),
+			'adam_membership_username_exists' => __( 'Este endereço de email já está a ser usado como nome de utilizador.', 'adam-membership' ),
+			'adam_membership_invalid_nif'     => __( 'Introduza um NIF válido.', 'adam-membership' ),
+			'adam_membership_duplicate_nif'   => __( 'Este NIF já está associado a uma inscrição.', 'adam-membership' ),
+		);
+
+		return $known[ $error->get_error_code() ] ?? __( 'Não foi possível concluir a inscrição devido a um erro interno. Nenhum pedido incompleto foi submetido. Tente novamente.', 'adam-membership' );
+	}
+
+	/** Remove all attachments created by this request when an unexpected failure occurs. */
+	private function cleanup_pending_uploads(): void {
+		$ids = array_unique( array_map( 'absint', $this->pending_upload_ids ) );
+		$this->pending_upload_ids = array();
+		foreach ( $ids as $attachment_id ) {
+			if ( $attachment_id > 0 ) {
+				try {
+					wp_delete_attachment( $attachment_id, true );
+				} catch ( \Throwable $exception ) {
+					$this->logger->error( 'Failed to clean up a submission upload.', array( 'error_code' => 'adam_submission_upload_cleanup_failed', 'exception_class' => get_class( $exception ) ) );
+				}
+			}
+		}
 	}
 
 	/**
