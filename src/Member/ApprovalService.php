@@ -408,11 +408,13 @@ final class ApprovalService {
 
 	/** Send only the registration document without repeating approval. */
 	public function send_private_document( int $user_id ): true|WP_Error {
+		$this->logger->info( 'Private document send trace v1: member service entered.', array( 'user_id' => $user_id ) );
 		$member = $this->members->find( $user_id );
 		if ( null === $member ) {
 			return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
 		}
 		$document = $this->private_document( $member );
+		$this->logger->info( 'Private document send trace v1: member document lookup completed.', array( 'user_id' => $user_id, 'document_found' => null !== $document ) );
 		if ( null === $document || ! $this->email->send_private_document_email( $member, $document ) ) {
 			return new WP_Error( 'adam_private_document_email_failed', __( 'Não foi possível enviar o documento ao sócio.', 'adam-membership' ) );
 		}

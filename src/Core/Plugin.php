@@ -160,7 +160,7 @@ final class Plugin {
 		$member_change_repository  = new MemberChangeRepository();
 		$member_changes            = new MemberChangeService( $member_change_repository, $members, $email );
 		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams, $private_document_repository );
-		$google_sheets_client      = new GoogleSheetsClient( $settings );
+		$google_sheets_client      = new GoogleSheetsClient( $settings, $logger );
 		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository );
 		add_action(
 			'adam_membership_member_approved',
@@ -168,6 +168,7 @@ final class Plugin {
 				try {
 					$google_sheets_sync->sync_registration( $member );
 				} catch ( \Throwable $exception ) {
+					$google_sheets_client->log_exception( (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), 'approval_hook', $exception );
 					$logger->error( 'Google Sheets registration synchronization threw an exception.', array( 'request_id' => (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},
@@ -180,6 +181,7 @@ final class Plugin {
 				try {
 					$google_sheets_sync->sync_renewal( $request, $member );
 				} catch ( \Throwable $exception ) {
+					$google_sheets_client->log_exception( $request->request_uuid(), 'approval_hook', $exception );
 					$logger->error( 'Google Sheets renewal synchronization threw an exception.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},

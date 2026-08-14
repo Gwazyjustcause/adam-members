@@ -227,9 +227,11 @@ final class RenewalService {
 
 	/** Send only the renewal document without repeating approval. */
 	public function send_private_document( int $request_id ): true|WP_Error {
+		$this->logger->info( 'Private document send trace v1: renewal service entered.', array( 'request_id' => $request_id ) );
 		$request = $this->renewals->find( $request_id );
 		$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
 		$document = null !== $request ? $this->private_documents->find_active( $request->request_uuid() ) : null;
+		$this->logger->info( 'Private document send trace v1: renewal document lookup completed.', array( 'request_id' => $request_id, 'request_found' => null !== $request, 'member_found' => null !== $member, 'document_found' => null !== $document ) );
 		if ( null === $request || null === $member || null === $document || ! $this->email->send_private_document_email( $member, $document ) ) {
 			return new WP_Error( 'adam_private_document_email_failed', __( 'Não foi possível enviar o documento ao sócio.', 'adam-membership' ) );
 		}

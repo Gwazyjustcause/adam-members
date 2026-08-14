@@ -330,7 +330,9 @@ final class EmailService {
 
 	/** Send only a private document in a short message. */
 	public function send_private_document_email( Member $member, PrivateDocument $document ): bool {
+		$this->logger->info( 'Private document send trace v1: email service entered.', array( 'member_id' => $member->user_id(), 'document_id' => $document->id() ) );
 		$delivery = $this->document_delivery( $document );
+		$this->logger->info( 'Private document send trace v1: attachment preparation completed.', array( 'document_id' => $document->id(), 'available' => $delivery['available'], 'error_code' => $delivery['error'] ) );
 		if ( array() === $delivery['attachments'] ) {
 			$this->record_document_delivery( $document, $delivery, false );
 			return false;

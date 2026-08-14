@@ -48,7 +48,7 @@ $deletion_source = (string) file_get_contents( __DIR__ . '/../src/Member/MemberD
 $approval_source = (string) file_get_contents( __DIR__ . '/../src/Member/ApprovalService.php' );
 $document_source = (string) file_get_contents( __DIR__ . '/../src/Document/PrivateDocumentRepository.php' );
 
-adam_deletion_safety_assert( str_contains( $sync_source, 'append_table_row( $row )' ), 'Synchronization uses the table append path after planning.' );
+adam_deletion_safety_assert( str_contains( $sync_source, 'append_table_row( $row' ), 'Synchronization uses the table append path after planning.' );
 adam_deletion_safety_assert( str_contains( $client_source, 'appendCells' ) && str_contains( $client_source, "'tableId' => \$table['tableId']" ), 'Expansion targets the real table metadata.' );
 adam_deletion_safety_assert( ! str_contains( $deletion_source, 'GoogleSheets' ) && ! str_contains( $deletion_source, 'adam_membership_member_approved' ), 'WordPress member deletion does not invoke Google synchronization.' );
 adam_deletion_safety_assert( str_contains( $approval_source, 'return $this->private_documents->find_active( $reference );' ), 'Approval document lookup tolerates a missing active document.' );

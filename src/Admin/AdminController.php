@@ -1490,6 +1490,7 @@ final class AdminController {
 	 */
 	public function handle_member_admin_action(): void {
 		$action = isset( $_POST['member_action'] ) ? sanitize_key( wp_unslash( $_POST['member_action'] ) ) : '';
+		$this->logger->info( 'Private document send trace v1: member admin action received.', array( 'action' => $action, 'user_id' => absint( $_POST['user_id'] ?? 0 ) ) );
 
 		$this->handle_member_action( $action );
 	}
@@ -1534,6 +1535,7 @@ final class AdminController {
 
 		$request_id = isset( $_POST['request_id'] ) ? absint( wp_unslash( $_POST['request_id'] ) ) : 0;
 		$action     = isset( $_POST['renewal_action'] ) ? sanitize_key( wp_unslash( $_POST['renewal_action'] ) ) : '';
+		$this->logger->info( 'Private document send trace v1: renewal admin action received.', array( 'action' => $action, 'request_id' => $request_id ) );
 
 		$this->verify_admin_nonce( 'adam_membership_renewal_action_' . $request_id );
 

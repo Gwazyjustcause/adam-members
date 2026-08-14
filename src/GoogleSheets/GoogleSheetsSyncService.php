@@ -145,8 +145,9 @@ final class GoogleSheetsSyncService {
 			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
 		}
 		$row = $this->row( $movement );
-		$existing = $this->client->read_values( 'A5:K' );
+		$existing = $this->client->read_values( 'A5:K', (string) $movement['request_id'] );
 		if ( is_wp_error( $existing ) ) {
+			$this->client->log_failure( (string) $movement['request_id'], 'read_values', $existing );
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $existing, $member, $renewal_id );
 		}
 		$plan = GoogleSheetsTablePlanner::plan( (array) ( $existing['values'] ?? array() ), (string) $movement['request_id'] );
@@ -157,8 +158,9 @@ final class GoogleSheetsSyncService {
 			}
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'O ID do pedido já existe na spreadsheet com dados diferentes.', 'adam-membership' ) ), $member, $renewal_id );
 		}
-		$appended = $this->client->append_table_row( $row );
+		$appended = $this->client->append_table_row( $row, (string) $movement['request_id'] );
 		if ( is_wp_error( $appended ) ) {
+			$this->client->log_failure( (string) $movement['request_id'], 'append_or_confirmation', $appended );
 			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $appended, $member, $renewal_id );
 		}
 		$range = (array) ( $appended['table']['range'] ?? array() );
