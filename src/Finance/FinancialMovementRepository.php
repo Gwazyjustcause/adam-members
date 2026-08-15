@@ -32,6 +32,10 @@ final class FinancialMovementRepository {
 		return $movements[0] ?? null;
 	}
 
+	public static function member_type_for_quota_type( string $quota_type ): string {
+		return in_array( $quota_type, array( 'Inscrição ADAM', 'Renovação ADAM' ), true ) ? 'Aderente' : 'Efetivo';
+	}
+
 	public function all(): array {
 		global $wpdb;
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . FinancialMovementSchema::table_name() . ' ORDER BY membership_year DESC, (payment_date IS NULL) ASC, payment_date DESC, created_at DESC, id DESC', ARRAY_A );
@@ -48,12 +52,11 @@ final class FinancialMovementRepository {
 		$now = current_time( 'mysql' );
 		$existing_member_number = null !== $current ? $current->member_number() : '';
 		$existing_member_name   = null !== $current ? $current->member_name() : '';
-		$existing_member_type   = null !== $current ? $current->member_type() : '';
 		$row = array(
 			'movement_id' => $movement_id, 'member_id' => absint( $data['member_id'] ?? 0 ),
 			'member_number' => '' !== $existing_member_number ? $existing_member_number : (string) ( $data['member_number'] ?? '' ),
 			'member_name' => '' !== $existing_member_name ? $existing_member_name : (string) ( $data['member_name'] ?? '' ),
-			'member_type' => in_array( $existing_member_type, array( 'Aderente', 'Efetivo' ), true ) ? $existing_member_type : (string) ( $data['member_type'] ?? '' ),
+			'member_type' => self::member_type_for_quota_type( $quota_type ),
 			'source_type' => $source_type, 'source_reference' => $source_reference, 'quota_type' => $quota_type,
 			'membership_year' => absint( $data['membership_year'] ?? 0 ), 'amount' => number_format( (float) ( $data['amount'] ?? 0 ), 2, '.', '' ),
 			'payment_date' => '' !== (string) ( $data['payment_date'] ?? '' ) ? (string) $data['payment_date'] : null,
@@ -92,10 +95,6 @@ final class FinancialMovementRepository {
 
 	public function create_manual( Member $member, array $data ): FinancialMovement|WP_Error {
 		$id = 'manual:' . wp_generate_uuid4();
-		return $this->ensure( array_merge( $data, array( 'movement_id' => $id, 'source_type' => 'manual', 'source_reference' => $id, 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_type' => self::member_type_for( $member ), 'financial_status' => 'paid' ) ) );
-	}
-
-	private static function member_type_for( Member $member ): string {
-		return 'external_association' === (string) $member->field( 'adam_membership_origin' ) ? 'Aderente' : 'Efetivo';
+		return $this->ensure( array_merge( $data, array( 'movement_id' => $id, 'source_type' => 'manual', 'source_reference' => $id, 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'financial_status' => 'paid' ) ) );
 	}
 }

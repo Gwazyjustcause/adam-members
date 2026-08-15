@@ -854,43 +854,71 @@
 	margin: 0;
 }
 
-.adam-google-sheets-payment-panel form:first-of-type {
+
+.adam-google-sheets-payment-form {
+	display: grid;
+	gap: 14px;
+}
+
+.adam-google-sheets-quota-field {
+	max-width: 360px;
+}
+
+.adam-google-sheets-payment-form label {
+	display: grid;
+	gap: 6px;
+	min-width: 0;
+}
+
+.adam-google-sheets-payment-fields {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 14px;
 	align-items: end;
 }
 
-.adam-google-sheets-payment-panel form:first-of-type > label {
-	display: grid;
-	gap: 6px;
-	min-width: 0;
-}
-
-.adam-google-sheets-payment-panel form:first-of-type input,
-.adam-google-sheets-payment-panel form:first-of-type select {
+.adam-google-sheets-payment-form input,
+.adam-google-sheets-payment-form select {
 	box-sizing: border-box;
 	max-width: 100%;
 	width: 100%;
 }
 
-.adam-google-sheets-payment-panel form:first-of-type > .button {
-	grid-column: 1 / -1;
+.adam-google-sheets-payment-actions {
+	margin-top: 10px;
+	margin-bottom: 0;
+}
+
+.adam-google-sheets-payment-actions form {
+	margin: 0;
+}
+
+.adam-google-sheets-history-link {
+	margin-bottom: 0;
+	margin-top: 14px;
+}
+
+.adam-google-sheets-payment-form > .button {
 	justify-self: start;
 }
 
 @media (max-width: 900px) {
-	.adam-google-sheets-payment-panel form:first-of-type {
+	.adam-google-sheets-payment-fields {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
 @media (max-width: 600px) {
-	.adam-google-sheets-payment-panel form:first-of-type {
+	.adam-google-sheets-quota-field {
+		max-width: none;
+	}
+
+	.adam-google-sheets-payment-fields {
 		grid-template-columns: 1fr;
 	}
 
-	.adam-google-sheets-payment-panel form:first-of-type > .button {
+	.adam-google-sheets-payment-form > .button,
+	.adam-google-sheets-payment-actions .button {
 		width: 100%;
 	}
 }
