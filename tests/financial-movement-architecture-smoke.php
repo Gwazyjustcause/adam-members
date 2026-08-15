@@ -34,7 +34,7 @@ adam_finance_assert( str_contains( $admin, "'manual' === \$type" ) && str_contai
 adam_finance_assert( str_contains( $sync, 'ensure_registration_movement' ) && str_contains( $sync, 'ensure_renewal_movement' ) && str_contains( $sync, 'ensure_apd_movement' ), 'Complete payment data can persist all workflow movement types without approval.' );
 adam_finance_assert( str_contains( $admin, 'ensure_registration_movement' ) && str_contains( $admin, 'ensure_renewal_movement' ), 'Saving payment data persists the movement locally without approving the request.' );
 adam_finance_assert( str_contains( $repository, 'ORDER BY membership_year DESC' ) && str_contains( $repository, 'payment_date DESC' ) && str_contains( $repository, 'created_at DESC' ), 'The current panel selects the newest movement deterministically.' );
-adam_finance_assert( str_contains( $sync, "if ( 'paid' !== \$movement->financial_status() )" ), 'Retry repairs legacy financial status without creating a new movement.' );
+adam_finance_assert( str_contains( $sync, "if ( 'paid' !== (string) ( \$movement['financial_status'] ?? '' )" ), 'Synchronization validates financial status without reconstructing payment data.' );
 adam_finance_assert( str_contains( $bootstrap, 'FinancialMovementSchema::maybe_install' ), 'Schema upgrades run through the normal non-destructive init path.' );
 
 $movement = new FinancialMovement( array( 'movement_id' => 'renewal:test', 'financial_status' => 'paid', 'google_state' => 'pending' ) );

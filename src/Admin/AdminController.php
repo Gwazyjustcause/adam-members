@@ -2047,12 +2047,13 @@ final class AdminController {
 				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado como Pago. Pode sincronizar quando desejar.' );
 				return;
 			}
+			$financial = array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method );
+			$movement = $this->google_sheets_sync->ensure_registration_movement( $member, $financial );
+			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
 			update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
-			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', number_format( (float) $amount, 2, '.', '' ) );
+			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', $financial['amount'] );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_method', $method );
-			$movement = $this->google_sheets_sync->ensure_registration_movement( $member );
-			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
 			$this->redirect_with_message( __( 'Dados de pagamento guardados como Pago. Pode sincronizar quando desejar.', 'adam-membership' ) );
 			return;
 		}
@@ -2076,10 +2077,10 @@ final class AdminController {
 				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado como Pago. Pode sincronizar quando desejar.' );
 				return;
 			}
-			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
-			$request = $this->renewal_repository->find( $id ) ?? $request;
-			$movement = $this->google_sheets_sync->ensure_renewal_movement( $request, $member );
+			$financial = array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method );
+			$movement = $this->google_sheets_sync->ensure_renewal_movement( $request, $member, $financial );
 			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
+			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => $financial['amount'], 'payment_date' => $date, 'payment_method' => $method ) );
 			$this->redirect_with_message( __( 'Dados de pagamento guardados como Pago. Pode sincronizar quando desejar.', 'adam-membership' ) );
 			return;
 		}
@@ -3740,6 +3741,13 @@ final class AdminController {
 		$quota_type = $this->google_sheets_quota_type( $member, $request );
 		$request_id = null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid();
 		$persisted_movement = '' !== $request_id ? $this->financial_movements->find( $request_id ) : null;
+		if ( null !== $persisted_movement ) {
+			$data['membership_year'] = $persisted_movement->membership_year();
+			$data['payment_amount'] = $persisted_movement->amount();
+			$data['payment_date'] = $persisted_movement->payment_date();
+			$data['payment_method'] = $persisted_movement->payment_method();
+			$quota_type = $persisted_movement->quota_type();
+		}
 		$financial_labels = array( 'paid' => 'Pago', 'pending' => 'Pendente', 'failed' => 'Falhou' );
 		?>
 		<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel">
