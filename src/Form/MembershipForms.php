@@ -226,7 +226,21 @@ final class MembershipForms {
 			return $this->notice_markup( 'error', __( "N\u{00E3}o foi poss\u{00ED}vel localizar a conta de s\u{00F3}cio associada a esta sess\u{00E3}o.", 'adam-membership' ) );
 		}
 
-		if ( $member->isPending() || $member->isRejected() || $member->isRenewalPending() ) {
+		/*
+		 * RenewalService::submit() changes the member to renewal-pending before
+		 * redirecting here. The success redirect is therefore the authoritative
+		 * result for this request and must be rendered before the normal state gate.
+		 * Returning also makes refreshing the confirmation page read-only.
+		 */
+		if ( 'renewal' === sanitize_key( wp_unslash( $_GET['adam_form_success'] ?? '' ) ) ) {
+			return $this->render_submission_notice( 'renewal', array() );
+		}
+
+		if ( $member->isRenewalPending() ) {
+			return $this->notice_markup( 'info', __( 'O seu pedido de renovação está em análise pela ADAM. Não é necessário submeter um novo pedido.', 'adam-membership' ) );
+		}
+
+		if ( $member->isPending() || $member->isRejected() ) {
 			return $this->notice_markup( 'info', __( "A renova\u{00E7}\u{00E3}o n\u{00E3}o est\u{00E1} dispon\u{00ED}vel para o estado atual da conta.", 'adam-membership' ) );
 		}
 
@@ -1558,7 +1572,7 @@ final class MembershipForms {
 			if ( 'registration' === $form && $ana_mode ) {
 				return '<div class="adam-notice adam-notice--warning"><strong>' . esc_html__( 'Inscrição através da ANA', 'adam-membership' ) . '</strong><p>' . esc_html__( 'A sua inscrição será submetida à ANA pela ADAM. A aprovação como sócio da ADAM será concluída após recebermos a confirmação da ANA, pelo que o processo poderá demorar até 7 dias.', 'adam-membership' ) . '</p></div>';
 			}
-			return $this->notice_markup( 'success', 'renewal' === $form ? __( 'O pedido de renovação foi submetido com sucesso e está agora em análise.', 'adam-membership' ) : __( 'A inscrição foi submetida com sucesso. Prazo estimado de processamento: 2–7 dias.', 'adam-membership' ) );
+			return $this->notice_markup( 'success', 'renewal' === $form ? __( 'O pedido de renovação foi submetido com sucesso e está agora em análise. Prazo estimado de resposta da ADAM: 2–7 dias.', 'adam-membership' ) : __( 'A inscrição foi submetida com sucesso. Prazo estimado de processamento: 2–7 dias.', 'adam-membership' ) );
 		}
 		$errors = is_array( $state['errors'] ?? null ) ? $state['errors'] : array();
 		if ( array() === $errors ) { return ''; }
