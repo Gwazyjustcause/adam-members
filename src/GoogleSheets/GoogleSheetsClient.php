@@ -275,7 +275,7 @@ final class GoogleSheetsClient {
 	private function cell_values( array $row ): array {
 		$values = array();
 		foreach ( array_values( $row ) as $index => $value ) {
-			$values[] = array( 'userEnteredValue' => in_array( $index, array( 2, 5 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
+			$values[] = array( 'userEnteredValue' => in_array( $index, array( 3, 6 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
 		}
 		return $values;
 	}
