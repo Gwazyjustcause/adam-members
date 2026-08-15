@@ -45,6 +45,11 @@ final class ApdAssociationService {
 		$request = $this->repository->create( array( 'request_uuid' => 'apd:' . wp_generate_uuid4(), 'quota_type' => 'Associar APD/ANA', 'user_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'requested_at' => $requested, 'membership_start' => (string) $member->field( 'data_adesao' ), 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_status' => 'submitted', 'proof_of_payment' => $receipt, 'submitted_data' => $data ) );
 		$member->save( array( 'adam_apd_management_status' => Member::APD_PENDING ) );
 		if ( null !== $this->email ) { $this->email->send_apd_association_received_email( $member, $request->amount() ); }
+		try {
+			do_action( 'adam_membership_apd_association_submitted', $request, $member );
+		} catch ( \Throwable $exception ) {
+			// External operational synchronization must not undo a valid APD request.
+		}
 		return $request;
 	}
 

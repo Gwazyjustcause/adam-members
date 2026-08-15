@@ -110,6 +110,11 @@ final class RenewalService {
 		$this->logger->info( 'Renewal submitted.', array( 'member_id' => $member->user_id(), 'renewal_id' => $request->id(), 'submission_id' => $entry_id ) );
 		$this->history->renewal_submitted( $member, $request->id(), $entry_id, '' !== $this->proof_url( $request ) );
 		$this->email->send_renewal_submitted_email( $member, $request->id() );
+		try {
+			do_action( 'adam_membership_renewal_submitted', $request, $member );
+		} catch ( \Throwable $exception ) {
+			$this->logger->error( 'Renewal submitted listeners failed after the request was created.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_renewal_submitted_listener_failed' ) );
+		}
 
 		return $request;
 	}

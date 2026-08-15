@@ -37,6 +37,7 @@ use AdamMembership\Form\NifValidationController;
 use AdamMembership\Form\RegistrationService;
 use AdamMembership\GoogleSheets\GoogleSheetsClient;
 use AdamMembership\GoogleSheets\GoogleSheetsSyncService;
+use AdamMembership\GoogleSheets\GoogleSheetsMembershipWorkflowService;
 use AdamMembership\Forminator\RegistrationFormConfig;
 use AdamMembership\Forminator\RenewalSubmission;
 use AdamMembership\Forminator\UserRegistration;
@@ -174,6 +175,35 @@ final class Plugin {
 		$google_sheets_client      = new GoogleSheetsClient( $settings, $logger );
 		$financial_movements       = new FinancialMovementRepository();
 		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository, $financial_movements );
+		$membership_workflow       = new GoogleSheetsMembershipWorkflowService( $google_sheets_client, $logger );
+		add_action(
+			'adam_membership_registration_submitted',
+			static function ( \AdamMembership\Member\Member $member ) use ( $membership_workflow, $logger ): void {
+				try {
+					$membership_workflow->sync_registration( $member );
+				} catch ( \Throwable $exception ) {
+					$logger->error( 'Gestão de Sócios synchronization listener failed.', array( 'user_id' => $member->user_id(), 'error_code' => 'adam_google_sheets_exception' ) );
+				}
+			},
+			10,
+			2
+		);
+		add_action(
+			'adam_membership_renewal_submitted',
+			static function ( \AdamMembership\Member\RenewalRequest $request, \AdamMembership\Member\Member $member ) use ( $membership_workflow, $logger ): void {
+				try { $membership_workflow->sync_renewal( $request, $member ); } catch ( \Throwable $exception ) { $logger->error( 'Gestão de Sócios renewal synchronization listener failed.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) ); }
+			},
+			10,
+			2
+		);
+		add_action(
+			'adam_membership_apd_association_submitted',
+			static function ( \AdamMembership\Member\ApdAssociationRequest $request, \AdamMembership\Member\Member $member ) use ( $membership_workflow, $logger ): void {
+				try { $membership_workflow->sync_apd( $request, $member ); } catch ( \Throwable $exception ) { $logger->error( 'Gestão de Sócios APD synchronization listener failed.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) ); }
+			},
+			10,
+			2
+		);
 		add_action(
 			'adam_membership_member_approved',
 			static function ( \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $logger ): void {

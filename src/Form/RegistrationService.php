@@ -200,6 +200,14 @@ final class RegistrationService {
 			);
 		}
 
+		// This notification is deliberately outside the registration transaction:
+		// the operational spreadsheet must never make a valid registration fail.
+		try {
+			do_action( 'adam_membership_registration_submitted', $member, $entry_id );
+		} catch ( \Throwable $exception ) {
+			$this->logger->error( 'Registration submitted listeners failed after the account was created.', array( 'user_id' => $user_id, 'error_code' => 'adam_registration_submitted_listener_failed' ) );
+		}
+
 		return $member;
 	}
 

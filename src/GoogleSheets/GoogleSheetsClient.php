@@ -117,6 +117,50 @@ final class GoogleSheetsClient {
 		return $this->request_values( 'GET', $range, array(), self::READONLY_SCOPE, array( 'valueRenderOption' => 'UNFORMATTED_VALUE' ), $request_id, 'read_values' );
 	}
 
+	/** Read values from a named worksheet without changing the configured Quotas worksheet. */
+	public function read_sheet_values( string $sheet_name, string $range, string $request_id = '' ): array|WP_Error {
+		return $this->request_values( 'GET', $range, array(), self::READONLY_SCOPE, array( 'valueRenderOption' => 'UNFORMATTED_VALUE' ), $request_id, 'read_sheet_values', $sheet_name );
+	}
+
+	/** Append a workflow row using INSERT_ROWS; never infer a destination from counts or row numbers. */
+	public function append_workflow_row( string $sheet_name, array $row, string $request_id = '' ): array|WP_Error {
+		$table = $this->workflow_table_metadata( $sheet_name, $request_id );
+		if ( is_wp_error( $table ) ) { return $table; }
+		$range = (array) $table['range'];
+		$start = absint( $range['startRowIndex'] ?? 0 );
+		$end = absint( $range['endRowIndex'] ?? 0 );
+		$source = max( $start, $end - 1 );
+		$target = $end;
+		$requests = array(
+			array( 'insertDimension' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $target, 'endIndex' => $target + 1 ), 'inheritFromBefore' => true ) ),
+			array( 'copyPaste' => array( 'source' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $source, 'endRowIndex' => $source + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 8 ), 'destination' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $target, 'endRowIndex' => $target + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 8 ), 'pasteType' => 'PASTE_NORMAL' ) ),
+			array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $target, 'endRowIndex' => $target + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 8 ), 'rows' => array( array( 'values' => $this->workflow_cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ),
+			array( 'createDeveloperMetadata' => array( 'developerMetadata' => array( 'metadataKey' => 'adam_gestao_socios_request_id', 'metadataValue' => $request_id, 'visibility' => 'DOCUMENT', 'location' => array( 'dimensionRange' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $target, 'endIndex' => $target + 1 ) ) ) ) ),
+		);
+		$expanded = $range;
+		$expanded['endRowIndex'] = $end + 1;
+		$requests[] = array( 'updateTable' => array( 'table' => array( 'tableId' => $table['tableId'], 'range' => $expanded ), 'fields' => 'range' ) );
+		$result = $this->request_json( 'POST', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate', array( 'requests' => $requests ), self::WRITE_SCOPE, array(), $request_id, 'append_gestao_de_socios' );
+		if ( is_wp_error( $result ) ) { return $result; }
+		$after = $this->workflow_table_metadata( $sheet_name, $request_id );
+		if ( is_wp_error( $after ) || absint( $after['range']['endRowIndex'] ?? 0 ) < $end + 1 ) {
+			return new WP_Error( 'adam_google_sheets_table_expand_unconfirmed', __( 'A nova linha da Gestão de Sócios não foi confirmada dentro da tabela.', 'adam-membership' ) );
+		}
+		return array( 'row_number' => $target + 1, 'table' => $after );
+	}
+
+	/** Return request IDs recorded as row-level developer metadata. */
+	public function workflow_request_ids( string $sheet_name, string $request_id = '' ): array|WP_Error {
+		$config = $this->settings->google_sheets_settings();
+		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ), array(), self::READONLY_SCOPE, array( 'fields' => 'developerMetadata(metadataKey,metadataValue)' ), $request_id, 'read_gestao_metadata' );
+		if ( is_wp_error( $response ) ) { return $response; }
+		$ids = array();
+		foreach ( (array) ( $response['developerMetadata'] ?? array() ) as $metadata ) {
+			if ( 'adam_gestao_socios_request_id' === (string) ( $metadata['metadataKey'] ?? '' ) && '' !== (string) ( $metadata['metadataValue'] ?? '' ) ) { $ids[] = (string) $metadata['metadataValue']; }
+		}
+		return array_values( array_unique( $ids ) );
+	}
+
 	/**
 	 * Append one row to the configured worksheet.
 	 *
@@ -338,7 +382,7 @@ final class GoogleSheetsClient {
 
 
 	/** Perform an authenticated Sheets values request without exposing responses. */
-	private function request_values( string $method, string $range, array $body, string $scope, array $query = array(), string $request_id = '', string $stage = 'request_values' ): array|WP_Error {
+	private function request_values( string $method, string $range, array $body, string $scope, array $query = array(), string $request_id = '', string $stage = 'request_values', string $sheet_name = '' ): array|WP_Error {
 		$config = $this->settings->google_sheets_settings();
 		if ( ! $config['enabled'] || '' === $config['spreadsheet_id'] ) {
 			return new WP_Error( 'adam_google_sheets_not_configured', __( 'A integração Google Sheets não está configurada.', 'adam-membership' ) );
@@ -354,7 +398,8 @@ final class GoogleSheetsClient {
 		if ( is_wp_error( $token ) ) {
 			return $token;
 		}
-		$url = add_query_arg( $query, 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ) . '/values/' . rawurlencode( $config['sheet_name'] . '!' . $range ) );
+		$sheet_name = '' !== $sheet_name ? $sheet_name : $config['sheet_name'];
+		$url = add_query_arg( $query, 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ) . '/values/' . rawurlencode( $sheet_name . '!' . $range ) );
 		$args = array(
 			'timeout' => 20,
 			'headers' => array( 'Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json' ),
@@ -514,6 +559,29 @@ final class GoogleSheetsClient {
 	/** Record a safe synchronization failure discovered by the orchestration layer. */
 	public function log_failure( string $request_id, string $stage, WP_Error $error ): void {
 		$this->log_diagnostic( $request_id, $stage, $error );
+	}
+
+	/** Resolve the first existing table on the separate operational worksheet. */
+	private function workflow_table_metadata( string $sheet_name, string $request_id = '' ): array|WP_Error {
+		$config = $this->settings->google_sheets_settings();
+		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ), array(), self::READONLY_SCOPE, array( 'fields' => 'sheets(properties(title,sheetId),tables(tableId,range))' ), $request_id, 'gestao_table_metadata' );
+		if ( is_wp_error( $response ) ) { return $response; }
+		foreach ( (array) ( $response['sheets'] ?? array() ) as $sheet ) {
+			if ( $sheet_name !== (string) ( $sheet['properties']['title'] ?? '' ) ) { continue; }
+			foreach ( (array) ( $sheet['tables'] ?? array() ) as $table ) {
+				$range = (array) ( $table['range'] ?? array() );
+				if ( '' !== (string) ( $table['tableId'] ?? '' ) && absint( $range['endColumnIndex'] ?? 0 ) - absint( $range['startColumnIndex'] ?? 0 ) >= 8 ) {
+					return array( 'tableId' => (string) $table['tableId'], 'sheetId' => absint( $sheet['properties']['sheetId'] ?? 0 ), 'range' => $range );
+				}
+			}
+		}
+		return new WP_Error( 'adam_google_sheets_table_missing', __( 'A tabela da Gestão de Sócios não foi encontrada.', 'adam-membership' ) );
+	}
+
+	private function workflow_cell_values( array $row ): array {
+		$values = array();
+		foreach ( array_slice( array_pad( array_values( $row ), 8, '' ), 0, 8 ) as $value ) { $values[] = array( 'userEnteredValue' => array( 'stringValue' => (string) $value ) ); }
+		return $values;
 	}
 
 	/** Record a safe synchronization exception without exposing its payload. */
