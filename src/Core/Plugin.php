@@ -145,7 +145,7 @@ final class Plugin {
 		$private_document_storage    = new PrivateDocumentStorage( $logger );
 		MemberDocumentHistorySchema::maybe_install();
 		$member_document_history_repository = new MemberDocumentHistoryRepository();
-		$member_document_history     = new MemberDocumentHistoryService( $settings, $renewal_repository, $private_document_repository, $member_document_history_repository );
+		$member_document_history     = new MemberDocumentHistoryService( $settings, $renewal_repository, $private_document_repository, $member_document_history_repository, $private_document_storage );
 		$email                     = new EmailService( $settings, $logger, $private_document_repository, $private_document_storage );
 		$communication_categories  = new CommunicationCategoryRegistry();
 		$communication_preferences = new CommunicationPreferences( $communication_categories );

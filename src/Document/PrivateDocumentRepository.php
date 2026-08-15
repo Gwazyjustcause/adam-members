@@ -233,6 +233,16 @@ final class PrivateDocumentRepository {
 		);
 	}
 
+	/** @return array<int,PrivateDocument> */
+	public function for_file_identifier( string $identifier ): array {
+		global $wpdb;
+		if ( ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ) ) {
+			return array();
+		}
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE file_identifier = %s ORDER BY id ASC', $identifier ), ARRAY_A );
+		return array_values( array_map( static fn ( array $row ): PrivateDocument => new PrivateDocument( $row ), is_array( $rows ) ? $rows : array() ) );
+	}
+
 	/** @param array<string, mixed> $data */
 	public function update( PrivateDocument $document, array $data ): PrivateDocument|WP_Error {
 		global $wpdb;
@@ -255,5 +265,42 @@ final class PrivateDocumentRepository {
 
 	public function mark_superseded( PrivateDocument $document, int $replacement_id ): PrivateDocument|WP_Error {
 		return $this->update( $document, array( 'active_key' => null, 'document_status' => 'superseded', 'superseded_by' => $replacement_id ) );
+	}
+
+	/** Permanently remove one already-audited metadata row. */
+	public function delete( PrivateDocument $document ): true|WP_Error {
+		global $wpdb;
+		$wpdb->query( 'START TRANSACTION' );
+		if ( false === $wpdb->query( $wpdb->prepare( 'UPDATE ' . PrivateDocumentSchema::table_name() . ' SET superseded_by = NULL WHERE superseded_by = %d', $document->id() ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível atualizar as relações do documento.', 'adam-membership' ) );
+		}
+		if ( false === $wpdb->delete( PrivateDocumentSchema::table_name(), array( 'id' => $document->id() ), array( '%d' ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível remover o registo do documento.', 'adam-membership' ) );
+		}
+		$wpdb->query( 'COMMIT' );
+		return true;
+	}
+
+	/** Delete the metadata and physical file in one guarded operation. */
+	public function delete_with_storage( PrivateDocument $document, PrivateDocumentStorage $storage ): true|WP_Error {
+		$path = $storage->path( $document );
+		if ( is_wp_error( $path ) ) {
+			return $path;
+		}
+		global $wpdb;
+		$wpdb->query( 'START TRANSACTION' );
+		if ( false === $wpdb->query( $wpdb->prepare( 'UPDATE ' . PrivateDocumentSchema::table_name() . ' SET superseded_by = NULL WHERE superseded_by = %d', $document->id() ) ) || false === $wpdb->delete( PrivateDocumentSchema::table_name(), array( 'id' => $document->id() ), array( '%d' ) ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível remover o registo do documento.', 'adam-membership' ) );
+		}
+		$storage->delete_identifier( $document->file_identifier() );
+		if ( is_file( $path ) ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível eliminar o ficheiro privado.', 'adam-membership' ) );
+		}
+		$wpdb->query( 'COMMIT' );
+		return true;
 	}
 }

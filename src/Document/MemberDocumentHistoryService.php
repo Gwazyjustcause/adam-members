@@ -15,7 +15,7 @@ use AdamMembership\Member\RenewalRepository;
 
 /** Aggregates existing Media Library and private-document records without copying files. */
 final class MemberDocumentHistoryService {
-	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents, private MemberDocumentHistoryRepository $history_repository ) {}
+	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents, private MemberDocumentHistoryRepository $history_repository, private PrivateDocumentStorage $private_storage ) {}
 
 	/** @return array<int,array<string,mixed>> */
 	public function for_member( Member $member ): array {
@@ -32,6 +32,96 @@ final class MemberDocumentHistoryService {
 			}
 		}
 		return new \WP_Error( 'adam_membership_history_entry_not_found', __( 'A entrada do histórico não foi encontrada.', 'adam-membership' ) );
+	}
+
+	/** Permanently delete one item only after its complete provenance audit passes. */
+	public function permanently_delete_for_member( Member $member, string $history_key ): true|\WP_Error {
+		$item = null;
+		foreach ( $this->all_items_for_member( $member ) as $candidate ) {
+			if ( hash_equals( (string) ( $candidate['history_key'] ?? '' ), $history_key ) ) {
+				$item = $candidate;
+				break;
+			}
+		}
+		if ( null === $item ) {
+			return new \WP_Error( 'adam_membership_history_entry_not_found', __( 'A entrada do histórico não foi encontrada.', 'adam-membership' ) );
+		}
+
+		if ( ! empty( $item['private'] ) ) {
+			$document = $this->private_documents->find( absint( $item['source_id'] ?? 0 ) );
+			if ( null === $document ) {
+				return new \WP_Error( 'adam_membership_document_not_found', __( 'O documento privado não foi encontrado.', 'adam-membership' ) );
+			}
+			if ( $document->active() || 'active' === $document->document_status() ) {
+				return new \WP_Error( 'adam_membership_active_document', __( 'O documento privado está ativo e não pode ser eliminado. Use primeiro a substituição ou a remoção do histórico.', 'adam-membership' ) );
+			}
+			foreach ( $this->private_documents->for_file_identifier( $document->file_identifier() ) as $other ) {
+				if ( $other->id() !== $document->id() ) {
+					return new \WP_Error( 'adam_membership_private_file_shared', __( 'Este ficheiro privado é referenciado por outro registo.', 'adam-membership' ) );
+				}
+			}
+			return $this->private_documents->delete_with_storage( $document, $this->private_storage );
+		}
+
+		$attachment_id = absint( $item['source_id'] ?? 0 );
+		if ( $attachment_id <= 0 || 'attachment' !== get_post_type( $attachment_id ) ) {
+			return new \WP_Error( 'adam_membership_attachment_not_found', __( 'O anexo não foi encontrado.', 'adam-membership' ) );
+		}
+		$target_request_id = 0;
+		foreach ( $this->renewals->admin_requests() as $request ) {
+			$matches = $this->request_contains_attachment( $request, $attachment_id );
+			if ( ! $matches ) { continue; }
+			if ( $request->request_uuid() !== (string) ( $item['request_reference'] ?? '' ) || ! in_array( $request->status(), array( \AdamMembership\Member\RenewalRequest::STATUS_APPROVED, \AdamMembership\Member\RenewalRequest::STATUS_REJECTED ), true ) ) {
+				return new \WP_Error( 'adam_membership_attachment_still_referenced', __( 'Este anexo ainda está referenciado por outro pedido ou por um pedido ativo.', 'adam-membership' ) );
+			}
+			$target_request_id = $request->id();
+		}
+		if ( $this->attachment_in_any_user_meta( $attachment_id ) || $this->attachment_in_correction_or_apd_data( $attachment_id ) ) {
+			return new \WP_Error( 'adam_membership_attachment_still_referenced', __( 'Este anexo ainda está referenciado por dados de sócio, correção ou APD/ANA.', 'adam-membership' ) );
+		}
+		foreach ( $this->all_items_for_member( $member ) as $other ) {
+			if ( (string) ( $other['history_key'] ?? '' ) !== $history_key && absint( $other['source_id'] ?? 0 ) === $attachment_id ) {
+				return new \WP_Error( 'adam_membership_attachment_shared', __( 'Este anexo é partilhado por outra entrada histórica.', 'adam-membership' ) );
+			}
+		}
+		if ( false === wp_delete_attachment( $attachment_id, true ) ) {
+			return new \WP_Error( 'adam_membership_attachment_delete_failed', __( 'Não foi possível eliminar permanentemente o anexo.', 'adam-membership' ) );
+		}
+		if ( $target_request_id > 0 ) {
+			$request = $this->renewals->find( $target_request_id );
+			if ( null !== $request ) {
+				$data = $request->submitted_data();
+				foreach ( $data as $key => $value ) { if ( (string) $value === (string) $attachment_id ) { unset( $data[ $key ] ); } }
+				$this->renewals->update( $request, array( 'proof_of_payment' => (string) $request->proof_of_payment() === (string) $attachment_id ? '' : $request->proof_of_payment(), 'submitted_data' => $data ) );
+			}
+		}
+		return true;
+	}
+
+	private function request_contains_attachment( object $request, int $attachment_id ): bool {
+		$values = array_merge( array( $request->proof_of_payment() ), array_values( $request->submitted_data() ) );
+		foreach ( $values as $value ) { if ( is_numeric( $value ) && absint( $value ) === $attachment_id ) { return true; } }
+		return false;
+	}
+
+	private function attachment_in_any_user_meta( int $attachment_id ): bool {
+		foreach ( get_users( array( 'fields' => 'ID' ) ) as $user_id ) {
+			foreach ( get_user_meta( (int) $user_id ) as $values ) { foreach ( (array) $values as $value ) { if ( is_numeric( $value ) && absint( $value ) === $attachment_id ) { return true; } } }
+		}
+		return false;
+	}
+
+	private function attachment_in_correction_or_apd_data( int $attachment_id ): bool {
+		foreach ( array( 'adam_membership_member_change_requests', 'adam_membership_apd_association_requests' ) as $option ) {
+			$rows = get_option( $option, array() );
+			if ( $this->nested_contains_attachment( $rows, $attachment_id ) ) { return true; }
+		}
+		return false;
+	}
+
+	private function nested_contains_attachment( mixed $value, int $attachment_id ): bool {
+		if ( is_array( $value ) ) { foreach ( $value as $child ) { if ( $this->nested_contains_attachment( $child, $attachment_id ) ) { return true; } } return false; }
+		return is_numeric( $value ) && absint( $value ) === $attachment_id;
 	}
 
 	/** @return array<int,array<string,mixed>> */
