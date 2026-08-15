@@ -35,5 +35,6 @@ adam_membership_workflow_assert( str_contains( $workflow_script, "currentState =
 adam_membership_workflow_assert( str_contains( $workflow_script, "state = 'Pronto'" ) && str_contains( $workflow_script, "invoice === 'Disponível' || invoice === 'Entregue'" ), 'Spreadsheet automation must calculate readiness using the updated invoice values.' );
 adam_membership_workflow_assert( str_contains( $workflow_script, '.onEdit()' ) && ! str_contains( $workflow_script, 'newTrigger(GESTAO_SOCIOS_HANDLER).timeBased' ), 'Installation must create an immediate edit trigger and no time-based trigger.' );
 adam_membership_workflow_assert( str_contains( $workflow_script, "value('Sócio') === '' || value('Tipo de quota') === ''" ) && str_contains( $workflow_script, 'not workflow requests' ), 'Blank or partially cleared rows must not be processed.' );
+adam_membership_workflow_assert( substr_count( $workflow_script, 'const requiredHeaders = ' ) === 1 && ! str_contains( $workflow_script, 'const required = ' ), 'The standalone handler must contain one unambiguous header declaration.' );
 
 echo "Google Sheets membership workflow smoke tests passed.\n";

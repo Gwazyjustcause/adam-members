@@ -60,8 +60,8 @@ function handleGestaoSociosEdit(e) {
 
   const headers = sheet.getRange(1, 1, 1, 8).getValues()[0];
   const index = Object.fromEntries(headers.map((header, i) => [String(header).trim(), i]));
-  const required = ['Responsável', 'Tipo de quota', 'Sócio', 'Pagamento', 'ANA', 'Fatura', 'Estado'];
-  if (required.some((header) => index[header] === undefined)) return;
+  const requiredHeaders = ['Responsável', 'Tipo de quota', 'Sócio', 'Pagamento', 'ANA', 'Fatura', 'Estado'];
+  if (requiredHeaders.some((header) => index[header] === undefined)) return;
 
   const rowNumber = e.range.getRow();
   const row = sheet.getRange(rowNumber, 1, 1, 8).getValues()[0];
