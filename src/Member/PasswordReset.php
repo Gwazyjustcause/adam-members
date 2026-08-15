@@ -279,8 +279,9 @@ final class PasswordReset {
 	private function render_success(): string {
 		ob_start();
 		?>
-		<div class="adam-member-area adam-account-page">
+		<div class="adam-member-area adam-account-page adam-confirmation-page">
 			<section class="adam-card adam-login-required" aria-labelledby="adam-reset-success-title">
+				<div class="adam-confirmation-icon" aria-hidden="true">✓</div>
 				<p class="adam-eyebrow"><?php esc_html_e( 'Palavra-passe atualizada', 'adam-membership' ); ?></p>
 				<h2 id="adam-reset-success-title"><?php esc_html_e( 'Palavra-passe redefinida', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'A sua palavra-passe foi redefinida com sucesso.', 'adam-membership' ); ?></p>

@@ -201,6 +201,19 @@ final class MembershipForms {
 		</section>
 		<?php return (string) ob_get_clean();
 	}
+
+	private function render_renewal_confirmation(): string {
+		ob_start(); ?>
+		<section class="adam-public-form adam-card adam-registration-confirmation" data-adam-membership-confirmation="renewal">
+			<div class="adam-card-heading"><div><p class="adam-eyebrow">PEDIDO RECEBIDO</p><h2><?php esc_html_e( 'Pedido de renovação recebido', 'adam-membership' ); ?></h2><p><?php esc_html_e( 'Recebemos o seu pedido e a renovação está agora a ser analisada pela ADAM.', 'adam-membership' ); ?></p></div></div>
+			<div class="adam-confirmation-success"><span aria-hidden="true">✓</span><strong><?php esc_html_e( 'Renovação submetida com sucesso', 'adam-membership' ); ?></strong></div>
+			<p><?php esc_html_e( 'A ADAM irá rever os dados e o comprovativo de pagamento. Receberá um email assim que a análise estiver concluída.', 'adam-membership' ); ?></p>
+			<p class="adam-confirmation-timing"><strong><?php esc_html_e( 'Prazo estimado de resposta da ADAM: 2–7 dias.', 'adam-membership' ); ?></strong></p>
+			<p><a class="button button-primary adam-button" href="<?php echo esc_url( $this->settings->member_area_url() ); ?>"><?php esc_html_e( 'Voltar à Área de Sócio', 'adam-membership' ); ?></a></p>
+		</section>
+		<?php return (string) ob_get_clean();
+	}
+
 	/**
 	 * Render native renewal form.
 	 */
@@ -233,7 +246,7 @@ final class MembershipForms {
 		 * Returning also makes refreshing the confirmation page read-only.
 		 */
 		if ( 'renewal' === sanitize_key( wp_unslash( $_GET['adam_form_success'] ?? '' ) ) ) {
-			return $this->render_submission_notice( 'renewal', array() );
+			return $this->render_renewal_confirmation();
 		}
 
 		if ( $member->isRenewalPending() ) {

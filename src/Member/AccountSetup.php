@@ -493,8 +493,9 @@ final class AccountSetup {
 	private function render_success_state(): string {
 		ob_start();
 		?>
-		<div class="adam-member-area adam-account-page">
+		<div class="adam-member-area adam-account-page adam-confirmation-page">
 			<section class="adam-card adam-login-required" aria-labelledby="adam-setup-success-title">
+				<div class="adam-confirmation-icon" aria-hidden="true">✓</div>
 				<p class="adam-eyebrow"><?php esc_html_e( 'Conta pronta', 'adam-membership' ); ?></p>
 				<h2 id="adam-setup-success-title"><?php esc_html_e( 'Acesso configurado com sucesso', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'O seu utilizador e a sua palavra-passe ficaram definidos com sucesso.', 'adam-membership' ); ?></p>

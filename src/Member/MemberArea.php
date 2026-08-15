@@ -2669,7 +2669,9 @@ final class MemberArea {
 		}
 		$allowed = $this->normalize_correction_fields( $stored_fields, $fields );
 		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'external_association_proof' => 'adam_external_association_proof' );
-		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) { return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>As alterações ao seu pedido foram enviadas com sucesso. A ADAM irá agora rever novamente a informação submetida.</p></div></section></div>'; }
+		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
+			return $this->render_correction_confirmation_page( 'As alterações ao seu pedido foram enviadas com sucesso. A ADAM irá agora rever novamente a informação submetida.' );
+		}
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) ) {
 			foreach ( $allowed as $required_key ) { $definition = is_array( $fields[ $required_key ] ?? null ) ? $fields[ $required_key ] : array( 'label' => DisplayLabels::field( $required_key ), 'type' => 'text' ); $raw_value = sanitize_text_field( wp_unslash( $_POST[ $required_key ] ?? '' ) ); $field_error = 'profile_photo' === $required_key ? ( empty( $_FILES['profile_photo']['name'] ) ? new \WP_Error( 'adam_photo_required', 'É necessário enviar a fotografia.' ) : null ) : SharedFieldValidator::validate( $required_key, $raw_value, $definition, true ); if ( $field_error instanceof \WP_Error ) { $message = $this->notice_markup( 'error', 'Preencha corretamente todos os campos solicitados antes de enviar a correção. ' . $field_error->get_error_message() ); unset( $_POST['adam_registration_correction_submit'] ); break; } }
@@ -2729,7 +2731,7 @@ final class MemberArea {
 			$message = $this->notice_markup( 'error', 'Não foi possível identificar os campos solicitados. Contacte-nos através de apoio@airsoftmondego.pt.' );
 		}
 		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
-			return '<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Correção submetida</h2><p>Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.</p><a class="button button-primary" href="' . esc_url( $this->member_area_url() ) . '">Voltar à Área de Sócio</a></div></section></div>';
+			return $this->render_correction_confirmation_page( 'Recebemos as correções ao seu pedido. A informação corrigida foi enviada para nova análise pela ADAM.' );
 		}
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_registration_correction_submit'] ) && ! empty( $allowed ) ) {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_registration_correction' ) ) {
@@ -2790,6 +2792,33 @@ final class MemberArea {
 		?>
 		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><h2>Corrigir pedido</h2><p>Corrija os dados indicados pela ADAM e volte a submeter o seu pedido.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Necessita de correção</strong><p>Motivo: <?php echo esc_html( (string) $member->field( 'adam_correction_reason' ) ); ?></p><?php if ( $member->field( 'adam_correction_note' ) ) : ?><p>O que precisa de corrigir: <?php echo esc_html( (string) $member->field( 'adam_correction_note' ) ); ?></p><?php endif; ?></div><?php if ( ! empty( $allowed ) ) : ?><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_registration_correction' ); ?><div class="adam-form-grid">
 		<?php foreach ( $allowed as $key ) : $config = $definitions[ $key ]; $storage = $map[ $key ] ?? $key; $value = $member->field( $storage ); if ( 'file' === $config['type'] ) : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><?php if ( $member->media_url( $storage ) ) : ?><a href="<?php echo esc_url( $member->media_url( $storage ) ); ?>" target="_blank" rel="noopener">Ver documento atual</a><?php endif; ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="profile_photo" === $key ? ".jpg,.jpeg,.png,.webp" : ".pdf,.jpg,.jpeg,.png,.webp" required></label><?php elseif ( in_array( $config['type'], array( 'select', 'radio' ), true ) ) : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><select name="<?php echo esc_attr( $key ); ?>" required><option value="">Selecionar</option><?php foreach ( SharedFieldValidator::parse_options( $config['options'] ) as $option_key => $option_label ) : ?><option value="<?php echo esc_attr( $option_key ); ?>" <?php selected( (string) $value, (string) $option_key ); ?>><?php echo esc_html( $option_label ); ?></option><?php endforeach; ?></select></label><?php else : ?><label class="adam-form-field"><span><?php echo esc_html( $config['label'] ); ?></span><input type="<?php echo esc_attr( in_array( $config['type'], array( 'date', 'email', 'number', 'tel' ), true ) ? $config['type'] : 'text' ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( is_scalar( $value ) ? (string) $value : '' ); ?>" required></label><?php endif; endforeach; ?></div><button class="button button-primary" name="adam_registration_correction_submit" value="1">Enviar correção</button></form><?php endif; ?></section></div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Render the shared polished confirmation state for correction submissions.
+	 *
+	 * @param string $message Confirmation detail.
+	 */
+	private function render_correction_confirmation_page( string $message ): string {
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page adam-confirmation-page">
+			<section class="adam-member-hero adam-account-hero">
+				<div>
+					<p class="adam-eyebrow">PEDIDO RECEBIDO</p>
+					<h2>Correção submetida</h2>
+					<p><?php echo esc_html( $message ); ?></p>
+				</div>
+			</section>
+			<section class="adam-card adam-form-card" aria-labelledby="adam-correction-success-title">
+				<div class="adam-confirmation-icon" aria-hidden="true">✓</div>
+				<h3 id="adam-correction-success-title">A ADAM irá rever a informação</h3>
+				<p>O pedido corrigido foi encaminhado para nova análise. A informação atualmente aprovada mantém-se inalterada até essa revisão.</p>
+				<p><a class="button button-primary" href="<?php echo esc_url( $this->member_area_url() ); ?>">Voltar à Área de Sócio</a></p>
+			</section>
+		</div>
 		<?php
 		return (string) ob_get_clean();
 	}

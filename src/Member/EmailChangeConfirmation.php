@@ -140,9 +140,10 @@ final class EmailChangeConfirmation {
 	private function render_success_state( string $notice = '' ): string {
 		ob_start();
 		?>
-		<div class="adam-member-area adam-account-page">
+		<div class="adam-member-area adam-account-page adam-confirmation-page">
 			<?php echo wp_kses_post( $notice ); ?>
 			<section class="adam-card adam-login-required" aria-labelledby="adam-email-confirmed-title">
+				<div class="adam-confirmation-icon" aria-hidden="true">✓</div>
 				<p class="adam-eyebrow"><?php esc_html_e( 'Email confirmado', 'adam-membership' ); ?></p>
 				<h2 id="adam-email-confirmed-title"><?php esc_html_e( 'Email atualizado', 'adam-membership' ); ?></h2>
 				<p><?php esc_html_e( 'O seu endereço de email foi alterado com sucesso.', 'adam-membership' ); ?></p>
