@@ -82,6 +82,18 @@ final class GoogleSheetsSyncService {
 		return $this->sync_record( $record, $member );
 	}
 
+	/** Persist a financially confirmed registration without approving or synchronizing it. */
+	public function ensure_registration_movement( Member $member ): FinancialMovement|WP_Error {
+		$movement = $this->registration_movement( $member );
+		return $this->movements->ensure( array_merge( $movement, array(
+			'member_id' => $member->user_id(),
+			'member_number' => (string) $member->field( 'numero_socio' ),
+			'member_name' => $member->full_name(),
+			'member_type' => FinancialMovementRepository::member_type_for_quota_type( (string) $movement['quota_type'] ),
+			'financial_status' => 'paid',
+		) ) );
+	}
+
 	/** Synchronize one approved renewal. */
 	public function sync_renewal( RenewalRequest $request, Member $member ): true|WP_Error {
 		if ( RenewalRequest::STATUS_APPROVED !== $request->status() ) {
@@ -112,6 +124,29 @@ final class GoogleSheetsSyncService {
 		return $this->sync_record( $record, $member, $request->id() );
 	}
 
+	/** Persist a financially confirmed renewal without approving the request. */
+	public function ensure_renewal_movement( RenewalRequest $request, Member $member ): FinancialMovement|WP_Error {
+		$data = $request->data();
+		$quota_type = $this->quota_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' ), 'renewal' );
+		$sync = (array) ( $data['google_sheets_sync'] ?? array() );
+		return $this->movements->ensure( array(
+			'quota_type' => $quota_type,
+			'movement_id' => $request->request_uuid(),
+			'source_type' => 'renewal',
+			'source_reference' => $request->request_uuid(),
+			'member_id' => $member->user_id(),
+			'member_number' => (string) $member->field( 'numero_socio' ),
+			'member_name' => $member->full_name(),
+			'member_type' => FinancialMovementRepository::member_type_for_quota_type( $quota_type ),
+			'membership_year' => absint( $data['membership_year'] ?? 0 ),
+			'amount' => (string) ( $data['payment_amount'] ?? $data['submitted_data']['adam_membership_fee'] ?? '' ),
+			'payment_date' => (string) ( $data['payment_date'] ?? '' ),
+			'payment_method' => (string) ( $data['payment_method'] ?? '' ),
+			'financial_status' => 'paid',
+			'google_state' => (string) ( $sync['state'] ?? 'pending' ),
+		) );
+	}
+
 	/** Synchronize a confirmed APD/ANA financial movement. */
 	public function sync_apd_association( ApdAssociationRequest $request, Member $member ): true|WP_Error {
 		if ( ApdAssociationRequest::STATUS_CONFIRMED !== $request->status() ) {
@@ -134,6 +169,26 @@ final class GoogleSheetsSyncService {
 		return $this->sync_record( $record, $member, 0, $request );
 	}
 
+	/** Persist a financially confirmed APD movement without confirming the APD request. */
+	public function ensure_apd_movement( ApdAssociationRequest $request, Member $member ): FinancialMovement|WP_Error {
+		return $this->movements->ensure( array(
+			'quota_type' => 'Associar APD/ANA',
+			'movement_id' => $request->request_uuid(),
+			'source_type' => 'apd',
+			'source_reference' => $request->request_uuid(),
+			'member_id' => $member->user_id(),
+			'member_number' => (string) $member->field( 'numero_socio' ),
+			'member_name' => $member->full_name(),
+			'member_type' => FinancialMovementRepository::member_type_for_quota_type( 'Associar APD/ANA' ),
+			'membership_year' => $request->membership_year(),
+			'amount' => $request->payment_amount(),
+			'payment_date' => $request->payment_date(),
+			'payment_method' => $request->payment_method(),
+			'financial_status' => 'paid',
+			'google_state' => 'pending',
+		) );
+	}
+
 	public function sync_manual( FinancialMovement $movement, Member $member ): true|WP_Error {
 		return $this->sync_persisted_movement( $movement, $member );
 	}
@@ -145,6 +200,7 @@ final class GoogleSheetsSyncService {
 		if ( '' === trim( $movement->member_name() ) ) { $repair['member_name'] = $member->full_name(); }
 		$expected_member_type = FinancialMovementRepository::member_type_for_quota_type( $movement->quota_type() );
 		if ( $movement->member_type() !== $expected_member_type ) { $repair['member_type'] = $expected_member_type; }
+		if ( 'paid' !== $movement->financial_status() ) { $repair['financial_status'] = 'paid'; }
 		if ( array() !== $repair ) {
 			$this->movements->update( $movement, $repair );
 			$movement = $this->movements->find( $movement->movement_id() ) ?? $movement;

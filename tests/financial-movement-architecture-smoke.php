@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../src/Finance/FinancialMovement.php';
+
+use AdamMembership\Finance\FinancialMovement;
+
 function adam_finance_assert( bool $condition, string $message ): void {
 	if ( ! $condition ) { fwrite( STDERR, "FAIL: {$message}\n" ); exit( 1 ); }
 }
@@ -13,7 +17,7 @@ $bootstrap = (string) file_get_contents( __DIR__ . '/../adam-membership.php' );
 
 adam_finance_assert( str_contains( $schema, 'UNIQUE KEY movement_id' ), 'Movement IDs are unique.' );
 adam_finance_assert( str_contains( $schema, 'UNIQUE KEY source_reference' ), 'Source type/reference is unique.' );
-foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'payment_method', 'member_type', 'google_state' ) as $field ) {
+foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'payment_method', 'member_type', 'financial_status', 'google_state' ) as $field ) {
 	adam_finance_assert( str_contains( $schema, $field ), "Schema stores {$field}." );
 }
 adam_finance_assert( str_contains( $repository, 'find_by_source' ) && str_contains( $repository, 'ensure' ), 'Legacy records migrate idempotently by source.' );
@@ -27,6 +31,13 @@ adam_finance_assert( str_contains( $sync, "'movement_id' => \$record->movement_i
 adam_finance_assert( str_contains( $sync, 'sync_manual' ), 'Manual movements use the same sync path.' );
 adam_finance_assert( str_contains( $admin, 'create_manual_financial_movement' ) && str_contains( $admin, 'Selecionar outro tipo cria um novo movimento manual' ), 'Changing type creates a manual movement and explains the consequence.' );
 adam_finance_assert( str_contains( $admin, "'manual' === \$type" ) && str_contains( $admin, 'sync_manual' ), 'Manual movements can be edited and retried without membership side effects.' );
+adam_finance_assert( str_contains( $sync, 'ensure_registration_movement' ) && str_contains( $sync, 'ensure_renewal_movement' ) && str_contains( $sync, 'ensure_apd_movement' ), 'Complete payment data can persist all workflow movement types without approval.' );
+adam_finance_assert( str_contains( $admin, 'ensure_registration_movement' ) && str_contains( $admin, 'ensure_renewal_movement' ), 'Saving payment data persists the movement locally without approving the request.' );
+adam_finance_assert( str_contains( $repository, 'ORDER BY membership_year DESC' ) && str_contains( $repository, 'payment_date DESC' ) && str_contains( $repository, 'created_at DESC' ), 'The current panel selects the newest movement deterministically.' );
+adam_finance_assert( str_contains( $sync, "if ( 'paid' !== \$movement->financial_status() )" ), 'Retry repairs legacy financial status without creating a new movement.' );
 adam_finance_assert( str_contains( $bootstrap, 'FinancialMovementSchema::maybe_install' ), 'Schema upgrades run through the normal non-destructive init path.' );
+
+$movement = new FinancialMovement( array( 'movement_id' => 'renewal:test', 'financial_status' => 'paid', 'google_state' => 'pending' ) );
+adam_finance_assert( 'paid' === $movement->financial_status() && 'pending' === $movement->google_state(), 'Financial paid status is independent from pending Google synchronization.' );
 
 echo "Financial movement architecture smoke tests passed.\n";

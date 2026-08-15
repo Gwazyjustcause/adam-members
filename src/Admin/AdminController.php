@@ -1991,6 +1991,8 @@ final class AdminController {
 			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', number_format( (float) $amount, 2, '.', '' ) );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
 			update_user_meta( $member->user_id(), 'adam_membership_payment_method', $method );
+			$movement = $this->google_sheets_sync->ensure_registration_movement( $member );
+			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
 			$this->redirect_with_message( __( 'Dados de pagamento guardados. Pode repetir a sincronização.', 'adam-membership' ) );
 			return;
 		}
@@ -2015,6 +2017,9 @@ final class AdminController {
 				return;
 			}
 			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
+			$request = $this->renewal_repository->find( $id ) ?? $request;
+			$movement = $this->google_sheets_sync->ensure_renewal_movement( $request, $member );
+			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
 			$this->redirect_with_message( __( 'Dados de pagamento guardados. Pode repetir a sincronização.', 'adam-membership' ) );
 			return;
 		}
@@ -2027,7 +2032,7 @@ final class AdminController {
 				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado. O movimento anterior foi preservado.' );
 				return;
 			}
-			$this->financial_movements->update( $movement, array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
+			$this->financial_movements->update( $movement, array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method, 'financial_status' => 'paid' ) );
 			$updated = $this->financial_movements->find( $movement->movement_id() );
 			$result = null !== $updated ? $this->google_sheets_sync->sync_manual( $updated, $member ) : new WP_Error( 'adam_financial_movement_not_found', 'Movimento manual não encontrado.' );
 			is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Dados de pagamento guardados. Pode repetir a sincronização.' );
@@ -3680,10 +3685,13 @@ final class AdminController {
 		$sync_state = (string) ( $sync['state'] ?? 'pending' );
 		$quota_type = $this->google_sheets_quota_type( $member, $request );
 		$request_id = null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid();
+		$persisted_movement = '' !== $request_id ? $this->financial_movements->find( $request_id ) : null;
+		$financial_labels = array( 'paid' => 'Pago', 'pending' => 'Pendente', 'failed' => 'Falhou' );
 		?>
 		<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel">
 			<h2>Google Sheets — movimento financeiro</h2>
-			<p>Estado: <?php echo esc_html( $sync_labels[ $sync_state ] ?? $sync_state ); ?></p>
+			<p>Estado: <?php echo esc_html( null !== $persisted_movement ? ( $financial_labels[ $persisted_movement->financial_status() ] ?? $persisted_movement->financial_status() ) : 'Pendente de confirmação financeira' ); ?></p>
+			<p>Google Sheets: <?php echo esc_html( null !== $persisted_movement ? ( $sync_labels[ $persisted_movement->google_state() ] ?? $persisted_movement->google_state() ) : ( $sync_labels[ $sync_state ] ?? $sync_state ) ); ?></p>
 			<p>Tipo de quota: <?php echo esc_html( $quota_type ); ?></p>
 			<p>ID: <?php echo esc_html( '' !== $request_id ? $request_id : 'Não resolvido' ); ?></p>
 			<?php if ( ! empty( $sync['missing_fields'] ) && is_array( $sync['missing_fields'] ) ) : ?><p><strong>Dados em falta:</strong> <?php echo esc_html( implode( ', ', array_map( 'strval', $sync['missing_fields'] ) ) ); ?></p><?php endif; ?>
@@ -3698,7 +3706,6 @@ final class AdminController {
 				</div>
 				<button type="submit" class="button button-primary">Guardar dados de pagamento</button>
 			</form>
-			<?php $movement_id = null === $request ? $request_id : $request->request_uuid(); $persisted_movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null; ?>
 			<?php if ( null !== $persisted_movement || in_array( $sync_state, array( 'pending', 'failed' ), true ) || ( null === $request && Member::STATUS_ACTIVE === $member->status() ) || ( null !== $request && RenewalRequest::STATUS_APPROVED === $request->status() ) ) : ?>
 			<div class="adam-google-sheets-payment-actions"><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-actions"><input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_retry_google_sheets_' . $type . '_' . $id ); ?><button type="submit" class="button">Repetir sincronização</button></form></div>
 			<?php endif; ?>
@@ -3723,9 +3730,10 @@ final class AdminController {
 			$this->render_google_sheets_payment_panel( $member );
 			return;
 		}
-		$labels = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' );
+		$financial_labels = array( 'paid' => 'Pago', 'pending' => 'Pendente', 'failed' => 'Falhou' );
+		$google_labels = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' );
 		$id = $movement->movement_id();
-		echo '<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel"><h2>Google Sheets — movimento financeiro</h2><p>Estado: ' . esc_html( $labels[ $movement->google_state() ] ?? $movement->google_state() ) . '</p><p>Tipo de quota: ' . esc_html( $movement->quota_type() ?: 'Não resolvido' ) . '</p><p>ID: ' . esc_html( $id ?: 'Não resolvido' ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="adam-google-sheets-payment-form">';
+		echo '<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel"><h2>Google Sheets — movimento financeiro</h2><p>Estado: ' . esc_html( $financial_labels[ $movement->financial_status() ] ?? $movement->financial_status() ) . '</p><p>Google Sheets: ' . esc_html( $google_labels[ $movement->google_state() ] ?? $movement->google_state() ) . '</p><p>Tipo de quota: ' . esc_html( $movement->quota_type() ?: 'Não resolvido' ) . '</p><p>ID: ' . esc_html( $id ?: 'Não resolvido' ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="adam-google-sheets-payment-form">';
 		wp_nonce_field( 'adam_membership_save_google_sheets_payment_manual_' . $id );
 		echo '<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $id ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $this->member_url( $member ) ) . '"><div class="adam-google-sheets-quota-field"><label>Tipo de quota <select name="quota_type" required>';
 		foreach ( array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' ) as $option ) { echo '<option value="' . esc_attr( $option ) . '"' . selected( $option, $movement->quota_type(), false ) . '>' . esc_html( $option ) . '</option>'; }
@@ -5345,9 +5353,11 @@ final class AdminController {
 			echo '<p>Não existem movimentos financeiros.</p></div>';
 			return;
 		}
-		echo '<table class="widefat striped"><thead><tr><th>Tipo de quota</th><th>Sócio</th><th>Ano</th><th>Valor</th><th>Data</th><th>Método</th><th>Estado</th><th>ID do movimento</th><th>Ação</th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th>Tipo de quota</th><th>Sócio</th><th>Ano</th><th>Valor</th><th>Data</th><th>Método</th><th>Estado financeiro</th><th>Google Sheets</th><th>ID do movimento</th><th>Ação</th></tr></thead><tbody>';
 		foreach ( $movements as $movement ) {
-			echo '<tr><td>' . esc_html( $movement->quota_type() ) . '</td><td>' . esc_html( $movement->member_number() . ( $movement->member_name() ? ' — ' . $movement->member_name() : '' ) ) . '</td><td>' . esc_html( (string) $movement->membership_year() ) . '</td><td>' . esc_html( number_format_i18n( (float) $movement->amount(), 2 ) ) . '</td><td>' . esc_html( $movement->payment_date() ) . '</td><td>' . esc_html( $movement->payment_method() ) . '</td><td>' . esc_html( $movement->google_state() ) . '</td><td><code>' . esc_html( $movement->movement_id() ) . '</code></td><td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return window.confirm(\'Tem a certeza de que pretende eliminar este movimento financeiro? Esta ação remove também o respetivo registo do Google Sheets e não pode ser anulada.\');"><input type="hidden" name="action" value="adam_membership_delete_financial_movement"><input type="hidden" name="movement_id" value="' . esc_attr( $movement->movement_id() ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
+			$financial_label = array( 'paid' => 'Pago', 'pending' => 'Pendente', 'failed' => 'Falhou' )[ $movement->financial_status() ] ?? $movement->financial_status();
+			$google_label = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' )[ $movement->google_state() ] ?? $movement->google_state();
+			echo '<tr><td>' . esc_html( $movement->quota_type() ) . '</td><td>' . esc_html( $movement->member_number() . ( $movement->member_name() ? ' — ' . $movement->member_name() : '' ) ) . '</td><td>' . esc_html( (string) $movement->membership_year() ) . '</td><td>' . esc_html( number_format_i18n( (float) $movement->amount(), 2 ) ) . '</td><td>' . esc_html( $movement->payment_date() ) . '</td><td>' . esc_html( $movement->payment_method() ) . '</td><td>' . esc_html( $financial_label ) . '</td><td>' . esc_html( $google_label ) . '</td><td><code>' . esc_html( $movement->movement_id() ) . '</code></td><td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return window.confirm(\'Tem a certeza de que pretende eliminar este movimento financeiro? Esta ação remove também o respetivo registo do Google Sheets e não pode ser anulada.\');"><input type="hidden" name="action" value="adam_membership_delete_financial_movement"><input type="hidden" name="movement_id" value="' . esc_attr( $movement->movement_id() ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
 			wp_nonce_field( 'adam_membership_delete_financial_movement_' . $movement->movement_id() );
 			echo '<button type="submit" class="button button-link-delete adam-button adam-button--danger">Eliminar</button></form></td></tr>';
 		}

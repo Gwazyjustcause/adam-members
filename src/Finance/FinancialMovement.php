@@ -19,5 +19,6 @@ final class FinancialMovement {
 	public function amount(): string { return (string) ( $this->data['amount'] ?? '' ); }
 	public function payment_date(): string { return (string) ( $this->data['payment_date'] ?? '' ); }
 	public function payment_method(): string { return (string) ( $this->data['payment_method'] ?? '' ); }
+	public function financial_status(): string { return (string) ( $this->data['financial_status'] ?? 'paid' ); }
 	public function google_state(): string { return (string) ( $this->data['google_state'] ?? 'pending' ); }
 }
