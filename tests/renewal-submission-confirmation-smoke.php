@@ -48,7 +48,7 @@ adam_renewal_confirmation_assert( str_contains( $points, 'adam_membership_points
 adam_renewal_confirmation_assert( str_contains( $rewards, 'adam_membership_reward_member_inactive' ) && str_contains( $rewards, 'public function member_can_redeem' ), 'Reward redemption must reject inactive members before creating a request.' );
 adam_renewal_confirmation_assert( str_contains( $card, 'adam_membership_card_member_inactive' ), 'Card customization must be protected at the card service boundary.' );
 adam_renewal_confirmation_assert( str_contains( $card, 'has_active_benefits()' ) && str_contains( $card, 'is_valid = null !== $member' ), 'Public QR validation must use current benefit availability.' );
-adam_renewal_confirmation_assert( str_contains( $member_area, 'render_actions( $this->renewal_actions( $member ) )' ), 'Expired members must receive a clear primary renewal action.' );
+adam_renewal_confirmation_assert( str_contains( $member_area, '$this->renewal_actions( $member )' ) && str_contains( $member_area, 'adam-status-card__actions' ), 'Expired members must receive a clear primary renewal action inside the status card.' );
 adam_renewal_confirmation_assert( str_contains( $member_area, 'Prazo estimado de resposta: 2–7 dias.' ), 'Renewal-pending dashboard must include the expected response time.' );
 adam_renewal_confirmation_assert( str_contains( $forms, 'Prazo estimado de resposta: 2–7 dias.' ), 'The renewal form must include the expected response time for an existing pending request.' );
 adam_renewal_confirmation_assert( str_contains( $renewal, "'estado'         => Member::STATUS_ACTIVE" ) && str_contains( $renewal, "'validade_quota' => \$new_expiry" ), 'Approved renewal must restore active status and the renewed expiry.' );

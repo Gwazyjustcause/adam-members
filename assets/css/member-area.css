@@ -165,6 +165,13 @@
 	grid-column: span 6;
 }
 
+.adam-status-card__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-top: 18px;
+}
+
 .adam-notifications-card,
 .adam-profile-card {
 	grid-column: span 6;
@@ -3290,6 +3297,10 @@
 
 	.adam-action-grid {
 		grid-template-columns: 1fr;
+	}
+
+	.adam-status-card__actions .button {
+		width: 100%;
 	}
 
 	.adam-announcement-grid {

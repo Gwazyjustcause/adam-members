@@ -646,10 +646,9 @@ final class MemberArea {
 			<?php
 			$this->render_status_card(
 				$member->effective_status(),
-				__( 'A sua quota expirou. Renove agora para restaurar o acesso aos benefícios de sócio.', 'adam-membership' )
+				__( 'A sua quota expirou. Renove agora para restaurar o acesso aos benefícios de sócio.', 'adam-membership' ),
+				$this->renewal_actions( $member )
 			);
-
-			$this->render_actions( $this->renewal_actions( $member ) );
 
 			$this->render_membership( $member );
 
@@ -2125,9 +2124,10 @@ final class MemberArea {
 	 * Render status card.
 	 *
 	 * @param string $status  Status.
-	 * @param string $message Message.
+	 * @param string                                                                               $message Message.
+	 * @param array<int,array{label:string,description:string,url:string}> $actions Optional actions.
 	 */
-	private function render_status_card( string $status, string $message ): void {
+	private function render_status_card( string $status, string $message, array $actions = array() ): void {
 		?>
 		<section class="adam-card adam-status-card" aria-label="<?php esc_attr_e( 'Estado da inscrição', 'adam-membership' ); ?>">
 			<div class="adam-card-heading">
@@ -2135,6 +2135,13 @@ final class MemberArea {
 				<?php $this->render_status_badge( $status ); ?>
 			</div>
 			<p><?php echo esc_html( $message ); ?></p>
+			<?php if ( array() !== $actions ) : ?>
+				<div class="adam-status-card__actions">
+					<?php foreach ( $actions as $action ) : ?>
+						<a class="button button-primary adam-primary-action adam-button" href="<?php echo esc_url( $action['url'] ); ?>"><?php echo esc_html( $action['label'] ); ?></a>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
 		</section>
 		<?php
 	}
