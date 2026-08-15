@@ -68,8 +68,11 @@ final class FinancialMovementRepository {
 		if ( null !== $current ) {
 			$changes = $row;
 			unset( $changes['movement_id'], $changes['source_type'], $changes['source_reference'], $changes['quota_type'], $changes['google_state'], $changes['google_row_number'], $changes['google_error_code'], $changes['google_missing_fields'], $changes['google_retry_count'] );
-			$this->update( $current, $changes );
-			return $this->find( $current->movement_id() ) ?? $current;
+			if ( ! $this->update( $current, $changes ) ) {
+				return new WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível atualizar o movimento financeiro.' );
+			}
+			$updated = $this->find( $current->movement_id() );
+			return null !== $updated ? $updated : new WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível reler o movimento financeiro atualizado.' );
 		}
 		$row['created_at'] = $now;
 		global $wpdb;

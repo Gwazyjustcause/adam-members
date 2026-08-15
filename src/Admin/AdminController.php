@@ -2048,12 +2048,18 @@ final class AdminController {
 				return;
 			}
 			$financial = array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method );
-			$movement = $this->google_sheets_sync->ensure_registration_movement( $member, $financial );
+			$movement_id = sanitize_text_field( (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) );
+			$movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null;
+			if ( null !== $movement ) {
+				$movement = $this->update_financial_movement_payment( $movement, array_merge( $financial, array( 'financial_status' => 'paid' ) ) );
+			} else {
+				update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
+				update_user_meta( $member->user_id(), 'adam_membership_payment_amount', $financial['amount'] );
+				update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
+				update_user_meta( $member->user_id(), 'adam_membership_payment_method', $method );
+				$movement = $this->google_sheets_sync->ensure_registration_movement( $member );
+			}
 			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
-			update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
-			update_user_meta( $member->user_id(), 'adam_membership_payment_amount', $financial['amount'] );
-			update_user_meta( $member->user_id(), 'adam_membership_payment_date', $date );
-			update_user_meta( $member->user_id(), 'adam_membership_payment_method', $method );
 			$this->redirect_with_message( __( 'Dados de pagamento guardados como Pago. Pode sincronizar quando desejar.', 'adam-membership' ) );
 			return;
 		}
@@ -2078,9 +2084,16 @@ final class AdminController {
 				return;
 			}
 			$financial = array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method );
-			$movement = $this->google_sheets_sync->ensure_renewal_movement( $request, $member, $financial );
+			$movement = $this->financial_movements->find( $request->request_uuid() );
+			if ( null !== $movement ) {
+				$movement = $this->update_financial_movement_payment( $movement, array_merge( $financial, array( 'financial_status' => 'paid' ) ) );
+			} else {
+				$updated_request = $this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => $financial['amount'], 'payment_date' => $date, 'payment_method' => $method ) );
+				if ( false === $updated_request ) { $this->redirect_with_error( 'Não foi possível guardar os dados do pedido de renovação.' ); return; }
+				$request = $this->renewal_repository->find( $request->id() ) ?? $request;
+				$movement = $this->google_sheets_sync->ensure_renewal_movement( $request, $member );
+			}
 			if ( is_wp_error( $movement ) ) { $this->redirect_with_error( $movement->get_error_message() ); return; }
-			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => $financial['amount'], 'payment_date' => $date, 'payment_method' => $method ) );
 			$this->redirect_with_message( __( 'Dados de pagamento guardados como Pago. Pode sincronizar quando desejar.', 'adam-membership' ) );
 			return;
 		}
@@ -2093,7 +2106,16 @@ final class AdminController {
 				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado. O movimento anterior foi preservado.' );
 				return;
 			}
-			$this->financial_movements->update( $movement, array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method, 'financial_status' => 'paid' ) );
+			$financial = array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method, 'financial_status' => 'paid' );
+			if ( ! $this->financial_movements->update( $movement, $financial ) ) {
+				$this->redirect_with_error( 'Não foi possível guardar os dados do movimento financeiro.' );
+				return;
+			}
+			$updated = $this->financial_movements->find( $movement->movement_id() );
+			if ( null === $updated || $updated->membership_year() !== $year || number_format( (float) $updated->amount(), 2, '.', '' ) !== $financial['amount'] || $updated->payment_date() !== $date || $updated->payment_method() !== $method || 'paid' !== $updated->financial_status() ) {
+				$this->redirect_with_error( 'Os dados do movimento não puderam ser confirmados após a gravação.' );
+				return;
+			}
 			$this->redirect_with_message( 'Dados de pagamento guardados como Pago. Pode sincronizar quando desejar.' );
 			return;
 		}
@@ -3810,6 +3832,32 @@ final class AdminController {
 		$movement = $this->financial_movements->create_manual( $member, array( 'quota_type' => $quota_type, 'membership_year' => $year, 'amount' => $amount, 'payment_date' => $date, 'payment_method' => $method ) );
 		if ( is_wp_error( $movement ) ) { return $movement; }
 		return $movement;
+	}
+
+	/**
+	 * Persist payment data on the existing movement and verify the read-back.
+	 *
+	 * @param FinancialMovement $movement Existing movement.
+	 * @param array<string, mixed> $financial Validated payment data.
+	 */
+	private function update_financial_movement_payment( FinancialMovement $movement, array $financial ): FinancialMovement|\WP_Error {
+		if ( ! $this->financial_movements->update( $movement, $financial ) ) {
+			return new \WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível guardar os dados do movimento financeiro.' );
+		}
+
+		$updated = $this->financial_movements->find( $movement->movement_id() );
+		if (
+			null === $updated
+			|| $updated->membership_year() !== absint( $financial['membership_year'] ?? 0 )
+			|| number_format( (float) $updated->amount(), 2, '.', '' ) !== number_format( (float) ( $financial['amount'] ?? 0 ), 2, '.', '' )
+			|| $updated->payment_date() !== (string) ( $financial['payment_date'] ?? '' )
+			|| $updated->payment_method() !== (string) ( $financial['payment_method'] ?? '' )
+			|| ( 'paid' === (string) ( $financial['financial_status'] ?? '' ) && 'paid' !== $updated->financial_status() )
+		) {
+			return new \WP_Error( 'adam_financial_movement_store_failed', 'Os dados do movimento não puderam ser confirmados após a gravação.' );
+		}
+
+		return $updated;
 	}
 
 	/**
