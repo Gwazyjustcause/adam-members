@@ -23,7 +23,18 @@ final class FinancialMovementRepository {
 
 	public function for_member( int $member_id ): array {
 		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . FinancialMovementSchema::table_name() . ' WHERE member_id = %d ORDER BY id ASC', $member_id ), ARRAY_A );
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . FinancialMovementSchema::table_name() . ' WHERE member_id = %d ORDER BY membership_year DESC, (payment_date IS NULL) ASC, payment_date DESC, created_at DESC, id DESC', $member_id ), ARRAY_A );
+		return array_map( static fn ( array $row ): FinancialMovement => new FinancialMovement( $row ), is_array( $rows ) ? $rows : array() );
+	}
+
+	public function latest_for_member( int $member_id ): ?FinancialMovement {
+		$movements = $this->for_member( $member_id );
+		return $movements[0] ?? null;
+	}
+
+	public function all(): array {
+		global $wpdb;
+		$rows = $wpdb->get_results( 'SELECT * FROM ' . FinancialMovementSchema::table_name() . ' ORDER BY membership_year DESC, (payment_date IS NULL) ASC, payment_date DESC, created_at DESC, id DESC', ARRAY_A );
 		return array_map( static fn ( array $row ): FinancialMovement => new FinancialMovement( $row ), is_array( $rows ) ? $rows : array() );
 	}
 
@@ -35,9 +46,14 @@ final class FinancialMovementRepository {
 		if ( '' === $movement_id || '' === $source_type || '' === $source_reference || ! in_array( $quota_type, self::TYPES, true ) ) { return new WP_Error( 'adam_financial_movement_invalid', 'Movimento financeiro inválido.' ); }
 		$current = $this->find( $movement_id ) ?? $this->find_by_source( $source_type, $source_reference );
 		$now = current_time( 'mysql' );
+		$existing_member_number = null !== $current ? $current->member_number() : '';
+		$existing_member_name   = null !== $current ? $current->member_name() : '';
+		$existing_member_type   = null !== $current ? $current->member_type() : '';
 		$row = array(
 			'movement_id' => $movement_id, 'member_id' => absint( $data['member_id'] ?? 0 ),
-			'member_number' => (string) ( $data['member_number'] ?? '' ), 'member_name' => (string) ( $data['member_name'] ?? '' ),
+			'member_number' => '' !== $existing_member_number ? $existing_member_number : (string) ( $data['member_number'] ?? '' ),
+			'member_name' => '' !== $existing_member_name ? $existing_member_name : (string) ( $data['member_name'] ?? '' ),
+			'member_type' => in_array( $existing_member_type, array( 'Aderente', 'Efetivo' ), true ) ? $existing_member_type : (string) ( $data['member_type'] ?? '' ),
 			'source_type' => $source_type, 'source_reference' => $source_reference, 'quota_type' => $quota_type,
 			'membership_year' => absint( $data['membership_year'] ?? 0 ), 'amount' => number_format( (float) ( $data['amount'] ?? 0 ), 2, '.', '' ),
 			'payment_date' => '' !== (string) ( $data['payment_date'] ?? '' ) ? (string) $data['payment_date'] : null,
@@ -54,7 +70,7 @@ final class FinancialMovementRepository {
 		}
 		$row['created_at'] = $now;
 		global $wpdb;
-		$format = array( '%s','%d','%s','%s','%s','%s','%s','%d','%s','%s','%s','%s','%s','%d','%s','%s','%d','%s','%s' );
+		$format = array( '%s','%d','%s','%s','%s','%s','%s','%s','%d','%s','%s','%s','%s','%s','%d','%s','%s','%d','%s','%s' );
 		if ( false === $wpdb->insert( FinancialMovementSchema::table_name(), $row, $format ) ) { return new WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível guardar o movimento financeiro.' ); }
 		return $this->find( $movement_id ) ?? new WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível ler o movimento financeiro guardado.' );
 	}
@@ -65,12 +81,21 @@ final class FinancialMovementRepository {
 		return false !== $wpdb->update( FinancialMovementSchema::table_name(), $changes, array( 'id' => $movement->id() ) );
 	}
 
+	public function delete( FinancialMovement $movement ): bool {
+		global $wpdb;
+		return false !== $wpdb->delete( FinancialMovementSchema::table_name(), array( 'id' => $movement->id() ), array( '%d' ) );
+	}
+
 	public function save_sync_state( FinancialMovement $movement, array $state ): bool {
 		return $this->update( $movement, array( 'google_state' => (string) ( $state['state'] ?? 'failed' ), 'google_row_number' => absint( $state['row_number'] ?? 0 ), 'google_error_code' => (string) ( $state['last_error'] ?? '' ), 'google_missing_fields' => wp_json_encode( (array) ( $state['missing_fields'] ?? array() ) ), 'google_retry_count' => absint( $state['retry_count'] ?? 0 ) ) );
 	}
 
 	public function create_manual( Member $member, array $data ): FinancialMovement|WP_Error {
 		$id = 'manual:' . wp_generate_uuid4();
-		return $this->ensure( array_merge( $data, array( 'movement_id' => $id, 'source_type' => 'manual', 'source_reference' => $id, 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'financial_status' => 'paid' ) ) );
+		return $this->ensure( array_merge( $data, array( 'movement_id' => $id, 'source_type' => 'manual', 'source_reference' => $id, 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_type' => self::member_type_for( $member ), 'financial_status' => 'paid' ) ) );
+	}
+
+	private static function member_type_for( Member $member ): string {
+		return 'external_association' === (string) $member->field( 'adam_membership_origin' ) ? 'Aderente' : 'Efetivo';
 	}
 }

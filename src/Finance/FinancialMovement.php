@@ -9,6 +9,9 @@ final class FinancialMovement {
 	public function id(): int { return absint( $this->data['id'] ?? 0 ); }
 	public function movement_id(): string { return (string) ( $this->data['movement_id'] ?? '' ); }
 	public function member_id(): int { return absint( $this->data['member_id'] ?? 0 ); }
+	public function member_number(): string { return (string) ( $this->data['member_number'] ?? '' ); }
+	public function member_name(): string { return (string) ( $this->data['member_name'] ?? '' ); }
+	public function member_type(): string { return (string) ( $this->data['member_type'] ?? '' ); }
 	public function source_type(): string { return (string) ( $this->data['source_type'] ?? '' ); }
 	public function source_reference(): string { return (string) ( $this->data['source_reference'] ?? '' ); }
 	public function quota_type(): string { return (string) ( $this->data['quota_type'] ?? '' ); }

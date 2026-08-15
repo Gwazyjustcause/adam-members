@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace AdamMembership\Finance;
 
 final class FinancialMovementSchema {
-	private const VERSION = '1.0.0';
+	private const VERSION = '1.1.0';
 	private const VERSION_OPTION = 'adam_membership_financial_movements_schema_version';
 
 	public static function table_name(): string {
@@ -22,6 +22,7 @@ final class FinancialMovementSchema {
 			member_id bigint(20) unsigned NOT NULL,
 			member_number varchar(64) NOT NULL DEFAULT '',
 			member_name varchar(191) NOT NULL DEFAULT '',
+			member_type varchar(32) NOT NULL DEFAULT '',
 			source_type varchar(32) NOT NULL,
 			source_reference varchar(191) NOT NULL,
 			quota_type varchar(64) NOT NULL,

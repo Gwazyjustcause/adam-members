@@ -303,6 +303,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_test_google_sheets', array( $this, 'handle_test_google_sheets' ) );
 		add_action( 'admin_post_adam_membership_retry_google_sheets', array( $this, 'handle_retry_google_sheets' ) );
 		add_action( 'admin_post_adam_membership_save_google_sheets_payment', array( $this, 'handle_save_google_sheets_payment' ) );
+		add_action( 'admin_post_adam_membership_delete_financial_movement', array( $this, 'handle_delete_financial_movement' ) );
 		add_action( 'admin_post_adam_membership_save_forms_settings', array( $this, 'handle_save_forms_settings' ) );
 		add_action( 'admin_post_adam_membership_save_email_settings', array( $this, 'handle_save_email_settings' ) );
 		add_action( 'admin_post_adam_membership_send_test_email', array( $this, 'handle_send_test_email' ) );
@@ -740,6 +741,7 @@ final class AdminController {
 		$this->render_header( __( 'Histórico do Sócio', 'adam-membership' ) );
 		$this->render_notices();
 		$this->render_history_filters( $filters );
+		$this->render_financial_history( (int) ( $filters['member_id'] ?? 0 ) );
 		$this->render_history_timeline( $entries );
 		$this->render_footer();
 	}
@@ -1571,6 +1573,28 @@ final class AdminController {
 		}
 
 		$this->redirect_with_message( __( 'Pedido de renovação atualizado com sucesso.', 'adam-membership' ) );
+	}
+
+	public function handle_delete_financial_movement(): void {
+		$this->ensure_can_manage();
+		if ( 'POST' !== strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) ) {
+			$this->redirect_with_error( 'A eliminação de movimentos financeiros requer um pedido POST.' );
+		}
+		$movement_id = sanitize_text_field( wp_unslash( (string) ( $_POST['movement_id'] ?? '' ) ) );
+		$this->verify_admin_nonce( 'adam_membership_delete_financial_movement_' . $movement_id );
+		$movement = $this->financial_movements->find( $movement_id );
+		if ( null === $movement ) {
+			$this->redirect_with_error( 'Movimento financeiro não encontrado.' );
+		}
+		$google = $this->google_sheets->delete_table_row( $movement_id );
+		if ( is_wp_error( $google ) ) {
+			$this->google_sheets->log_failure( $movement_id, 'delete', $google );
+			$this->redirect_with_error( $google->get_error_message() );
+		}
+		if ( ! $this->financial_movements->delete( $movement ) ) {
+			$this->redirect_with_error( 'O registo Google foi tratado, mas não foi possível eliminar o movimento local. Verifique a consistência antes de repetir.' );
+		}
+		$this->redirect_with_message( 'Movimento financeiro eliminado. Os pedidos de membro e respetivos estados não foram alterados.' );
 	}
 
 	/** Handle private financial document upload/removal without changing workflow state. */
@@ -3501,8 +3525,7 @@ final class AdminController {
 			<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $document_rows, $member, null, true ); ?>
 			<div class="adam-admin-financial-document-stack">
 				<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
-				<?php $this->render_google_sheets_payment_panel( $member ); ?>
-				<?php $this->render_manual_financial_movement_panels( $member ); ?>
+				<?php $this->render_current_financial_movement_panel( $member ); ?>
 			</div>
 			<?php foreach ( $member_requests as $request ) : ?>
 				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
@@ -3621,19 +3644,23 @@ final class AdminController {
 		return array( 'adam_primary' => 'Renovação ADAM/ANA', 'external_association' => 'Renovação ADAM' )[ $origin ] ?? 'Não resolvido';
 	}
 
-	private function render_manual_financial_movement_panels( Member $member ): void {
-		foreach ( $this->financial_movements->for_member( $member->user_id() ) as $movement ) {
-			if ( 'manual' !== $movement->source_type() ) { continue; }
-			echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets — movimento manual</h2><p>Estado: ' . esc_html( $movement->google_state() ) . '</p><p>ID: ' . esc_html( $movement->movement_id() ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-			wp_nonce_field( 'adam_membership_save_google_sheets_payment_manual_' . $movement->movement_id() );
-			echo '<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $movement->movement_id() ) . '"><label>Tipo de quota <select name="quota_type" required>';
-			foreach ( array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' ) as $option ) { echo '<option value="' . esc_attr( $option ) . '"' . selected( $option, $movement->quota_type(), false ) . '>' . esc_html( $option ) . '</option>'; }
-			echo '</select></label><label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="' . esc_attr( (string) $movement->membership_year() ) . '"></label><label>Valor pago <input type="number" name="payment_amount" min="0.01" step="0.01" required value="' . esc_attr( $movement->amount() ) . '"></label><label>Data de pagamento <input type="date" name="payment_date" required value="' . esc_attr( $movement->payment_date() ) . '"></label><label>Método <select name="payment_method" required><option value="">Selecionar</option>';
-			foreach ( GoogleSheetsSyncService::PAYMENT_METHODS as $method ) { echo '<option value="' . esc_attr( $method ) . '"' . selected( $method, $movement->payment_method(), false ) . '>' . esc_html( $method ) . '</option>'; }
-			echo '</select></label><button type="submit" class="button button-primary">Guardar dados de pagamento</button></form><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-			wp_nonce_field( 'adam_membership_retry_google_sheets_manual_' . $movement->movement_id() );
-			echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $movement->movement_id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div>';
+	private function render_current_financial_movement_panel( Member $member ): void {
+		$movement = $this->financial_movements->latest_for_member( $member->user_id() );
+		if ( null === $movement ) {
+			$this->render_google_sheets_payment_panel( $member );
+			return;
 		}
+		$labels = array( 'pending' => 'Pendente', 'synchronized' => 'Sincronizado', 'failed' => 'Falhou', 'inactive' => 'Não ativa — sincronização não necessária' );
+		$id = $movement->movement_id();
+		echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets — movimento financeiro</h2><p>Estado: ' . esc_html( $labels[ $movement->google_state() ] ?? $movement->google_state() ) . '</p><p>Tipo de quota: ' . esc_html( $movement->quota_type() ?: 'Não resolvido' ) . '</p><p>ID: ' . esc_html( $id ?: 'Não resolvido' ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'adam_membership_save_google_sheets_payment_manual_' . $id );
+		echo '<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $id ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $this->member_url( $member ) ) . '"><label>Tipo de quota <select name="quota_type" required>';
+		foreach ( array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' ) as $option ) { echo '<option value="' . esc_attr( $option ) . '"' . selected( $option, $movement->quota_type(), false ) . '>' . esc_html( $option ) . '</option>'; }
+		echo '</select></label><label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="' . esc_attr( (string) $movement->membership_year() ) . '"></label><label>Valor pago <input type="number" name="payment_amount" min="0.01" step="0.01" required value="' . esc_attr( $movement->amount() ) . '"></label><label>Data de pagamento <input type="date" name="payment_date" required value="' . esc_attr( $movement->payment_date() ) . '"></label><label>Método <select name="payment_method" required><option value="">Selecionar</option>';
+		foreach ( GoogleSheetsSyncService::PAYMENT_METHODS as $method ) { echo '<option value="' . esc_attr( $method ) . '"' . selected( $method, $movement->payment_method(), false ) . '>' . esc_html( $method ) . '</option>'; }
+		echo '</select></label><button type="submit" class="button button-primary">Guardar dados de pagamento</button></form><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'adam_membership_retry_google_sheets_manual_' . $id );
+		echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $id ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $this->member_url( $member ) ) . '"><button type="submit" class="button">Repetir sincronização</button></form><p><a href="' . esc_url( add_query_arg( array( 'page' => self::HISTORY_PAGE_SLUG, 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) ) ) . '">Ver histórico financeiro</a></p></div>';
 	}
 
 	private function create_manual_financial_movement( Member $member, string $quota_type, int $year, string $amount, string $date, string $method ): true|\WP_Error {
@@ -5235,6 +5262,23 @@ final class AdminController {
 			<?php endif; ?>
 		</div>
 		<?php
+	}
+
+	private function render_financial_history( int $member_id = 0 ): void {
+		$movements = $member_id > 0 ? $this->financial_movements->for_member( $member_id ) : $this->financial_movements->all();
+		$redirect = add_query_arg( array( 'page' => self::HISTORY_PAGE_SLUG, 'member_id' => $member_id ), admin_url( 'admin.php' ) );
+		echo '<div class="adam-admin-panel adam-card"><h2>Histórico financeiro</h2><p>Os movimentos financeiros são registos históricos independentes dos pedidos de inscrição, renovação e APD.</p>';
+		if ( array() === $movements ) {
+			echo '<p>Não existem movimentos financeiros.</p></div>';
+			return;
+		}
+		echo '<table class="widefat striped"><thead><tr><th>Tipo de quota</th><th>Sócio</th><th>Ano</th><th>Valor</th><th>Data</th><th>Método</th><th>Estado</th><th>ID do movimento</th><th>Ação</th></tr></thead><tbody>';
+		foreach ( $movements as $movement ) {
+			echo '<tr><td>' . esc_html( $movement->quota_type() ) . '</td><td>' . esc_html( $movement->member_number() . ( $movement->member_name() ? ' — ' . $movement->member_name() : '' ) ) . '</td><td>' . esc_html( (string) $movement->membership_year() ) . '</td><td>' . esc_html( number_format_i18n( (float) $movement->amount(), 2 ) ) . '</td><td>' . esc_html( $movement->payment_date() ) . '</td><td>' . esc_html( $movement->payment_method() ) . '</td><td>' . esc_html( $movement->google_state() ) . '</td><td><code>' . esc_html( $movement->movement_id() ) . '</code></td><td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return window.confirm(\'Tem a certeza de que pretende eliminar este movimento financeiro? Esta ação remove também o respetivo registo do Google Sheets e não pode ser anulada.\');"><input type="hidden" name="action" value="adam_membership_delete_financial_movement"><input type="hidden" name="movement_id" value="' . esc_attr( $movement->movement_id() ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $redirect ) . '">';
+			wp_nonce_field( 'adam_membership_delete_financial_movement_' . $movement->movement_id() );
+			echo '<button type="submit" class="button button-link-delete adam-button adam-button--danger">Eliminar</button></form></td></tr>';
+		}
+		echo '</tbody></table></div>';
 	}
 
 	/** Render the optional private billing-document controls for one request. */

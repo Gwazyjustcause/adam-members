@@ -77,7 +77,7 @@ final class GoogleSheetsSyncService {
 			return new WP_Error( 'adam_google_sheets_not_approved', __( 'A inscrição só pode ser sincronizada depois de aprovada.', 'adam-membership' ) );
 		}
 		$movement = $this->registration_movement( $member );
-		$record = $this->movements->ensure( array_merge( $movement, array( 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name() ) ) );
+		$record = $this->movements->ensure( array_merge( $movement, array( 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ) ) ) );
 		if ( is_wp_error( $record ) ) { return $record; }
 		return $this->sync_record( $record, $member );
 	}
@@ -94,6 +94,8 @@ final class GoogleSheetsSyncService {
 			'movement_id'    => $request->request_uuid(),
 			'member_number'  => (string) $member->field( 'numero_socio' ),
 			'name'           => $member->full_name(),
+			'member_name'    => $member->full_name(),
+			'member_type'    => $this->membership_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? $member->field( 'adam_membership_origin' ) ) ),
 			'year'           => (string) ( $data['membership_year'] ?? '' ),
 			'movement'       => 'Renovação',
 			'type'           => $this->membership_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? $member->field( 'adam_membership_origin' ) ) ),
@@ -117,7 +119,8 @@ final class GoogleSheetsSyncService {
 		}
 		$movement = array(
 			'quota_type' => 'Associar APD/ANA', 'movement_id' => $request->request_uuid(),
-			'member_number' => (string) $member->field( 'numero_socio' ), 'name' => $member->full_name(),
+			'member_number' => (string) $member->field( 'numero_socio' ), 'name' => $member->full_name(), 'member_name' => $member->full_name(),
+			'member_type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ),
 			'year' => (string) $request->membership_year(), 'movement' => 'Associar APD/ANA',
 			'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ),
 			'amount' => $request->payment_amount(), 'payment_date' => $request->payment_date(),
@@ -132,11 +135,19 @@ final class GoogleSheetsSyncService {
 	}
 
 	public function sync_manual( FinancialMovement $movement, Member $member ): true|WP_Error {
+		$repair = array();
+		if ( '' === trim( $movement->member_number() ) ) { $repair['member_number'] = (string) $member->field( 'numero_socio' ); }
+		if ( '' === trim( $movement->member_name() ) ) { $repair['member_name'] = $member->full_name(); }
+		if ( ! in_array( $movement->member_type(), array( 'Aderente', 'Efetivo' ), true ) ) { $repair['member_type'] = $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ); }
+		if ( array() !== $repair ) {
+			$this->movements->update( $movement, $repair );
+			$movement = $this->movements->find( $movement->movement_id() ) ?? $movement;
+		}
 		return $this->sync_record( $movement, $member );
 	}
 
 	private function sync_record( FinancialMovement $record, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
-		$payload = array( 'quota_type' => $record->quota_type(), 'movement_id' => $record->movement_id(), 'member_number' => (string) ( $record->data()['member_number'] ?? $member->field( 'numero_socio' ) ), 'name' => (string) ( $record->data()['member_name'] ?? $member->full_name() ), 'year' => (string) $record->membership_year(), 'movement' => $this->movement_label( $record->quota_type() ), 'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ), 'amount' => $record->amount(), 'payment_date' => $record->payment_date(), 'method' => $record->payment_method(), 'status' => 'Pago', 'order_id' => $record->source_reference(), 'note' => '' );
+		$payload = array( 'quota_type' => $record->quota_type(), 'movement_id' => $record->movement_id(), 'member_number' => $record->member_number() ?: (string) $member->field( 'numero_socio' ), 'name' => $record->member_name() ?: $member->full_name(), 'year' => (string) $record->membership_year(), 'movement' => $this->movement_label( $record->quota_type() ), 'type' => $record->member_type() ?: $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ), 'amount' => $record->amount(), 'payment_date' => $record->payment_date(), 'method' => $record->payment_method(), 'status' => 'Pago', 'order_id' => $record->source_reference(), 'note' => '' );
 		$this->active_movement = $record;
 		try { return $this->sync( $payload, $member, $renewal_id, $apd_request ); } finally { $this->active_movement = null; }
 	}

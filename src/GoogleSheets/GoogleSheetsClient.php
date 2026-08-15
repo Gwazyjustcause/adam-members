@@ -203,6 +203,59 @@ final class GoogleSheetsClient {
 		return is_wp_error( $after ) ? $after : array( 'table' => $after, 'row_number' => $row_number );
 	}
 
+	/** Delete exactly the current row whose column K equals the canonical ID. */
+	public function delete_table_row( string $request_id = '' ): array|WP_Error {
+		if ( ! $this->is_configured() ) {
+			return array( 'configured' => false, 'row_found' => false, 'deleted' => false );
+		}
+		$current = $this->read_values( 'A5:L', $request_id );
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+		$row_number = 0;
+		$matches = 0;
+		foreach ( (array) ( $current['values'] ?? array() ) as $index => $stored ) {
+			$stored_row = array_pad( (array) $stored, 12, '' );
+			if ( $request_id === (string) $stored_row[10] ) {
+				++$matches;
+				$row_number = 5 + (int) $index;
+			}
+		}
+		if ( 0 === $matches ) {
+			return array( 'configured' => true, 'row_found' => false, 'deleted' => false );
+		}
+		if ( 1 !== $matches ) {
+			return new WP_Error( 'adam_google_sheets_duplicate_movement_id', __( 'O ID canónico aparece mais do que uma vez na spreadsheet. A eliminação foi cancelada.', 'adam-membership' ) );
+		}
+		$table = $this->table_metadata( $request_id, 'delete_metadata' );
+		if ( is_wp_error( $table ) ) {
+			return $table;
+		}
+		$result = $this->request_json(
+			'POST',
+			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
+			array( 'requests' => array( array( 'deleteDimension' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $row_number - 1, 'endIndex' => $row_number ) ) ) ) ),
+			self::WRITE_SCOPE,
+			array(),
+			$request_id,
+			'delete'
+		);
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		$confirmation = $this->read_values( 'A5:L', $request_id );
+		if ( is_wp_error( $confirmation ) ) {
+			return new WP_Error( 'adam_google_sheets_delete_unconfirmed', __( 'A linha foi solicitada para eliminação, mas não foi possível confirmar o resultado. O movimento local não foi eliminado.', 'adam-membership' ) );
+		}
+		foreach ( (array) ( $confirmation['values'] ?? array() ) as $stored ) {
+			$stored_row = array_pad( (array) $stored, 12, '' );
+			if ( $request_id === (string) $stored_row[10] ) {
+				return new WP_Error( 'adam_google_sheets_delete_unconfirmed', __( 'A linha financeira continua presente. O movimento local não foi eliminado.', 'adam-membership' ) );
+			}
+		}
+		return array( 'configured' => true, 'row_found' => true, 'deleted' => true, 'row_number' => $row_number );
+	}
+
 	/** Convert ordered A:L values to Sheets user-entered cell values. */
 	private function cell_values( array $row ): array {
 		$values = array();

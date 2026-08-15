@@ -13,7 +13,7 @@ $bootstrap = (string) file_get_contents( __DIR__ . '/../adam-membership.php' );
 
 adam_finance_assert( str_contains( $schema, 'UNIQUE KEY movement_id' ), 'Movement IDs are unique.' );
 adam_finance_assert( str_contains( $schema, 'UNIQUE KEY source_reference' ), 'Source type/reference is unique.' );
-foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'payment_method', 'google_state' ) as $field ) {
+foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'payment_method', 'member_type', 'google_state' ) as $field ) {
 	adam_finance_assert( str_contains( $schema, $field ), "Schema stores {$field}." );
 }
 adam_finance_assert( str_contains( $repository, 'find_by_source' ) && str_contains( $repository, 'ensure' ), 'Legacy records migrate idempotently by source.' );
