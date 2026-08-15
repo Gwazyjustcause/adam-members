@@ -2025,6 +2025,7 @@ final class AdminController {
 			$this->redirect_with_error( 'Selecione um Tipo de quota válido.' );
 			return;
 		}
+		$this->financial_save_trace( 'post_received', $request_key, $year, $method, $amount, $date, 'pending', 'AdminController::handle_save_google_sheets_payment' );
 		$payment_date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date );
 		if ( $year < 2000 || $year > 2100 || ! is_numeric( $amount ) || (float) $amount <= 0 || false === $payment_date || $payment_date->format( 'Y-m-d' ) !== $date || ! in_array( $method, GoogleSheetsSyncService::PAYMENT_METHODS, true ) ) {
 			$this->redirect_with_error( __( 'Indique um ano, valor pago, data e método de pagamento válidos.', 'adam-membership' ) );
@@ -3764,6 +3765,9 @@ final class AdminController {
 		$request_id = null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid();
 		$persisted_movement = '' !== $request_id ? $this->financial_movements->find( $request_id ) : null;
 		if ( null !== $persisted_movement ) {
+			$this->financial_save_trace( 'panel_load_render', $persisted_movement->movement_id(), $persisted_movement->membership_year(), $persisted_movement->payment_method(), $persisted_movement->amount(), $persisted_movement->payment_date(), $persisted_movement->financial_status(), 'AdminController::render_google_sheets_payment_panel' );
+		}
+		if ( null !== $persisted_movement ) {
 			$data['membership_year'] = $persisted_movement->membership_year();
 			$data['payment_amount'] = $persisted_movement->amount();
 			$data['payment_date'] = $persisted_movement->payment_date();
@@ -3810,6 +3814,9 @@ final class AdminController {
 
 	private function render_current_financial_movement_panel( Member $member ): void {
 		$movement = $this->financial_movements->latest_for_member( $member->user_id() );
+		if ( null !== $movement ) {
+			$this->financial_save_trace( 'panel_load_render', $movement->movement_id(), $movement->membership_year(), $movement->payment_method(), $movement->amount(), $movement->payment_date(), $movement->financial_status(), 'AdminController::render_current_financial_movement_panel' );
+		}
 		if ( null === $movement ) {
 			$this->render_google_sheets_payment_panel( $member );
 			return;
@@ -3834,6 +3841,12 @@ final class AdminController {
 		return $movement;
 	}
 
+	/** @param string $stage Trace stage. */
+	private function financial_save_trace( string $stage, string $movement_id, int $year, string $method, string $amount, string $date, string $status, string $handler ): void {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) { return; }
+		error_log( '[ADAM Membership] financial_save_trace ' . wp_json_encode( array( 'stage' => $stage, 'handler' => $handler, 'movement_id' => $movement_id, 'membership_year' => $year, 'payment_method' => $method, 'amount' => $amount, 'payment_date' => $date, 'financial_status' => $status ) ) );
+	}
+
 	/**
 	 * Persist payment data on the existing movement and verify the read-back.
 	 *
@@ -3841,11 +3854,18 @@ final class AdminController {
 	 * @param array<string, mixed> $financial Validated payment data.
 	 */
 	private function update_financial_movement_payment( FinancialMovement $movement, array $financial ): FinancialMovement|\WP_Error {
+		$this->financial_save_trace( 'before_repository_update', $movement->movement_id(), absint( $financial['membership_year'] ?? 0 ), (string) ( $financial['payment_method'] ?? '' ), (string) ( $financial['amount'] ?? '' ), (string) ( $financial['payment_date'] ?? '' ), (string) ( $financial['financial_status'] ?? '' ), 'AdminController::update_financial_movement_payment' );
 		if ( ! $this->financial_movements->update( $movement, $financial ) ) {
 			return new \WP_Error( 'adam_financial_movement_store_failed', 'Não foi possível guardar os dados do movimento financeiro.' );
 		}
+		$this->financial_save_trace( 'after_repository_update', $movement->movement_id(), absint( $financial['membership_year'] ?? 0 ), (string) ( $financial['payment_method'] ?? '' ), (string) ( $financial['amount'] ?? '' ), (string) ( $financial['payment_date'] ?? '' ), (string) ( $financial['financial_status'] ?? '' ), 'AdminController::update_financial_movement_payment' );
 
 		$updated = $this->financial_movements->find( $movement->movement_id() );
+		if ( null !== $updated ) {
+			$this->financial_save_trace( 'fresh_repository_readback', $updated->movement_id(), $updated->membership_year(), $updated->payment_method(), $updated->amount(), $updated->payment_date(), $updated->financial_status(), 'AdminController::update_financial_movement_payment' );
+		} else {
+			$this->financial_save_trace( 'fresh_repository_readback_missing', $movement->movement_id(), absint( $financial['membership_year'] ?? 0 ), (string) ( $financial['payment_method'] ?? '' ), (string) ( $financial['amount'] ?? '' ), (string) ( $financial['payment_date'] ?? '' ), (string) ( $financial['financial_status'] ?? '' ), 'AdminController::update_financial_movement_payment' );
+		}
 		if (
 			null === $updated
 			|| $updated->membership_year() !== absint( $financial['membership_year'] ?? 0 )

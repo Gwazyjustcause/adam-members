@@ -74,4 +74,13 @@ foreach ( array( 'registration:39d9371e-test', 'renewal:test', 'apd:test', 'manu
 	}
 }
 
+$invalid = $repository->find( 'manual:test' );
+if ( null === $invalid || $repository->update( $invalid, array( 'membership_year' => 0, 'payment_method' => '', 'financial_status' => 'paid' ) ) ) {
+	fwrite( STDERR, "FAIL: incomplete payment data was accepted as paid\n" ); exit( 1 );
+}
+$still_valid = $repository->find( 'manual:test' );
+if ( null === $still_valid || 2026 !== $still_valid->membership_year() || 'Transferência bancária' !== $still_valid->payment_method() || 'paid' !== $still_valid->financial_status() ) {
+	fwrite( STDERR, "FAIL: rejected paid update changed the persisted movement\n" ); exit( 1 );
+}
+
 echo "Financial movement persistence lifecycle tests passed.\n";
