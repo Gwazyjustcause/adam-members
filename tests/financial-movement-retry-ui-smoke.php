@@ -27,7 +27,7 @@ adam_retry_ui_assert( str_contains( $sync, 'public function sync_persisted_movem
 adam_retry_ui_assert( ! str_contains( $retry_code, 'approve(' ) && ! str_contains( $retry_code, 'send_' ), 'Retry does not repeat approval or email side effects.' );
 
 adam_retry_ui_assert( str_contains( $admin, "'pending' => 'Pendente'" ) && str_contains( $admin, "'failed' => 'Falhou'" ), 'Pending and failed states are represented in the panels.' );
-adam_retry_ui_assert( str_contains( $admin, 'null !== $persisted_movement ||' ) && str_contains( $admin, 'Repetir sincronização' ), 'A persisted pending/failed movement renders the retry action even before workflow approval.' );
+adam_retry_ui_assert( str_contains( $admin, 'null !== $persisted_movement || in_array( $sync_state, array( \'pending\', \'failed\' ), true )' ) && str_contains( $admin, 'Repetir sincronização' ), 'A pending/failed movement panel renders the retry action even before workflow approval.' );
 adam_retry_ui_assert( str_contains( $admin, "'movement_id'" ) || str_contains( $sync, "'movement_id'" ), 'Retry preserves the canonical movement ID.' );
 
 echo "Financial movement retry UI smoke tests passed.\n";
