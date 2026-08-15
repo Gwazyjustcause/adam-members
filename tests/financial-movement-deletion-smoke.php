@@ -19,6 +19,7 @@ adam_delete_assert( str_contains( $client, "read_values( 'A5:L', \$request_id )"
 adam_delete_assert( str_contains( $client, '(string) $stored_row[10]' ) && str_contains( $client, "deleteDimension" ) && str_contains( $client, "'sheetId' => \$table['sheetId']" ), 'Deletion matches column K exactly and uses the resolved sheet ID.' );
 adam_delete_assert( str_contains( $client, 'adam_google_sheets_duplicate_movement_id' ), 'Duplicate canonical IDs abort deletion safely.' );
 adam_delete_assert( str_contains( $client, 'adam_google_sheets_delete_unconfirmed' ) && str_contains( $client, 'confirmation' ), 'Google deletion must be confirmed before local deletion.' );
+adam_delete_assert( str_contains( $client, '$inside_table' ) && str_contains( $client, '$expected_end = $inside_table ? $table_end - 1 : $table_end' ), 'Rows outside the current table can be deleted by exact canonical ID without resizing the table.' );
 adam_delete_assert( str_contains( $delete_code, "'dimension' => 'ROWS'" ) && str_contains( $delete_code, "'startIndex' => \$api_row_index" ) && str_contains( $delete_code, "'endIndex' => \$api_row_index + 1" ), 'Deletion uses one physical zero-based grid row.' );
 adam_delete_assert( ! str_contains( $delete_code, 'updateCells' ) && ! str_contains( $delete_code, 'clear' ), 'Deletion does not clear cells or write blank values.' );
 adam_delete_assert( str_contains( $delete_code, 'table_end - 1' ) && str_contains( $delete_code, 'adam_google_sheets_table_range_unconfirmed' ), 'Deletion confirms that QuotasTable shrank by exactly one row.' );
