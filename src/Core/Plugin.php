@@ -239,6 +239,10 @@ final class Plugin {
 		}
 
 		if ( is_admin() || $is_adam_admin_post ) {
+			if ( $is_adam_admin_post && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				$controller_reflection = new \ReflectionClass( AdminController::class );
+				$logger->info( 'financial-movement-trace-v3 bootstrap_controller_file', array( 'file' => $controller_reflection->getFileName() ?: 'unknown', 'handler_registered' => false !== has_action( 'admin_post_adam_membership_save_google_sheets_payment' ) ) );
+			}
 			$admin = new AdminController(
 				$members,
 				$approval,
@@ -278,6 +282,10 @@ final class Plugin {
 						'renewal_handler' => false !== has_action( 'admin_post_adam_membership_renewal_action' ),
 					)
 				);
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					$controller_reflection = new \ReflectionClass( AdminController::class );
+					$logger->info( 'financial-movement-trace-v3 bootstrap_controller_registered', array( 'file' => $controller_reflection->getFileName() ?: 'unknown', 'handler_registered' => false !== has_action( 'admin_post_adam_membership_save_google_sheets_payment' ) ) );
+				}
 			}
 			if ( is_admin() ) {
 				( new AnnouncementController( $announcements ) )->register();

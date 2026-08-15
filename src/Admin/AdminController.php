@@ -54,6 +54,10 @@ use AdamMembership\Team\Team;
 use AdamMembership\Team\TeamRepository;
 use WP_Error;
 
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+	error_log( '[ADAM Membership] financial-movement-trace-v3 controller_loaded' );
+}
+
 /**
  * Registers and renders ADAM Membership admin pages.
  */
@@ -2010,6 +2014,9 @@ final class AdminController {
 
 	/** Save payment data required for a quota movement and leave approval unchanged. */
 	public function handle_save_google_sheets_payment(): void {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '[ADAM Membership] financial-movement-trace-v3 save_handler_entered' );
+		}
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
