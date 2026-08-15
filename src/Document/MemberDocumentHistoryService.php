@@ -15,10 +15,27 @@ use AdamMembership\Member\RenewalRepository;
 
 /** Aggregates existing Media Library and private-document records without copying files. */
 final class MemberDocumentHistoryService {
-	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents ) {}
+	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents, private MemberDocumentHistoryRepository $history_repository ) {}
 
 	/** @return array<int,array<string,mixed>> */
 	public function for_member( Member $member ): array {
+		$items = $this->all_items_for_member( $member );
+		$archived = array_flip( $this->history_repository->archived_keys( $member->user_id() ) );
+		return array_values( array_filter( $items, static fn ( array $item ): bool => ! isset( $archived[ (string) ( $item['history_key'] ?? '' ) ] ) ) );
+	}
+
+	/** Archive one verified item without deleting its source record or file. */
+	public function archive_for_member( Member $member, string $history_key ): true|\WP_Error {
+		foreach ( $this->all_items_for_member( $member ) as $item ) {
+			if ( hash_equals( (string) ( $item['history_key'] ?? '' ), $history_key ) ) {
+				return $this->history_repository->archive( $member->user_id(), $history_key, (string) $item['source_type'], absint( $item['source_id'] ?? 0 ) );
+			}
+		}
+		return new \WP_Error( 'adam_membership_history_entry_not_found', __( 'A entrada do histórico não foi encontrada.', 'adam-membership' ) );
+	}
+
+	/** @return array<int,array<string,mixed>> */
+	private function all_items_for_member( Member $member ): array {
 		$registration_reference = (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true );
 		if ( '' === $registration_reference ) {
 			$registration_reference = 'registration:legacy-' . $member->user_id();
@@ -51,6 +68,9 @@ final class MemberDocumentHistoryService {
 				'download_url'    => $this->private_download_url( $document->id() ),
 				'private'         => true,
 				'document_id'     => $document->id(),
+				'history_key'     => 'private:' . $document->id(),
+				'source_type'     => 'private',
+				'source_id'       => $document->id(),
 			);
 		}
 
@@ -111,7 +131,8 @@ final class MemberDocumentHistoryService {
 		$url = $id > 0 ? (string) wp_get_attachment_url( $id ) : ( is_string( $value ) && filter_var( $value, FILTER_VALIDATE_URL ) ? esc_url_raw( $value ) : '' );
 		if ( '' === $url ) { return null; }
 		$filename = $id > 0 ? sanitize_file_name( (string) get_post_meta( $id, '_wp_attached_file', true ) ) : sanitize_file_name( wp_basename( (string) parse_url( $url, PHP_URL_PATH ) ) );
-		return array( 'year' => $year, 'request_type' => $type, 'request_label' => 'registration' === $type ? 'Inscrição' : 'Renovação', 'request_reference' => $reference, 'document_type' => $label, 'filename' => wp_basename( $filename ), 'date' => $id > 0 ? (string) get_post_field( 'post_date', $id ) : '', 'origin' => 'Sócio', 'status' => 'submitted', 'sent' => false, 'download_url' => $url, 'private' => false, 'document_id' => $id );
+		$history_key = 'media:' . hash( 'sha256', $reference . '|' . $type . '|' . $label . '|' . (string) $id . '|' . $url );
+		return array( 'year' => $year, 'request_type' => $type, 'request_label' => 'registration' === $type ? 'Inscrição' : 'Renovação', 'request_reference' => $reference, 'document_type' => $label, 'filename' => wp_basename( $filename ), 'date' => $id > 0 ? (string) get_post_field( 'post_date', $id ) : '', 'origin' => 'Sócio', 'status' => 'submitted', 'sent' => false, 'download_url' => $url, 'private' => false, 'document_id' => $id, 'history_key' => $history_key, 'source_type' => 'media', 'source_id' => $id );
 	}
 
 	private function registration_year( Member $member ): string { return (string) ( get_user_meta( $member->user_id(), 'adam_membership_year', true ) ?: $this->year_from_date( (string) $member->field( 'data_adesao' ) ) ); }

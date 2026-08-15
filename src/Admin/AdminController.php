@@ -320,6 +320,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_member_change_action', array( $this, 'handle_member_change_action' ) );
 		add_action( 'admin_post_adam_membership_team_action', array( $this, 'handle_team_admin_action' ) );
 		add_action( 'admin_post_adam_membership_private_document_action', array( $this, 'handle_private_document_action' ) );
+		add_action( 'admin_post_adam_membership_archive_document_history', array( $this, 'handle_archive_document_history' ) );
 	}
 
 	/**
@@ -817,7 +818,12 @@ final class AdminController {
 					$status = (string) ( $item['status'] ?? '' );
 					$status_label = ! empty( $item['private'] ) ? $this->private_document_status_label( $status ) : __( 'Submetido', 'adam-membership' );
 					$sent = ! empty( $item['private'] ) ? ( ! empty( $item['sent'] ) ? __( 'Enviado ao sócio', 'adam-membership' ) : __( 'Ainda não enviado', 'adam-membership' ) ) : '';
-					printf( '<div class="adam-admin-document-row"><div class="adam-admin-document-cell"><strong>%s</strong><span class="adam-admin-document-filename">%s</span></div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div></div>', esc_html( (string) $item['document_type'] ), esc_html( (string) $item['filename'] ), esc_html( (string) $item['date'] ?: '—' ), esc_html( (string) $item['origin'] ), esc_html( trim( $status_label . ( '' !== $sent ? ' · ' . $sent : '' ) ) ), '' !== (string) ( $item['download_url'] ?? '' ) ? '<a class="button button-small" href="' . esc_url( (string) $item['download_url'] ) . '">' . esc_html__( 'Descarregar', 'adam-membership' ) . '</a>' : '—' );
+					$history_key = (string) ( $item['history_key'] ?? '' );
+					$nonce_action = 'adam_membership_archive_document_history_' . $member->user_id() . '_' . $history_key;
+					$remove_form = '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline" onsubmit="return window.confirm(\'' . esc_js( __( 'Remover esta entrada apenas do histórico? O pedido e o ficheiro original serão preservados.', 'adam-membership' ) ) . '\');">';
+					$remove_form .= '<input type="hidden" name="action" value="adam_membership_archive_document_history"><input type="hidden" name="member_id" value="' . esc_attr( (string) $member->user_id() ) . '"><input type="hidden" name="history_key" value="' . esc_attr( $history_key ) . '"><input type="hidden" name="redirect_to" value="' . esc_url( $this->member_document_history_url( $member ) ) . '"><input type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( $nonce_action ) ) . '"><button type="submit" class="button button-small">' . esc_html__( 'Remover do histórico', 'adam-membership' ) . '</button></form>';
+					$actions = ( '' !== (string) ( $item['download_url'] ?? '' ) ? '<a class="button button-small" href="' . esc_url( (string) $item['download_url'] ) . '">' . esc_html__( 'Descarregar', 'adam-membership' ) . '</a> ' : '— ' ) . $remove_form;
+					printf( '<div class="adam-admin-document-row"><div class="adam-admin-document-cell"><strong>%s</strong><span class="adam-admin-document-filename">%s</span></div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div></div>', esc_html( (string) $item['document_type'] ), esc_html( (string) $item['filename'] ), esc_html( (string) $item['date'] ?: '—' ), esc_html( (string) $item['origin'] ), esc_html( trim( $status_label . ( '' !== $sent ? ' · ' . $sent : '' ) ) ), $actions );
 				}
 				echo '</div></div>';
 			}
@@ -1677,7 +1683,23 @@ final class AdminController {
 		$this->redirect_with_message( 'Movimento financeiro eliminado. Os pedidos de membro e respetivos estados não foram alterados.' );
 	}
 
-	/** Handle private financial document upload/removal without changing workflow state. */
+	/** Archive one history entry without deleting its source record or file. */
+	public function handle_archive_document_history(): void {
+		$this->ensure_can_manage();
+		$member_id = absint( $_POST['member_id'] ?? 0 );
+		$history_key = sanitize_text_field( wp_unslash( $_POST['history_key'] ?? '' ) );
+		$this->verify_admin_nonce( 'adam_membership_archive_document_history_' . $member_id . '_' . $history_key );
+		$member = $member_id > 0 ? $this->members->find( $member_id ) : null;
+		if ( null === $member || '' === $history_key ) {
+			$this->redirect_with_error( __( 'Não foi possível remover a entrada do histórico.', 'adam-membership' ) );
+		}
+		$result = $this->member_document_history->archive_for_member( $member, $history_key );
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_with_error( __( 'Não foi possível remover a entrada do histórico.', 'adam-membership' ) );
+		}
+		$this->redirect_with_message( __( 'Entrada removida do histórico. O pedido e o ficheiro original foram preservados.', 'adam-membership' ) );
+	}
+
 	public function handle_private_document_action(): void {
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['document_type'] ?? '' ) );
