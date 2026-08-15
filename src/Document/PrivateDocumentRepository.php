@@ -295,7 +295,12 @@ final class PrivateDocumentRepository {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível remover o registo do documento.', 'adam-membership' ) );
 		}
-		$storage->delete_identifier( $document->file_identifier() );
+		try {
+			$storage->delete_identifier( $document->file_identifier() );
+		} catch ( \Throwable $exception ) {
+			$wpdb->query( 'ROLLBACK' );
+			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível eliminar o ficheiro privado.', 'adam-membership' ) );
+		}
 		if ( is_file( $path ) ) {
 			$wpdb->query( 'ROLLBACK' );
 			return new WP_Error( 'adam_private_document_delete_failed', __( 'Não foi possível eliminar o ficheiro privado.', 'adam-membership' ) );

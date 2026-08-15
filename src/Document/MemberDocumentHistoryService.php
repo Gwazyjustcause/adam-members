@@ -10,12 +10,13 @@ declare(strict_types=1);
 namespace AdamMembership\Document;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\Member;
 use AdamMembership\Member\RenewalRepository;
 
 /** Aggregates existing Media Library and private-document records without copying files. */
 final class MemberDocumentHistoryService {
-	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents, private MemberDocumentHistoryRepository $history_repository, private PrivateDocumentStorage $private_storage ) {}
+	public function __construct( private SettingsRepository $settings, private RenewalRepository $renewals, private PrivateDocumentRepository $private_documents, private MemberDocumentHistoryRepository $history_repository, private PrivateDocumentStorage $private_storage, private Logger $logger ) {}
 
 	/** @return array<int,array<string,mixed>> */
 	public function for_member( Member $member ): array {
@@ -36,6 +37,7 @@ final class MemberDocumentHistoryService {
 
 	/** Permanently delete one item only after its complete provenance audit passes. */
 	public function permanently_delete_for_member( Member $member, string $history_key ): true|\WP_Error {
+		$this->trace( 'Private document history deletion trace: service entered.', array( 'stage' => 'service.entered', 'member_id' => $member->user_id(), 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
 		$item = null;
 		foreach ( $this->all_items_for_member( $member ) as $candidate ) {
 			if ( hash_equals( (string) ( $candidate['history_key'] ?? '' ), $history_key ) ) {
@@ -44,10 +46,13 @@ final class MemberDocumentHistoryService {
 			}
 		}
 		if ( null === $item ) {
+			$this->trace( 'Private document history deletion trace: history key not found.', array( 'stage' => 'service.history_key_resolution', 'error_code' => 'adam_membership_history_entry_not_found' ) );
 			return new \WP_Error( 'adam_membership_history_entry_not_found', __( 'A entrada do histórico não foi encontrada.', 'adam-membership' ) );
 		}
+		$this->trace( 'Private document history deletion trace: source resolved.', array( 'stage' => 'service.source_resolved', 'source_type' => (string) $item['source_type'], 'source_id' => absint( $item['source_id'] ?? 0 ), 'private' => ! empty( $item['private'] ) ) );
 
 		if ( ! empty( $item['private'] ) ) {
+			$this->trace( 'Private document history deletion trace: private branch entered.', array( 'stage' => 'service.private_branch' ) );
 			$document = $this->private_documents->find( absint( $item['source_id'] ?? 0 ) );
 			if ( null === $document ) {
 				return new \WP_Error( 'adam_membership_document_not_found', __( 'O documento privado não foi encontrado.', 'adam-membership' ) );
@@ -60,6 +65,7 @@ final class MemberDocumentHistoryService {
 					return new \WP_Error( 'adam_membership_private_file_shared', __( 'Este ficheiro privado é referenciado por outro registo.', 'adam-membership' ) );
 				}
 			}
+			$this->trace( 'Private document history deletion trace: private audit passed; deleting source.', array( 'stage' => 'service.private_delete_start' ) );
 			return $this->private_documents->delete_with_storage( $document, $this->private_storage );
 		}
 
@@ -67,6 +73,7 @@ final class MemberDocumentHistoryService {
 		if ( $attachment_id <= 0 || 'attachment' !== get_post_type( $attachment_id ) ) {
 			return new \WP_Error( 'adam_membership_attachment_not_found', __( 'O anexo não foi encontrado.', 'adam-membership' ) );
 		}
+		$this->trace( 'Private document history deletion trace: Media Library branch entered.', array( 'stage' => 'service.media_branch', 'source_id' => $attachment_id ) );
 		$target_request_id = 0;
 		foreach ( $this->renewals->admin_requests() as $request ) {
 			$matches = $this->request_contains_attachment( $request, $attachment_id );
@@ -79,6 +86,7 @@ final class MemberDocumentHistoryService {
 		if ( $this->attachment_in_any_user_meta( $attachment_id ) || $this->attachment_in_correction_or_apd_data( $attachment_id ) ) {
 			return new \WP_Error( 'adam_membership_attachment_still_referenced', __( 'Este anexo ainda está referenciado por dados de sócio, correção ou APD/ANA.', 'adam-membership' ) );
 		}
+		$this->trace( 'Private document history deletion trace: Media Library audit passed; deleting attachment.', array( 'stage' => 'service.media_delete_start' ) );
 		foreach ( $this->all_items_for_member( $member ) as $other ) {
 			if ( (string) ( $other['history_key'] ?? '' ) !== $history_key && absint( $other['source_id'] ?? 0 ) === $attachment_id ) {
 				return new \WP_Error( 'adam_membership_attachment_shared', __( 'Este anexo é partilhado por outra entrada histórica.', 'adam-membership' ) );
@@ -96,6 +104,10 @@ final class MemberDocumentHistoryService {
 			}
 		}
 		return true;
+	}
+
+	private function trace( string $message, array $context = array() ): void {
+		$this->logger->info( $message, $context );
 	}
 
 	private function request_contains_attachment( object $request, int $attachment_id ): bool {

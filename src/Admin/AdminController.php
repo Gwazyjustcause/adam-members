@@ -1713,22 +1713,34 @@ final class AdminController {
 
 	/** Permanently delete one audited history file. */
 	public function handle_delete_document_history(): void {
-		$this->ensure_can_manage();
 		$member_id = absint( $_POST['member_id'] ?? 0 );
 		$history_key = sanitize_text_field( wp_unslash( $_POST['history_key'] ?? '' ) );
-		$this->verify_admin_nonce( 'adam_membership_delete_document_history_' . $member_id . '_' . $history_key );
-		$member = $member_id > 0 ? $this->members->find( $member_id ) : null;
-		if ( null === $member || '' === $history_key ) {
-			$this->redirect_with_error( __( 'Não foi possível eliminar o ficheiro.', 'adam-membership' ) );
+		$redirect = $member_id > 0 ? add_query_arg( array( 'page' => self::MEMBER_DOCUMENT_HISTORY_PAGE_SLUG, 'member_id' => $member_id ), admin_url( 'admin.php' ) ) : admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG );
+		try {
+			$this->ensure_can_manage();
+			$this->logger->info( 'Private document history deletion trace: handler received.', array( 'stage' => 'handler.received', 'member_id' => $member_id, 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
+			$this->verify_admin_nonce( 'adam_membership_delete_document_history_' . $member_id . '_' . $history_key );
+			$this->logger->info( 'Private document history deletion trace: nonce passed.', array( 'stage' => 'handler.nonce_passed', 'member_id' => $member_id ) );
+			$member = $member_id > 0 ? $this->members->find( $member_id ) : null;
+			$this->logger->info( 'Private document history deletion trace: member lookup completed.', array( 'stage' => 'handler.member_lookup', 'member_found' => null !== $member ) );
+			if ( null === $member || '' === $history_key ) {
+				$this->logger->error( 'Private document history deletion refused.', array( 'stage' => 'handler.validation', 'error_code' => 'adam_membership_history_entry_not_found' ) );
+				$this->redirect_document_history_error( $redirect, __( 'Não foi possível eliminar o ficheiro.', 'adam-membership' ) );
+			}
+			$result = $this->member_document_history->permanently_delete_for_member( $member, $history_key );
+			$this->logger->info( 'Private document history deletion trace: service returned.', array( 'stage' => 'service.return', 'result' => is_wp_error( $result ) ? 'error' : 'success', 'error_code' => is_wp_error( $result ) ? $result->get_error_code() : '' ) );
+			if ( is_wp_error( $result ) ) {
+				// Logger has no warning() API; use the debug.log-backed error channel.
+				$this->logger->error( 'Permanent document history deletion refused or failed.', array( 'stage' => 'service.refused', 'member_id' => $member_id, 'error_code' => $result->get_error_code() ) );
+				$this->redirect_document_history_error( $redirect, $result->get_error_message() );
+			}
+			$this->logger->info( 'Permanent document history deletion completed.', array( 'stage' => 'service.completed', 'member_id' => $member_id, 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
+			$this->record_admin_member_history( $member, 'document_history_permanently_deleted', __( 'Ficheiro eliminado permanentemente', 'adam-membership' ), __( 'Um administrador eliminou permanentemente um ficheiro do histórico de documentos.', 'adam-membership' ), array( 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
+			$this->redirect_document_history_message( $redirect, __( 'Ficheiro eliminado permanentemente.', 'adam-membership' ) );
+		} catch ( \Throwable $exception ) {
+			$this->logger->error( 'Private document history deletion throwable caught.', array( 'stage' => 'handler.catch', 'exception_class' => get_class( $exception ), 'exception_file' => basename( $exception->getFile() ), 'exception_line' => $exception->getLine(), 'member_id' => $member_id, 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
+			$this->redirect_document_history_error( $redirect, __( 'Não foi possível eliminar o ficheiro. Nenhuma alteração insegura foi efetuada.', 'adam-membership' ) );
 		}
-		$result = $this->member_document_history->permanently_delete_for_member( $member, $history_key );
-		if ( is_wp_error( $result ) ) {
-			$this->logger->warning( 'Permanent document history deletion refused or failed.', array( 'member_id' => $member_id, 'error_code' => $result->get_error_code() ) );
-			$this->redirect_with_error( $result->get_error_message() );
-		}
-		$this->logger->info( 'Permanent document history deletion completed.', array( 'member_id' => $member_id, 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
-		$this->record_admin_member_history( $member, 'document_history_permanently_deleted', __( 'Ficheiro eliminado permanentemente', 'adam-membership' ), __( 'Um administrador eliminou permanentemente um ficheiro do histórico de documentos.', 'adam-membership' ), array( 'history_key_fingerprint' => hash( 'sha256', $history_key ) ) );
-		$this->redirect_with_message( __( 'Ficheiro eliminado permanentemente.', 'adam-membership' ) );
 	}
 
 	public function handle_private_document_action(): void {
@@ -6680,6 +6692,17 @@ final class AdminController {
 				wp_validate_redirect( $redirect_to, $fallback )
 			)
 		);
+		exit;
+	}
+
+	/** Always return a document-history action to its member history screen. */
+	private function redirect_document_history_error( string $redirect, string $message ): void {
+		wp_safe_redirect( add_query_arg( array( 'adam_error' => $message ), wp_validate_redirect( $redirect, admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ) ) ) );
+		exit;
+	}
+
+	private function redirect_document_history_message( string $redirect, string $message ): void {
+		wp_safe_redirect( add_query_arg( array( 'adam_message' => $message ), wp_validate_redirect( $redirect, admin_url( 'admin.php?page=' . self::HISTORY_PAGE_SLUG ) ) ) );
 		exit;
 	}
 
