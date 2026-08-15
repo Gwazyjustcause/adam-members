@@ -178,10 +178,11 @@ final class Plugin {
 		$membership_workflow       = new GoogleSheetsMembershipWorkflowService( $google_sheets_client, $logger );
 		add_action(
 			'adam_membership_registration_submitted',
-			static function ( \AdamMembership\Member\Member $member ) use ( $membership_workflow, $logger ): void {
+			static function ( \AdamMembership\Member\Member $member ) use ( $membership_workflow, $google_sheets_client, $logger ): void {
 				try {
 					$membership_workflow->sync_registration( $member );
 				} catch ( \Throwable $exception ) {
+					$google_sheets_client->log_exception( (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), 'gestao_socios_registration_hook', $exception );
 					$logger->error( 'Gestão de Sócios synchronization listener failed.', array( 'user_id' => $member->user_id(), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},
@@ -295,6 +296,7 @@ final class Plugin {
 				$apd_association,
 				$member_changes,
 				$google_sheets_client,
+				$membership_workflow,
 				$google_sheets_sync,
 				$financial_movements,
 				$private_document_repository,

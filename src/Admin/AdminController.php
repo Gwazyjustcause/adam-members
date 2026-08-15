@@ -29,6 +29,7 @@ use AdamMembership\Export\CompleteMemberExportService;
 use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\GoogleSheets\GoogleSheetsClient;
+use AdamMembership\GoogleSheets\GoogleSheetsMembershipWorkflowService;
 use AdamMembership\GoogleSheets\GoogleSheetsSyncService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
@@ -238,6 +239,7 @@ final class AdminController {
 	private ApdAssociationService $apd_association;
 	private MemberChangeService $member_changes;
 	private GoogleSheetsClient $google_sheets;
+	private GoogleSheetsMembershipWorkflowService $membership_workflow;
 	private GoogleSheetsSyncService $google_sheets_sync;
 	private FinancialMovementRepository $financial_movements;
 	private PrivateDocumentRepository $private_documents;
@@ -266,7 +268,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, FinancialMovementRepository $financial_movements, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage, MemberDocumentHistoryService $member_document_history ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsMembershipWorkflowService $membership_workflow, GoogleSheetsSyncService $google_sheets_sync, FinancialMovementRepository $financial_movements, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage, MemberDocumentHistoryService $member_document_history ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -288,6 +290,7 @@ final class AdminController {
 		$this->apd_association     = $apd_association;
 		$this->member_changes      = $member_changes;
 		$this->google_sheets      = $google_sheets;
+		$this->membership_workflow = $membership_workflow;
 		$this->google_sheets_sync = $google_sheets_sync;
 		$this->financial_movements = $financial_movements;
 		$this->private_documents = $private_documents;
@@ -2008,6 +2011,11 @@ final class AdminController {
 		if ( 'registration' === $type ) {
 			$member = $this->members->find( $id );
 			if ( null !== $member ) {
+				$workflow_result = $this->membership_workflow->sync_registration( $member );
+				if ( is_wp_error( $workflow_result ) ) {
+					$this->redirect_with_error( $workflow_result->get_error_message() );
+					return;
+				}
 			}
 			$movement_id = null !== $member ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : '';
 			$movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null;

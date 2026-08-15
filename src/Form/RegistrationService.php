@@ -186,17 +186,9 @@ final class RegistrationService {
 		);
 		$this->history->registration_submitted( $member, $entry_id );
 		} catch ( \Throwable $exception ) {
-			if ( ! function_exists( 'wp_delete_user' ) ) {
-				require_once ABSPATH . 'wp-admin/includes/user.php';
-			}
-			wp_delete_user( (int) $user_id );
 			$this->logger->error(
-				'Falha ao finalizar a inscrição; criação revertida.',
-				array( 'exception' => $exception->getMessage() )
-			);
-			return new WP_Error(
-				'adam_membership_registration_failed',
-				__( 'Não foi possível concluir a inscrição. Verifique os dados e tente novamente.', 'adam-membership' )
+				'Falha numa notificação ou registo secundário após a inscrição; a conta persistida foi preservada.',
+				array( 'user_id' => $user_id, 'exception_class' => get_class( $exception ) )
 			);
 		}
 

@@ -85,6 +85,19 @@ final class ApprovalService {
 	 * @return true|WP_Error
 	 */
 	public function approve( int $user_id ): true|WP_Error {
+		$lock = $this->acquire_approval_lock( $user_id );
+		if ( $lock instanceof WP_Error ) {
+			return $lock;
+		}
+		try {
+			return $this->approve_locked( $user_id );
+		} finally {
+			$this->release_approval_lock( $lock );
+		}
+	}
+
+	/** @param int $user_id User ID. */
+	private function approve_locked( int $user_id ): true|WP_Error {
 
 		$member = $this->members->find( $user_id );
 
@@ -93,6 +106,10 @@ final class ApprovalService {
 				'adam_membership_member_not_found',
 				__( 'Sócio não encontrado.', 'adam-membership' )
 			);
+		}
+
+		if ( Member::STATUS_ACTIVE === $member->status() ) {
+			return true;
 		}
 
 		if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) {
@@ -120,6 +137,9 @@ final class ApprovalService {
 		 */
 		if ( '' === (string) $member->field( 'numero_socio' ) ) {
 			$member_number = $this->next_available_member_number();
+			if ( is_wp_error( $member_number ) ) {
+				return $member_number;
+			}
 
 			$member->save(
 				array(
@@ -169,6 +189,32 @@ final class ApprovalService {
 		do_action( 'adam_membership_member_approved', $member );
 
 		return true;
+	}
+
+	/** @return array{key:string,token:string}|WP_Error */
+	private function acquire_approval_lock( int $user_id ): array|WP_Error {
+		$key = 'adam_membership_approval_lock_' . absint( $user_id );
+		$token = wp_generate_uuid4();
+		$payload = array( 'token' => $token, 'created_at' => time() );
+		if ( add_option( $key, $payload, '', 'no' ) ) {
+			return array( 'key' => $key, 'token' => $token );
+		}
+		$current = get_option( $key, array() );
+		if ( is_array( $current ) && absint( $current['created_at'] ?? 0 ) < time() - 120 ) {
+			delete_option( $key );
+			if ( add_option( $key, $payload, '', 'no' ) ) {
+				return array( 'key' => $key, 'token' => $token );
+			}
+		}
+		return new WP_Error( 'adam_membership_approval_in_progress', __( 'Este pedido já está a ser processado. Aguarde alguns segundos e tente novamente.', 'adam-membership' ) );
+	}
+
+	/** @param array{key:string,token:string} $lock */
+	private function release_approval_lock( array $lock ): void {
+		$current = get_option( $lock['key'], array() );
+		if ( is_array( $current ) && hash_equals( $lock['token'], (string) ( $current['token'] ?? '' ) ) ) {
+			delete_option( $lock['key'] );
+		}
 	}
 
 	/**
@@ -560,11 +606,31 @@ final class ApprovalService {
 	/**
 	 * Reserve the next unique ADAM member number.
 	 */
-	private function next_available_member_number(): string {
-		do {
-			$member_number = $this->settings->reserve_next_member_number();
-		} while ( $this->members->member_number_exists( $member_number ) );
-
-		return $member_number;
+	private function next_available_member_number(): string|WP_Error {
+		$key = 'adam_membership_member_number_lock';
+		$token = wp_generate_uuid4();
+		$payload = array( 'token' => $token, 'created_at' => time() );
+		if ( ! add_option( $key, $payload, '', 'no' ) ) {
+			$current = get_option( $key, array() );
+			if ( is_array( $current ) && absint( $current['created_at'] ?? 0 ) < time() - 120 ) {
+				delete_option( $key );
+				if ( ! add_option( $key, $payload, '', 'no' ) ) {
+					return new WP_Error( 'adam_membership_number_in_progress', __( 'A atribuição do número de sócio está ocupada. Tente novamente.', 'adam-membership' ) );
+				}
+			} else {
+				return new WP_Error( 'adam_membership_number_in_progress', __( 'A atribuição do número de sócio está ocupada. Tente novamente.', 'adam-membership' ) );
+			}
+		}
+		try {
+			do {
+				$member_number = $this->settings->reserve_next_member_number();
+			} while ( $this->members->member_number_exists( $member_number ) );
+			return $member_number;
+		} finally {
+			$current = get_option( $key, array() );
+			if ( is_array( $current ) && hash_equals( $token, (string) ( $current['token'] ?? '' ) ) ) {
+				delete_option( $key );
+			}
+		}
 	}
 }
