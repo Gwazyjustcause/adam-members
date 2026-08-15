@@ -237,7 +237,7 @@ final class MembershipForms {
 		}
 
 		if ( $member->isRenewalPending() ) {
-			return $this->notice_markup( 'info', __( 'O seu pedido de renovação está em análise pela ADAM. Não é necessário submeter um novo pedido.', 'adam-membership' ) );
+			return $this->notice_markup( 'info', __( 'O seu pedido de renovação está em análise pela ADAM. Não é necessário submeter um novo pedido. Prazo estimado de resposta: 2–7 dias.', 'adam-membership' ) );
 		}
 
 		if ( $member->isPending() || $member->isRejected() ) {

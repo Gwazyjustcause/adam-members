@@ -262,6 +262,10 @@ final class MemberArea {
 			return $this->render_not_found();
 		}
 		if ( is_page( ManagedPages::id( 'points_history' ) ) ) {
+			if ( ! $member->has_active_benefits() ) {
+				return $this->render_points_unavailable_page( $member );
+			}
+
 			return $this->render_points_history_page( $member );
 		}
 
@@ -283,7 +287,9 @@ final class MemberArea {
 			if ( 'correction_requested' === (string) $member->field( 'adam_correction_status' ) ) { return $this->render_registration_correction_v2( $member ); }
 			return $this->render_member_correction_page( $member );
 		}
-		$this->recognition->grant_eligible_loyalty_rewards( $member );
+		if ( $member->has_active_benefits() ) {
+			$this->recognition->grant_eligible_loyalty_rewards( $member );
+		}
 
 		ob_start();
 		?>
@@ -295,7 +301,11 @@ final class MemberArea {
 				<?php $this->render_reward_notices(); ?>
 
 			<?php if ( 'recompensas' === $this->current_member_view() ) : ?>
+			<?php if ( $member->has_active_benefits() ) : ?>
 			<?php $this->render_rewards_catalogue_page( $member ); ?>
+			<?php else : ?>
+			<?php echo wp_kses_post( $this->render_points_unavailable_page( $member ) ); ?>
+			<?php endif; ?>
 			<?php elseif ( 'avisos' === $this->current_member_view() ) : ?>
 			<?php $this->render_announcements( $member, false, true ); ?>
 			<?php else : ?>
@@ -315,9 +325,11 @@ final class MemberArea {
 					$this->render_unknown_status();
 				}
 
-				$this->render_digital_card( $member );
-				$this->render_personalization_section( $member );
-				$this->render_points_card( $member );
+				if ( $member->has_active_benefits() ) {
+					$this->render_digital_card( $member );
+					$this->render_personalization_section( $member );
+					$this->render_points_card( $member );
+				}
 				$this->render_documents( $member );
 				$this->render_member_actions( $member );
 				$this->render_announcements( $member, true );
@@ -605,7 +617,7 @@ final class MemberArea {
 			<?php
 			$this->render_status_card(
 				$member->effective_status(),
-				__( 'O seu pedido de renovação foi submetido e encontra-se em análise pela ADAM.', 'adam-membership' )
+				__( 'O seu pedido de renovação foi submetido e encontra-se em análise pela ADAM. Prazo estimado de resposta: 2–7 dias.', 'adam-membership' )
 			);
 
 			$this->render_membership( $member );
@@ -634,8 +646,10 @@ final class MemberArea {
 			<?php
 			$this->render_status_card(
 				$member->effective_status(),
-				__( 'A sua quota expirou. Para voltar a ter a inscrição ativa, submeta a renovação.', 'adam-membership' )
+				__( 'A sua quota expirou. Renove agora para restaurar o acesso aos benefícios de sócio.', 'adam-membership' )
 			);
+
+			$this->render_actions( $this->renewal_actions( $member ) );
 
 			$this->render_membership( $member );
 
@@ -720,7 +734,7 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_digital_card( Member $member ): void {
-		if ( $member->isPending() || $member->isRejected() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return;
 		}
 
@@ -786,7 +800,7 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_personalization_section( Member $member ): void {
-		if ( $member->isPending() || $member->isRejected() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return;
 		}
 
@@ -895,7 +909,35 @@ final class MemberArea {
 		return (string) ob_get_clean();
 	}
 
+	/**
+	 * Explain why points and rewards are temporarily unavailable.
+	 *
+	 * @param Member $member Member.
+	 */
+	private function render_points_unavailable_page( Member $member ): string {
+		$message = $member->isRenewalPending()
+			? __( 'Os pontos, recompensas e histórico ficam temporariamente indisponíveis enquanto a renovação está em análise.', 'adam-membership' )
+			: __( 'Os pontos, recompensas e histórico ficam temporariamente indisponíveis enquanto a quota está expirada. Renove a quota para recuperar estes benefícios.', 'adam-membership' );
+
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page adam-points-unavailable-page">
+			<section class="adam-card adam-form-card">
+				<p class="adam-eyebrow">PONTOS ADAM</p>
+				<h2><?php esc_html_e( 'Pontos temporariamente indisponíveis', 'adam-membership' ); ?></h2>
+				<p><?php echo esc_html( $message ); ?></p>
+				<p><a class="button button-primary" href="<?php echo esc_url( ManagedPages::url( 'member_area' ) ); ?>"><?php esc_html_e( 'Voltar à Área do Sócio', 'adam-membership' ); ?></a></p>
+			</section>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
 	private function render_points_card( Member $member ): void {
+		if ( ! $member->has_active_benefits() ) {
+			return;
+		}
+
 		$balance        = $this->points->current_balance( $member );
 		$total_earned   = $this->points->total_earned( $member );
 		$recent_entries = $this->points->recent_activity( $member, 5 );
@@ -1774,7 +1816,7 @@ final class MemberArea {
 		if ( 'loyalty' === $unlock_method ) {
 			$tier = $this->loyalty_tier_for_reward( $reward );
 
-			if ( ! $member->isActive() ) {
+			if ( ! $member->has_active_benefits() ) {
 				return __( 'Requer associacao ativa e renovacoes confirmadas.', 'adam-membership' );
 			}
 
@@ -2274,7 +2316,7 @@ final class MemberArea {
 			$this->redirect_member_notice( 'reward_error', __( 'Nao foi possivel validar o pedido de recompensa.', 'adam-membership' ), array( 'view' => 'recompensas' ) );
 		}
 
-		if ( $member->isPending() || $member->isRejected() ) {
+		if ( ! $member->has_active_benefits() ) {
 			$this->redirect_member_notice( 'reward_error', __( 'A tua conta nao pode resgatar recompensas neste estado.', 'adam-membership' ), array( 'view' => 'recompensas' ) );
 		}
 
@@ -2312,6 +2354,10 @@ final class MemberArea {
 			$this->redirect_member_notice( 'card_error', __( 'Nao foi possivel validar a personalizacao do cartao.', 'adam-membership' ) );
 		}
 
+		if ( ! $member->has_active_benefits() ) {
+			$this->redirect_member_notice( 'card_error', __( 'A personalizacao do cartao fica temporariamente indisponivel enquanto a quota nao esta ativa.', 'adam-membership' ) );
+		}
+
 		$result = $this->cards->save_member_cosmetic_selection( $member, $_POST );
 
 		if ( is_wp_error( $result ) ) {
@@ -2340,7 +2386,6 @@ final class MemberArea {
 		if ( $member->isExpired() ) {
 			$this->render_actions(
 				array_merge(
-					$this->renewal_actions( $member ),
 					$this->member_update_actions(),
 					$this->standard_account_actions()
 				)
@@ -3000,7 +3045,7 @@ final class MemberArea {
 		if ( $this->rewards->is_loyalty_reward( $reward ) ) {
 			$tier = $this->loyalty_tier_for_reward( $reward );
 
-			if ( ! $member->isActive() ) {
+			if ( ! $member->has_active_benefits() ) {
 				return __( 'Requer associacao ativa e renovacoes confirmadas.', 'adam-membership' );
 			}
 

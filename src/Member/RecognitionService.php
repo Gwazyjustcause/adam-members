@@ -218,7 +218,7 @@ final class RecognitionService {
 	public function get_member_loyalty_years( Member|int $member ): int {
 		$member = $this->resolve_member( $member );
 
-		if ( ! $member instanceof Member || ! $member->isActive() ) {
+		if ( ! $member instanceof Member || ! $member->has_active_benefits() ) {
 			return 0;
 		}
 
@@ -246,7 +246,7 @@ final class RecognitionService {
 	}
 
 	private function unlock_loyalty_rewards( Member $member ): void {
-		if ( ! $member->isActive() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return;
 		}
 
@@ -356,7 +356,7 @@ final class RecognitionService {
 	}
 
 	private function get_member_loyalty_months( Member $member ): int {
-		if ( ! $member->isActive() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return 0;
 		}
 

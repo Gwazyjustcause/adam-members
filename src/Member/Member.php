@@ -522,6 +522,20 @@ final class Member {
 	}
 
 	/**
+	 * Check whether the member's existing paid benefits remain active.
+	 *
+	 * This is intentionally separate from isActive(): a member may have an
+	 * early renewal under review while their current quota is still valid.
+	 */
+	public function has_active_benefits(): bool {
+		if ( ! in_array( $this->status(), array( self::STATUS_ACTIVE, self::STATUS_RENEWAL_PENDING ), true ) ) {
+			return false;
+		}
+
+		return self::QUOTA_EXPIRED !== $this->quota_status();
+	}
+
+	/**
 	 * Check if the member can start renewal from the member area.
 	 */
 	public function can_renew(): bool {

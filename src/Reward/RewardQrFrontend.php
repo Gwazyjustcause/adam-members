@@ -66,7 +66,7 @@ final class RewardQrFrontend {
 			$notice_lines[] = __( 'Esta recompensa e exclusiva para socios da ADAM.', 'adam-membership' );
 			$notice_lines[] = __( 'Inicia sessao para resgatar esta recompensa.', 'adam-membership' );
 		} else {
-			if ( ! $member instanceof Member || ! $member->isActive() ) {
+			if ( ! $member instanceof Member || ! $member->has_active_benefits() ) {
 				$notice_type    = 'warning';
 				$notice_lines[] = __( 'Esta recompensa esta disponivel apenas para socios ativos da ADAM.', 'adam-membership' );
 			} else {
@@ -126,7 +126,7 @@ final class RewardQrFrontend {
 						);
 						?>
 					</div>
-				<?php elseif ( is_user_logged_in() && ( ! $member instanceof Member || ! $member->isActive() ) ) : ?>
+				<?php elseif ( is_user_logged_in() && ( ! $member instanceof Member || ! $member->has_active_benefits() ) ) : ?>
 					<div class="adam-reward-claim-card__actions">
 						<a class="adam-reward-claim-card__button" href="<?php echo esc_url( $registration ); ?>">
 							<?php esc_html_e( 'Tornar-me socio', 'adam-membership' ); ?>

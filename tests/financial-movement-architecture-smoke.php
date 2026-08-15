@@ -19,6 +19,11 @@ foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'pay
 adam_finance_assert( str_contains( $repository, 'find_by_source' ) && str_contains( $repository, 'ensure' ), 'Legacy records migrate idempotently by source.' );
 adam_finance_assert( str_contains( $repository, "'manual:' . wp_generate_uuid4()" ), 'Manual movements get independent IDs.' );
 adam_finance_assert( str_contains( $sync, '$this->movements->ensure' ), 'Automatic workflows persist FinancialMovement before sync.' );
+adam_finance_assert( str_contains( $sync, "'movement_id'    => \$request->request_uuid()" ), 'Renewals pass their canonical ID as movement_id.' );
+adam_finance_assert( str_contains( $sync, "'quota_type' => 'Associar APD/ANA', 'movement_id' => \$request->request_uuid()" ), 'APD passes its canonical ID as movement_id.' );
+adam_finance_assert( str_contains( $sync, "'movement_id'   => \$request_id, 'source_type' => 'registration'" ), 'Registrations pass their canonical ID as movement_id.' );
+adam_finance_assert( ! str_contains( $sync, "'request_id'     => \$request->request_uuid()" ) && ! str_contains( $sync, "'request_id' => \$request->request_uuid()" ), 'Workflow constructors do not use request_id as the FinancialMovement ID.' );
+adam_finance_assert( str_contains( $sync, "'movement_id' => \$record->movement_id()" ), 'The Google sync payload preserves the FinancialMovement ID.' );
 adam_finance_assert( str_contains( $sync, 'sync_manual' ), 'Manual movements use the same sync path.' );
 adam_finance_assert( str_contains( $admin, 'create_manual_financial_movement' ) && str_contains( $admin, 'Selecionar outro tipo cria um novo movimento manual' ), 'Changing type creates a manual movement and explains the consequence.' );
 adam_finance_assert( str_contains( $admin, "'manual' === \$type" ) && str_contains( $admin, 'sync_manual' ), 'Manual movements can be edited and retried without membership side effects.' );

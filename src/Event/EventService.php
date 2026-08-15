@@ -181,7 +181,7 @@ final class EventService {
 			return new WP_Error( 'adam_membership_event_checkin_disabled', __( 'O check-in para este evento não está ativo.', 'adam-membership' ) );
 		}
 
-		if ( ! $member->isActive() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return new WP_Error( 'adam_membership_event_member_not_active', __( 'Os pontos de participação estão disponíveis apenas para sócios ADAM com estado Ativo.', 'adam-membership' ) );
 		}
 

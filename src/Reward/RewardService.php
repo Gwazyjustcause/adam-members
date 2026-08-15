@@ -238,7 +238,7 @@ final class RewardService {
 			return new WP_Error( 'adam_membership_reward_qr_expired', __( 'Este QR Code ja expirou.', 'adam-membership' ) );
 		}
 
-		if ( ! $member->isActive() ) {
+		if ( ! $member->has_active_benefits() ) {
 			return new WP_Error( 'adam_membership_reward_qr_member_inactive', __( 'Esta recompensa esta disponivel apenas para socios ativos da ADAM.', 'adam-membership' ) );
 		}
 
@@ -510,6 +510,10 @@ final class RewardService {
 	 * @return RewardRedemption|WP_Error
 	 */
 	public function redeem( Member $member, int $reward_id ): RewardRedemption|WP_Error {
+		if ( ! $member->has_active_benefits() ) {
+			return new WP_Error( 'adam_membership_reward_member_inactive', __( 'As recompensas ficam temporariamente indisponíveis enquanto a quota não está ativa.', 'adam-membership' ) );
+		}
+
 		$reward = $this->repository->find_reward( $reward_id );
 
 		if ( null === $reward || ! $reward->is_visible() || ! $reward->catalog_visible() ) {
@@ -823,6 +827,10 @@ final class RewardService {
 	}
 
 	public function member_can_redeem( Member $member, Reward $reward ): bool {
+		if ( ! $member->has_active_benefits() ) {
+			return false;
+		}
+
 		if ( ! $reward->is_visible() || ! $reward->redeemable() ) {
 			return false;
 		}

@@ -97,6 +97,10 @@ final class PointsService {
 	}
 
 	public function award_event_checkin_points( Member $member, Event $event, EventCheckIn $checkin ): ?PointsEntry {
+		if ( ! $member->has_active_benefits() ) {
+			return null;
+		}
+
 		$points = $event->checkin_points();
 
 		if ( $points <= 0 ) {
@@ -140,6 +144,10 @@ final class PointsService {
 	}
 
 	public function award_event_checkin_bonus( Member $member, Event $event, EventCheckIn $checkin, string $reason ): ?PointsEntry {
+		if ( ! $member->has_active_benefits() ) {
+			return null;
+		}
+
 		$points = $event->checkin_bonus_points();
 
 		if ( ! $event->checkin_bonus_enabled() || $points <= 0 ) {
@@ -199,6 +207,10 @@ final class PointsService {
 	 * @return PointsEntry|WP_Error
 	 */
 	public function redeem_reward_points( Member $member, int $points_cost, string $reason, int $reward_id, int $actor_user_id = 0 ): PointsEntry|WP_Error {
+		if ( ! $member->has_active_benefits() ) {
+			return new WP_Error( 'adam_membership_points_member_inactive', __( 'Os pontos ficam temporariamente indisponíveis enquanto a quota não está ativa.', 'adam-membership' ) );
+		}
+
 		$points_cost = absint( $points_cost );
 		$reason      = trim( sanitize_text_field( $reason ) );
 

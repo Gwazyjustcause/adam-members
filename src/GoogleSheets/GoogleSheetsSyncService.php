@@ -91,7 +91,7 @@ final class GoogleSheetsSyncService {
 		$sync = (array) ( $data['google_sheets_sync'] ?? array() );
 		$movement = array(
 			'quota_type'     => $this->quota_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' ), 'renewal' ),
-			'request_id'     => $request->request_uuid(),
+			'movement_id'    => $request->request_uuid(),
 			'member_number'  => (string) $member->field( 'numero_socio' ),
 			'name'           => $member->full_name(),
 			'year'           => (string) ( $data['membership_year'] ?? '' ),
@@ -116,7 +116,7 @@ final class GoogleSheetsSyncService {
 			return new WP_Error( 'adam_google_sheets_not_approved', __( 'O movimento APD sÃ³ pode ser sincronizado depois de confirmado.', 'adam-membership' ) );
 		}
 		$movement = array(
-			'quota_type' => 'Associar APD/ANA', 'request_id' => $request->request_uuid(),
+			'quota_type' => 'Associar APD/ANA', 'movement_id' => $request->request_uuid(),
 			'member_number' => (string) $member->field( 'numero_socio' ), 'name' => $member->full_name(),
 			'year' => (string) $request->membership_year(), 'movement' => 'Associar APD/ANA',
 			'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ),
@@ -136,7 +136,7 @@ final class GoogleSheetsSyncService {
 	}
 
 	private function sync_record( FinancialMovement $record, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
-		$payload = array( 'quota_type' => $record->quota_type(), 'request_id' => $record->movement_id(), 'member_number' => (string) ( $record->data()['member_number'] ?? $member->field( 'numero_socio' ) ), 'name' => (string) ( $record->data()['member_name'] ?? $member->full_name() ), 'year' => (string) $record->membership_year(), 'movement' => $this->movement_label( $record->quota_type() ), 'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ), 'amount' => $record->amount(), 'payment_date' => $record->payment_date(), 'method' => $record->payment_method(), 'status' => 'Pago', 'order_id' => $record->source_reference(), 'note' => '' );
+		$payload = array( 'quota_type' => $record->quota_type(), 'movement_id' => $record->movement_id(), 'member_number' => (string) ( $record->data()['member_number'] ?? $member->field( 'numero_socio' ) ), 'name' => (string) ( $record->data()['member_name'] ?? $member->full_name() ), 'year' => (string) $record->membership_year(), 'movement' => $this->movement_label( $record->quota_type() ), 'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ), 'amount' => $record->amount(), 'payment_date' => $record->payment_date(), 'method' => $record->payment_method(), 'status' => 'Pago', 'order_id' => $record->source_reference(), 'note' => '' );
 		$this->active_movement = $record;
 		try { return $this->sync( $payload, $member, $renewal_id, $apd_request ); } finally { $this->active_movement = null; }
 	}
@@ -147,7 +147,7 @@ final class GoogleSheetsSyncService {
 		$sync = (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
 		return array(
 			'quota_type'    => $this->quota_type( (string) $member->field( 'adam_membership_origin' ), 'registration' ),
-			'request_id'    => $request_id, 'source_type' => 'registration', 'source_reference' => $request_id,
+			'movement_id'   => $request_id, 'source_type' => 'registration', 'source_reference' => $request_id,
 			'member_number' => (string) $member->field( 'numero_socio' ),
 			'name'          => $member->full_name(),
 			'year'          => (string) get_user_meta( $member->user_id(), 'adam_membership_year', true ),
@@ -165,7 +165,7 @@ final class GoogleSheetsSyncService {
 
 	/** Append or update idempotently after checking canonical ID in column K. */
 	private function sync( array $movement, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
-		$lock_key = 'adam_google_sheets_lock_' . md5( (string) $movement['request_id'] );
+		$lock_key = 'adam_google_sheets_lock_' . md5( (string) $movement['movement_id'] );
 		$lock_token = time() . ':' . wp_generate_uuid4();
 		$existing_lock = (string) get_option( $lock_key, '' );
 		if ( '' !== $existing_lock && (int) strtok( $existing_lock, ':' ) < time() - 60 ) {
@@ -178,8 +178,8 @@ final class GoogleSheetsSyncService {
 			$this->active_apd_request = $apd_request;
 			return $this->sync_locked( $movement, $member, $renewal_id, $apd_request );
 		} catch ( \Throwable $exception ) {
-			$this->client->log_exception( (string) $movement['request_id'], 'sync_service', $exception );
-			return $this->finish( (string) $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_unexpected', __( 'A sincronizaÃ§Ã£o Google Sheets falhou. Pode repetir a operaÃ§Ã£o.', 'adam-membership' ) ), $member, $renewal_id );
+			$this->client->log_exception( (string) $movement['movement_id'], 'sync_service', $exception );
+			return $this->finish( (string) $movement['movement_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_unexpected', __( 'A sincronizaÃ§Ã£o Google Sheets falhou. Pode repetir a operaÃ§Ã£o.', 'adam-membership' ) ), $member, $renewal_id );
 		} finally {
 			$this->active_apd_request = null;
 			if ( $lock_token === (string) get_option( $lock_key, '' ) ) {
@@ -191,7 +191,7 @@ final class GoogleSheetsSyncService {
 	/** Perform validation, duplicate detection and a bounded table write while locked. */
 	private function sync_locked( array $movement, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
 		if ( ! $this->client->is_configured() ) {
-			return $this->finish( $movement['request_id'], self::STATUS_INACTIVE, true, $member, $renewal_id );
+			return $this->finish( $movement['movement_id'], self::STATUS_INACTIVE, true, $member, $renewal_id );
 		}
 		$missing = array_filter( array( 'year', 'amount', 'payment_date', 'method' ), static fn ( string $key ): bool => '' === trim( (string) ( $movement[ $key ] ?? '' ) ) );
 		if ( '' !== trim( (string) ( $movement['amount'] ?? '' ) ) && ! is_numeric( str_replace( ',', '.', (string) $movement['amount'] ) ) ) {
@@ -205,43 +205,43 @@ final class GoogleSheetsSyncService {
 			$missing['method'] = true;
 		}
 		if ( array() !== $missing ) {
-			return $this->finish( $movement['request_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
+			return $this->finish( $movement['movement_id'], self::STATUS_PENDING, new WP_Error( 'adam_google_sheets_payment_data_missing', __( 'Dados de pagamento em falta para sincronizar este movimento.', 'adam-membership' ) ), $member, $renewal_id, 0, array_keys( $missing ) );
 		}
 		$row = $this->row( $movement );
-		$existing = $this->client->read_values( 'A5:L', (string) $movement['request_id'] );
+		$existing = $this->client->read_values( 'A5:L', (string) $movement['movement_id'] );
 		if ( is_wp_error( $existing ) ) {
-			$this->client->log_failure( (string) $movement['request_id'], 'read_values', $existing );
-			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $existing, $member, $renewal_id );
+			$this->client->log_failure( (string) $movement['movement_id'], 'read_values', $existing );
+			return $this->finish( $movement['movement_id'], self::STATUS_FAILED, $existing, $member, $renewal_id );
 		}
-		$plan = GoogleSheetsTablePlanner::plan( (array) ( $existing['values'] ?? array() ), (string) $movement['request_id'] );
+		$plan = GoogleSheetsTablePlanner::plan( (array) ( $existing['values'] ?? array() ), (string) $movement['movement_id'] );
 		if ( $plan['duplicate_row'] > 0 && ! $this->same_row( $plan['duplicate_values'], $row ) ) {
-			$updated = $this->client->update_table_row( $row, (string) $movement['request_id'] );
+			$updated = $this->client->update_table_row( $row, (string) $movement['movement_id'] );
 			if ( is_wp_error( $updated ) ) {
-				$this->client->log_failure( (string) $movement['request_id'], 'update', $updated );
-				return $this->finish( $movement['request_id'], self::STATUS_FAILED, $updated, $member, $renewal_id );
+				$this->client->log_failure( (string) $movement['movement_id'], 'update', $updated );
+				return $this->finish( $movement['movement_id'], self::STATUS_FAILED, $updated, $member, $renewal_id );
 			}
-			return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, absint( $updated['row_number'] ?? $plan['duplicate_row'] ) );
+			return $this->finish( $movement['movement_id'], self::STATUS_SYNCED, true, $member, $renewal_id, absint( $updated['row_number'] ?? $plan['duplicate_row'] ) );
 		}
 		if ( $plan['duplicate_row'] > 0 ) {
 			$values = $plan['duplicate_values'];
 			if ( $this->same_row( $values, $row ) ) {
-				return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $plan['duplicate_row'] );
+				return $this->finish( $movement['movement_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $plan['duplicate_row'] );
 			}
-			return $this->finish( $movement['request_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'Não foi possível atualizar o movimento existente.', 'adam-membership' ) ), $member, $renewal_id );
+			return $this->finish( $movement['movement_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'Não foi possível atualizar o movimento existente.', 'adam-membership' ) ), $member, $renewal_id );
 		}
-		$appended = $this->client->append_table_row( $row, (string) $movement['request_id'] );
+		$appended = $this->client->append_table_row( $row, (string) $movement['movement_id'] );
 		if ( is_wp_error( $appended ) ) {
-			$this->client->log_failure( (string) $movement['request_id'], 'append_or_confirmation', $appended );
-			return $this->finish( $movement['request_id'], self::STATUS_FAILED, $appended, $member, $renewal_id );
+			$this->client->log_failure( (string) $movement['movement_id'], 'append_or_confirmation', $appended );
+			return $this->finish( $movement['movement_id'], self::STATUS_FAILED, $appended, $member, $renewal_id );
 		}
 		$range = (array) ( $appended['table']['range'] ?? array() );
 		$row_number = absint( $range['endRowIndex'] ?? 0 );
-		return $this->finish( $movement['request_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $row_number );
+		return $this->finish( $movement['movement_id'], self::STATUS_SYNCED, true, $member, $renewal_id, $row_number );
 	}
 
 	/** Convert canonical movement data into columns A:L. */
 	private function row( array $movement ): array {
-		return array( $movement['quota_type'], $movement['member_number'], $movement['name'], absint( $movement['year'] ), $movement['movement'], $movement['type'], (float) str_replace( ',', '.', (string) $movement['amount'] ), $movement['payment_date'], $movement['method'], $movement['status'], $movement['request_id'], $movement['note'] );
+		return array( $movement['quota_type'], $movement['member_number'], $movement['name'], absint( $movement['year'] ), $movement['movement'], $movement['type'], (float) str_replace( ',', '.', (string) $movement['amount'] ), $movement['payment_date'], $movement['method'], $movement['status'], $movement['movement_id'], $movement['note'] );
 	}
 
 	/** Compare existing and expected rows without treating formatting as data. */

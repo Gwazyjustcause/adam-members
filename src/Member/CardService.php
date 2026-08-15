@@ -132,7 +132,7 @@ final class CardService {
 		}
 
 		$member = $this->member_by_token( $token );
-		$is_valid = null !== $member && $member->isActive();
+		$is_valid = null !== $member && $member->has_active_benefits();
 
 		status_header( 200 );
 		nocache_headers();
@@ -423,6 +423,10 @@ final class CardService {
 	 * @return true|WP_Error
 	 */
 	public function save_member_cosmetic_selection( Member $member, array $raw_data ): true|WP_Error {
+		if ( ! $member->has_active_benefits() ) {
+			return new WP_Error( 'adam_membership_card_member_inactive', __( 'A personalização do cartão fica temporariamente indisponível enquanto a quota não está ativa.', 'adam-membership' ) );
+		}
+
 		return $this->cosmetics->save_member_selection( $member, $raw_data );
 	}
 
