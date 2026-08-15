@@ -53,6 +53,8 @@ final class DisplayLabels {
 		'renewal_pending' => 'Renovação pendente',
 		'expired' => 'Expirado',
 		'pending_review' => 'Pendente de aprovação',
+		'correction_requested' => 'Correção solicitada',
+		'correction_submitted' => 'Correção submetida',
 		'pending_payment' => 'Pendente de pagamento',
 		'pending' => 'Pendente de pagamento',
 		'submitted' => 'Submetido',

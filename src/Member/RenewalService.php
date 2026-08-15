@@ -113,6 +113,87 @@ final class RenewalService {
 		return $request;
 	}
 
+	/** Find a renewal request for an authenticated member correction flow. */
+	public function find_request( int $request_id ): ?RenewalRequest {
+		return $this->renewals->find( $request_id );
+	}
+
+	/** Find the member's renewal request currently waiting for correction. */
+	public function correction_request_for_user( int $user_id ): ?RenewalRequest {
+		foreach ( $this->renewals->for_user( $user_id ) as $request ) {
+			if ( RenewalRequest::STATUS_CORRECTION_REQUESTED === $request->status() ) {
+				return $request;
+			}
+		}
+		return null;
+	}
+
+	/** Request correction on the existing renewal record without changing registration state. */
+	public function request_correction( int $request_id, string $reason, string $note, array $fields ): true|WP_Error {
+		$request = $this->renewals->find( $request_id );
+		if ( null === $request || ! in_array( $request->status(), array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
+			return new WP_Error( 'adam_renewal_correction_invalid', __( 'Este pedido de renovação já não pode ser corrigido.', 'adam-membership' ) );
+		}
+		$reason = sanitize_text_field( $reason );
+		$note   = sanitize_textarea_field( $note );
+		$fields = array_values( array_unique( array_filter( array_map( 'sanitize_key', $fields ) ) ) );
+		$available_fields = array_keys( $request->submitted_data() );
+		if ( '' !== (string) $request->proof_of_payment() ) { $available_fields[] = 'payment_receipt'; }
+		$fields = array_values( array_intersect( $fields, array_map( 'sanitize_key', $available_fields ) ) );
+		if ( '' === trim( $reason ) || ( 'Outro motivo' === $reason && '' === trim( $note ) ) ) {
+			return new WP_Error( 'adam_renewal_correction_reason', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) );
+		}
+		if ( array() === $fields ) {
+			return new WP_Error( 'adam_renewal_correction_fields', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) );
+		}
+		$history   = $request->correction_history();
+		$round_id  = count( $history ) + 1;
+		$history[] = array( 'id' => $round_id, 'status' => RenewalRequest::STATUS_CORRECTION_REQUESTED, 'requested_at' => current_time( 'mysql' ), 'reason' => $reason, 'note' => $note, 'fields' => $fields );
+		$updated = $this->renewals->update( $request, array( 'status' => RenewalRequest::STATUS_CORRECTION_REQUESTED, 'correction_reason' => $reason, 'correction_note' => $note, 'correction_fields' => $fields, 'correction_active_round' => $round_id, 'correction_history' => $history, 'correction_requested_at' => current_time( 'mysql' ), 'correction_requested_by' => get_current_user_id() ) );
+		$member = $this->members->find( $request->user_id() );
+		if ( null !== $member ) { $this->email->send_renewal_correction_email( $member, $updated->id(), $reason, $note ); }
+		return true;
+	}
+
+	/** Resubmit the same renewal request after the selected fields were corrected. */
+	public function submit_correction( int $request_id, int $user_id, array $submitted_data, mixed $proof_of_payment = null, array $file_uploads = array() ): true|WP_Error {
+		$request = $this->renewals->find( $request_id );
+		if ( null === $request || $request->user_id() !== $user_id || RenewalRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+			return new WP_Error( 'adam_renewal_correction_invalid', __( 'Este pedido já não pode ser corrigido.', 'adam-membership' ) );
+		}
+		$allowed = $request->correction_fields();
+		$clean   = array();
+		foreach ( $allowed as $field ) {
+			if ( 'payment_receipt' === $field ) { continue; }
+			if ( array_key_exists( $field, $file_uploads ) ) {
+				if ( ! is_scalar( $file_uploads[ $field ] ) || '' === trim( (string) $file_uploads[ $field ] ) ) {
+					return new WP_Error( 'adam_renewal_correction_file_required', __( 'Envie todos os documentos solicitados antes de reenviar o pedido.', 'adam-membership' ) );
+				}
+				$clean[ $field ] = sanitize_text_field( (string) $file_uploads[ $field ] );
+				continue;
+			}
+			if ( ! array_key_exists( $field, $submitted_data ) || ! is_scalar( $submitted_data[ $field ] ) || '' === trim( (string) $submitted_data[ $field ] ) ) {
+				return new WP_Error( 'adam_renewal_correction_field_required', __( 'Preencha todos os campos solicitados antes de reenviar o pedido.', 'adam-membership' ) );
+			}
+			$clean[ $field ] = sanitize_text_field( (string) $submitted_data[ $field ] );
+		}
+		if ( array() === $clean && ! in_array( 'payment_receipt', $allowed, true ) ) {
+			return new WP_Error( 'adam_renewal_correction_empty', __( 'Corrija pelo menos um campo antes de reenviar o pedido.', 'adam-membership' ) );
+		}
+		$merged = array_merge( $request->submitted_data(), $clean );
+		$data   = array( 'status' => RenewalRequest::STATUS_CORRECTION_SUBMITTED, 'submitted_data' => $merged, 'correction_submitted_at' => current_time( 'mysql' ) );
+		if ( in_array( 'payment_receipt', $allowed, true ) && null !== $proof_of_payment && '' !== (string) $proof_of_payment ) { $data['proof_of_payment'] = $proof_of_payment; }
+		$history = $request->correction_history();
+		$active  = absint( $request->data()['correction_active_round'] ?? 0 );
+		foreach ( $history as &$round ) { if ( is_array( $round ) && absint( $round['id'] ?? 0 ) === $active ) { $round['status'] = RenewalRequest::STATUS_CORRECTION_SUBMITTED; $round['submitted_at'] = current_time( 'mysql' ); $round['values'] = $clean; } }
+		unset( $round );
+		$data['correction_history'] = $history;
+		$this->renewals->update( $request, $data );
+		$member = $this->members->find( $user_id );
+		if ( null !== $member ) { $this->email->send_renewal_submitted_email( $member, $request->id() ); }
+		return true;
+	}
+
 	/**
 	 * Approve a renewal request.
 	 *
@@ -126,7 +207,7 @@ final class RenewalService {
 			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		}
 
-		if ( RenewalRequest::STATUS_PENDING !== $request->status() ) {
+		if ( ! in_array( $request->status(), array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Apenas pedidos de renovação pendentes podem ser aprovados.', 'adam-membership' ) );
 		}
 
@@ -270,7 +351,7 @@ final class RenewalService {
 			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		}
 
-		if ( RenewalRequest::STATUS_PENDING !== $request->status() ) {
+		if ( ! in_array( $request->status(), array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Apenas pedidos de renovação pendentes podem ser rejeitados.', 'adam-membership' ) );
 		}
 

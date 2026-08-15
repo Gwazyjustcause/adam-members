@@ -276,6 +276,9 @@ final class MemberArea {
 			if ( '1' === (string) ( $_GET['apd_confirmation'] ?? '' ) ) { return $this->render_apd_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_apd_association_page( $member );
 		}
+		if ( 'renewal-correction' === $this->current_member_view() ) {
+			return $this->render_renewal_correction_page( $member, absint( $_GET['request_id'] ?? $_POST['request_id'] ?? 0 ) );
+		}
 		if ( 'member-update' === $this->current_member_view() ) {
 			if ( '1' === (string) ( $_GET['member_update_confirmation'] ?? '' ) ) { return $this->render_member_update_confirmation_page( $member, absint( $_GET['request_id'] ?? 0 ) ); }
 			return $this->render_member_update_page( $member );
@@ -612,12 +615,14 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_renewal_pending( Member $member ): void {
+		$correction = $this->renewal_correction_actions( $member );
 		?>
 		<div class="adam-dashboard-grid">
 			<?php
 			$this->render_status_card(
 				$member->effective_status(),
-				__( 'O seu pedido de renovação foi submetido e encontra-se em análise pela ADAM. Prazo estimado de resposta: 2–7 dias.', 'adam-membership' )
+				$correction ? 'A ADAM solicitou correções ao seu pedido de renovação.' : __( 'O seu pedido de renovação foi submetido e encontra-se em análise pela ADAM. Prazo estimado de resposta: 2–7 dias.', 'adam-membership' ),
+				$correction
 			);
 
 			$this->render_membership( $member );
@@ -2446,6 +2451,118 @@ final class MemberArea {
 				'url'         => wp_logout_url( add_query_arg( 'logged_out', '1', ManagedPages::url( 'member_area' ) ) ),
 			),
 		);
+	}
+
+	/** @return array<int,array{label:string,description:string,url:string}> */
+	private function renewal_correction_actions( Member $member ): array {
+		$request = $this->renewals->correction_request_for_user( $member->user_id() );
+		if ( null === $request ) { return array(); }
+		return array( array( 'label' => 'Corrigir pedido', 'description' => $request->correction_reason(), 'url' => $this->member_area_url( array( 'view' => 'renewal-correction', 'request_id' => $request->id() ) ) ) );
+	}
+
+	/**
+	 * Render and process corrections for the existing renewal request.
+	 *
+	 * This deliberately uses the renewal request as the source of truth. It does
+	 * not write member profile fields, create a second request, or touch the
+	 * original registration correction state.
+	 */
+	private function render_renewal_correction_page( Member $member, int $request_id ): string {
+		$request = $this->renewals->find_request( $request_id );
+		if ( null === $request || $request->user_id() !== $member->user_id() || RenewalRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+			return $this->render_not_found();
+		}
+
+		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
+			return $this->render_correction_confirmation_page( 'Recebemos as correções ao pedido de renovação. A ADAM irá agora rever novamente a informação submetida.' );
+		}
+
+		$settings     = $this->settings->membership_form_settings();
+		$configs      = (array) ( $settings['registration_fields'] ?? array() );
+		$submitted    = $request->submitted_data();
+		$allowed      = array_values( array_unique( array_filter( $request->correction_fields() ) ) );
+		$file_fields  = array( 'payment_receipt', 'adam_external_association_proof', 'external_association_proof', 'profile_photo' );
+		$definitions  = array();
+		foreach ( $allowed as $key ) {
+			$config = is_array( $configs[ $key ] ?? null ) ? $configs[ $key ] : array();
+			$type   = in_array( $key, $file_fields, true ) ? 'file' : (string) ( $config['type'] ?? 'text' );
+			if ( 'upload' === $type ) { $type = 'file'; }
+			$definitions[ $key ] = array(
+				'label'   => (string) ( $config['label'] ?? DisplayLabels::field( $key ) ),
+				'type'    => $type,
+				'options' => (string) ( $config['options'] ?? '' ),
+				'help'    => (string) ( $config['help'] ?? '' ),
+			);
+		}
+		$message = '';
+
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_renewal_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_renewal_correction_' . $request_id ) ) {
+				$message = $this->notice_markup( 'error', 'Não foi possível validar o pedido. Tente novamente.' );
+			} else {
+				$values = array();
+				$proof  = null;
+				$file_uploads = array();
+				foreach ( $allowed as $key ) {
+					$definition = $definitions[ $key ];
+					if ( 'payment_receipt' === $key || 'file' === $definition['type'] ) {
+						$mimes = ( 'payment_receipt' === $key || 'external_association_proof' === $key || 'adam_external_association_proof' === $key ) ? array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) : array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+						$check = SharedFieldValidator::validate_upload( $_FILES[ $key ] ?? array(), $mimes, true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+						if ( 'payment_receipt' === $key ) {
+							$proof = $this->store_renewal_correction_upload( $key, $mimes );
+							if ( is_wp_error( $proof ) ) { $message = $this->notice_markup( 'error', $proof->get_error_message() ); break; }
+						} else {
+							$upload = $this->store_renewal_correction_upload( $key, $mimes );
+							if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+							$file_uploads[ $key ] = $upload;
+						}
+						continue;
+					}
+					$raw = array_key_exists( $key, $_POST ) ? wp_unslash( $_POST[ $key ] ) : '';
+					if ( 'citizen_card' === $key ) { $raw = IdentificationValidator::normalize( is_scalar( $raw ) ? (string) $raw : '' ); }
+					$check = SharedFieldValidator::validate( $key, $raw, $definition, true );
+					if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+					$values[ $key ] = is_scalar( $raw ) ? sanitize_text_field( (string) $raw ) : '';
+				}
+				if ( '' === $message ) {
+					$result = $this->renewals->submit_correction( $request_id, $member->user_id(), $values, $proof, $file_uploads );
+					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); }
+					else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'renewal-correction', 'request_id' => $request_id, 'correction_complete' => '1' ) ) ); exit; }
+				}
+			}
+		}
+
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page">
+			<section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido de renovação</h2><p>Atualize apenas a informação indicada pela ADAM e volte a enviar o mesmo pedido para análise.</p></div></section>
+			<section class="adam-card adam-form-card adam-public-form">
+				<?php echo wp_kses_post( $message ); ?>
+				<div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div>
+				<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_renewal_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid">
+				<?php foreach ( $allowed as $key ) : $definition = $definitions[ $key ]; $value = $submitted[ $key ] ?? ''; ?>
+					<?php if ( 'payment_receipt' === $key || 'file' === $definition['type'] ) : ?>
+						<label class="adam-form-field"><span><?php echo esc_html( $definition['label'] ); ?></span><?php if ( ( 'payment_receipt' === $key && is_scalar( $request->proof_of_payment() ) && '' !== (string) $request->proof_of_payment() ) || ( 'payment_receipt' !== $key && is_scalar( $value ) && '' !== (string) $value ) ) : ?><small>Documento atual preservado; envie o novo ficheiro apenas se foi solicitado.</small><?php endif; ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="payment_receipt" === $key || str_contains( $key, 'proof' ) ? ".pdf,.jpg,.jpeg,.png,.webp" : ".jpg,.jpeg,.png,.webp" required></label>
+					<?php elseif ( in_array( $definition['type'], array( 'select', 'radio' ), true ) ) : ?>
+						<label class="adam-form-field"><span><?php echo esc_html( $definition['label'] ); ?></span><select name="<?php echo esc_attr( $key ); ?>" required><option value="">Selecionar</option><?php foreach ( SharedFieldValidator::parse_options( $definition['options'] ) as $option_key => $option_label ) : ?><option value="<?php echo esc_attr( $option_key ); ?>" <?php selected( (string) $value, (string) $option_key ); ?>><?php echo esc_html( $option_label ); ?></option><?php endforeach; ?></select></label>
+					<?php else : ?>
+						<label class="adam-form-field"><span><?php echo esc_html( $definition['label'] ); ?></span><input type="<?php echo esc_attr( in_array( $definition['type'], array( 'date', 'email', 'number', 'tel' ), true ) ? $definition['type'] : 'text' ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( is_scalar( $value ) ? (string) $value : '' ); ?>" required><?php if ( '' !== $definition['help'] ) : ?><small><?php echo esc_html( $definition['help'] ); ?></small><?php endif; ?></label>
+					<?php endif; ?>
+				<?php endforeach; ?></div><button class="button button-primary" name="adam_renewal_correction_submit" value="1">Enviar correção</button></form>
+			</section>
+		</div>
+		<?php
+		return (string) ob_get_clean();
+	}
+
+	/** Store a correction upload and return its stable attachment reference. */
+	private function store_renewal_correction_upload( string $field, array $mimes ): mixed {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		$attachment = media_handle_upload( $field, 0, array(), array( 'test_form' => false, 'mimes' => $mimes ) );
+		return is_wp_error( $attachment ) ? $attachment : absint( $attachment );
 	}
 
 	private function render_apd_association_page( Member $member ): string {

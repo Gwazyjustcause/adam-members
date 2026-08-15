@@ -135,6 +135,11 @@ final class GoogleSheetsSyncService {
 	}
 
 	public function sync_manual( FinancialMovement $movement, Member $member ): true|WP_Error {
+		return $this->sync_persisted_movement( $movement, $member );
+	}
+
+	/** Synchronize an already-persisted movement without rerunning its originating workflow. */
+	public function sync_persisted_movement( FinancialMovement $movement, Member $member ): true|WP_Error {
 		$repair = array();
 		if ( '' === trim( $movement->member_number() ) ) { $repair['member_number'] = (string) $member->field( 'numero_socio' ); }
 		if ( '' === trim( $movement->member_name() ) ) { $repair['member_name'] = $member->full_name(); }

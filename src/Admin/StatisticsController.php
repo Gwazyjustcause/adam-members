@@ -909,6 +909,8 @@ final class StatisticsController {
 		return match ( $status ) {
 			RenewalRequest::STATUS_APPROVED => __( 'Aprovada', 'adam-membership' ),
 			RenewalRequest::STATUS_REJECTED => __( 'Rejeitada', 'adam-membership' ),
+			RenewalRequest::STATUS_CORRECTION_REQUESTED => __( 'Correção solicitada', 'adam-membership' ),
+			RenewalRequest::STATUS_CORRECTION_SUBMITTED => __( 'Correção submetida', 'adam-membership' ),
 			default                         => __( 'Pendente', 'adam-membership' ),
 		};
 	}

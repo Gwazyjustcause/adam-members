@@ -277,6 +277,15 @@ final class EmailService {
 		);
 	}
 
+	/** Send the existing correction-request notification using the renewal request link. */
+	public function send_renewal_correction_email( Member $member, int $renewal_id, string $reason = '', string $note = '' ): bool {
+		$link = add_query_arg( array( 'view' => 'renewal-correction', 'request_id' => $renewal_id ), $this->settings->member_area_url() );
+		$body = '';
+		if ( '' !== trim( $note ) ) { $body .= '<p><strong>O que precisa de corrigir:</strong><br>' . nl2br( esc_html( $note ) ) . '</p>'; }
+		$body .= '<p><a href="' . esc_url( $link ) . '" style="display:inline-block;background:#4f9f2f;color:#fff;padding:12px 20px;text-decoration:none;border-radius:4px;font-weight:bold;">CORRIGIR PEDIDO</a></p>';
+		return $this->send_member_template_email( 'member_correction_requested', $member, array( 'reason' => $reason, 'correction_html' => $body ), array( 'member_id' => $member->user_id(), 'renewal_id' => $renewal_id ) );
+	}
+
 	/**
 	 * Send renewal pending confirmation email.
 	 *

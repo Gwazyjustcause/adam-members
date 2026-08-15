@@ -65,6 +65,7 @@ final class AdminController {
 	private const ACTION_REMOVE_ANA   = 'remove_ana';
 	private const ACTION_REJECT       = 'reject';
 	private const ACTION_REQUEST_CORRECTION = 'request_correction';
+	private const ACTION_REQUEST_RENEWAL_CORRECTION = 'request_renewal_correction';
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
@@ -720,7 +721,7 @@ final class AdminController {
 	private function approval_rows(): array {
 		$rows = array();
 		foreach ( $this->members->pending_members() as $member ) { $correction_received = 'correction_submitted' === (string) $member->field( 'adam_correction_status' ); $rows[] = array( 'type' => 'registrations', 'label' => 'Inscrição', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $member->registration_date(), 'status' => $correction_received ? 'Correção recebida' : 'Pendente', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'registration', 'approval_category' => 'registrations', 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) ) ); }
-		foreach ( $this->renewal_repository->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'renewal', 'approval_category' => 'renewals', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
+		foreach ( $this->renewal_repository->admin_requests( array( 'status' => array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ) ) ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'renewals', 'label' => 'Renovação', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'renewal', 'approval_category' => 'renewals', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->member_changes->repository()->all( MemberChangeRequest::STATUS_PENDING ) as $request ) { $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'changes', 'label' => 'Alteração de dados', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->submitted_at(), 'status' => 'Pendente de revisão', 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'changes', 'approval_category' => 'changes', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $this->apd_association->repository()->all() as $request ) { if ( in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { continue; } $member = $this->members->find( $request->user_id() ); if ( null !== $member ) { $rows[] = array( 'type' => 'apd', 'label' => 'APD / ANA', 'member_name' => $member->full_name(), 'member_number' => (string) $member->field( 'numero_socio' ), 'date' => $request->requested_at(), 'status' => $request->status(), 'url' => add_query_arg( array( 'page' => 'adam-membership-pending', 'review_type' => 'apd', 'approval_category' => 'apd', 'request_id' => $request->id() ), admin_url( 'admin.php' ) ) ); } }
 		foreach ( $rows as &$row ) {
@@ -1596,6 +1597,7 @@ final class AdminController {
 		$result = match ( $action ) {
 			self::ACTION_APPROVE_RENEWAL          => $this->renewal_service->approve( $request_id ),
 			self::ACTION_CONFIRM_ANA_RENEWAL     => $this->renewal_service->confirm_ana_and_approve( $request_id, sanitize_text_field( wp_unslash( $_POST['confirmation_date'] ?? '' ) ) ),
+			self::ACTION_REQUEST_RENEWAL_CORRECTION => $this->renewal_service->request_correction( $request_id, $this->posted_correction_reason(), $this->posted_correction_note(), isset( $_POST['correction_fields'] ) && is_array( $_POST['correction_fields'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['correction_fields'] ) ) : array() ),
 			self::ACTION_REJECT_RENEWAL           => $this->renewal_service->reject( $request_id, $this->posted_rejection_reason() ),
 			self::ACTION_RESEND_RENEWAL_EMAIL     => $this->renewal_service->resend_approval_email( $request_id ),
 			self::ACTION_SEND_PRIVATE_DOCUMENT    => $this->renewal_service->send_private_document( $request_id ),
@@ -1900,21 +1902,23 @@ final class AdminController {
 			$member = $this->members->find( $id );
 			if ( null !== $member ) {
 			}
-			$result = null !== $member ? $this->google_sheets_sync->sync_registration( $member ) : new WP_Error( 'adam_google_sheets_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) );
+			$movement_id = null !== $member ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : '';
+			$movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null;
+			$result = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_persisted_movement( $movement, $member ) : ( null !== $member ? $this->google_sheets_sync->sync_registration( $member ) : new WP_Error( 'adam_google_sheets_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ) );
 		} elseif ( 'renewal' === $type ) {
 			$request = $this->renewal_repository->find( $id );
 			$member  = null !== $request ? $this->members->find( $request->user_id() ) : null;
-			if ( null !== $request && null !== $member ) {
-			}
-			$result  = null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
+			$movement = null !== $request ? $this->financial_movements->find( $request->request_uuid() ) : null;
+			$result  = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_persisted_movement( $movement, $member ) : ( null !== $request && null !== $member ? $this->google_sheets_sync->sync_renewal( $request, $member ) : new WP_Error( 'adam_google_sheets_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) ) );
 		} elseif ( 'apd' === $type ) {
 			$apd_request = $this->apd_association->repository()->find( $id );
 			$member = null !== $apd_request ? $this->members->find( $apd_request->user_id() ) : null;
-			$result = null !== $apd_request && null !== $member ? $this->google_sheets_sync->sync_apd_association( $apd_request, $member ) : new WP_Error( 'adam_google_sheets_apd_not_found', __( 'Pedido APD nÃ£o encontrado.', 'adam-membership' ) );
+			$movement = null !== $apd_request ? $this->financial_movements->find( $apd_request->request_uuid() ) : null;
+			$result = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_persisted_movement( $movement, $member ) : ( null !== $apd_request && null !== $member ? $this->google_sheets_sync->sync_apd_association( $apd_request, $member ) : new WP_Error( 'adam_google_sheets_apd_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ) );
 		} elseif ( 'manual' === $type ) {
 			$movement = $this->financial_movements->find( $request_key );
 			$member = null !== $movement ? $this->members->find( $movement->member_id() ) : null;
-			$result = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_manual( $movement, $member ) : new WP_Error( 'adam_google_sheets_manual_not_found', 'Movimento manual não encontrado.' );
+			$result = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_persisted_movement( $movement, $member ) : new WP_Error( 'adam_google_sheets_manual_not_found', 'Movimento manual não encontrado.' );
 		} else {
 			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
 		}
@@ -2544,13 +2548,14 @@ final class AdminController {
 			<?php endif; ?>
 		</div>
 
-		<?php if ( RenewalRequest::STATUS_PENDING === $request->status() ) : ?>
+		<?php if ( in_array( $request->status(), array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) : ?>
 			<div class="adam-admin-panel adam-card">
 				<h2><?php esc_html_e( 'Decisão de revisão', 'adam-membership' ); ?></h2>
 				<div class="adam-admin-actions">
 					<?php $this->render_renewal_action_form( $request, self::ACTION_APPROVE_RENEWAL, __( 'Aprovar renovação', 'adam-membership' ), 'button-primary' ); ?>
 				<?php $submitted = $request->data()['submitted_data'] ?? array(); if ( 'adam_primary' === (string) ( $submitted['adam_membership_origin'] ?? '' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_renewal_action"><input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA_RENEWAL ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>"><?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?><label>Data de confirmação ANA <input type="date" name="confirmation_date" required></label><button class="button button-primary">Confirmar ANA e concluir</button></form><?php endif; ?>
 				</div>
+				<?php $this->render_renewal_correction_selector( $request ); ?>
 				<?php $this->render_renewal_rejection_form( $request ); ?>
 			</div>
 		<?php endif; ?>
@@ -3637,6 +3642,27 @@ final class AdminController {
 		echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="apd"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div></div>';
 	}
 
+	/** Render the established field-picker interaction for a renewal correction. */
+	private function render_renewal_correction_selector( RenewalRequest $request ): void {
+		$fields = array_keys( $request->submitted_data() );
+		if ( '' !== (string) $request->proof_of_payment() ) { $fields[] = 'payment_receipt'; }
+		$fields = array_values( array_unique( array_map( 'sanitize_key', $fields ) ) );
+		if ( array() === $fields ) { return; }
+		$labels = array( 'payment_receipt' => 'Comprovativo de pagamento', 'adam_membership_origin' => 'Tipo de renovação', 'team_id' => 'Equipa' );
+		?>
+		<div class="adam-admin-rejection-form adam-admin-correction-form" data-adam-correction-selector>
+			<h3><?php esc_html_e( 'Pedir correção', 'adam-membership' ); ?></h3>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_renewal_action"><input type="hidden" name="renewal_action" value="<?php echo esc_attr( self::ACTION_REQUEST_RENEWAL_CORRECTION ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_renewal_action_' . $request->id() ); ?>
+				<label><span><?php esc_html_e( 'Motivo da correção', 'adam-membership' ); ?></span><select name="correction_reason" required><option value="">Selecionar</option><?php foreach ( $this->correction_reasons() as $reason ) : ?><option value="<?php echo esc_attr( $reason ); ?>"><?php echo esc_html( $reason ); ?></option><?php endforeach; ?></select></label>
+				<div class="adam-correction-field-picker"><span>Campos a corrigir</span><button type="button" class="button adam-correction-field-picker__trigger" data-adam-correction-open>Selecionar campos...</button><div class="adam-correction-field-picker__summary" data-adam-correction-summary hidden><strong data-adam-correction-count></strong><div data-adam-correction-chips></div><button type="button" class="button-link" data-adam-correction-open>Alterar seleção</button></div></div>
+				<dialog class="adam-admin-correction-dialog" data-adam-correction-dialog><div class="adam-admin-correction-dialog__header"><h2>Campos a corrigir</h2><button type="button" class="button-link" data-adam-correction-close aria-label="Fechar">&times;</button></div><p>Selecione apenas a informação ou o documento que deve ser corrigido.</p><div class="adam-admin-correction-dialog__groups"><fieldset><legend>Renovação</legend><?php foreach ( $fields as $field ) : ?><label class="adam-admin-correction-option"><input type="checkbox" name="correction_fields[]" value="<?php echo esc_attr( $field ); ?>" data-adam-correction-option data-label="<?php echo esc_attr( $labels[ $field ] ?? DisplayLabels::field( $field ) ); ?>"><span><?php echo esc_html( $labels[ $field ] ?? DisplayLabels::field( $field ) ); ?></span></label><?php endforeach; ?></fieldset></div><div class="adam-admin-correction-dialog__actions"><button type="button" class="button" data-adam-correction-close>Cancelar</button><button type="button" class="button button-primary" data-adam-correction-apply>Aplicar seleção</button></div></dialog>
+				<label><span>O que precisa de corrigir</span><textarea name="correction_note" rows="4"></textarea></label><button type="submit" class="button button-primary adam-button">Pedir correção</button>
+			</form>
+		</div>
+		<?php
+	}
+
 	private function render_google_sheets_payment_panel( Member $member, ?RenewalRequest $request = null ): void {
 		$type = null === $request ? 'registration' : 'renewal';
 		$id = null === $request ? $member->user_id() : $request->id();
@@ -3665,7 +3691,8 @@ final class AdminController {
 				</div>
 				<button type="submit" class="button button-primary">Guardar dados de pagamento</button>
 			</form>
-			<?php if ( ( null === $request && Member::STATUS_ACTIVE === $member->status() ) || ( null !== $request && RenewalRequest::STATUS_APPROVED === $request->status() ) ) : ?>
+			<?php $movement_id = null === $request ? $request_id : $request->request_uuid(); $persisted_movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null; ?>
+			<?php if ( null !== $persisted_movement || ( null === $request && Member::STATUS_ACTIVE === $member->status() ) || ( null !== $request && RenewalRequest::STATUS_APPROVED === $request->status() ) ) : ?>
 			<div class="adam-google-sheets-payment-actions"><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-actions"><input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_retry_google_sheets_' . $type . '_' . $id ); ?><button type="submit" class="button">Repetir sincronização</button></form></div>
 			<?php endif; ?>
 			<?php if ( null === $request ) : ?><p class="adam-google-sheets-history-link"><a href="<?php echo esc_url( add_query_arg( array( 'page' => self::HISTORY_PAGE_SLUG, 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) ) ); ?>">Ver histórico financeiro</a></p><?php endif; ?>
@@ -6239,6 +6266,8 @@ final class AdminController {
 		return match ( $status ) {
 			RenewalRequest::STATUS_APPROVED => __( 'Aprovado', 'adam-membership' ),
 			RenewalRequest::STATUS_REJECTED => __( 'Rejeitado', 'adam-membership' ),
+			RenewalRequest::STATUS_CORRECTION_REQUESTED => __( 'Correção solicitada', 'adam-membership' ),
+			RenewalRequest::STATUS_CORRECTION_SUBMITTED => __( 'Correção submetida', 'adam-membership' ),
 			default                         => __( 'Pendente de revisão', 'adam-membership' ),
 		};
 	}

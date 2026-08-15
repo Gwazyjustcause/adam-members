@@ -70,7 +70,7 @@ final class RenewalRepository {
 	 * @return array<int, RenewalRequest>
 	 */
 	public function admin_requests( array $filters = array() ): array {
-		$status   = isset( $filters['status'] ) ? sanitize_key( (string) $filters['status'] ) : '';
+		$status   = $filters['status'] ?? '';
 		$order    = isset( $filters['order'] ) && 'asc' === strtolower( (string) $filters['order'] ) ? 'asc' : 'desc';
 		$requests = array_map(
 			static fn ( array $data ): RenewalRequest => new RenewalRequest( $data ),
@@ -80,7 +80,7 @@ final class RenewalRepository {
 		$requests = array_values(
 			array_filter(
 				$requests,
-				static fn ( RenewalRequest $request ): bool => '' === $status || $request->status() === $status
+				static fn ( RenewalRequest $request ): bool => '' === $status || ( is_array( $status ) ? in_array( $request->status(), array_map( 'sanitize_key', $status ), true ) : $request->status() === sanitize_key( (string) $status ) )
 			)
 		);
 
@@ -120,7 +120,7 @@ final class RenewalRepository {
 	public function pending_for_user( int $user_id ): array {
 		return array_values(
 			array_filter(
-				$this->admin_requests( array( 'status' => RenewalRequest::STATUS_PENDING ) ),
+				$this->admin_requests( array( 'status' => array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_REQUESTED, RenewalRequest::STATUS_CORRECTION_SUBMITTED ) ) ),
 				static fn ( RenewalRequest $request ): bool => $request->user_id() === $user_id
 			)
 		);

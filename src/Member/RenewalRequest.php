@@ -14,6 +14,8 @@ namespace AdamMembership\Member;
  */
 final class RenewalRequest {
 	public const STATUS_PENDING  = 'pending_review';
+	public const STATUS_CORRECTION_REQUESTED = 'correction_requested';
+	public const STATUS_CORRECTION_SUBMITTED = 'correction_submitted';
 	public const STATUS_APPROVED = 'approved';
 	public const STATUS_REJECTED = 'rejected';
 
@@ -112,6 +114,18 @@ final class RenewalRequest {
 		return is_array( $data ) ? array_map( 'strval', $data ) : array();
 	}
 
+	/** @return array<int,string> */
+	public function correction_fields(): array {
+		return array_values( array_filter( array_map( 'sanitize_key', (array) ( $this->data['correction_fields'] ?? array() ) ) ) );
+	}
+
+	public function correction_reason(): string { return is_scalar( $this->data['correction_reason'] ?? '' ) ? (string) $this->data['correction_reason'] : ''; }
+
+	public function correction_note(): string { return is_scalar( $this->data['correction_note'] ?? '' ) ? (string) $this->data['correction_note'] : ''; }
+
+	/** @return array<int,array<string,mixed>> */
+	public function correction_history(): array { return is_array( $this->data['correction_history'] ?? null ) ? $this->data['correction_history'] : array(); }
+
 	/**
 	 * Get all allowed request statuses.
 	 *
@@ -120,6 +134,8 @@ final class RenewalRequest {
 	public static function statuses(): array {
 		return array(
 			self::STATUS_PENDING,
+			self::STATUS_CORRECTION_REQUESTED,
+			self::STATUS_CORRECTION_SUBMITTED,
 			self::STATUS_APPROVED,
 			self::STATUS_REJECTED,
 		);
