@@ -25,6 +25,7 @@ use AdamMembership\Communication\CommunicationPreferences;
 use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Document\DocumentRepository;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Document\MemberDocumentHistoryService;
 use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Emails\EmailService;
@@ -140,6 +141,7 @@ final class Plugin {
 		$history                   = new HistoryService( $history_repository, $members );
 		$private_document_repository = new PrivateDocumentRepository( $logger );
 		$private_document_storage    = new PrivateDocumentStorage( $logger );
+		$member_document_history     = new MemberDocumentHistoryService( $settings, $renewal_repository, $private_document_repository );
 		$email                     = new EmailService( $settings, $logger, $private_document_repository, $private_document_storage );
 		$communication_categories  = new CommunicationCategoryRegistry();
 		$communication_preferences = new CommunicationPreferences( $communication_categories );
@@ -261,7 +263,8 @@ final class Plugin {
 				$google_sheets_sync,
 				$financial_movements,
 				$private_document_repository,
-				$private_document_storage
+				$private_document_storage,
+				$member_document_history
 			);
 
 			$admin->register();

@@ -214,6 +214,25 @@ final class PrivateDocumentRepository {
 		return is_array( $row ) ? new PrivateDocument( $row ) : null;
 	}
 
+	/** @param array<int,string> $references @return array<int,PrivateDocument> */
+	public function for_references( array $references ): array {
+		global $wpdb;
+		$references = array_values( array_unique( array_filter( array_map( 'sanitize_text_field', $references ) ) ) );
+		if ( array() === $references ) {
+			return array();
+		}
+		$placeholders = implode( ', ', array_fill( 0, count( $references ), '%s' ) );
+		$query = $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . " WHERE request_reference IN ({$placeholders}) ORDER BY created_at ASC, id ASC", ...$references );
+		$rows  = $wpdb->get_results( $query, ARRAY_A );
+
+		return array_values(
+			array_map(
+				static fn ( array $row ): PrivateDocument => new PrivateDocument( $row ),
+				is_array( $rows ) ? $rows : array()
+			)
+		);
+	}
+
 	/** @param array<string, mixed> $data */
 	public function update( PrivateDocument $document, array $data ): PrivateDocument|WP_Error {
 		global $wpdb;

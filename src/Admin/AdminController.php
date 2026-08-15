@@ -18,6 +18,7 @@ use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\MaintenanceService;
 use AdamMembership\Core\Plugin;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Document\MemberDocumentHistoryService;
 use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Emails\EmailService;
@@ -61,6 +62,7 @@ final class AdminController {
 	private const MENU_SLUG           = 'adam-membership';
 	private const HISTORY_PAGE_SLUG   = 'adam-membership-history';
 	private const MEMBER_PAGE_SLUG    = 'adam-membership-member';
+	private const MEMBER_DOCUMENT_HISTORY_PAGE_SLUG = 'adam-membership-member-document-history';
 	private const ACTION_APPROVE      = 'approve';
 	private const ACTION_CONFIRM_ANA  = 'confirm_ana';
 	private const ACTION_REMOVE_ANA   = 'remove_ana';
@@ -236,6 +238,7 @@ final class AdminController {
 	private FinancialMovementRepository $financial_movements;
 	private PrivateDocumentRepository $private_documents;
 	private PrivateDocumentStorage $private_document_storage;
+	private MemberDocumentHistoryService $member_document_history;
 
 	/**
 	 * Create the admin controller.
@@ -259,7 +262,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, FinancialMovementRepository $financial_movements, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, FinancialMovementRepository $financial_movements, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage, MemberDocumentHistoryService $member_document_history ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -285,6 +288,7 @@ final class AdminController {
 		$this->financial_movements = $financial_movements;
 		$this->private_documents = $private_documents;
 		$this->private_document_storage = $private_document_storage;
+		$this->member_document_history = $member_document_history;
 	}
 
 	/**
@@ -451,6 +455,7 @@ final class AdminController {
 			self::TEAM_PAGE_SLUG,
 			array( $this, 'render_team_page' )
 		);
+		add_submenu_page( null, esc_html__( 'Histórico de documentos', 'adam-membership' ), esc_html__( 'Histórico de documentos', 'adam-membership' ), self::CAPABILITY, self::MEMBER_DOCUMENT_HISTORY_PAGE_SLUG, array( $this, 'render_member_document_history_page' ) );
 		add_submenu_page( null, 'Pedidos APD/ANA', 'Pedidos APD/ANA', self::CAPABILITY, self::APD_PAGE_SLUG, array( $this, 'render_apd_requests_page' ) );
 		add_submenu_page( null, 'Alterações de dados', 'Alterações de dados', self::CAPABILITY, self::MEMBER_CHANGES_PAGE_SLUG, array( $this, 'render_member_changes_page' ) );
 
@@ -784,6 +789,39 @@ final class AdminController {
 		$this->render_history_filters( $filters );
 		$this->render_financial_history( (int) ( $filters['member_id'] ?? 0 ) );
 		$this->render_history_timeline( $entries );
+		$this->render_footer();
+	}
+
+	/** Render the read-only document archive for one member. */
+	public function render_member_document_history_page(): void {
+		$this->ensure_can_manage();
+		$member_id = absint( $_GET['member_id'] ?? 0 );
+		$member    = $member_id > 0 ? $this->members->find( $member_id ) : null;
+		$this->render_header( __( 'Histórico de documentos', 'adam-membership' ) );
+		$this->render_notices();
+		if ( null === $member ) {
+			$this->render_empty_state( __( 'Sócio não encontrado.', 'adam-membership' ) );
+			$this->render_footer();
+			return;
+		}
+
+		$groups = MemberDocumentHistoryService::group_items( $this->member_document_history->for_member( $member ) );
+		printf( '<p><a class="button" href="%s">← %s</a></p>', esc_url( $this->member_url( $member ) ), esc_html__( 'Voltar aos detalhes do sócio', 'adam-membership' ) );
+		printf( '<div class="adam-admin-panel adam-card"><h2>%s</h2><p>%s</p></div>', esc_html( $member->full_name() ), esc_html__( 'Arquivo histórico agregado dos documentos existentes. Os ficheiros não são copiados nem alterados nesta página.', 'adam-membership' ) );
+		if ( array() === $groups ) {
+			$this->render_empty_state( __( 'Ainda não existem documentos históricos para este sócio.', 'adam-membership' ) );
+		} else {
+			foreach ( $groups as $group ) {
+				printf( '<div class="adam-admin-panel adam-card adam-document-history-group"><h2>%s — %s</h2><div class="adam-admin-document-list">', esc_html( (string) $group['year'] ), esc_html( (string) $group['request_label'] ) );
+				foreach ( (array) $group['items'] as $item ) {
+					$status = (string) ( $item['status'] ?? '' );
+					$status_label = ! empty( $item['private'] ) ? $this->private_document_status_label( $status ) : __( 'Submetido', 'adam-membership' );
+					$sent = ! empty( $item['private'] ) ? ( ! empty( $item['sent'] ) ? __( 'Enviado ao sócio', 'adam-membership' ) : __( 'Ainda não enviado', 'adam-membership' ) ) : '';
+					printf( '<div class="adam-admin-document-row"><div class="adam-admin-document-cell"><strong>%s</strong><span class="adam-admin-document-filename">%s</span></div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div><div class="adam-admin-document-cell">%s</div></div>', esc_html( (string) $item['document_type'] ), esc_html( (string) $item['filename'] ), esc_html( (string) $item['date'] ?: '—' ), esc_html( (string) $item['origin'] ), esc_html( trim( $status_label . ( '' !== $sent ? ' · ' . $sent : '' ) ) ), '' !== (string) ( $item['download_url'] ?? '' ) ? '<a class="button button-small" href="' . esc_url( (string) $item['download_url'] ) . '">' . esc_html__( 'Descarregar', 'adam-membership' ) . '</a>' : '—' );
+				}
+				echo '</div></div>';
+			}
+		}
 		$this->render_footer();
 	}
 
@@ -3519,7 +3557,6 @@ final class AdminController {
 	}
 
 	private function render_member_detail( Member $member ): void {
-		$member_requests    = $this->renewal_repository->for_user( $member->user_id() );
 		$document_rows      = $this->member_document_rows( $member, true );
 		$document_warnings  = $this->approval_service->missing_registration_documents( $member );
 		?>
@@ -3577,10 +3614,7 @@ final class AdminController {
 				<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
 				<?php $this->render_current_financial_movement_panel( $member ); ?>
 			</div>
-			<?php foreach ( $member_requests as $request ) : ?>
-				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
-				<?php $this->render_private_document_panel( 'renewal', $request->id(), $request->request_uuid(), $this->renewal_url( $request ) ); ?>
-			<?php endforeach; ?>
+			<div class="adam-admin-panel adam-card"><a class="button" href="<?php echo esc_url( $this->member_document_history_url( $member ) ); ?>"><?php esc_html_e( 'Ver histórico de documentos', 'adam-membership' ); ?></a></div>
 
 			<?php $this->render_member_edit_form( $member ); ?>
 
@@ -6605,6 +6639,10 @@ final class AdminController {
 			$requests = array_values( array_filter( $requests, static fn( MemberChangeRequest $request ): bool => $request->id() === $requested_id ) );
 		}
 		?><div class="wrap"><h1>Pedidos de alteração de dados</h1><table class="widefat striped"><thead><tr><th>Sócio</th><th>Data</th><th>Diferenças</th><th>Estado</th><th>Ações</th></tr></thead><tbody><?php foreach ( $requests as $request ) : $member = $this->members->find( $request->user_id() ); if ( null === $member ) { continue; } ?><tr><td><?php echo esc_html( $member->full_name() . ( $member->member_number() ? ' — ' . $member->member_number() : '' ) ); ?></td><td><?php echo esc_html( $request->submitted_at() ); ?></td><td><table><?php foreach ( $request->changes() as $field => $change ) : ?><tr><td><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?></td><td><?php echo esc_html( DisplayLabels::value( (string) $field, $change['old'] ?? '' ) ); ?></td><td>→ <?php echo esc_html( DisplayLabels::value( (string) $field, $change['new'] ?? '' ) ); ?></td></tr><?php endforeach; ?></table></td><td><?php echo esc_html( DisplayLabels::status( (string) $request->status() ) ); ?></td><td><?php if ( MemberChangeRequest::STATUS_PENDING === $request->status() ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline"><?php wp_nonce_field( 'adam_member_change_' . $request->id() ); ?><input type="hidden" name="action" value="adam_membership_member_change_action"><input type="hidden" name="request_id" value="<?php echo esc_attr( $request->id() ); ?>"><button class="button button-primary" name="decision" value="approve">Aprovar</button> <button class="button" name="decision" value="reject">Rejeitar</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
+	}
+
+	private function member_document_history_url( Member $member ): string {
+		return add_query_arg( array( 'page' => self::MEMBER_DOCUMENT_HISTORY_PAGE_SLUG, 'member_id' => $member->user_id() ), admin_url( 'admin.php' ) );
 	}
 
 	/** Render the shared full member-information correction selector. */
