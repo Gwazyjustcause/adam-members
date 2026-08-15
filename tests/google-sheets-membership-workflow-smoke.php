@@ -30,7 +30,10 @@ adam_membership_workflow_assert( str_contains( $renewal, 'adam_membership_renewa
 adam_membership_workflow_assert( str_contains( $plugin, 'GoogleSheetsMembershipWorkflowService' ) && str_contains( $plugin, 'adam_membership_registration_submitted' ), 'The isolated service must be wired to the submission hook.' );
 adam_membership_workflow_assert( str_contains( $quota_client, 'QuotasTable' ) && str_contains( $quota, 'sync_registration' ), 'The existing Quotas synchronization code must remain present.' );
 adam_membership_workflow_assert( ! str_contains( $service, 'adam_membership_member_approved' ), 'The new workflow must not be approval-driven.' );
+adam_membership_workflow_assert( str_contains( $workflow_script, "GESTAO_SOCIOS_SPREADSHEET_ID = '1mz-VjjljBVgeHXIdxgrvp9nO7HAHzxmFqNpewKa756Q'" ) && str_contains( $workflow_script, 'installGestaoSociosTrigger' ) && str_contains( $workflow_script, 'handleGestaoSociosEdit' ), 'The Apps Script must be standalone and target the supplied spreadsheet.' );
 adam_membership_workflow_assert( str_contains( $workflow_script, "currentState === 'Concluído'" ) && str_contains( $workflow_script, "currentState === 'Rejeitado'" ), 'Completed and rejected rows must remain terminal.' );
 adam_membership_workflow_assert( str_contains( $workflow_script, "state = 'Pronto'" ) && str_contains( $workflow_script, "invoice === 'Disponível' || invoice === 'Entregue'" ), 'Spreadsheet automation must calculate readiness using the updated invoice values.' );
+adam_membership_workflow_assert( str_contains( $workflow_script, '.onEdit()' ) && ! str_contains( $workflow_script, 'newTrigger(GESTAO_SOCIOS_HANDLER).timeBased' ), 'Installation must create an immediate edit trigger and no time-based trigger.' );
+adam_membership_workflow_assert( str_contains( $workflow_script, "value('Sócio') === '' || value('Tipo de quota') === ''" ) && str_contains( $workflow_script, 'not workflow requests' ), 'Blank or partially cleared rows must not be processed.' );
 
 echo "Google Sheets membership workflow smoke tests passed.\n";
