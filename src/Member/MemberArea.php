@@ -2470,12 +2470,20 @@ final class MemberArea {
 	 */
 	private function render_renewal_correction_page( Member $member, int $request_id ): string {
 		$request = $this->renewals->find_request( $request_id );
-		if ( null === $request || $request->user_id() !== $member->user_id() || RenewalRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+		if ( null === $request || $request->user_id() !== $member->user_id() ) {
 			return $this->render_not_found();
 		}
 
 		if ( '1' === (string) ( $_GET['correction_complete'] ?? '' ) ) {
 			return $this->render_correction_confirmation_page( 'Recebemos as correções ao pedido de renovação. A ADAM irá agora rever novamente a informação submetida.' );
+		}
+
+		if ( RenewalRequest::STATUS_CORRECTION_SUBMITTED === $request->status() ) {
+			return $this->render_correction_confirmation_page( 'Recebemos as correções ao pedido de renovação. A ADAM irá agora rever novamente a informação submetida.' );
+		}
+
+		if ( RenewalRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
+			return $this->render_not_found();
 		}
 
 		$settings     = $this->settings->membership_form_settings();
