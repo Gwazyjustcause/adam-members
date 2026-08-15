@@ -21,6 +21,8 @@ foreach ( array( 'quota_type', 'membership_year', 'amount', 'payment_date', 'pay
 	adam_finance_assert( str_contains( $schema, $field ), "Schema stores {$field}." );
 }
 adam_finance_assert( str_contains( $repository, 'find_by_source' ) && str_contains( $repository, 'ensure' ), 'Legacy records migrate idempotently by source.' );
+adam_finance_assert( str_contains( $repository, 'is_suppressed' ) && str_contains( $repository, 'adam_financial_movement_suppressed' ), 'Deleted movements are blocked from lazy recreation.' );
+adam_finance_assert( str_contains( $schema, 'tombstone_table_name' ) && str_contains( $schema, 'adam_financial_movement_tombstones' ), 'Deletion tombstones have persistent schema storage.' );
 adam_finance_assert( str_contains( $repository, "'manual:' . wp_generate_uuid4()" ), 'Manual movements get independent IDs.' );
 adam_finance_assert( str_contains( $sync, '$this->movements->ensure' ), 'Automatic workflows persist FinancialMovement before sync.' );
 adam_finance_assert( str_contains( $sync, "'movement_id'    => \$request->request_uuid()" ), 'Renewals pass their canonical ID as movement_id.' );

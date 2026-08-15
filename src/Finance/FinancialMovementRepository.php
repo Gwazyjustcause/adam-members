@@ -15,6 +15,16 @@ final class FinancialMovementRepository {
 		return is_array( $row ) ? new FinancialMovement( $row ) : null;
 	}
 
+	public function is_suppressed( string $movement_id ): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . FinancialMovementSchema::tombstone_table_name() . ' WHERE movement_id = %s LIMIT 1', $movement_id ) );
+	}
+
+	public function suppress( string $movement_id ): bool {
+		global $wpdb;
+		return false !== $wpdb->insert( FinancialMovementSchema::tombstone_table_name(), array( 'movement_id' => $movement_id, 'deleted_at' => current_time( 'mysql' ), 'deleted_by' => get_current_user_id() ), array( '%s', '%s', '%d' ) ) || $this->is_suppressed( $movement_id );
+	}
+
 	public function find_by_source( string $source_type, string $source_reference ): ?FinancialMovement {
 		global $wpdb;
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . FinancialMovementSchema::table_name() . ' WHERE source_type = %s AND source_reference = %s LIMIT 1', $source_type, $source_reference ), ARRAY_A );
@@ -48,6 +58,7 @@ final class FinancialMovementRepository {
 		$source_reference = sanitize_text_field( (string) ( $data['source_reference'] ?? $movement_id ) );
 		$quota_type = (string) ( $data['quota_type'] ?? '' );
 		if ( '' === $movement_id || '' === $source_type || '' === $source_reference || ! in_array( $quota_type, self::TYPES, true ) ) { return new WP_Error( 'adam_financial_movement_invalid', 'Movimento financeiro inválido.' ); }
+		if ( $this->is_suppressed( $movement_id ) ) { return new WP_Error( 'adam_financial_movement_suppressed', 'Este movimento financeiro foi eliminado pelo administrador e não pode ser recriado automaticamente.' ); }
 		$requested_status = array_key_exists( 'financial_status', $data ) ? (string) $data['financial_status'] : 'pending';
 		if ( 'paid' === $requested_status && ! self::valid_payment_data( $data ) ) { return new WP_Error( 'adam_financial_movement_payment_incomplete', 'Não é possível marcar o movimento como Pago com dados de pagamento incompletos.' ); }
 		$current = $this->find( $movement_id ) ?? $this->find_by_source( $source_type, $source_reference );

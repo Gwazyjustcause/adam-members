@@ -1681,8 +1681,11 @@ final class AdminController {
 			$this->google_sheets->log_failure( $movement_id, 'delete', $google );
 			$this->redirect_with_error( $google->get_error_message() );
 		}
+		if ( ! $this->financial_movements->suppress( $movement_id ) ) {
+			$this->redirect_with_error( 'O registo Google foi tratado, mas não foi possível registar a proteção contra recriação automática. O movimento local foi preservado.' );
+		}
 		if ( ! $this->financial_movements->delete( $movement ) ) {
-			$this->redirect_with_error( 'O registo Google foi tratado, mas não foi possível eliminar o movimento local. Verifique a consistência antes de repetir.' );
+			$this->redirect_with_error( 'A proteção contra recriação foi registada, mas não foi possível eliminar o movimento local. Verifique a consistência antes de repetir.' );
 		}
 		$this->redirect_with_message( 'Movimento financeiro eliminado. Os pedidos de membro e respetivos estados não foram alterados.' );
 	}
@@ -2032,7 +2035,7 @@ final class AdminController {
 			$this->redirect_with_error( 'Selecione um Tipo de quota válido.' );
 			return;
 		}
-		$this->financial_save_trace( 'post_received', $request_key, $year, $method, $amount, $date, 'pending', 'AdminController::handle_save_google_sheets_payment' );
+		$this->financial_save_trace_identifiers( 'post_received', $request_key, '', $id, 'registration' , $year, $method, $amount, $date, 'pending', 'AdminController::handle_save_google_sheets_payment' );
 		$payment_date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date );
 		if ( $year < 2000 || $year > 2100 || ! is_numeric( $amount ) || (float) $amount <= 0 || false === $payment_date || $payment_date->format( 'Y-m-d' ) !== $date || ! in_array( $method, GoogleSheetsSyncService::PAYMENT_METHODS, true ) ) {
 			$this->redirect_with_error( __( 'Indique um ano, valor pago, data e método de pagamento válidos.', 'adam-membership' ) );
@@ -3731,6 +3734,10 @@ final class AdminController {
 		$sync = (array) ( $request->data()['google_sheets_sync'] ?? array() );
 		$quota_type = $request->quota_type();
 		$request_id = $request->request_uuid();
+		if ( '' !== $request_id && $this->financial_movements->is_suppressed( $request_id ) ) {
+			echo '<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel"><h2>Google Sheets — movimento financeiro</h2><p>Estado: Eliminado do histórico financeiro</p><p>ID: ' . esc_html( $request_id ) . '</p><p>O movimento eliminado não será recriado a partir dos dados legados. O pedido APD permanece intacto.</p></div>';
+			return;
+		}
 		echo '<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel"><h2>Google Sheets — movimento financeiro</h2><p>Estado: ' . esc_html( (string) ( $sync['state'] ?? 'pending' ) ) . '</p><p>Tipo de quota: ' . esc_html( '' !== $quota_type ? $quota_type : 'Não resolvido' ) . '</p><p>ID: ' . esc_html( '' !== $request_id ? $request_id : 'Não resolvido' ) . '</p><div class="adam-google-sheets-payment-actions"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'adam_membership_retry_google_sheets_apd_' . $request->id() );
 		echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="apd"><input type="hidden" name="request_id" value="' . esc_attr( (string) $request->id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div></div>';
@@ -3770,6 +3777,10 @@ final class AdminController {
 		$sync_state = (string) ( $sync['state'] ?? 'pending' );
 		$quota_type = $this->google_sheets_quota_type( $member, $request );
 		$request_id = null === $request ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : $request->request_uuid();
+		if ( '' !== $request_id && $this->financial_movements->is_suppressed( $request_id ) ) {
+			echo '<div class="adam-admin-panel adam-card adam-google-sheets-payment-panel"><h2>Google Sheets — movimento financeiro</h2><p>Estado: Eliminado do histórico financeiro</p><p>ID: ' . esc_html( $request_id ) . '</p><p>O movimento eliminado não será recriado a partir dos dados legados. Os dados do pedido/membro permanecem intactos.</p></div>';
+			return;
+		}
 		$persisted_movement = '' !== $request_id ? $this->financial_movements->find( $request_id ) : null;
 		if ( null !== $persisted_movement ) {
 			$this->financial_save_trace( 'panel_load_render', $persisted_movement->movement_id(), $persisted_movement->membership_year(), $persisted_movement->payment_method(), $persisted_movement->amount(), $persisted_movement->payment_date(), $persisted_movement->financial_status(), 'AdminController::render_google_sheets_payment_panel' );
@@ -3851,7 +3862,12 @@ final class AdminController {
 	/** @param string $stage Trace stage. */
 	private function financial_save_trace( string $stage, string $movement_id, int $year, string $method, string $amount, string $date, string $status, string $handler ): void {
 		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) { return; }
-		error_log( '[ADAM Membership] financial_save_trace ' . wp_json_encode( array( 'stage' => $stage, 'handler' => $handler, 'movement_id' => $movement_id, 'membership_year' => $year, 'payment_method' => $method, 'amount' => $amount, 'payment_date' => $date, 'financial_status' => $status ) ) );
+		$this->financial_save_trace_identifiers( $stage, '', $movement_id, 0, '' , $year, $method, $amount, $date, $status, $handler );
+	}
+
+	private function financial_save_trace_identifiers( string $stage, string $request_id, string $canonical_movement_id, int $member_id, string $source_type, int $year, string $method, string $amount, string $date, string $status, string $handler ): void {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) { return; }
+		error_log( '[ADAM Membership] financial_save_trace ' . wp_json_encode( array( 'stage' => $stage, 'handler' => $handler, 'request_id' => $request_id, 'canonical_movement_id' => $canonical_movement_id, 'member_id' => $member_id, 'source_type' => $source_type, 'membership_year' => $year, 'payment_method' => $method, 'amount' => $amount, 'payment_date' => $date, 'financial_status' => $status ) ) );
 	}
 
 	/**
