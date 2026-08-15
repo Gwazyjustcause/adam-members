@@ -3040,6 +3040,18 @@
 	color: var(--adam-text, #374151);
 }
 
+.adam-account-setup-feedback {
+	min-height: 1.5em;
+}
+
+.adam-account-setup-feedback.has-errors {
+	color: var(--adam-error, #b42318);
+}
+
+.adam-account-setup-feedback.is-valid {
+	color: var(--adam-green-700, #28743a);
+}
+
 .adam-password-rules p {
 	margin: 0 0 14px;
 	font-size: 15px;

@@ -16,6 +16,8 @@ use AdamMembership\Member\ApdAssociationRequest;
 use AdamMembership\Member\RenewalRequest;
 use AdamMembership\Member\RenewalRepository;
 use AdamMembership\Member\ApdAssociationRepository;
+use AdamMembership\Finance\FinancialMovement;
+use AdamMembership\Finance\FinancialMovementRepository;
 use WP_Error;
 
 /**
@@ -39,13 +41,16 @@ final class GoogleSheetsSyncService {
 	private RenewalRepository $renewals;
 	private ApdAssociationRepository $apd_repository;
 	private ?ApdAssociationRequest $active_apd_request = null;
+	private FinancialMovementRepository $movements;
+	private ?FinancialMovement $active_movement = null;
 
-	public function __construct( GoogleSheetsClient $client, HistoryRepository $history, Logger $logger, RenewalRepository $renewals ) {
+	public function __construct( GoogleSheetsClient $client, HistoryRepository $history, Logger $logger, RenewalRepository $renewals, FinancialMovementRepository $movements ) {
 		$this->client  = $client;
 		$this->history = $history;
 		$this->logger  = $logger;
 		$this->renewals = $renewals;
 		$this->apd_repository = new ApdAssociationRepository();
+		$this->movements = $movements;
 	}
 
 	/**
@@ -72,7 +77,9 @@ final class GoogleSheetsSyncService {
 			return new WP_Error( 'adam_google_sheets_not_approved', __( 'A inscrição só pode ser sincronizada depois de aprovada.', 'adam-membership' ) );
 		}
 		$movement = $this->registration_movement( $member );
-		return $this->sync( $movement, $member );
+		$record = $this->movements->ensure( array_merge( $movement, array( 'member_id' => $member->user_id(), 'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name() ) ) );
+		if ( is_wp_error( $record ) ) { return $record; }
+		return $this->sync_record( $record, $member );
 	}
 
 	/** Synchronize one approved renewal. */
@@ -81,6 +88,7 @@ final class GoogleSheetsSyncService {
 			return new WP_Error( 'adam_google_sheets_not_approved', __( 'A renovação só pode ser sincronizada depois de aprovada.', 'adam-membership' ) );
 		}
 		$data = $request->data();
+		$sync = (array) ( $data['google_sheets_sync'] ?? array() );
 		$movement = array(
 			'quota_type'     => $this->quota_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' ), 'renewal' ),
 			'request_id'     => $request->request_uuid(),
@@ -95,8 +103,11 @@ final class GoogleSheetsSyncService {
 			'status'         => 'Pago',
 			'order_id'       => (string) ( $data['source_order_id'] ?? $request->id() ),
 			'note'           => '',
+			'google_state'   => (string) ( $sync['state'] ?? 'pending' ), 'google_row_number' => absint( $sync['row_number'] ?? 0 ),
 		);
-		return $this->sync( $movement, $member, $request->id() );
+		$record = $this->movements->ensure( array_merge( $movement, array( 'source_type' => 'renewal', 'source_reference' => $request->request_uuid(), 'member_id' => $member->user_id() ) ) );
+		if ( is_wp_error( $record ) ) { return $record; }
+		return $this->sync_record( $record, $member, $request->id() );
 	}
 
 	/** Synchronize a confirmed APD/ANA financial movement. */
@@ -112,14 +123,31 @@ final class GoogleSheetsSyncService {
 			'amount' => $request->payment_amount(), 'payment_date' => $request->payment_date(),
 			'method' => $request->payment_method(), 'status' => 'Pago', 'order_id' => (string) $request->id(), 'note' => '',
 		);
-		return $this->sync( $movement, $member, 0, $request );
+		$sync = (array) ( $request->data()['google_sheets_sync'] ?? array() );
+		$movement['google_state'] = (string) ( $sync['state'] ?? 'pending' );
+		$movement['google_row_number'] = absint( $sync['row_number'] ?? 0 );
+		$record = $this->movements->ensure( array_merge( $movement, array( 'source_type' => 'apd', 'source_reference' => $request->request_uuid(), 'member_id' => $member->user_id() ) ) );
+		if ( is_wp_error( $record ) ) { return $record; }
+		return $this->sync_record( $record, $member, 0, $request );
+	}
+
+	public function sync_manual( FinancialMovement $movement, Member $member ): true|WP_Error {
+		return $this->sync_record( $movement, $member );
+	}
+
+	private function sync_record( FinancialMovement $record, Member $member, int $renewal_id = 0, ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
+		$payload = array( 'quota_type' => $record->quota_type(), 'request_id' => $record->movement_id(), 'member_number' => (string) ( $record->data()['member_number'] ?? $member->field( 'numero_socio' ) ), 'name' => (string) ( $record->data()['member_name'] ?? $member->full_name() ), 'year' => (string) $record->membership_year(), 'movement' => $this->movement_label( $record->quota_type() ), 'type' => $this->membership_type( (string) $member->field( 'adam_membership_origin' ) ), 'amount' => $record->amount(), 'payment_date' => $record->payment_date(), 'method' => $record->payment_method(), 'status' => 'Pago', 'order_id' => $record->source_reference(), 'note' => '' );
+		$this->active_movement = $record;
+		try { return $this->sync( $payload, $member, $renewal_id, $apd_request ); } finally { $this->active_movement = null; }
 	}
 
 	/** Build the canonical row data for a registration. */
 	private function registration_movement( Member $member ): array {
+		$request_id = $this->registration_request_id( $member->user_id() );
+		$sync = (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
 		return array(
 			'quota_type'    => $this->quota_type( (string) $member->field( 'adam_membership_origin' ), 'registration' ),
-			'request_id'    => $this->registration_request_id( $member->user_id() ),
+			'request_id'    => $request_id, 'source_type' => 'registration', 'source_reference' => $request_id,
 			'member_number' => (string) $member->field( 'numero_socio' ),
 			'name'          => $member->full_name(),
 			'year'          => (string) get_user_meta( $member->user_id(), 'adam_membership_year', true ),
@@ -130,6 +158,7 @@ final class GoogleSheetsSyncService {
 			'method'        => (string) get_user_meta( $member->user_id(), 'adam_membership_payment_method', true ),
 			'status'        => 'Pago',
 			'order_id'      => (string) get_user_meta( $member->user_id(), 'adam_membership_source_order_id', true ),
+			'google_state'  => (string) ( $sync['state'] ?? 'pending' ), 'google_row_number' => absint( $sync['row_number'] ?? 0 ),
 			'note'          => '',
 		);
 	}
@@ -233,12 +262,19 @@ final class GoogleSheetsSyncService {
 		return 'external_association' === $origin ? 'Renovação ADAM' : 'Renovação ADAM/ANA';
 	}
 
+	private function movement_label( string $quota_type ): string {
+		return str_starts_with( $quota_type, 'Inscrição' ) ? 'Inscrição' : ( str_starts_with( $quota_type, 'Renovação' ) ? 'Renovação' : 'Associar APD/ANA' );
+	}
+
 	/** Persist status metadata and a safe audit entry. */
 	private function finish( string $request_id, string $status, true|WP_Error $result, Member $member, int $renewal_id = 0, int $row_number = 0, array $missing_fields = array(), ?ApdAssociationRequest $apd_request = null ): true|WP_Error {
 		$apd_request = $apd_request ?? $this->active_apd_request;
 		$previous = $renewal_id > 0 ? (array) ( $this->renewals->find( $renewal_id )?->data()[ self::RENEWAL_SYNC ] ?? array() ) : (array) get_user_meta( $member->user_id(), self::REGISTRATION_DATA, true );
 		$membership_year = null !== $apd_request ? $apd_request->membership_year() : ( $renewal_id > 0 ? absint( $this->renewals->find( $renewal_id )?->data()['membership_year'] ?? 0 ) : absint( get_user_meta( $member->user_id(), 'adam_membership_year', true ) ) );
 		$meta = array( 'state' => $status, 'request_id' => $request_id, 'membership_year' => $membership_year, 'row_number' => $row_number, 'timestamp' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'last_error' => is_wp_error( $result ) ? $result->get_error_code() : '', 'missing_fields' => $missing_fields, 'retry_count' => 1 + absint( $previous['retry_count'] ?? 0 ) );
+		if ( null !== $this->active_movement ) {
+			$this->movements->save_sync_state( $this->active_movement, $meta );
+		}
 		if ( null !== $apd_request ) {
 			$this->apd_repository->save_sync_state( $apd_request, $meta );
 		} elseif ( $renewal_id <= 0 ) {

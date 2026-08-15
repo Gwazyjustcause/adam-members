@@ -32,6 +32,8 @@ use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
 use AdamMembership\Member\ApdAssociationService;
 use AdamMembership\Member\ApdAssociationRequest;
+use AdamMembership\Finance\FinancialMovement;
+use AdamMembership\Finance\FinancialMovementRepository;
 use AdamMembership\Member\CardService;
 use AdamMembership\Member\HistoryEntry;
 use AdamMembership\Member\HistoryRepository;
@@ -229,6 +231,7 @@ final class AdminController {
 	private MemberChangeService $member_changes;
 	private GoogleSheetsClient $google_sheets;
 	private GoogleSheetsSyncService $google_sheets_sync;
+	private FinancialMovementRepository $financial_movements;
 	private PrivateDocumentRepository $private_documents;
 	private PrivateDocumentStorage $private_document_storage;
 
@@ -254,7 +257,7 @@ final class AdminController {
 	 * @param MemberDeletionService       $member_deletion Permanent member deletion service.
 	 * @param CompleteMemberExportService $complete_export Complete member archive exporter.
 	 */
-	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage ) {
+	public function __construct( MemberRepository $members, ApprovalService $approval_service, SettingsRepository $settings, Logger $logger, RenewalRepository $renewals, RenewalService $renewal_service, MaintenanceService $maintenance, CardService $cards, HistoryRepository $history, AnnouncementService $announcements, DocumentService $documents, EventService $events, RewardService $rewards, RecognitionService $recognition, EmailService $email, TeamRepository $teams, MemberDeletionService $member_deletion, CompleteMemberExportService $complete_export, ApdAssociationService $apd_association, MemberChangeService $member_changes, GoogleSheetsClient $google_sheets, GoogleSheetsSyncService $google_sheets_sync, FinancialMovementRepository $financial_movements, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_document_storage ) {
 		$this->members            = $members;
 		$this->approval_service   = $approval_service;
 		$this->settings           = $settings;
@@ -277,6 +280,7 @@ final class AdminController {
 		$this->member_changes      = $member_changes;
 		$this->google_sheets      = $google_sheets;
 		$this->google_sheets_sync = $google_sheets_sync;
+		$this->financial_movements = $financial_movements;
 		$this->private_documents = $private_documents;
 		$this->private_document_storage = $private_document_storage;
 	}
@@ -1821,6 +1825,7 @@ final class AdminController {
 	public function handle_retry_google_sheets(): void {
 		$type = '';
 		$id = 0;
+		$request_key = '';
 		$member = null;
 		$request = null;
 		$apd_request = null;
@@ -1828,7 +1833,8 @@ final class AdminController {
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
-		$this->verify_admin_nonce( 'adam_membership_retry_google_sheets_' . $type . '_' . $id );
+		$request_key = sanitize_text_field( wp_unslash( (string) ( $_POST['request_id'] ?? '' ) ) );
+		$this->verify_admin_nonce( 'adam_membership_retry_google_sheets_' . $type . '_' . ( 'manual' === $type ? $request_key : $id ) );
 
 		if ( 'registration' === $type ) {
 			$member = $this->members->find( $id );
@@ -1845,6 +1851,10 @@ final class AdminController {
 			$apd_request = $this->apd_association->repository()->find( $id );
 			$member = null !== $apd_request ? $this->members->find( $apd_request->user_id() ) : null;
 			$result = null !== $apd_request && null !== $member ? $this->google_sheets_sync->sync_apd_association( $apd_request, $member ) : new WP_Error( 'adam_google_sheets_apd_not_found', __( 'Pedido APD nÃ£o encontrado.', 'adam-membership' ) );
+		} elseif ( 'manual' === $type ) {
+			$movement = $this->financial_movements->find( $request_key );
+			$member = null !== $movement ? $this->members->find( $movement->member_id() ) : null;
+			$result = null !== $movement && null !== $member ? $this->google_sheets_sync->sync_manual( $movement, $member ) : new WP_Error( 'adam_google_sheets_manual_not_found', 'Movimento manual não encontrado.' );
 		} else {
 			$result = new WP_Error( 'adam_google_sheets_invalid_retry', __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
 		}
@@ -1862,6 +1872,8 @@ final class AdminController {
 				$request_id = (string) $request->request_uuid();
 			} elseif ( 'apd' === $type && null !== $apd_request ) {
 				$request_id = (string) $apd_request->request_uuid();
+			} elseif ( 'manual' === $type ) {
+				$request_id = $request_key;
 			}
 			$this->google_sheets->log_exception( $request_id, 'retry_handler', $exception );
 			$this->redirect_with_error( 'A Google Sheets synchronization failed. You can retry the operation.' );
@@ -1873,11 +1885,18 @@ final class AdminController {
 		$this->ensure_can_manage();
 		$type = sanitize_key( (string) ( $_POST['sync_type'] ?? '' ) );
 		$id   = absint( $_POST['request_id'] ?? 0 );
-		$this->verify_admin_nonce( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id );
+		$request_key = sanitize_text_field( wp_unslash( (string) ( $_POST['request_id'] ?? '' ) ) );
+		$this->verify_admin_nonce( 'adam_membership_save_google_sheets_payment_' . $type . '_' . ( 'manual' === $type ? $request_key : $id ) );
 		$year   = absint( $_POST['membership_year'] ?? 0 );
 		$amount = str_replace( ',', '.', sanitize_text_field( wp_unslash( (string) ( $_POST['payment_amount'] ?? '' ) ) ) );
 		$date   = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_date'] ?? '' ) ) );
 		$method = sanitize_text_field( wp_unslash( (string) ( $_POST['payment_method'] ?? '' ) ) );
+		$quota_type = sanitize_text_field( wp_unslash( (string) ( $_POST['quota_type'] ?? '' ) ) );
+		$allowed_quota_types = array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' );
+		if ( ! in_array( $quota_type, $allowed_quota_types, true ) ) {
+			$this->redirect_with_error( 'Selecione um Tipo de quota válido.' );
+			return;
+		}
 		$payment_date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date );
 		if ( $year < 2000 || $year > 2100 || ! is_numeric( $amount ) || (float) $amount <= 0 || false === $payment_date || $payment_date->format( 'Y-m-d' ) !== $date || ! in_array( $method, GoogleSheetsSyncService::PAYMENT_METHODS, true ) ) {
 			$this->redirect_with_error( __( 'Indique um ano, valor pago, data e método de pagamento válidos.', 'adam-membership' ) );
@@ -1893,6 +1912,11 @@ final class AdminController {
 			$stored_year = absint( $sync_data['membership_year'] ?? get_user_meta( $member->user_id(), 'adam_membership_year', true ) );
 			if ( absint( $sync_data['row_number'] ?? 0 ) > 0 && $stored_year !== $year ) {
 				$this->redirect_with_error( 'O ano de uma transação já sincronizada não pode ser alterado. Crie uma renovação para um novo ano.' );
+				return;
+			}
+			if ( $quota_type !== $this->google_sheets_quota_type( $member ) ) {
+				$result = $this->create_manual_financial_movement( $member, $quota_type, $year, $amount, $date, $method );
+				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado. A sincronização foi tentada sem alterar o movimento anterior.' );
 				return;
 			}
 			update_user_meta( $member->user_id(), 'adam_membership_year', (string) $year );
@@ -1915,8 +1939,30 @@ final class AdminController {
 				$this->redirect_with_error( 'O ano de uma transação já sincronizada não pode ser alterado. Crie uma nova renovação para um novo ano.' );
 				return;
 			}
+			$member = $this->members->find( $request->user_id() );
+			if ( null === $member ) { $this->redirect_with_error( 'Sócio não encontrado.' ); return; }
+			if ( $quota_type !== $this->google_sheets_quota_type( $member, $request ) ) {
+				$result = $this->create_manual_financial_movement( $member, $quota_type, $year, $amount, $date, $method );
+				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado. A sincronização foi tentada sem alterar o movimento anterior.' );
+				return;
+			}
 			$this->renewal_repository->update( $request, array( 'membership_year' => $year, 'payment_amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
 			$this->redirect_with_message( __( 'Dados de pagamento guardados. Pode repetir a sincronização.', 'adam-membership' ) );
+			return;
+		}
+		if ( 'manual' === $type ) {
+			$movement = $this->financial_movements->find( $request_key );
+			$member = null !== $movement ? $this->members->find( $movement->member_id() ) : null;
+			if ( null === $movement || null === $member ) { $this->redirect_with_error( 'Movimento manual não encontrado.' ); return; }
+			if ( $quota_type !== $movement->quota_type() ) {
+				$result = $this->create_manual_financial_movement( $member, $quota_type, $year, $amount, $date, $method );
+				is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Novo movimento financeiro criado. O movimento anterior foi preservado.' );
+				return;
+			}
+			$this->financial_movements->update( $movement, array( 'membership_year' => $year, 'amount' => number_format( (float) $amount, 2, '.', '' ), 'payment_date' => $date, 'payment_method' => $method ) );
+			$updated = $this->financial_movements->find( $movement->movement_id() );
+			$result = null !== $updated ? $this->google_sheets_sync->sync_manual( $updated, $member ) : new WP_Error( 'adam_financial_movement_not_found', 'Movimento manual não encontrado.' );
+			is_wp_error( $result ) ? $this->redirect_with_error( $result->get_error_message() ) : $this->redirect_with_message( 'Dados de pagamento guardados. Pode repetir a sincronização.' );
 			return;
 		}
 		$this->redirect_with_error( __( 'Tipo de sincronização inválido.', 'adam-membership' ) );
@@ -3456,6 +3502,7 @@ final class AdminController {
 			<div class="adam-admin-financial-document-stack">
 				<?php $this->render_private_document_panel( 'registration', $member->user_id(), (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) ?: 'registration:legacy-' . $member->user_id(), $this->member_url( $member ) ); ?>
 				<?php $this->render_google_sheets_payment_panel( $member ); ?>
+				<?php $this->render_manual_financial_movement_panels( $member ); ?>
 			</div>
 			<?php foreach ( $member_requests as $request ) : ?>
 				<?php $this->render_documents_panel( sprintf( __( 'Documentos da renovação #%d', 'adam-membership' ), $request->id() ), $this->renewal_document_rows( $request ), null, $request, true ); ?>
@@ -3550,6 +3597,7 @@ final class AdminController {
 			<?php if ( ! empty( $sync['missing_fields'] ) && is_array( $sync['missing_fields'] ) ) : ?><p><strong>Dados em falta:</strong> <?php echo esc_html( implode( ', ', array_map( 'strval', $sync['missing_fields'] ) ) ); ?></p><?php endif; ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="<?php echo esc_attr( $type ); ?>"><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $id ); ?>"><input type="hidden" name="redirect_to" value="<?php echo esc_url( null === $request ? $this->member_url( $member ) : $this->renewal_url( $request ) ); ?>"><?php wp_nonce_field( 'adam_membership_save_google_sheets_payment_' . $type . '_' . $id ); ?>
+				<label>Tipo de quota <select name="quota_type" required><?php foreach ( array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' ) as $option ) : ?><option value="<?php echo esc_attr( $option ); ?>" <?php selected( $option, $quota_type ); ?>><?php echo esc_html( $option ); ?></option><?php endforeach; ?></select></label><p class="description">Selecionar outro tipo cria um novo movimento manual e preserva este registo histórico.</p>
 				<label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="<?php echo esc_attr( (string) ( $data['membership_year'] ?? '' ) ); ?>"></label>
 				<label>Valor pago <input type="number" name="payment_amount" min="0.01" step="0.01" required value="<?php echo esc_attr( (string) ( $data['payment_amount'] ?? '' ) ); ?>"></label>
 				<label>Data de pagamento <input type="date" name="payment_date" required value="<?php echo esc_attr( (string) ( $data['payment_date'] ?? '' ) ); ?>"></label>
@@ -3571,6 +3619,28 @@ final class AdminController {
 		$data = $request->data();
 		$origin = (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' );
 		return array( 'adam_primary' => 'Renovação ADAM/ANA', 'external_association' => 'Renovação ADAM' )[ $origin ] ?? 'Não resolvido';
+	}
+
+	private function render_manual_financial_movement_panels( Member $member ): void {
+		foreach ( $this->financial_movements->for_member( $member->user_id() ) as $movement ) {
+			if ( 'manual' !== $movement->source_type() ) { continue; }
+			echo '<div class="adam-admin-panel adam-card"><h2>Google Sheets — movimento manual</h2><p>Estado: ' . esc_html( $movement->google_state() ) . '</p><p>ID: ' . esc_html( $movement->movement_id() ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( 'adam_membership_save_google_sheets_payment_manual_' . $movement->movement_id() );
+			echo '<input type="hidden" name="action" value="adam_membership_save_google_sheets_payment"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $movement->movement_id() ) . '"><label>Tipo de quota <select name="quota_type" required>';
+			foreach ( array( 'Inscrição ADAM', 'Inscrição ADAM/ANA', 'Renovação ADAM', 'Renovação ADAM/ANA', 'Associar APD/ANA' ) as $option ) { echo '<option value="' . esc_attr( $option ) . '"' . selected( $option, $movement->quota_type(), false ) . '>' . esc_html( $option ) . '</option>'; }
+			echo '</select></label><label>Ano <input type="number" name="membership_year" min="2000" max="2100" required value="' . esc_attr( (string) $movement->membership_year() ) . '"></label><label>Valor pago <input type="number" name="payment_amount" min="0.01" step="0.01" required value="' . esc_attr( $movement->amount() ) . '"></label><label>Data de pagamento <input type="date" name="payment_date" required value="' . esc_attr( $movement->payment_date() ) . '"></label><label>Método <select name="payment_method" required><option value="">Selecionar</option>';
+			foreach ( GoogleSheetsSyncService::PAYMENT_METHODS as $method ) { echo '<option value="' . esc_attr( $method ) . '"' . selected( $method, $movement->payment_method(), false ) . '>' . esc_html( $method ) . '</option>'; }
+			echo '</select></label><button type="submit" class="button button-primary">Guardar dados de pagamento</button></form><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( 'adam_membership_retry_google_sheets_manual_' . $movement->movement_id() );
+			echo '<input type="hidden" name="action" value="adam_membership_retry_google_sheets"><input type="hidden" name="sync_type" value="manual"><input type="hidden" name="request_id" value="' . esc_attr( $movement->movement_id() ) . '"><button type="submit" class="button">Repetir sincronização</button></form></div>';
+		}
+	}
+
+	private function create_manual_financial_movement( Member $member, string $quota_type, int $year, string $amount, string $date, string $method ): true|\WP_Error {
+		$movement = $this->financial_movements->create_manual( $member, array( 'quota_type' => $quota_type, 'membership_year' => $year, 'amount' => $amount, 'payment_date' => $date, 'payment_method' => $method ) );
+		if ( is_wp_error( $movement ) ) { return $movement; }
+		$result = $this->google_sheets_sync->sync_manual( $movement, $member );
+		return $result;
 	}
 
 	/**

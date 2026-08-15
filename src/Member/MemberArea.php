@@ -2776,6 +2776,7 @@ final class MemberArea {
 			}
 		}
 		$data = (array) ( $request->data()['submitted_data'] ?? array() ); ob_start(); ?>
+		<?php echo wp_kses_post( $message ); ?>
 		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido APD / ANA</h2><p><?php echo esc_html( (string) ( $request->data()['correction_note'] ?? $request->data()['correction_reason'] ?? '' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><form method="post"><?php wp_nonce_field( 'adam_apd_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid"><?php foreach ( $data as $field => $value ) : if ( ! is_scalar( $value ) ) { continue; } ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) $value ); ?>"></label><?php endforeach; ?></div><button class="button button-primary" name="adam_apd_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
 	}
 

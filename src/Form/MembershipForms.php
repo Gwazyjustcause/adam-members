@@ -704,6 +704,7 @@ final class MembershipForms {
 				type="<?php echo esc_attr( $type ); ?>"
 				name="<?php echo esc_attr( $field ); ?>"
 				value="<?php echo esc_attr( (string) ( $values[ $field ] ?? '' ) ); ?>"
+				<?php echo $config['required'] ? 'required' : ''; ?>
 				<?php if ( $is_registration_nif ) : ?>
 					inputmode="numeric"
 					maxlength="9"
@@ -740,7 +741,7 @@ final class MembershipForms {
 		?>
 		<label class="adam-form-field <?php echo esc_attr( $extra_class ); ?>">
 			<span><?php echo esc_html( $config['label'] . ( $config['required'] ? ' *' : '' ) ); ?></span>
-			<input type="file" name="<?php echo esc_attr( $field ); ?>" <?php echo '' !== $accept ? 'accept="' . esc_attr( $accept ) . '"' : ''; ?>>
+			<input type="file" name="<?php echo esc_attr( $field ); ?>" <?php echo $config['required'] ? 'required' : ''; ?> <?php echo '' !== $accept ? 'accept="' . esc_attr( $accept ) . '"' : ''; ?>>
 			<?php if ( '' !== $config['help'] ) : ?>
 				<small><?php echo esc_html( $config['help'] ); ?></small>
 			<?php endif; ?>
@@ -765,7 +766,7 @@ final class MembershipForms {
 		?>
 		<div class="adam-form-field adam-field--full adam-checkbox-field">
 			<label class="adam-checkbox-control">
-				<input type="checkbox" name="privacy_acceptance" value="1" <?php checked( '1', (string) ( $values['privacy_acceptance'] ?? '' ) ); ?>>
+				<input type="checkbox" name="privacy_acceptance" value="1" <?php checked( '1', (string) ( $values['privacy_acceptance'] ?? '' ) ); ?> <?php echo $config['required'] ? 'required' : ''; ?>>
 				<span class="adam-checkbox-label"><?php echo esc_html( '' !== $text ? $text : $config['label'] ); ?></span>
 			</label>
 			<?php if ( '' !== $config['help'] ) : ?>
@@ -1227,7 +1228,7 @@ final class MembershipForms {
 			?>
 			<label class="adam-form-field <?php echo esc_attr( $field_class ); ?>">
 				<span><?php echo esc_html( $label ); ?></span>
-				<textarea name="<?php echo esc_attr( $field ); ?>" rows="4"><?php echo esc_textarea( $value ); ?></textarea>
+				<textarea name="<?php echo esc_attr( $field ); ?>" rows="4" <?php echo $config['required'] ? 'required' : ''; ?>><?php echo esc_textarea( $value ); ?></textarea>
 				<?php if ( '' !== (string) $config['help'] ) : ?>
 					<small><?php echo esc_html( (string) $config['help'] ); ?></small>
 				<?php endif; ?>
@@ -1242,7 +1243,7 @@ final class MembershipForms {
 			<label class="adam-form-field <?php echo esc_attr( $field_class ); ?>">
 				<span><?php echo esc_html( $label ); ?></span>
 				<?php if ( 'select' === $type ) : ?>
-					<select name="<?php echo esc_attr( $field ); ?>">
+					<select name="<?php echo esc_attr( $field ); ?>" <?php echo $config['required'] ? 'required' : ''; ?>>
 						<option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
 						<?php foreach ( $options as $option_value => $option_label ) : ?>
 							<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>
@@ -1251,7 +1252,7 @@ final class MembershipForms {
 				<?php else : ?>
 					<div class="adam-inline-choice">
 						<?php foreach ( $options as $option_value => $option_label ) : ?>
-							<label><input type="radio" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $option_value ); ?>" <?php checked( $value, $option_value ); ?>> <?php echo esc_html( $option_label ); ?></label>
+							<label><input type="radio" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( $option_value ); ?>" <?php checked( $value, $option_value ); ?> <?php echo $config['required'] ? 'required' : ''; ?>> <?php echo esc_html( $option_label ); ?></label>
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
@@ -1289,7 +1290,7 @@ final class MembershipForms {
 		?>
 		<label class="adam-form-field adam-team-field">
 			<span><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
-			<input type="text" name="team" value="<?php echo esc_attr( $value ); ?>" list="<?php echo esc_attr( $list_id ); ?>" maxlength="191" autocomplete="off" placeholder="<?php esc_attr_e( 'Comece a escrever para pesquisar ou criar uma equipa', 'adam-membership' ); ?>">
+			<input type="text" name="team" value="<?php echo esc_attr( $value ); ?>" list="<?php echo esc_attr( $list_id ); ?>" maxlength="191" autocomplete="off" placeholder="<?php esc_attr_e( 'Comece a escrever para pesquisar ou criar uma equipa', 'adam-membership' ); ?>" <?php echo $config['required'] ? 'required' : ''; ?>>
 			<datalist id="<?php echo esc_attr( $list_id ); ?>">
 				<?php foreach ( $this->teams->all() as $team ) : ?>
 					<option value="<?php echo esc_attr( $team->name() ); ?>"></option>
@@ -1320,7 +1321,7 @@ final class MembershipForms {
 		<div class="adam-form-field">
 			<span id="<?php echo esc_attr( $label_id ); ?>"><?php echo esc_html( (string) $config['label'] . ( ! empty( $config['required'] ) ? ' *' : '' ) ); ?></span>
 			<div class="adam-searchable-select" data-adam-searchable-select>
-				<select id="<?php echo esc_attr( $select_id ); ?>" name="<?php echo esc_attr( $field ); ?>" aria-labelledby="<?php echo esc_attr( $label_id ); ?>" data-adam-select-options>
+				<select id="<?php echo esc_attr( $select_id ); ?>" name="<?php echo esc_attr( $field ); ?>" aria-labelledby="<?php echo esc_attr( $label_id ); ?>" data-adam-select-options <?php echo $config['required'] ? 'required' : ''; ?>>
 					<option value=""><?php esc_html_e( 'Selecionar', 'adam-membership' ); ?></option>
 					<?php foreach ( $options as $option_value => $option_label ) : ?>
 						<option value="<?php echo esc_attr( $option_value ); ?>" <?php selected( $value, $option_value ); ?>><?php echo esc_html( $option_label ); ?></option>

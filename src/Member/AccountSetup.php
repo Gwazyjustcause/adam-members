@@ -192,7 +192,7 @@ final class AccountSetup {
 
 				<?php echo wp_kses_post( (string) ( $message['notice'] ?? '' ) ); ?>
 
-				<form method="post" class="adam-account-form">
+				<form method="post" class="adam-account-form" data-adam-account-setup>
 					<?php wp_nonce_field( 'adam_account_setup' ); ?>
 					<input type="hidden" name="user" value="<?php echo esc_attr( (string) $user_id ); ?>">
 					<input type="hidden" name="token" value="<?php echo esc_attr( $token ); ?>">
@@ -238,6 +238,8 @@ final class AccountSetup {
 							autocomplete="new-password"
 						>
 					</div>
+
+					<p id="adam-account-setup-feedback" class="adam-strength-text adam-account-setup-feedback" role="status" aria-live="polite"></p>
 
 					<div class="adam-form-actions">
 						<button type="submit" name="adam_account_setup_submit" class="button button-primary adam-primary-action adam-button" <?php disabled( $is_preview ); ?>>

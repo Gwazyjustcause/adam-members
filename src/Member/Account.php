@@ -261,6 +261,15 @@ final class Account {
 			return $this->notice_markup( 'error', __( 'A palavra-passe deve ter pelo menos 8 caracteres.', 'adam-membership' ) );
 		}
 
+		if (
+			! preg_match( '/[a-z]/', $new ) ||
+			! preg_match( '/[A-Z]/', $new ) ||
+			! preg_match( '/[0-9]/', $new ) ||
+			! preg_match( '/[^A-Za-z0-9]/', $new )
+		) {
+			return $this->notice_markup( 'error', __( 'A palavra-passe deve incluir letra minúscula, letra maiúscula, número e símbolo.', 'adam-membership' ) );
+		}
+
 		if ( wp_check_password( $new, $user->user_pass, $user->ID ) ) {
 			return $this->notice_markup( 'error', __( 'A nova palavra-passe deve ser diferente da palavra-passe atual.', 'adam-membership' ) );
 		}
@@ -305,8 +314,16 @@ final class Account {
 			return $this->notice_markup( 'error', __( 'A palavra-passe atual esta incorreta.', 'adam-membership' ) );
 		}
 
-		if ( $new !== $confirm || ! is_email( $new ) || email_exists( $new ) ) {
-			return $this->notice_markup( 'error', __( 'Nao foi possivel iniciar a alteracao de email com os dados indicados.', 'adam-membership' ) );
+		if ( $new !== $confirm ) {
+			return $this->notice_markup( 'error', __( 'Os novos emails não coincidem.', 'adam-membership' ) );
+		}
+
+		if ( ! is_email( $new ) ) {
+			return $this->notice_markup( 'error', __( 'Introduza um endereço de email válido.', 'adam-membership' ) );
+		}
+
+		if ( email_exists( $new ) ) {
+			return $this->notice_markup( 'error', __( 'Já existe uma conta associada a este email.', 'adam-membership' ) );
 		}
 
 		$token = wp_generate_password( 32, false, false );

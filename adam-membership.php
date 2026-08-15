@@ -60,6 +60,10 @@ register_activation_hook(
 			Document\PrivateDocumentSchema::install();
 		}
 
+		if ( class_exists( Finance\FinancialMovementSchema::class ) ) {
+			Finance\FinancialMovementSchema::install();
+		}
+
 		if ( class_exists( Core\MaintenanceService::class ) ) {
 			Core\MaintenanceService::activate();
 		}
@@ -96,6 +100,10 @@ add_action(
 
 		if ( class_exists( Document\PrivateDocumentSchema::class ) ) {
 			Document\PrivateDocumentSchema::maybe_install();
+		}
+
+		if ( class_exists( Finance\FinancialMovementSchema::class ) ) {
+			Finance\FinancialMovementSchema::maybe_install();
 		}
 	},
 	1

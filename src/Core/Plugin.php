@@ -29,6 +29,7 @@ use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Form\MembershipForms;
+use AdamMembership\Finance\FinancialMovementRepository;
 use AdamMembership\Form\NifValidationController;
 use AdamMembership\Form\RegistrationService;
 use AdamMembership\GoogleSheets\GoogleSheetsClient;
@@ -165,7 +166,8 @@ final class Plugin {
 		$member_changes            = new MemberChangeService( $member_change_repository, $members, $email );
 		$renewals                  = new RenewalService( $members, $renewal_repository, $email, $logger, $history, $recognition, $teams, $private_document_repository );
 		$google_sheets_client      = new GoogleSheetsClient( $settings, $logger );
-		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository );
+		$financial_movements       = new FinancialMovementRepository();
+		$google_sheets_sync        = new GoogleSheetsSyncService( $google_sheets_client, $history_repository, $logger, $renewal_repository, $financial_movements );
 		add_action(
 			'adam_membership_member_approved',
 			static function ( \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $logger ): void {
@@ -257,6 +259,7 @@ final class Plugin {
 				$member_changes,
 				$google_sheets_client,
 				$google_sheets_sync,
+				$financial_movements,
 				$private_document_repository,
 				$private_document_storage
 			);

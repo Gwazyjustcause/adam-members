@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const strengthBar = document.getElementById('adam-strength-bar');
 	const form = password.closest('form');
 	const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+	const isAccountSetup = !!(form && form.hasAttribute('data-adam-account-setup'));
+	const accountUsername = isAccountSetup ? form.querySelector('#adam_setup_username') : null;
+	const accountFeedback = isAccountSetup ? form.querySelector('#adam-account-setup-feedback') : null;
+	const initiallyDisabled = !!(submitButton && submitButton.disabled);
 
 	if (!strengthText || !strengthBar) {
 		return;
@@ -93,12 +97,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		strengthText.textContent = labels[Math.max(score, 0)] || 'Muito fraca';
 
-		const isStrongEnough = score >= 3
-			&& checks.length
+		const meetsPasswordRules = checks.length
 			&& checks.lower
 			&& checks.upper
 			&& checks.number
 			&& checks.symbol;
+		// The visible five rules are the shared password contract. The numeric
+		// zxcvbn score is advisory only and is not a second hidden requirement.
+		const isStrongEnough = meetsPasswordRules;
 
 		let confirmValid = true;
 
@@ -109,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				confirmPassword.setCustomValidity('');
 
 				if (confirmFeedback) {
-					confirmFeedback.textContent = '';
+					confirmFeedback.textContent = 'Confirme a palavra-passe.';
 				}
 			} else if (!confirmValid) {
 				confirmPassword.setCustomValidity('As palavras-passe não coincidem.');
@@ -133,12 +139,48 @@ document.addEventListener('DOMContentLoaded', function () {
 		);
 
 		if (submitButton) {
-			submitButton.disabled = !isStrongEnough || (confirmPassword && !confirmValid);
+			if (isAccountSetup) {
+				const blockers = [];
+				const username = accountUsername ? accountUsername.value.trim() : '';
+
+				if ('' === username) {
+					blockers.push('Introduza um nome de utilizador válido.');
+				} else if (username.length < 4) {
+					blockers.push('O nome de utilizador deve ter pelo menos 4 caracteres.');
+				}
+
+				if (!meetsPasswordRules) {
+					blockers.push('A palavra-passe deve cumprir todos os requisitos indicados.');
+				}
+
+				if (!confirmPassword || '' === confirmPassword.value) {
+					blockers.push('Confirme a palavra-passe.');
+				} else if (!confirmValid) {
+					blockers.push('As palavras-passe não coincidem.');
+				}
+
+				submitButton.disabled = initiallyDisabled || blockers.length > 0;
+
+				if (accountFeedback) {
+					accountFeedback.textContent = blockers.length
+						? 'Para concluir, corrija: ' + blockers.join(' ')
+						: 'Todos os dados visíveis estão válidos. Pode concluir o acesso.';
+					accountFeedback.classList.toggle('is-valid', blockers.length === 0);
+					accountFeedback.classList.toggle('has-errors', blockers.length > 0);
+				}
+			} else {
+				submitButton.disabled = !isStrongEnough || (confirmPassword && !confirmValid);
+			}
 			submitButton.setAttribute('aria-disabled', submitButton.disabled ? 'true' : 'false');
 		}
 	}
 
 	password.addEventListener('input', updateState);
+
+	if (accountUsername) {
+		accountUsername.addEventListener('input', updateState);
+		accountUsername.addEventListener('change', updateState);
+	}
 
 	if (confirmPassword) {
 		confirmPassword.addEventListener('input', updateState);

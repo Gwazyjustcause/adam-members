@@ -211,6 +211,15 @@ final class PasswordReset {
 			return $this->notice_markup( 'error', __( 'A palavra-passe deve ter pelo menos 8 caracteres.', 'adam-membership' ) );
 		}
 
+		if (
+			! preg_match( '/[a-z]/', $password1 ) ||
+			! preg_match( '/[A-Z]/', $password1 ) ||
+			! preg_match( '/[0-9]/', $password1 ) ||
+			! preg_match( '/[^A-Za-z0-9]/', $password1 )
+		) {
+			return $this->notice_markup( 'error', __( 'A palavra-passe deve incluir letra minúscula, letra maiúscula, número e símbolo.', 'adam-membership' ) );
+		}
+
 		if ( wp_check_password( $password1, $user->user_pass, $user->ID ) ) {
 			return $this->notice_markup( 'error', __( 'A nova palavra-passe deve ser diferente da palavra-passe atual.', 'adam-membership' ) );
 		}
