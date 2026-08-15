@@ -1037,6 +1037,13 @@
 	margin: 12px 0;
 }
 
+/* The shared correction selector is rendered above the review card. Older
+ * APD review markup may still contain its legacy details form; keep that
+ * duplicate control out of the UI while preserving the stored request data. */
+.adam-apd-review details {
+	display: none;
+}
+
 @media (max-width: 900px) {
 	.adam-apd-review .adam-admin-detail-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));

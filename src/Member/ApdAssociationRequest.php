@@ -28,4 +28,6 @@ final class ApdAssociationRequest {
 	public function requested_at(): string { return (string) ( $this->data['requested_at'] ?? '' ); }
 	public function confirmation_date(): string { return (string) ( $this->data['ana_confirmation_date'] ?? '' ); }
 	public function data(): array { return $this->data; }
+	/** @return array<int,string> */
+	public function correction_fields(): array { return array_values( array_filter( array_map( 'sanitize_key', (array) ( $this->data['correction_fields'] ?? array() ) ) ) ); }
 }

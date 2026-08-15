@@ -17,4 +17,6 @@ final class MemberChangeRequest {
 	public function data(): array { return $this->data; }
 	public function correction_reason(): string { return (string) ( $this->data['correction_reason'] ?? '' ); }
 	public function correction_note(): string { return (string) ( $this->data['correction_note'] ?? '' ); }
+	/** @return array<int,string> */
+	public function correction_fields(): array { return array_values( array_filter( array_map( 'sanitize_key', (array) ( $this->data['correction_fields'] ?? array() ) ) ) ); }
 }

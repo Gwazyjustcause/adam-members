@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Core\CorrectionFieldCatalog;
 use AdamMembership\Emails\EmailService;
 use WP_Error;
 
@@ -57,10 +58,22 @@ final class ApdAssociationService {
 		$updates = array( 'adam_apd_management_status' => Member::APD_MANAGED, 'adam_apd_ana_confirmation_date' => $date, 'adam_external_association_name' => 'ANA', 'adam_external_member_number' => $ana_member_number, 'estado' => Member::STATUS_ACTIVE );
 		$submitted = $request->data()['submitted_data'] ?? array();
 		if ( is_array( $submitted ) ) {
+			if ( isset( $submitted['full_name'] ) && is_string( $submitted['full_name'] ) ) {
+				$name_parts = preg_split( '/\s+/', trim( $submitted['full_name'] ) ) ?: array();
+				$first_name = sanitize_text_field( (string) array_shift( $name_parts ) );
+				$last_name  = sanitize_text_field( implode( ' ', $name_parts ) );
+				update_user_meta( $member->user_id(), 'first_name', $first_name );
+				update_user_meta( $member->user_id(), 'last_name', $last_name );
+				wp_update_user( array( 'ID' => $member->user_id(), 'display_name' => trim( $first_name . ' ' . $last_name ), 'nickname' => trim( $first_name . ' ' . $last_name ) ) );
+			}
+			if ( isset( $submitted['email'] ) && is_email( (string) $submitted['email'] ) ) { wp_update_user( array( 'ID' => $member->user_id(), 'user_email' => sanitize_email( (string) $submitted['email'] ) ) ); }
 			foreach ( array( 'data_nascimento' => 'birth_date', 'genero' => 'gender', 'estado_civil' => 'marital_status', 'profissao' => 'profession', 'naturalidade' => 'birthplace', 'nacionalidade' => 'nationality', 'telefone' => 'phone', 'telefone_fixo' => 'telephone', 'morada' => 'address_line_1', 'morada_linha_2' => 'address_line_2', 'codigo_postal' => 'postcode', 'cidade' => 'city', 'municipio' => 'municipality', 'pais' => 'country', 'cartao_cidadao' => 'citizen_card', 'documento_validade' => 'document_expiry_date', 'documento_local_emissao' => 'document_issuing_place', 'nif' => 'nif', 'equipa' => 'team' ) as $member_field => $submitted_field ) {
 				if ( isset( $submitted[ $submitted_field ] ) ) { $updates[ $member_field ] = sanitize_text_field( (string) $submitted[ $submitted_field ] ); }
 			}
 			if ( ! empty( $submitted['remove_profile_photo'] ) ) { $updates['profile_photo'] = ''; } elseif ( ! empty( $submitted['profile_photo'] ) ) { $updates['profile_photo'] = absint( $submitted['profile_photo'] ); }
+			if ( isset( $submitted['external_association_name'] ) ) { $updates['adam_external_association_name'] = sanitize_text_field( (string) $submitted['external_association_name'] ); }
+			if ( isset( $submitted['external_member_number'] ) ) { $updates['adam_external_member_number'] = sanitize_text_field( (string) $submitted['external_member_number'] ); }
+			if ( isset( $submitted['external_association_proof'] ) ) { $updates['adam_external_association_proof'] = absint( $submitted['external_association_proof'] ); }
 		}
 		$member->save( $updates );
 		$confirmed = $this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CONFIRMED, 'ana_confirmation_date' => $date, 'reviewed_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'reviewed_by' => get_current_user_id() ) );
@@ -96,11 +109,33 @@ final class ApdAssociationService {
 		return true;
 	}
 
-	public function request_correction( int $request_id, string $reason, string $note = '' ): true|WP_Error {
+	public function request_correction( int $request_id, string $reason, string $note = '', array $fields = array() ): true|WP_Error {
 		$request = $this->repository->find( $request_id );
 		if ( null === $request || in_array( $request->status(), array( ApdAssociationRequest::STATUS_CONFIRMED, ApdAssociationRequest::STATUS_REJECTED ), true ) ) { return new WP_Error( 'adam_apd_request_invalid', __( 'Este pedido já não pode ser corrigido.', 'adam-membership' ) ); }
 		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) { return new WP_Error( 'adam_apd_correction_reason', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) ); }
-		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CORRECTION_REQUESTED, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+		$fields = array_values( array_intersect( array_unique( array_map( 'sanitize_key', $fields ) ), array_merge( array_keys( CorrectionFieldCatalog::labels() ), array( 'payment_receipt' ) ) ) );
+		if ( array() === $fields ) { return new WP_Error( 'adam_apd_correction_fields', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
+		$this->repository->update( $request, array( 'status' => ApdAssociationRequest::STATUS_CORRECTION_REQUESTED, 'correction_fields' => $fields, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) ) );
+		return true;
+	}
+
+	/** Resubmit the same APD request after selected member information is corrected. */
+	public function submit_correction( int $request_id, int $user_id, array $submitted, mixed $proof_of_payment = null ): true|WP_Error {
+		$request = $this->repository->find( $request_id );
+		if ( null === $request || $request->user_id() !== $user_id || ApdAssociationRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) { return new WP_Error( 'adam_apd_correction_invalid', __( 'Este pedido já não pode ser corrigido.', 'adam-membership' ) ); }
+		$allowed = $request->correction_fields();
+		$clean = (array) ( $request->data()['submitted_data'] ?? array() );
+		foreach ( $allowed as $field ) {
+			if ( 'payment_receipt' === $field ) {
+				if ( ! is_string( $proof_of_payment ) || '' === trim( $proof_of_payment ) ) { return new WP_Error( 'adam_apd_correction_payment_required', __( 'Envie o comprovativo de pagamento solicitado antes de reenviar o pedido.', 'adam-membership' ) ); }
+				continue;
+			}
+			if ( ! array_key_exists( $field, $submitted ) || ! is_scalar( $submitted[ $field ] ) || '' === trim( (string) $submitted[ $field ] ) ) { return new WP_Error( 'adam_apd_correction_field_required', __( 'Preencha todos os campos solicitados antes de reenviar o pedido.', 'adam-membership' ) ); }
+			$clean[ $field ] = sanitize_text_field( (string) $submitted[ $field ] );
+		}
+		$updates = array( 'status' => ApdAssociationRequest::STATUS_AWAITING_ADAM, 'submitted_data' => $clean, 'correction_resubmitted_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
+		if ( is_string( $proof_of_payment ) && '' !== trim( $proof_of_payment ) ) { $updates['proof_of_payment'] = esc_url_raw( $proof_of_payment ); }
+		$this->repository->update( $request, $updates );
 		return true;
 	}
 }

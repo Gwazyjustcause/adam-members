@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Emails\EmailService;
+use AdamMembership\Core\CorrectionFieldCatalog;
 use AdamMembership\Document\PrivateDocumentRepository;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Team\TeamRepository;
@@ -137,7 +138,7 @@ final class RenewalService {
 		$reason = sanitize_text_field( $reason );
 		$note   = sanitize_textarea_field( $note );
 		$fields = array_values( array_unique( array_filter( array_map( 'sanitize_key', $fields ) ) ) );
-		$available_fields = array_keys( $request->submitted_data() );
+		$available_fields = array_keys( CorrectionFieldCatalog::labels() );
 		if ( '' !== (string) $request->proof_of_payment() ) { $available_fields[] = 'payment_receipt'; }
 		$fields = array_values( array_intersect( $fields, array_map( 'sanitize_key', $available_fields ) ) );
 		if ( '' === trim( $reason ) || ( 'Outro motivo' === $reason && '' === trim( $note ) ) ) {
@@ -169,13 +170,13 @@ final class RenewalService {
 				if ( ! is_scalar( $file_uploads[ $field ] ) || '' === trim( (string) $file_uploads[ $field ] ) ) {
 					return new WP_Error( 'adam_renewal_correction_file_required', __( 'Envie todos os documentos solicitados antes de reenviar o pedido.', 'adam-membership' ) );
 				}
-				$clean[ $field ] = sanitize_text_field( (string) $file_uploads[ $field ] );
+				$clean[ CorrectionFieldCatalog::storage_key( $field ) ] = sanitize_text_field( (string) $file_uploads[ $field ] );
 				continue;
 			}
 			if ( ! array_key_exists( $field, $submitted_data ) || ! is_scalar( $submitted_data[ $field ] ) || '' === trim( (string) $submitted_data[ $field ] ) ) {
 				return new WP_Error( 'adam_renewal_correction_field_required', __( 'Preencha todos os campos solicitados antes de reenviar o pedido.', 'adam-membership' ) );
 			}
-			$clean[ $field ] = sanitize_text_field( (string) $submitted_data[ $field ] );
+			$clean[ CorrectionFieldCatalog::storage_key( $field ) ] = sanitize_text_field( (string) $submitted_data[ $field ] );
 		}
 		if ( array() === $clean && ! in_array( 'payment_receipt', $allowed, true ) ) {
 			return new WP_Error( 'adam_renewal_correction_empty', __( 'Corrija pelo menos um campo antes de reenviar o pedido.', 'adam-membership' ) );

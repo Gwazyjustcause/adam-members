@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AdamMembership\Member;
 
 use AdamMembership\Emails\EmailService;
+use AdamMembership\Core\CorrectionFieldCatalog;
 use WP_Error;
 
 final class MemberChangeService {
@@ -54,7 +55,7 @@ final class MemberChangeService {
 
 	public function approve( int $id ): true|WP_Error {
 		$request = $this->repository->find( $id );
-		if ( null === $request || MemberChangeRequest::STATUS_PENDING !== $request->status() ) {
+		if ( null === $request || ! in_array( $request->status(), array( MemberChangeRequest::STATUS_PENDING, MemberChangeRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
 		}
 		$member = $this->members->find( $request->user_id() );
@@ -64,6 +65,15 @@ final class MemberChangeService {
 		$patch = array();
 		foreach ( $request->changes() as $field => $change ) {
 			$new = $change['new'] ?? '';
+			if ( 'nome' === $field ) {
+				$name_parts = preg_split( '/\s+/', trim( (string) $new ) ) ?: array();
+				$first_name = sanitize_text_field( (string) array_shift( $name_parts ) );
+				$last_name  = sanitize_text_field( implode( ' ', $name_parts ) );
+				update_user_meta( $member->user_id(), 'first_name', $first_name );
+				update_user_meta( $member->user_id(), 'last_name', $last_name );
+				wp_update_user( array( 'ID' => $member->user_id(), 'display_name' => trim( $first_name . ' ' . $last_name ), 'nickname' => trim( $first_name . ' ' . $last_name ) ) );
+				continue;
+			}
 			if ( 'email' === $field ) {
 				$disable_email = static fn(): bool => false;
 				add_filter( 'send_email_change_email', $disable_email );
@@ -85,7 +95,7 @@ final class MemberChangeService {
 
 	public function reject( int $id, string $reason = '', string $note = '' ): true|WP_Error {
 		$request = $this->repository->find( $id );
-		if ( null === $request || MemberChangeRequest::STATUS_PENDING !== $request->status() ) {
+		if ( null === $request || ! in_array( $request->status(), array( MemberChangeRequest::STATUS_PENDING, MemberChangeRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
 		}
 		if ( '' === trim( $reason ) ) { return new WP_Error( 'adam_member_change_rejection_reason', __( 'Indique o motivo da rejeição.', 'adam-membership' ) ); }
@@ -97,7 +107,7 @@ final class MemberChangeService {
 		return true;
 	}
 
-	public function request_correction( int $id, string $reason, string $note = '' ): true|WP_Error {
+	public function request_correction( int $id, string $reason, string $note = '', array $fields = array() ): true|WP_Error {
 		$request = $this->repository->find( $id );
 		if ( null === $request || ! in_array( $request->status(), array( MemberChangeRequest::STATUS_PENDING, MemberChangeRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_member_change_not_pending', __( 'Pedido de alteração inválido.', 'adam-membership' ) );
@@ -105,7 +115,18 @@ final class MemberChangeService {
 		if ( '' === trim( $reason ) || ( 'Outro motivo' === trim( $reason ) && '' === trim( $note ) ) ) {
 			return new WP_Error( 'adam_member_change_correction_reason', __( 'Indique o motivo e, quando aplicável, uma explicação.', 'adam-membership' ) );
 		}
-		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_CORRECTION_REQUESTED, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'correction_requested_by' => get_current_user_id() ) );
+		$fields = array_values( array_intersect( array_unique( array_map( 'sanitize_key', $fields ) ), array_keys( CorrectionFieldCatalog::labels() ) ) );
+		if ( array() === $fields ) { return new WP_Error( 'adam_member_change_correction_fields', __( 'Selecione pelo menos um campo ou documento a corrigir.', 'adam-membership' ) ); }
+		$member = $this->members->find( $request->user_id() );
+		if ( null === $member ) { return new WP_Error( 'adam_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
+		$changes = $request->changes();
+		foreach ( $fields as $field ) {
+			$storage = CorrectionFieldCatalog::storage_key( $field );
+			if ( isset( $changes[ $storage ] ) ) { continue; }
+			$old = 'email' === $field ? $member->email() : CorrectionFieldCatalog::value( $member, $field );
+			$changes[ $storage ] = array( 'old' => $old, 'new' => $old );
+		}
+		$this->repository->update( $request, array( 'status' => MemberChangeRequest::STATUS_CORRECTION_REQUESTED, 'changes' => $changes, 'correction_fields' => $fields, 'correction_reason' => sanitize_text_field( $reason ), 'correction_note' => sanitize_textarea_field( $note ), 'correction_requested_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ), 'correction_requested_by' => get_current_user_id() ) );
 		return true;
 	}
 

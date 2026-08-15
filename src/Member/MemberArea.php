@@ -16,6 +16,7 @@ use AdamMembership\Communication\CommunicationPreferencesController;
 use AdamMembership\Core\SettingsRepository;
 use AdamMembership\Core\ManagedPages;
 use AdamMembership\Core\DisplayLabels;
+use AdamMembership\Core\CorrectionFieldCatalog;
 use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\Document\Document;
@@ -2478,14 +2479,14 @@ final class MemberArea {
 		}
 
 		$settings     = $this->settings->membership_form_settings();
-		$configs      = (array) ( $settings['registration_fields'] ?? array() );
+		$configs      = CorrectionFieldCatalog::definitions( $settings );
 		$submitted    = $request->submitted_data();
 		$allowed      = array_values( array_unique( array_filter( $request->correction_fields() ) ) );
 		$file_fields  = array( 'payment_receipt', 'adam_external_association_proof', 'external_association_proof', 'profile_photo' );
 		$definitions  = array();
 		foreach ( $allowed as $key ) {
 			$config = is_array( $configs[ $key ] ?? null ) ? $configs[ $key ] : array();
-			$type   = in_array( $key, $file_fields, true ) ? 'file' : (string) ( $config['type'] ?? 'text' );
+			$type   = in_array( $key, $file_fields, true ) || CorrectionFieldCatalog::is_file( $key ) ? 'file' : (string) ( $config['type'] ?? 'text' );
 			if ( 'upload' === $type ) { $type = 'file'; }
 			$definitions[ $key ] = array(
 				'label'   => (string) ( $config['label'] ?? DisplayLabels::field( $key ) ),
@@ -2541,7 +2542,7 @@ final class MemberArea {
 				<?php echo wp_kses_post( $message ); ?>
 				<div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div>
 				<form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_renewal_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid">
-				<?php foreach ( $allowed as $key ) : $definition = $definitions[ $key ]; $value = $submitted[ $key ] ?? ''; ?>
+			<?php foreach ( $allowed as $key ) : $definition = $definitions[ $key ] ?? array( 'label' => CorrectionFieldCatalog::label( $key ), 'type' => 'text', 'options' => '', 'help' => '' ); $storage_key = CorrectionFieldCatalog::storage_key( $key ); $value = array_key_exists( $storage_key, $submitted ) ? $submitted[ $storage_key ] : CorrectionFieldCatalog::value( $member, $key ); ?>
 					<?php if ( 'payment_receipt' === $key || 'file' === $definition['type'] ) : ?>
 						<label class="adam-form-field"><span><?php echo esc_html( $definition['label'] ); ?></span><?php if ( ( 'payment_receipt' === $key && is_scalar( $request->proof_of_payment() ) && '' !== (string) $request->proof_of_payment() ) || ( 'payment_receipt' !== $key && is_scalar( $value ) && '' !== (string) $value ) ) : ?><small>Documento atual preservado; envie o novo ficheiro apenas se foi solicitado.</small><?php endif; ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="payment_receipt" === $key || str_contains( $key, 'proof' ) ? ".pdf,.jpg,.jpeg,.png,.webp" : ".jpg,.jpeg,.png,.webp" required></label>
 					<?php elseif ( in_array( $definition['type'], array( 'select', 'radio' ), true ) ) : ?>
@@ -2754,13 +2755,16 @@ final class MemberArea {
 		if ( null === $request || $request->user_id() !== $member->user_id() || MemberChangeRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) {
 			return $this->render_not_found();
 		}
+		if ( $request->correction_fields() ) { return $this->render_full_member_correction_page( $member, $request ); }
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_member_correction_submit'] ) ) {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_member_correction_' . $request_id ) ) {
 				$message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' );
 			} else {
 				$changes = array();
+				$selected_fields = $request->correction_fields();
 				foreach ( $request->changes() as $field => $change ) {
+					if ( array() !== $selected_fields && ! in_array( CorrectionFieldCatalog::canonical_key( (string) $field ), $selected_fields, true ) ) { continue; }
 					$value = sanitize_text_field( wp_unslash( $_POST[ $field ] ?? '' ) );
 					$old = $change['old'] ?? '';
 					if ( (string) $value !== (string) ( $change['new'] ?? '' ) ) { $changes[ $field ] = array( 'old' => $old, 'new' => $value ); }
@@ -2771,13 +2775,48 @@ final class MemberArea {
 		}
 		ob_start(); ?>
 		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido</h2><p>Atualize a informação indicada pela ADAM e volte a enviar o pedido para análise.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div><form method="post"><?php wp_nonce_field( 'adam_member_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid">
-		<?php foreach ( $request->changes() as $field => $change ) : ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) ( $change['new'] ?? '' ) ); ?>"><small>Valor anteriormente enviado: <?php echo esc_html( DisplayLabels::value( (string) $field, $change['new'] ?? '' ) ); ?></small></label><?php endforeach; ?></div><button class="button button-primary" name="adam_member_correction_submit" value="1">Enviar correção</button></form></section></div>
+		<?php $selected_fields = $request->correction_fields(); foreach ( $request->changes() as $field => $change ) : if ( array() !== $selected_fields && ! in_array( CorrectionFieldCatalog::canonical_key( (string) $field ), $selected_fields, true ) ) { continue; } $canonical = CorrectionFieldCatalog::canonical_key( (string) $field ); ?><label class="adam-form-field"><?php echo esc_html( CorrectionFieldCatalog::label( $canonical ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) ( $change['new'] ?? '' ) ); ?>"><small>Valor anteriormente enviado: <?php echo esc_html( DisplayLabels::value( $canonical, $change['new'] ?? '' ) ); ?></small></label><?php endforeach; ?></div><button class="button button-primary" name="adam_member_correction_submit" value="1">Enviar correção</button></form></section></div>
 		<?php return (string) ob_get_clean();
+	}
+
+	/** Render a member-change correction from the shared canonical field catalogue. */
+	private function render_full_member_correction_page( Member $member, MemberChangeRequest $request ): string {
+		$definitions = CorrectionFieldCatalog::definitions( $this->settings->membership_form_settings() );
+		$allowed = array_values( array_intersect( $request->correction_fields(), array_keys( $definitions ) ) );
+		$message = '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_member_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_member_correction_' . $request->id() ) ) { $message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' ); }
+			else {
+				$changes = array();
+				foreach ( $allowed as $key ) {
+					$storage = CorrectionFieldCatalog::storage_key( $key );
+					$old = $request->changes()[ $storage ]['old'] ?? CorrectionFieldCatalog::value( $member, $key );
+					if ( CorrectionFieldCatalog::is_file( $key ) ) {
+						$mimes = 'external_association_proof' === $key ? array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) : array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+						$check = SharedFieldValidator::validate_upload( $_FILES[ $key ] ?? array(), $mimes, true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+						require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
+						$upload = media_handle_upload( $key, 0, array(), array( 'test_form' => false, 'mimes' => $mimes ) );
+						if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+						$value = absint( $upload );
+					} else {
+						$value = sanitize_text_field( wp_unslash( $_POST[ $key ] ?? '' ) );
+						$check = SharedFieldValidator::validate( $key, $value, $definitions[ $key ], true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+					}
+					$changes[ $storage ] = array( 'old' => $old, 'new' => $value );
+				}
+				if ( '' === $message ) { $result = $this->member_changes->submit_correction( $request->id(), $member->user_id(), $changes ); if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); } else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $request->id() ) ) ); exit; } }
+			}
+		}
+		ob_start();
+		?><div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido</h2><p>Confirme ou corrija apenas a informação indicada pela ADAM.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( $request->correction_reason() ); ?><?php if ( $request->correction_note() ) : ?> — <?php echo esc_html( $request->correction_note() ); ?><?php endif; ?></p></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_member_correction_' . $request->id() ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>"><div class="adam-form-grid"><?php foreach ( $allowed as $key ) : $storage = CorrectionFieldCatalog::storage_key( $key ); $value = $request->changes()[ $storage ]['new'] ?? CorrectionFieldCatalog::value( $member, $key ); ?><label class="adam-form-field"><span><?php echo esc_html( (string) $definitions[ $key ]['label'] ); ?></span><?php if ( CorrectionFieldCatalog::is_file( $key ) ) : ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="external_association_proof" === $key ? ".pdf,.jpg,.jpeg,.png,.webp" : ".jpg,.jpeg,.png,.webp" required><?php else : ?><input type="text" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( is_scalar( $value ) ? (string) $value : '' ); ?>" required><?php endif; ?></label><?php endforeach; ?></div><button class="button button-primary" name="adam_member_correction_submit" value="1">Enviar correção</button></form></section></div><?php
+		return (string) ob_get_clean();
 	}
 
 	private function render_registration_correction_page( Member $member ): string {
 		$settings = $this->settings->membership_form_settings();
-		$fields = (array) ( $settings['registration_fields'] ?? array() );
+		$fields = CorrectionFieldCatalog::definitions( $settings );
 		$stored_fields = $member->field( 'adam_correction_fields' );
 		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
 		$active_round = absint( $member->field( 'adam_correction_active_round' ) );
@@ -2806,7 +2845,7 @@ final class MemberArea {
 	 */
 	private function render_registration_correction_v2( Member $member ): string {
 		$settings = $this->settings->membership_form_settings();
-		$fields   = (array) ( $settings['registration_fields'] ?? array() );
+		$fields   = CorrectionFieldCatalog::definitions( $settings );
 		$stored  = $member->field( 'adam_correction_fields' );
 		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
 		$active  = absint( $member->field( 'adam_correction_active_round' ) );
@@ -2963,6 +3002,7 @@ final class MemberArea {
 	private function render_apd_correction_page( Member $member, int $request_id ): string {
 		$request = $this->apd_association->repository()->find( $request_id );
 		if ( null === $request || $request->user_id() !== $member->user_id() || ApdAssociationRequest::STATUS_CORRECTION_REQUESTED !== $request->status() ) { return $this->render_not_found(); }
+		if ( $request->correction_fields() ) { return $this->render_apd_full_correction_page( $member, $request ); }
 		$message = '';
 		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_apd_correction_submit'] ) ) {
 			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_correction_' . $request_id ) ) { $message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' ); }
@@ -2976,6 +3016,62 @@ final class MemberArea {
 		$data = (array) ( $request->data()['submitted_data'] ?? array() ); ob_start(); ?>
 		<?php echo wp_kses_post( $message ); ?>
 		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido APD / ANA</h2><p><?php echo esc_html( (string) ( $request->data()['correction_note'] ?? $request->data()['correction_reason'] ?? '' ) ); ?></p></div></section><section class="adam-card adam-form-card adam-public-form"><form method="post"><?php wp_nonce_field( 'adam_apd_correction_' . $request_id ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request_id ); ?>"><div class="adam-form-grid"><?php foreach ( $data as $field => $value ) : if ( ! is_scalar( $value ) ) { continue; } ?><label class="adam-form-field"><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?><input type="text" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) $value ); ?>"></label><?php endforeach; ?></div><button class="button button-primary" name="adam_apd_correction_submit" value="1">Enviar correção</button></form></section></div><?php return (string) ob_get_clean();
+	}
+
+	/** Render APD correction using the same canonical member-information catalogue. */
+	private function render_apd_full_correction_page( Member $member, ApdAssociationRequest $request ): string {
+		$settings = $this->settings->membership_form_settings();
+		$definitions = CorrectionFieldCatalog::definitions( $settings );
+		if ( in_array( 'payment_receipt', $request->correction_fields(), true ) ) { $definitions['payment_receipt'] = array( 'label' => 'Comprovativo de pagamento', 'type' => 'file', 'required' => true ); }
+		$allowed = array_values( array_intersect( $request->correction_fields(), array_keys( $definitions ) ) );
+		$data = (array) ( $request->data()['submitted_data'] ?? array() );
+		$proof = (string) ( $request->data()['proof_of_payment'] ?? '' );
+		$message = '';
+		if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && isset( $_POST['adam_apd_correction_submit'] ) ) {
+			if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'adam_apd_correction_' . $request->id() ) ) { $message = $this->notice_markup( 'error', 'Não foi possível validar o pedido.' ); }
+			else {
+				$values = array();
+				$new_proof = null;
+				foreach ( $allowed as $key ) {
+					if ( 'payment_receipt' === $key ) {
+						$mimes = array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+						$check = SharedFieldValidator::validate_upload( $_FILES[ $key ] ?? array(), $mimes, true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+						require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
+						$upload = media_handle_upload( $key, 0, array(), array( 'test_form' => false, 'mimes' => $mimes ) );
+						if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+						$new_proof = (string) $upload;
+						continue;
+					}
+					$raw = wp_unslash( $_POST[ $key ] ?? '' );
+					if ( CorrectionFieldCatalog::is_file( $key ) ) {
+						$mimes = 'external_association_proof' === $key ? array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) : array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' );
+						$check = SharedFieldValidator::validate_upload( $_FILES[ $key ] ?? array(), $mimes, true );
+						if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+						require_once ABSPATH . 'wp-admin/includes/file.php'; require_once ABSPATH . 'wp-admin/includes/media.php'; require_once ABSPATH . 'wp-admin/includes/image.php';
+						$upload = media_handle_upload( $key, 0, array(), array( 'test_form' => false, 'mimes' => $mimes ) );
+						if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+						$values[ $key ] = absint( $upload );
+						continue;
+					}
+					if ( 'citizen_card' === $key ) { $raw = IdentificationValidator::normalize( is_scalar( $raw ) ? (string) $raw : '' ); }
+					$check = SharedFieldValidator::validate( $key, $raw, $definitions[ $key ], true );
+					if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
+					$values[ $key ] = is_scalar( $raw ) ? sanitize_text_field( (string) $raw ) : '';
+				}
+				if ( '' === $message ) {
+					$result = $this->apd_association->submit_correction( $request->id(), $member->user_id(), $values, $new_proof );
+					if ( is_wp_error( $result ) ) { $message = $this->notice_markup( 'error', $result->get_error_message() ); }
+					else { wp_safe_redirect( $this->member_area_url( array( 'view' => 'member-update', 'member_update_confirmation' => '1', 'request_id' => $request->id() ) ) ); exit; }
+				}
+			}
+		}
+		ob_start();
+		?>
+		<div class="adam-member-area adam-account-page"><section class="adam-member-hero adam-account-hero"><div><p class="adam-eyebrow">CORRIGIR PEDIDO</p><h2>Corrigir pedido APD / ANA</h2><p>Confirme ou corrija apenas a informação indicada pela ADAM.</p></div></section><section class="adam-card adam-form-card adam-public-form"><?php echo wp_kses_post( $message ); ?><div class="adam-notice adam-notice--warning"><strong>Correção solicitada</strong><p><?php echo esc_html( (string) ( $request->data()['correction_reason'] ?? '' ) ); ?><?php if ( ! empty( $request->data()['correction_note'] ) ) : ?> — <?php echo esc_html( (string) $request->data()['correction_note'] ); ?><?php endif; ?></p></div><form method="post" enctype="multipart/form-data"><?php wp_nonce_field( 'adam_apd_correction_' . $request->id() ); ?><input type="hidden" name="request_id" value="<?php echo esc_attr( (string) $request->id() ); ?>"><div class="adam-form-grid">
+		<?php foreach ( $allowed as $key ) : $value = array_key_exists( $key, $data ) ? $data[ $key ] : CorrectionFieldCatalog::value( $member, $key ); $definition = $definitions[ $key ]; ?><label class="adam-form-field"><span><?php echo esc_html( (string) $definition['label'] ); ?></span><?php if ( CorrectionFieldCatalog::is_file( $key ) ) : ?><input type="file" name="<?php echo esc_attr( $key ); ?>" accept="payment_receipt" === $key || "external_association_proof" === $key ? ".pdf,.jpg,.jpeg,.png,.webp" : ".jpg,.jpeg,.png,.webp" required><?php else : ?><input type="<?php echo esc_attr( in_array( (string) ( $definition['type'] ?? '' ), array( 'date', 'email', 'number', 'tel' ), true ) ? (string) $definition['type'] : 'text' ); ?>" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( is_scalar( $value ) ? (string) $value : '' ); ?>" required><?php endif; ?></label><?php endforeach; ?></div><button class="button button-primary" name="adam_apd_correction_submit" value="1">Enviar correção</button></form></section></div>
+		<?php
+		return (string) ob_get_clean();
 	}
 
 	private function render_member_update_confirmation_page( Member $member, int $request_id ): string {
