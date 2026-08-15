@@ -56,7 +56,8 @@ final class StatisticsService {
 	 * @return array<string, mixed>
 	 */
 	public function build_report( array $range ): array {
-		$members      = $this->members->all_members();
+		$members      = $this->members->statistical_members();
+		$member_ids   = array_fill_keys( array_map( static fn ( Member $member ): int => $member->user_id(), $members ), true );
 		$renewals     = $this->renewals->admin_requests();
 		$events       = $this->events->admin_events();
 		$checkins     = $this->events->repository()->query_checkins();
@@ -64,6 +65,10 @@ final class StatisticsService {
 		$rewards      = $this->rewards->admin_rewards();
 		$redemptions  = $this->rewards->admin_redemptions();
 		$announcements = $this->announcements->admin_list();
+		$renewals     = array_values( array_filter( $renewals, static fn ( RenewalRequest $request ): bool => isset( $member_ids[ $request->user_id() ] ) ) );
+		$checkins     = array_values( array_filter( $checkins, static fn ( EventCheckIn $checkin ): bool => isset( $member_ids[ $checkin->member_id() ] ) ) );
+		$points       = array_values( array_filter( $points, static fn ( PointsEntry $entry ): bool => isset( $member_ids[ $entry->member_id() ] ) ) );
+		$redemptions  = array_values( array_filter( $redemptions, static fn ( RewardRedemption $redemption ): bool => isset( $member_ids[ $redemption->member_id() ] ) ) );
 
 		$members_in_range     = array_values( array_filter( $members, fn ( Member $member ): bool => $this->timestamp_in_range( $member->registration_timestamp(), $range ) ) );
 		$renewals_in_range    = array_values( array_filter( $renewals, fn ( RenewalRequest $request ): bool => $this->datetime_in_range( $request->submitted_at(), $range ) ) );

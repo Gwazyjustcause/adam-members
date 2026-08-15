@@ -83,6 +83,28 @@ final class MemberRepository {
 	}
 
 	/**
+	 * Get members eligible for membership statistics and reporting.
+	 *
+	 * WordPress administrators are deliberately excluded even when they have
+	 * ADAM membership metadata attached to their account.
+	 *
+	 * @return array<int, Member>
+	 */
+	public function statistical_members(): array {
+		return $this->query_members(
+			array(
+				'role__not_in' => array( 'administrator' ),
+				'meta_query'   => array(
+					array(
+						'key'     => 'estado',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+	}
+
+	/**
 	 * Get all founding members ordered by founder number.
 	 *
 	 * @return array<int, Member>
