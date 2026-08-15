@@ -231,10 +231,16 @@ final class GoogleSheetsClient {
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
+		$api_row_index = $row_number - 1;
+		$table_start = absint( $table['range']['startRowIndex'] ?? 0 );
+		$table_end   = absint( $table['range']['endRowIndex'] ?? 0 );
+		if ( $table_end <= $table_start || $api_row_index < $table_start || $api_row_index >= $table_end ) {
+			return new WP_Error( 'adam_google_sheets_row_outside_table', __( 'O movimento encontrado não pertence ao intervalo atual da QuotasTable. A eliminação foi cancelada.', 'adam-membership' ) );
+		}
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
-			array( 'requests' => array( array( 'deleteDimension' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $row_number - 1, 'endIndex' => $row_number ) ) ) ) ),
+			array( 'requests' => array( array( 'deleteDimension' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $api_row_index, 'endIndex' => $api_row_index + 1 ) ) ) ) ),
 			self::WRITE_SCOPE,
 			array(),
 			$request_id,
@@ -253,7 +259,16 @@ final class GoogleSheetsClient {
 				return new WP_Error( 'adam_google_sheets_delete_unconfirmed', __( 'A linha financeira continua presente. O movimento local não foi eliminado.', 'adam-membership' ) );
 			}
 		}
-		return array( 'configured' => true, 'row_found' => true, 'deleted' => true, 'row_number' => $row_number );
+		$table_after = $this->table_metadata( $request_id, 'delete_confirmation_metadata' );
+		if ( is_wp_error( $table_after ) ) {
+			return new WP_Error( 'adam_google_sheets_delete_unconfirmed', __( 'A linha foi eliminada, mas não foi possível confirmar o intervalo atual da QuotasTable. O movimento local não foi eliminado.', 'adam-membership' ) );
+		}
+		$after_start = absint( $table_after['range']['startRowIndex'] ?? 0 );
+		$after_end   = absint( $table_after['range']['endRowIndex'] ?? 0 );
+		if ( $after_start !== $table_start || $after_end !== $table_end - 1 ) {
+			return new WP_Error( 'adam_google_sheets_table_range_unconfirmed', __( 'A linha foi eliminada, mas o intervalo da QuotasTable não foi confirmado. O movimento local não foi eliminado.', 'adam-membership' ) );
+		}
+		return array( 'configured' => true, 'row_found' => true, 'deleted' => true, 'row_number' => $row_number, 'table' => $table_after );
 	}
 
 	/** Convert ordered A:L values to Sheets user-entered cell values. */
