@@ -178,9 +178,8 @@ final class Plugin {
 			'adam_membership_member_approved',
 			static function ( \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $logger ): void {
 				try {
-					$google_sheets_sync->sync_registration( $member );
+					$google_sheets_sync->ensure_registration_movement( $member );
 				} catch ( \Throwable $exception ) {
-					$google_sheets_client->log_exception( (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), 'approval_hook', $exception );
 					$logger->error( 'Google Sheets registration synchronization threw an exception.', array( 'request_id' => (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},
@@ -191,9 +190,8 @@ final class Plugin {
 			'adam_membership_renewal_approved',
 			static function ( \AdamMembership\Member\RenewalRequest $request, \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $logger ): void {
 				try {
-					$google_sheets_sync->sync_renewal( $request, $member );
+					$google_sheets_sync->ensure_renewal_movement( $request, $member );
 				} catch ( \Throwable $exception ) {
-					$google_sheets_client->log_exception( $request->request_uuid(), 'approval_hook', $exception );
 					$logger->error( 'Google Sheets renewal synchronization threw an exception.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},
@@ -202,11 +200,10 @@ final class Plugin {
 		);
 		add_action(
 			'adam_membership_apd_association_approved',
-			static function ( \AdamMembership\Member\ApdAssociationRequest $request, \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $google_sheets_client, $logger ): void {
+			static function ( \AdamMembership\Member\ApdAssociationRequest $request, \AdamMembership\Member\Member $member ) use ( $google_sheets_sync, $logger ): void {
 				try {
-					$google_sheets_sync->sync_apd_association( $request, $member );
+					$google_sheets_sync->ensure_apd_movement( $request, $member );
 				} catch ( \Throwable $exception ) {
-					$google_sheets_client->log_exception( $request->request_uuid(), 'approval_hook', $exception );
 					$logger->error( 'Google Sheets APD synchronization threw an exception.', array( 'request_id' => $request->request_uuid(), 'error_code' => 'adam_google_sheets_exception' ) );
 				}
 			},

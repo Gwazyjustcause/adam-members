@@ -24,7 +24,7 @@ foreach ( array( 'request_uuid', 'quota_type', 'membership_year', 'payment_amoun
 adam_apd_assert( str_contains( $service, "'quota_type' => 'Associar APD/ANA'" ), 'APD classification is explicit.' );
 adam_apd_assert( str_contains( $service, "'request_uuid' => 'apd:'" ), 'APD receives an independent canonical ID.' );
 adam_apd_assert( str_contains( $service, "do_action( 'adam_membership_apd_association_approved'" ), 'APD sync starts only after confirmation.' );
-adam_apd_assert( str_contains( $plugin, 'sync_apd_association' ), 'Plugin registers APD approval synchronization.' );
+adam_apd_assert( str_contains( $plugin, 'ensure_apd_movement' ) && ! str_contains( $plugin, '$google_sheets_sync->sync_apd_association' ), 'Plugin registers APD approval movement persistence without automatic Google synchronization.' );
 adam_apd_assert( str_contains( $admin, "'apd' === " . '$type' ), 'APD retry uses the canonical sync service.' );
 adam_apd_assert( str_contains( $admin, 'google_sheets_quota_type' ), 'Admin panel resolves the persisted quota type.' );
 adam_apd_assert( str_contains( $admin, "'Não resolvido'" ), 'Unresolved quota types are shown safely.' );

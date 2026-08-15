@@ -30,7 +30,7 @@ adam_finance_assert( ! str_contains( $sync, "'request_id'     => \$request->requ
 adam_finance_assert( str_contains( $sync, "'movement_id' => \$record->movement_id()" ), 'The Google sync payload preserves the FinancialMovement ID.' );
 adam_finance_assert( str_contains( $sync, 'sync_manual' ), 'Manual movements use the same sync path.' );
 adam_finance_assert( str_contains( $admin, 'create_manual_financial_movement' ) && str_contains( $admin, 'Selecionar outro tipo cria um novo movimento manual' ), 'Changing type creates a manual movement and explains the consequence.' );
-adam_finance_assert( str_contains( $admin, "'manual' === \$type" ) && str_contains( $admin, 'sync_manual' ), 'Manual movements can be edited and retried without membership side effects.' );
+adam_finance_assert( str_contains( $admin, "'manual' === \$type" ) && str_contains( $admin, 'sync_persisted_movement' ), 'Manual movements can be edited and retried without membership side effects.' );
 adam_finance_assert( str_contains( $sync, 'ensure_registration_movement' ) && str_contains( $sync, 'ensure_renewal_movement' ) && str_contains( $sync, 'ensure_apd_movement' ), 'Complete payment data can persist all workflow movement types without approval.' );
 adam_finance_assert( str_contains( $admin, 'ensure_registration_movement' ) && str_contains( $admin, 'ensure_renewal_movement' ), 'Saving payment data persists the movement locally without approving the request.' );
 adam_finance_assert( str_contains( $repository, 'ORDER BY membership_year DESC' ) && str_contains( $repository, 'payment_date DESC' ) && str_contains( $repository, 'created_at DESC' ), 'The current panel selects the newest movement deterministically.' );

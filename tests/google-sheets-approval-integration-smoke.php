@@ -35,7 +35,8 @@ adam_phase4_assert( str_contains( $renewal, 'return $this->approve( $request_id 
 
 adam_phase4_assert( str_contains( $plugin, "'adam_membership_member_approved'" ) && str_contains( $plugin, "'adam_membership_renewal_approved'" ), 'Plugin bootstrap registers both post-approval integrations.' );
 adam_phase4_assert( str_contains( $plugin, 'catch ( \\Throwable $exception )' ), 'Integration exceptions are isolated from approval.' );
-adam_phase4_assert( str_contains( $plugin, 'sync_registration' ) && str_contains( $plugin, 'sync_renewal' ), 'Both approved financial movement types are synchronized.' );
+adam_phase4_assert( str_contains( $plugin, 'ensure_registration_movement' ) && str_contains( $plugin, 'ensure_renewal_movement' ) && str_contains( $plugin, 'ensure_apd_movement' ), 'Approval preserves movements without automatically synchronizing Google Sheets.' );
+adam_phase4_assert( ! str_contains( $plugin, '$google_sheets_sync->sync_registration' ) && ! str_contains( $plugin, '$google_sheets_sync->sync_renewal' ) && ! str_contains( $plugin, '$google_sheets_sync->sync_apd_association' ), 'Approval hooks do not perform automatic Google synchronization.' );
 adam_phase4_assert( str_contains( $sync, 'is_configured' ) && str_contains( $sync, 'STATUS_INACTIVE' ), 'Disabled integration is recorded as inactive without an HTTP attempt.' );
 adam_phase4_assert( str_contains( $sync, 'adam_google_sheets_payment_data_missing' ) && str_contains( $sync, 'missing_fields' ), 'Missing financial data remains pending and identifies the missing fields.' );
 adam_phase4_assert( str_contains( $client, '401 === $status' ) && str_contains( $client, 'unavailable' ), 'HTTP failures use safe provider-independent errors.' );
