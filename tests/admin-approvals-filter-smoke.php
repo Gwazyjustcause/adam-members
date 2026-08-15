@@ -17,8 +17,10 @@ adam_approvals_filter_assert( str_contains( $source, '$this->normalize_approval_
 adam_approvals_filter_assert( str_contains( $source, "'registrations' => 'Inscrições'" ) && str_contains( $source, "'renewals' => 'Renovações'" ) && str_contains( $source, "'changes' => 'Alterações de dados'" ) && str_contains( $source, "'apd' => 'APD / ANA'" ), 'All approval categories must be present.' );
 adam_approvals_filter_assert( str_contains( $source, "'registration' => 'registrations'" ) && str_contains( $source, "'renewal' => 'renewals'" ) && str_contains( $source, "'memberchange' => 'changes'" ) && str_contains( $source, "'apdassociation' => 'apd'" ), 'Known legacy/current type names must normalize safely.' );
 adam_approvals_filter_assert( str_contains( $source, 'is-active' ) && str_contains( $source, 'aria-current=' ), 'The selected category must have an accessible active state.' );
+adam_approvals_filter_assert( str_contains( $source, "\$_GET['approval_category'] ?? \$_GET['approval_type'] ?? 'all'" ), 'The dedicated category parameter must be preferred while accepting legacy approval URLs.' );
+adam_approvals_filter_assert( str_contains( $source, "'approval_category' => \$key" ), 'Category links must submit the dedicated category parameter.' );
 adam_approvals_filter_assert( str_contains( $source, 'Não existem pedidos pendentes na categoria' ), 'Filtered empty states must explain the selected category.' );
-adam_approvals_filter_assert( substr_count( $source, "'approval_type' => '" ) >= 4, 'Review links must preserve their canonical category.' );
+adam_approvals_filter_assert( substr_count( $source, "'approval_category' => '" ) >= 4, 'Review links must preserve their canonical category.' );
 adam_approvals_filter_assert( str_contains( $source, '$requested_id = absint( $_GET[\'request_id\'] ?? 0 );' ), 'The data-change review route must honor the selected request ID.' );
 
 echo "Admin approvals filter smoke tests passed.\n";
