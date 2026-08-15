@@ -43,6 +43,7 @@ adam_sheets_assert( 5 === $plan['duplicate_row'], 'An existing identical request
 adam_sheets_assert( 'renewal:existing' !== (string) $row( 'renewal:other' )[10], 'A renewal for the same member can have a different request ID.' );
 adam_sheets_assert( GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same' ) ), 'An existing ID with identical data is idempotent.' );
 adam_sheets_assert( ! GoogleSheetsTablePlanner::rows_match( $row( 'registration:same' ), $row( 'registration:same', 'Changed' ) ), 'An existing ID with different data requires an update.' );
+adam_sheets_assert( GoogleSheetsTablePlanner::rows_match( array( 'Inscrição ADAM', '42', 'Member', 2027, 'Inscrição', 'Efetivo', '€ 25,00', '15/12/2026', 'MB WAY', 'Pago', 'registration:formatted', '' ), $row( 'registration:formatted' ) ), 'Formatted currency and dd/mm/yyyy date values compare equal to their numeric canonical values.' );
 adam_sheets_assert( 'A4:L25' === GoogleSheetsTablePlanner::expanded_range( 'A4:L24' ), 'The first table expansion ends at row 25.' );
 adam_sheets_assert( 'A4:L26' === GoogleSheetsTablePlanner::expanded_range( GoogleSheetsTablePlanner::expanded_range( 'A4:L24' ) ), 'The second table expansion ends at row 26.' );
 
@@ -55,6 +56,7 @@ adam_sheets_assert( str_contains( $service_source, 'update_table_row' ), 'An exi
 adam_sheets_assert( str_contains( $service_source, 'finally' ) && str_contains( $service_source, 'delete_option( $lock_key )' ), 'The per-request lock is released after concurrent attempts.' );
 adam_sheets_assert( str_contains( $service_source, "'Pago'" ), 'Financial status is Pago.' );
 adam_sheets_assert( str_contains( $service_source, '(float) str_replace' ), 'Amount is sent as a numeric value.' );
-adam_sheets_assert( str_contains( $client_source, 'appendCells' ) && str_contains( $client_source, "'sheetId' => \$table['sheetId']" ), 'Writes target the real Google Sheets grid by sheetId.' );
+adam_sheets_assert( str_contains( $client_source, 'updateTable' ) && str_contains( $client_source, 'copyPaste' ) && str_contains( $client_source, "'sheetId' => \$table['sheetId']" ), 'New rows expand the real table and use the resolved Google Sheets grid ID.' );
+adam_sheets_assert( str_contains( $client_source, "'pattern' => 'dd/mm/yyyy'" ) || str_contains( $client_source, 'date_serial' ), 'Payment dates remain real numeric Sheets dates.' );
 
 echo "Google Sheets table planner smoke tests passed.\n";

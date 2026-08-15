@@ -114,7 +114,7 @@ final class GoogleSheetsClient {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public function read_values( string $range, string $request_id = '' ): array|WP_Error {
-		return $this->request_values( 'GET', $range, array(), self::READONLY_SCOPE, array( 'valueRenderOption' => 'FORMULA' ), $request_id, 'read_values' );
+		return $this->request_values( 'GET', $range, array(), self::READONLY_SCOPE, array( 'valueRenderOption' => 'UNFORMATTED_VALUE' ), $request_id, 'read_values' );
 	}
 
 	/**
@@ -140,26 +140,56 @@ final class GoogleSheetsClient {
 	}
 
 	/** Append into the real Google Sheets table, not merely into a formatted range. */
-	public function append_table_row( array $row, string $request_id = '' ): array|WP_Error {
+	public function append_table_row( array $row, string $request_id = '', int $target_row = 0 ): array|WP_Error {
 		$table = $this->table_metadata( $request_id, 'table_metadata_before_write' );
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
+		$table_range = (array) ( $table['range'] ?? array() );
+		$table_start = absint( $table_range['startRowIndex'] ?? 0 );
+		$table_end = absint( $table_range['endRowIndex'] ?? 0 );
+		$target_api_row = $target_row > 0 ? $target_row - 1 : $table_end;
+		if ( $target_api_row > $table_end ) {
+			$target_api_row = $table_end;
+		}
+		if ( $target_api_row < $table_start ) {
+			return new WP_Error( 'adam_google_sheets_table_target_invalid', __( 'A linha de destino da QuotasTable é inválida. A operação foi cancelada.', 'adam-membership' ) );
+		}
 		$values = $this->cell_values( $row );
+		$requests = array();
+		$expands_table = $target_api_row === $table_end;
+		if ( $expands_table ) {
+			$requests[] = array( 'insertDimension' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'dimension' => 'ROWS', 'startIndex' => $table_end, 'endIndex' => $table_end + 1 ), 'inheritFromBefore' => true ) );
+			$source_start = max( $table_start, $table_end - 1 );
+			$requests[] = array( 'copyPaste' => array( 'source' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $source_start, 'endRowIndex' => $source_start + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'destination' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $table_end, 'endRowIndex' => $table_end + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'pasteType' => 'PASTE_NORMAL' ) );
+		}
+		$requests[] = array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $target_api_row, 'endRowIndex' => $target_api_row + 1, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'rows' => array( array( 'values' => $values ) ), 'fields' => 'userEnteredValue' ) );
+		$requests = array_merge( $requests, $this->financial_format_requests( (int) $table['sheetId'], $target_api_row ) );
+		if ( $expands_table ) {
+			$expanded_range = $table_range;
+			$expanded_range['endRowIndex'] = $table_end + 1;
+			$requests[] = array( 'updateTable' => array( 'table' => array( 'tableId' => $table['tableId'], 'range' => $expanded_range ), 'fields' => 'range' ) );
+		}
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
-			array( 'requests' => array( array( 'appendCells' => array( 'sheetId' => $table['sheetId'], 'rows' => array( array( 'values' => $values ) ), 'fields' => 'userEnteredValue' ) ) ) ),
+			array( 'requests' => $requests ),
 			self::WRITE_SCOPE,
 			array(),
 			$request_id,
-			'append'
+			$expands_table ? 'append_and_expand_table' : 'write_table_gap'
 		);
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 		$after = $this->table_metadata( $request_id, 'table_metadata_after_write' );
-		return is_wp_error( $after ) ? $after : array( 'table' => $after );
+		if ( is_wp_error( $after ) ) {
+			return $after;
+		}
+		if ( $expands_table && absint( $after['range']['endRowIndex'] ?? 0 ) < $table_end + 1 ) {
+			return new WP_Error( 'adam_google_sheets_table_expand_unconfirmed', __( 'A nova linha foi escrita, mas a expansão da QuotasTable não foi confirmada.', 'adam-membership' ) );
+		}
+		return array( 'table' => $after, 'row_number' => $target_api_row + 1 );
 	}
 
 	/** Update the current row identified by its canonical ID, never by a stored row number. */
@@ -187,10 +217,14 @@ final class GoogleSheetsClient {
 		if ( is_wp_error( $table ) ) {
 			return $table;
 		}
+		$requests = array_merge(
+			array( array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $row_number - 1, 'endRowIndex' => $row_number, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'rows' => array( array( 'values' => $this->cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ) ),
+			$this->financial_format_requests( (int) $table['sheetId'], $row_number - 1 )
+		);
 		$result = $this->request_json(
 			'POST',
 			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate',
-			array( 'requests' => array( array( 'updateCells' => array( 'range' => array( 'sheetId' => $table['sheetId'], 'startRowIndex' => $row_number - 1, 'endRowIndex' => $row_number, 'startColumnIndex' => 0, 'endColumnIndex' => 12 ), 'rows' => array( array( 'values' => $this->cell_values( $row ) ) ), 'fields' => 'userEnteredValue' ) ) ) ),
+			array( 'requests' => $requests ),
 			self::WRITE_SCOPE,
 			array(),
 			$request_id,
@@ -275,9 +309,32 @@ final class GoogleSheetsClient {
 	private function cell_values( array $row ): array {
 		$values = array();
 		foreach ( array_values( $row ) as $index => $value ) {
-			$values[] = array( 'userEnteredValue' => in_array( $index, array( 3, 6 ), true ) ? array( 'numberValue' => (float) $value ) : array( 'stringValue' => (string) $value ) );
+			if ( in_array( $index, array( 3, 6 ), true ) ) {
+				$values[] = array( 'userEnteredValue' => array( 'numberValue' => (float) $value ) );
+			} elseif ( 7 === $index ) {
+				$values[] = array( 'userEnteredValue' => array( 'numberValue' => $this->date_serial( (string) $value ) ) );
+			} else {
+				$values[] = array( 'userEnteredValue' => array( 'stringValue' => (string) $value ) );
+			}
 		}
 		return $values;
+	}
+
+	private function date_serial( string $date ): float {
+		$value = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date, new \DateTimeZone( 'UTC' ) );
+		if ( false === $value ) {
+			return 0.0;
+		}
+		$origin = new \DateTimeImmutable( '1899-12-30', new \DateTimeZone( 'UTC' ) );
+		return (float) $origin->diff( $value )->days;
+	}
+
+	/** Preserve the table's financial/date display contract without converting values to text. */
+	private function financial_format_requests( int $sheet_id, int $row_index ): array {
+		return array(
+			array( 'repeatCell' => array( 'range' => array( 'sheetId' => $sheet_id, 'startRowIndex' => $row_index, 'endRowIndex' => $row_index + 1, 'startColumnIndex' => 6, 'endColumnIndex' => 7 ), 'cell' => array( 'userEnteredFormat' => array( 'numberFormat' => array( 'type' => 'CURRENCY', 'pattern' => '€ #,##0.00' ) ) ), 'fields' => 'userEnteredFormat.numberFormat' ) ),
+			array( 'repeatCell' => array( 'range' => array( 'sheetId' => $sheet_id, 'startRowIndex' => $row_index, 'endRowIndex' => $row_index + 1, 'startColumnIndex' => 7, 'endColumnIndex' => 8 ), 'cell' => array( 'userEnteredFormat' => array( 'numberFormat' => array( 'type' => 'DATE', 'pattern' => 'dd/mm/yyyy' ) ) ), 'fields' => 'userEnteredFormat.numberFormat' ) ),
+		);
 	}
 
 

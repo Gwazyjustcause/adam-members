@@ -302,7 +302,7 @@ final class GoogleSheetsSyncService {
 			}
 			return $this->finish( $movement['movement_id'], self::STATUS_FAILED, new WP_Error( 'adam_google_sheets_conflict', __( 'Não foi possível atualizar o movimento existente.', 'adam-membership' ) ), $member, $renewal_id );
 		}
-		$appended = $this->client->append_table_row( $row, (string) $movement['movement_id'] );
+		$appended = $this->client->append_table_row( $row, (string) $movement['movement_id'], absint( $plan['target_row'] ?? 0 ) );
 		if ( is_wp_error( $appended ) ) {
 			$this->client->log_failure( (string) $movement['movement_id'], 'append_or_confirmation', $appended );
 			return $this->finish( $movement['movement_id'], self::STATUS_FAILED, $appended, $member, $renewal_id );
