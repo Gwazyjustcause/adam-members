@@ -8,9 +8,17 @@
 		var chips = root.querySelector( '[data-adam-correction-chips]' );
 		var options = Array.prototype.slice.call( root.querySelectorAll( '[data-adam-correction-option]' ) );
 		if ( ! dialog || ! summary || ! count || ! chips ) { return; }
+		var form = root.querySelector( 'form' );
+		var selectionError = document.createElement( 'p' );
+		selectionError.className = 'adam-correction-selection-error';
+		selectionError.setAttribute( 'role', 'alert' );
+		selectionError.textContent = 'Selecione pelo menos um campo antes de pedir a correção.';
+		selectionError.hidden = true;
+		if ( form ) { form.insertBefore( selectionError, form.querySelector( 'button[type="submit"]' ) ); }
 
 		function refresh() {
 			var selected = options.filter( function ( option ) { return option.checked; } );
+			selectionError.hidden = true;
 			count.textContent = selected.length + ( 1 === selected.length ? ' campo selecionado' : ' campos selecionados' );
 			chips.replaceChildren();
 			selected.forEach( function ( option ) {
@@ -37,6 +45,15 @@
 		} );
 		root.querySelector( '[data-adam-correction-apply]' ).addEventListener( 'click', function () { refresh(); if ( dialog.close ) { dialog.close(); } else { dialog.removeAttribute( 'open' ); } } );
 		options.forEach( function ( option ) { option.addEventListener( 'change', refresh ); } );
+		if ( form ) {
+			form.addEventListener( 'submit', function ( event ) {
+				if ( 0 === options.filter( function ( option ) { return option.checked; } ).length ) {
+					event.preventDefault();
+					selectionError.hidden = false;
+					root.querySelector( '[data-adam-correction-open]' ).focus();
+				}
+			} );
+		}
 		refresh();
 	} );
 }() );

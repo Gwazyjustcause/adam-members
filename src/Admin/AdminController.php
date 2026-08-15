@@ -495,6 +495,9 @@ final class AdminController {
 				file_exists( $script_path ) ? (string) filemtime( $script_path ) : ADAM_MEMBERSHIP_VERSION,
 				true
 			);
+		}
+
+		if ( $hook_suffix === $this->member_page_hook || $hook_suffix === $this->renewal_page_hook ) {
 			$correction_script = ADAM_MEMBERSHIP_PATH . 'assets/js/admin-correction-fields.js';
 			wp_enqueue_script( 'adam-membership-admin-correction-fields', ADAM_MEMBERSHIP_URL . 'assets/js/admin-correction-fields.js', array(), file_exists( $correction_script ) ? (string) filemtime( $correction_script ) : ADAM_MEMBERSHIP_VERSION, true );
 		}
