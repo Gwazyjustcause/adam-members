@@ -266,7 +266,7 @@ final class Plugin {
 
 		$is_adam_admin_post = $this->is_adam_admin_post_request();
 		if ( $is_adam_admin_post ) {
-			$logger->info( 'Private document bootstrap trace v2: plugin modules reached admin-post routing.', array( 'build' => self::BUILD_ID ) );
+			$logger->info( 'Private document bootstrap trace v2: plugin modules reached admin-post routing.', array( 'build' => self::BUILD_ID, 'action' => sanitize_key( (string) ( $_REQUEST['action'] ?? '' ) ) ) );
 		}
 
 		if ( is_admin() || $is_adam_admin_post ) {
@@ -312,6 +312,8 @@ final class Plugin {
 						'build'           => self::BUILD_ID,
 						'member_handler'  => false !== has_action( 'admin_post_adam_membership_member_action' ),
 						'renewal_handler' => false !== has_action( 'admin_post_adam_membership_renewal_action' ),
+						'quotas_test_handler' => false !== has_action( 'admin_post_adam_membership_test_google_sheets' ),
+						'gestao_test_handler' => false !== has_action( 'admin_post_adam_membership_test_gestao_google_sheets' ),
 					)
 				);
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

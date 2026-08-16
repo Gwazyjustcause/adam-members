@@ -2194,40 +2194,62 @@ final class AdminController {
 
 	/** Test the configured Google Sheets connection without writing spreadsheet data. */
 	public function handle_test_google_sheets(): void {
+		$this->log_connection_test_trace( 'quotas', 'handler_entered' );
 		try {
+			$this->log_connection_test_trace( 'quotas', 'before_capability_validation' );
 			$this->ensure_can_manage();
+			$this->log_connection_test_trace( 'quotas', 'capability_check_passed' );
+			$this->log_connection_test_trace( 'quotas', 'before_nonce_validation' );
 			$this->verify_admin_nonce( 'adam_membership_test_google_sheets' );
+			$this->log_connection_test_trace( 'quotas', 'nonce_check_passed' );
+			$this->log_connection_test_trace( 'quotas', 'before_google_client' );
 			$result = $this->google_sheets->test_connection();
+			$this->log_connection_test_trace( 'quotas', 'after_google_client', array( 'result' => is_wp_error( $result ) ? 'wp_error:' . (string) $result->get_error_code() : 'success' ) );
 
 			if ( is_wp_error( $result ) ) {
 				$this->settings->save_google_sheets_test_result( 'failed' );
+				$this->log_connection_test_trace( 'quotas', 'before_redirect', array( 'result' => 'wp_error' ) );
 				$this->redirect_with_error( $result->get_error_message() );
 				return;
 			}
 
 			$this->settings->save_google_sheets_test_result( 'connected', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
+			$this->log_connection_test_trace( 'quotas', 'before_redirect', array( 'result' => 'success' ) );
 			$this->redirect_with_message( __( 'A ligação Google Sheets foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 		} catch ( \Throwable $exception ) {
+			$this->log_connection_test_trace( 'quotas', 'handler_caught_throwable', array( 'error_class' => get_class( $exception ) ) );
 			$this->google_sheets->log_exception( '', 'connection_test_quotas_handler', $exception );
+			$this->log_connection_test_trace( 'quotas', 'before_redirect', array( 'result' => 'unexpected_error' ) );
 			$this->redirect_with_error( __( 'Não foi possível testar a ligação Google Sheets. Verifique a configuração e tente novamente.', 'adam-membership' ) );
 		}
 	}
 
 	/** Test the separate Gestão de Sócios destination without writing spreadsheet data. */
 	public function handle_test_gestao_google_sheets(): void {
+		$this->log_connection_test_trace( 'gestao', 'handler_entered' );
 		try {
+			$this->log_connection_test_trace( 'gestao', 'before_capability_validation' );
 			$this->ensure_can_manage();
+			$this->log_connection_test_trace( 'gestao', 'capability_check_passed' );
+			$this->log_connection_test_trace( 'gestao', 'before_nonce_validation' );
 			$this->verify_admin_nonce( 'adam_membership_test_gestao_google_sheets' );
+			$this->log_connection_test_trace( 'gestao', 'nonce_check_passed' );
+			$this->log_connection_test_trace( 'gestao', 'before_google_client' );
 			$result = $this->google_sheets->test_gestao_connection();
+			$this->log_connection_test_trace( 'gestao', 'after_google_client', array( 'result' => is_wp_error( $result ) ? 'wp_error:' . (string) $result->get_error_code() : 'success' ) );
 
 			if ( is_wp_error( $result ) ) {
+				$this->log_connection_test_trace( 'gestao', 'before_redirect', array( 'result' => 'wp_error' ) );
 				$this->redirect_with_error( $result->get_error_message() );
 				return;
 			}
 
+			$this->log_connection_test_trace( 'gestao', 'before_redirect', array( 'result' => 'success' ) );
 			$this->redirect_with_message( __( 'A ligação da Gestão de Sócios foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 		} catch ( \Throwable $exception ) {
+			$this->log_connection_test_trace( 'gestao', 'handler_caught_throwable', array( 'error_class' => get_class( $exception ) ) );
 			$this->google_sheets->log_exception( '', 'connection_test_gestao_handler', $exception );
+			$this->log_connection_test_trace( 'gestao', 'before_redirect', array( 'result' => 'unexpected_error' ) );
 			$this->redirect_with_error( __( 'Não foi possível testar a ligação da Gestão de Sócios. Verifique a configuração e tente novamente.', 'adam-membership' ) );
 		}
 	}
@@ -6748,16 +6770,30 @@ final class AdminController {
 	private function redirect_with_notice( string $key, string $message ): void {
 		$redirect_to = isset( $_POST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ) : '';
 		$fallback    = admin_url( 'admin.php?page=adam-membership-pending' );
-
-		wp_safe_redirect(
-			add_query_arg(
+		$redirect_url = add_query_arg(
 				array(
 					$key => $message,
 				),
 				wp_validate_redirect( $redirect_to, $fallback )
-			)
 		);
+		$action = sanitize_key( (string) ( $_REQUEST['action'] ?? '' ) );
+		if ( in_array( $action, array( 'adam_membership_test_google_sheets', 'adam_membership_test_gestao_google_sheets' ), true ) ) {
+			$this->log_connection_test_trace( 'adam_membership_test_gestao_google_sheets' === $action ? 'gestao' : 'quotas', 'redirect_prepared', array( 'path' => (string) wp_parse_url( $redirect_url, PHP_URL_PATH ) ) );
+		}
+		$redirect_result = wp_safe_redirect( $redirect_url );
+		if ( in_array( $action, array( 'adam_membership_test_google_sheets', 'adam_membership_test_gestao_google_sheets' ), true ) ) {
+			$this->log_connection_test_trace( 'adam_membership_test_gestao_google_sheets' === $action ? 'gestao' : 'quotas', 'redirect_attempted', array( 'path' => (string) wp_parse_url( $redirect_url, PHP_URL_PATH ), 'redirect_returned' => (bool) $redirect_result ) );
+		}
 		exit;
+	}
+
+	/** Write bounded diagnostics for the two temporary connection-test traces. */
+	private function log_connection_test_trace( string $destination, string $stage, array $context = array() ): void {
+		try {
+			$this->logger->info( 'Google Sheets connection-test trace.', array_merge( array( 'destination' => $destination, 'stage' => $stage ), $context ) );
+		} catch ( \Throwable $ignored ) {
+			// Diagnostics must never change the admin action outcome.
+		}
 	}
 
 	/** Always return a document-history action to its member history screen. */
