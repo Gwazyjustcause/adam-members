@@ -375,7 +375,23 @@ final class MembershipForms {
 	private function handle_registration_submission(): array {
 		$values = $this->posted_values();
 
+		if ( $this->request_exceeds_post_max_size() ) {
+			$this->logger->error( 'Registration request exceeded post_max_size.', array( 'content_length' => absint( $_SERVER['CONTENT_LENGTH'] ?? 0 ) ) );
+			return array(
+				'values' => $values,
+				'errors' => array( __( 'A submissão excede o limite de tamanho do servidor. Reduza o tamanho dos ficheiros e tente novamente.', 'adam-membership' ) ),
+			);
+		}
+
 		if ( 'registration' !== (string) ( $values['adam_membership_form_action'] ?? '' ) ) {
+			if ( 'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) && ( ! empty( $_POST ) || ! empty( $_FILES ) || absint( $_SERVER['CONTENT_LENGTH'] ?? 0 ) > 0 ) ) {
+				$this->logger->error( 'Registration submission did not contain the expected form action.', array( 'post_fields' => count( $_POST ), 'file_fields' => count( $_FILES ), 'content_length' => absint( $_SERVER['CONTENT_LENGTH'] ?? 0 ) ) );
+				return array(
+					'values' => $values,
+					'errors' => array( __( 'A submissão não chegou completa ao servidor. Verifique os ficheiros selecionados e tente novamente.', 'adam-membership' ) ),
+				);
+			}
+
 			return array( 'values' => array() );
 		}
 
@@ -679,6 +695,10 @@ final class MembershipForms {
 				array(
 					'primaryFee'   => $this->format_fee( (string) $this->settings()['fees']['primary'] ),
 					'secondaryFee' => $this->format_fee( (string) $this->settings()['fees']['secondary'] ),
+					'registrationPostMaxBytes' => $this->ini_size_bytes( (string) ini_get( 'post_max_size' ) ),
+					'registrationUploadMaxBytes' => $this->ini_size_bytes( (string) ini_get( 'upload_max_filesize' ) ),
+					'registrationUploadSizeMessage' => __( 'Os ficheiros selecionados excedem o limite de envio deste servidor. Reduza o tamanho dos ficheiros e tente novamente.', 'adam-membership' ),
+					'registrationUploadFormatMessage' => __( 'Formato de ficheiro não suportado. Utilize JPEG, PNG ou WEBP para imagens e PDF quando o campo o permitir.', 'adam-membership' ),
 					'nifValidationUrl' => admin_url( 'admin-ajax.php' ),
 					'nifValidationNonce' => wp_create_nonce( 'adam_membership_nif_validation' ),
 					'nifInvalidMessage' => __( 'O NIF introduzido não é válido. Verifique o número e tente novamente.', 'adam-membership' ),
@@ -688,6 +708,33 @@ final class MembershipForms {
 			) . ';',
 			'before'
 		);
+	}
+
+	/** Convert a PHP size shorthand to bytes; zero means that the setting is not limiting. */
+	private function ini_size_bytes( string $value ): int {
+		$value = trim( $value );
+		if ( '' === $value || '0' === $value ) {
+			return 0;
+		}
+
+		$number = (float) $value;
+		$unit   = strtolower( substr( $value, -1 ) );
+		$factor = match ( $unit ) {
+			'g' => 1024 * 1024 * 1024,
+			'm' => 1024 * 1024,
+			'k' => 1024,
+			default => 1,
+		};
+
+		return $number > 0 ? (int) floor( $number * $factor ) : 0;
+	}
+
+	/** Return whether PHP received a request body larger than post_max_size. */
+	private function request_exceeds_post_max_size(): bool {
+		$limit = $this->ini_size_bytes( (string) ini_get( 'post_max_size' ) );
+		$size  = absint( $_SERVER['CONTENT_LENGTH'] ?? 0 );
+
+		return $limit > 0 && $size > $limit;
 	}
 
 	/**
@@ -1473,7 +1520,7 @@ final class MembershipForms {
 	 * @param string $field Field key.
 	 */
 	private function field_accept_attribute( string $field ): string {
-		return 'profile_photo' === $field ? 'image/*' : '.pdf,image/*';
+		return 'profile_photo' === $field ? '.jpg,.jpeg,.png,.webp' : '.pdf,.jpg,.jpeg,.png,.webp';
 	}
 
 	/**

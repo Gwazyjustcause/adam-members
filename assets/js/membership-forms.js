@@ -21,6 +21,100 @@
 		feeNode.textContent = 'external_association' === mode ? ( config.secondaryFee || '' ) : ( config.primaryFee || '' );
 	}
 
+	function validateRegistrationUploadSize( form ) {
+		if ( ! form || 'registration' !== form.querySelector( 'input[name="adam_membership_form_action"]' )?.value ) {
+			return true;
+		}
+
+		var postMax = Number( config.registrationPostMaxBytes || 0 );
+		var uploadMax = Number( config.registrationUploadMaxBytes || 0 );
+
+		var total = 0;
+		var parts = 0;
+		var files = form.querySelectorAll( 'input[type="file"]' );
+		var unsupportedFormat = false;
+
+		files.forEach( function ( input ) {
+			if ( input.disabled || ! input.files ) {
+				return;
+			}
+
+			var allowed = 'profile_photo' === input.name
+				? [ 'jpg', 'jpeg', 'png', 'webp' ]
+				: [ 'pdf', 'jpg', 'jpeg', 'png', 'webp' ];
+			Array.from( input.files ).forEach( function ( file ) {
+				var name = String( file.name || '' ).toLowerCase();
+				var extension = name.includes( '.' ) ? name.split( '.' ).pop() : '';
+				if ( ! allowed.includes( extension ) ) {
+					unsupportedFormat = true;
+				}
+			} );
+		} );
+
+		files.forEach( function ( input ) {
+			if ( input.disabled || ! input.files ) {
+				return;
+			}
+
+			Array.from( input.files ).forEach( function ( file ) {
+				total += file.size;
+				parts += 1;
+			} );
+		} );
+
+		// Include text fields and a conservative multipart boundary allowance.
+		// This is intentionally only a pre-submit guard; PHP remains authoritative.
+		if ( postMax > 0 ) {
+			try {
+				new FormData( form ).forEach( function ( value, key ) {
+					parts += 1;
+					if ( 'string' === typeof value ) {
+						total += new Blob( [ value ] ).size;
+					}
+				} );
+			} catch ( error ) {
+				return true;
+			}
+		}
+
+		var estimatedBody = total + ( parts * 1024 );
+		var tooLarge = ( uploadMax > 0 && Array.from( files ).some( function ( input ) {
+			return ! input.disabled && input.files && Array.from( input.files ).some( function ( file ) {
+				return file.size > uploadMax;
+			} );
+		} ) ) || ( postMax > 0 && estimatedBody > postMax );
+
+		if ( unsupportedFormat ) {
+			var formatErrorNode = form.querySelector( '[data-adam-upload-size-error]' );
+			if ( ! formatErrorNode ) {
+				formatErrorNode = document.createElement( 'p' );
+				formatErrorNode.setAttribute( 'data-adam-upload-size-error', '1' );
+				formatErrorNode.setAttribute( 'role', 'alert' );
+				formatErrorNode.className = 'adam-form-error';
+				form.appendChild( formatErrorNode );
+			}
+			formatErrorNode.textContent = config.registrationUploadFormatMessage || 'Formato de ficheiro não suportado.';
+			formatErrorNode.hidden = false;
+			return false;
+		}
+
+		if ( ! tooLarge ) {
+			return true;
+		}
+
+		var errorNode = form.querySelector( '[data-adam-upload-size-error]' );
+		if ( ! errorNode ) {
+			errorNode = document.createElement( 'p' );
+			errorNode.setAttribute( 'data-adam-upload-size-error', '1' );
+			errorNode.setAttribute( 'role', 'alert' );
+			errorNode.className = 'adam-form-error';
+			form.appendChild( errorNode );
+		}
+		errorNode.textContent = config.registrationUploadSizeMessage || 'Os ficheiros selecionados excedem o limite de envio deste servidor.';
+		errorNode.hidden = false;
+		return false;
+	}
+
 	function toggleConditional( form, selector, visible ) {
 		var node = form.querySelector( selector );
 
@@ -401,6 +495,12 @@
 
 	document.querySelectorAll( '.adam-membership-native-form' ).forEach( function ( form ) {
 		syncFormState( form, false );
+		form.addEventListener( 'submit', function ( event ) {
+			if ( ! validateRegistrationUploadSize( form ) ) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+			}
+		}, true );
 		initializeNifValidation( form );
 	} );
 
