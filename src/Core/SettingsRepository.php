@@ -35,7 +35,7 @@ final class SettingsRepository {
 	/**
 	 * Return Google Sheets integration settings without ever storing credentials.
 	 *
-	 * @return array{enabled:bool,spreadsheet_id:string,sheet_name:string,status:string,last_test_at:string}
+	 * @return array{enabled:bool,spreadsheet_id:string,sheet_name:string,gestao_spreadsheet_id:string,status:string,last_test_at:string}
 	 */
 	public function google_sheets_settings(): array {
 		$stored = get_option( self::OPTION_GOOGLE_SHEETS_SETTINGS, array() );
@@ -45,6 +45,7 @@ final class SettingsRepository {
 			'enabled'        => ! empty( $stored['enabled'] ),
 			'spreadsheet_id' => sanitize_text_field( (string) ( $stored['spreadsheet_id'] ?? '' ) ),
 			'sheet_name'     => '' !== trim( (string) ( $stored['sheet_name'] ?? '' ) ) ? sanitize_text_field( (string) $stored['sheet_name'] ) : 'Quotas',
+			'gestao_spreadsheet_id' => sanitize_text_field( (string) ( $stored['gestao_spreadsheet_id'] ?? '' ) ),
 			'status'         => sanitize_key( (string) ( $stored['status'] ?? 'not_tested' ) ),
 			'last_test_at'   => sanitize_text_field( (string) ( $stored['last_test_at'] ?? '' ) ),
 		);
@@ -56,15 +57,18 @@ final class SettingsRepository {
 	 * @param bool   $enabled        Whether synchronization is enabled.
 	 * @param string $spreadsheet_id Spreadsheet ID.
 	 * @param string $sheet_name     Worksheet title.
+	 * @param string|null $gestao_spreadsheet_id Gestão de Sócios spreadsheet ID; null preserves the current value.
 	 */
-	public function save_google_sheets_settings( bool $enabled, string $spreadsheet_id, string $sheet_name ): void {
+	public function save_google_sheets_settings( bool $enabled, string $spreadsheet_id, string $sheet_name, ?string $gestao_spreadsheet_id = null ): void {
 		$current = $this->google_sheets_settings();
+		$gestao_spreadsheet_id = null !== $gestao_spreadsheet_id ? $gestao_spreadsheet_id : $current['gestao_spreadsheet_id'];
 		update_option(
 			self::OPTION_GOOGLE_SHEETS_SETTINGS,
 			array(
 				'enabled'        => $enabled,
 				'spreadsheet_id' => sanitize_text_field( trim( $spreadsheet_id ) ),
 				'sheet_name'     => '' !== trim( $sheet_name ) ? sanitize_text_field( trim( $sheet_name ) ) : 'Quotas',
+				'gestao_spreadsheet_id' => sanitize_text_field( trim( $gestao_spreadsheet_id ) ),
 				'status'         => $current['status'],
 				'last_test_at'   => $current['last_test_at'],
 			),

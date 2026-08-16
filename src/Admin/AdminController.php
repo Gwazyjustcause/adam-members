@@ -314,6 +314,7 @@ final class AdminController {
 		add_action( 'admin_post_adam_membership_renewal_action', array( $this, 'handle_renewal_admin_action' ) );
 		add_action( 'admin_post_adam_membership_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'admin_post_adam_membership_test_google_sheets', array( $this, 'handle_test_google_sheets' ) );
+		add_action( 'admin_post_adam_membership_test_gestao_google_sheets', array( $this, 'handle_test_gestao_google_sheets' ) );
 		add_action( 'admin_post_adam_membership_retry_google_sheets', array( $this, 'handle_retry_google_sheets' ) );
 		add_action( 'admin_post_adam_membership_save_google_sheets_payment', array( $this, 'handle_save_google_sheets_payment' ) );
 		add_action( 'admin_post_adam_membership_delete_financial_movement', array( $this, 'handle_delete_financial_movement' ) );
@@ -1154,6 +1155,10 @@ final class AdminController {
 						<th scope="row"><label for="adam_google_sheets_sheet_name"><?php esc_html_e( 'Nome da página', 'adam-membership' ); ?></label></th>
 						<td><input type="text" id="adam_google_sheets_sheet_name" name="google_sheets_sheet_name" class="regular-text" value="<?php echo esc_attr( $google_sheets['sheet_name'] ); ?>"><p class="description"><?php esc_html_e( 'Por defeito: Quotas. Nesta fase, o teste é exclusivamente de leitura.', 'adam-membership' ); ?></p></td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="adam_google_sheets_gestao_spreadsheet_id"><?php esc_html_e( 'ID da folha Gestão de Sócios', 'adam-membership' ); ?></label></th>
+						<td><input type="text" id="adam_google_sheets_gestao_spreadsheet_id" name="google_sheets_gestao_spreadsheet_id" class="regular-text" value="<?php echo esc_attr( $google_sheets['gestao_spreadsheet_id'] ); ?>" autocomplete="off"><p class="description"><?php esc_html_e( 'Spreadsheet independente usada para a fila operacional de Gestão de Sócios.', 'adam-membership' ); ?></p></td>
+					</tr>
 				</table>
 				<p><button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar configurações', 'adam-membership' ); ?></button></p>
 			</form>
@@ -1165,6 +1170,11 @@ final class AdminController {
 				<input type="hidden" name="action" value="adam_membership_test_google_sheets">
 				<?php wp_nonce_field( 'adam_membership_test_google_sheets' ); ?>
 				<button type="submit" class="button button-secondary adam-button adam-button--secondary"><?php esc_html_e( 'Testar ligação (read-only)', 'adam-membership' ); ?></button>
+			</form>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="adam_membership_test_gestao_google_sheets">
+				<?php wp_nonce_field( 'adam_membership_test_gestao_google_sheets' ); ?>
+				<button type="submit" class="button button-secondary adam-button adam-button--secondary"><?php esc_html_e( 'Testar ligação — Gestão de Sócios', 'adam-membership' ); ?></button>
 			</form>
 		</div>
 		<div class="adam-admin-panel adam-card">
@@ -1978,7 +1988,8 @@ final class AdminController {
 		$this->settings->save_google_sheets_settings(
 			! empty( $_POST['google_sheets_enabled'] ),
 			sanitize_text_field( wp_unslash( $_POST['google_sheets_spreadsheet_id'] ?? '' ) ),
-			sanitize_text_field( wp_unslash( $_POST['google_sheets_sheet_name'] ?? 'Quotas' ) )
+			sanitize_text_field( wp_unslash( $_POST['google_sheets_sheet_name'] ?? 'Quotas' ) ),
+			sanitize_text_field( wp_unslash( $_POST['google_sheets_gestao_spreadsheet_id'] ?? '' ) )
 		);
 
 		wp_safe_redirect(
@@ -2016,6 +2027,10 @@ final class AdminController {
 					$this->redirect_with_error( $workflow_result->get_error_message() );
 					return;
 				}
+			}
+			if ( null !== $member && Member::STATUS_ACTIVE !== $member->status() ) {
+				$this->redirect_with_message( __( 'Sincronização da Gestão de Sócios concluída. A sincronização financeira permanece pendente até à fase normal do pedido.', 'adam-membership' ) );
+				return;
 			}
 			$movement_id = null !== $member ? (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ) : '';
 			$movement = '' !== $movement_id ? $this->financial_movements->find( $movement_id ) : null;
@@ -2191,6 +2206,20 @@ final class AdminController {
 
 		$this->settings->save_google_sheets_test_result( 'connected', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
 		$this->redirect_with_message( __( 'A ligação Google Sheets foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
+	}
+
+	/** Test the separate Gestão de Sócios destination without writing spreadsheet data. */
+	public function handle_test_gestao_google_sheets(): void {
+		$this->ensure_can_manage();
+		$this->verify_admin_nonce( 'adam_membership_test_gestao_google_sheets' );
+		$result = $this->google_sheets->test_gestao_connection();
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect_with_error( $result->get_error_message() );
+			return;
+		}
+
+		$this->redirect_with_message( __( 'A ligação da Gestão de Sócios foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 	}
 
 	/**

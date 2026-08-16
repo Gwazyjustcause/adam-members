@@ -101,6 +101,40 @@ final class GoogleSheetsClient {
 		return new WP_Error( 'adam_google_sheets_sheet_missing', __( 'A página configurada não foi encontrada na spreadsheet.', 'adam-membership' ) );
 	}
 
+	/** Test the independent Gestão de Sócios destination without changing spreadsheet data. */
+	public function test_gestao_connection(): true|WP_Error {
+		$config = $this->settings->google_sheets_settings();
+		if ( ! $config['enabled'] ) {
+			return new WP_Error( 'adam_google_sheets_gestao_disabled', __( 'A integração Google Sheets está desativada.', 'adam-membership' ) );
+		}
+		$spreadsheet_id = trim( (string) ( $config['gestao_spreadsheet_id'] ?? '' ) );
+		if ( '' === $spreadsheet_id ) {
+			return new WP_Error( 'adam_google_sheets_gestao_spreadsheet_missing', __( 'O ID da folha Gestão de Sócios não está configurado.', 'adam-membership' ) );
+		}
+		if ( ! function_exists( 'openssl_sign' ) ) {
+			return new WP_Error( 'adam_google_sheets_gestao_openssl_missing', __( 'A extensão OpenSSL do PHP não está disponível no servidor.', 'adam-membership' ) );
+		}
+		$url = 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id );
+		$response = $this->request_json( 'GET', $url, array(), self::READONLY_SCOPE, array( 'fields' => 'spreadsheetId,sheets(properties(title,sheetId),tables(tableId,range))' ), '', 'gestao_connection_test', $spreadsheet_id );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+		foreach ( (array) ( $response['sheets'] ?? array() ) as $sheet ) {
+			if ( 'Gestão de Sócios' !== (string) ( $sheet['properties']['title'] ?? '' ) ) {
+				continue;
+			}
+			foreach ( (array) ( $sheet['tables'] ?? array() ) as $table ) {
+				$range = (array) ( $table['range'] ?? array() );
+				$columns = absint( $range['endColumnIndex'] ?? 0 ) - absint( $range['startColumnIndex'] ?? 0 );
+				if ( '' !== (string) ( $table['tableId'] ?? '' ) && $columns >= 8 ) {
+					return true;
+				}
+			}
+			return new WP_Error( 'adam_google_sheets_gestao_table_missing', __( 'A tabela nativa da Gestão de Sócios não foi encontrada ou não tem as oito colunas esperadas.', 'adam-membership' ) );
+		}
+		return new WP_Error( 'adam_google_sheets_gestao_sheet_missing', __( 'A página Gestão de Sócios não foi encontrada na spreadsheet configurada.', 'adam-membership' ) );
+	}
+
 	/** Return whether an approved movement should attempt Google synchronization. */
 	public function is_configured(): bool {
 		$config = $this->settings->google_sheets_settings();
@@ -140,7 +174,9 @@ final class GoogleSheetsClient {
 		$expanded = $range;
 		$expanded['endRowIndex'] = $end + 1;
 		$requests[] = array( 'updateTable' => array( 'table' => array( 'tableId' => $table['tableId'], 'range' => $expanded ), 'fields' => 'range' ) );
-		$result = $this->request_json( 'POST', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $this->settings->google_sheets_settings()['spreadsheet_id'] ) . ':batchUpdate', array( 'requests' => $requests ), self::WRITE_SCOPE, array(), $request_id, 'append_gestao_de_socios' );
+		$spreadsheet_id = $this->gestao_spreadsheet_id();
+		if ( is_wp_error( $spreadsheet_id ) ) { return $spreadsheet_id; }
+		$result = $this->request_json( 'POST', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ) . ':batchUpdate', array( 'requests' => $requests ), self::WRITE_SCOPE, array(), $request_id, 'append_gestao_de_socios', $spreadsheet_id );
 		if ( is_wp_error( $result ) ) { return $result; }
 		$after = $this->workflow_table_metadata( $sheet_name, $request_id );
 		if ( is_wp_error( $after ) || absint( $after['range']['endRowIndex'] ?? 0 ) < $end + 1 ) {
@@ -152,7 +188,9 @@ final class GoogleSheetsClient {
 	/** Return request IDs recorded as row-level developer metadata. */
 	public function workflow_request_ids( string $sheet_name, string $request_id = '' ): array|WP_Error {
 		$config = $this->settings->google_sheets_settings();
-		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ), array(), self::READONLY_SCOPE, array( 'fields' => 'developerMetadata(metadataKey,metadataValue)' ), $request_id, 'read_gestao_metadata' );
+		$spreadsheet_id = $this->gestao_spreadsheet_id();
+		if ( is_wp_error( $spreadsheet_id ) ) { return $spreadsheet_id; }
+		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ), array(), self::READONLY_SCOPE, array( 'fields' => 'developerMetadata(metadataKey,metadataValue)' ), $request_id, 'read_gestao_metadata', $spreadsheet_id );
 		if ( is_wp_error( $response ) ) { return $response; }
 		$ids = array();
 		foreach ( (array) ( $response['developerMetadata'] ?? array() ) as $metadata ) {
@@ -444,9 +482,10 @@ final class GoogleSheetsClient {
 	}
 
 	/** Perform a generic authenticated JSON request without exposing response data. */
-	private function request_json( string $method, string $url, array $body, string $scope, array $query = array(), string $request_id = '', string $stage = 'request_json' ): array|WP_Error {
+	private function request_json( string $method, string $url, array $body, string $scope, array $query = array(), string $request_id = '', string $stage = 'request_json', string $spreadsheet_id = '' ): array|WP_Error {
 		$config = $this->settings->google_sheets_settings();
-		if ( ! $config['enabled'] || '' === $config['spreadsheet_id'] || ! function_exists( 'openssl_sign' ) ) {
+		$destination_id = '' !== trim( $spreadsheet_id ) ? trim( $spreadsheet_id ) : (string) $config['spreadsheet_id'];
+		if ( ! $config['enabled'] || '' === $destination_id || ! function_exists( 'openssl_sign' ) ) {
 			return new WP_Error( 'adam_google_sheets_not_configured', __( 'A integração Google Sheets não está configurada.', 'adam-membership' ) );
 		}
 		$credentials = $this->credentials();
@@ -564,7 +603,9 @@ final class GoogleSheetsClient {
 	/** Resolve the first existing table on the separate operational worksheet. */
 	private function workflow_table_metadata( string $sheet_name, string $request_id = '' ): array|WP_Error {
 		$config = $this->settings->google_sheets_settings();
-		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $config['spreadsheet_id'] ), array(), self::READONLY_SCOPE, array( 'fields' => 'sheets(properties(title,sheetId),tables(tableId,range))' ), $request_id, 'gestao_table_metadata' );
+		$spreadsheet_id = $this->gestao_spreadsheet_id();
+		if ( is_wp_error( $spreadsheet_id ) ) { return $spreadsheet_id; }
+		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ), array(), self::READONLY_SCOPE, array( 'fields' => 'sheets(properties(title,sheetId),tables(tableId,range))' ), $request_id, 'gestao_table_metadata', $spreadsheet_id );
 		if ( is_wp_error( $response ) ) { return $response; }
 		foreach ( (array) ( $response['sheets'] ?? array() ) as $sheet ) {
 			if ( $sheet_name !== (string) ( $sheet['properties']['title'] ?? '' ) ) { continue; }
@@ -576,6 +617,13 @@ final class GoogleSheetsClient {
 			}
 		}
 		return new WP_Error( 'adam_google_sheets_table_missing', __( 'A tabela da Gestão de Sócios não foi encontrada.', 'adam-membership' ) );
+	}
+
+	/** Resolve the independent operational destination without falling back to Quotas. */
+	private function gestao_spreadsheet_id(): string|WP_Error {
+		$config = $this->settings->google_sheets_settings();
+		$id = trim( (string) ( $config['gestao_spreadsheet_id'] ?? '' ) );
+		return '' !== $id ? $id : new WP_Error( 'adam_google_sheets_gestao_spreadsheet_missing', __( 'O ID da folha Gestão de Sócios não está configurado.', 'adam-membership' ) );
 	}
 
 	private function workflow_cell_values( array $row ): array {
