@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace AdamMembership\Form;
 
 use AdamMembership\Core\SettingsRepository;
+use AdamMembership\Document\PrivateDocumentRepository;
+use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\AdminPreview;
 use AdamMembership\Member\Member;
@@ -28,21 +30,27 @@ final class MembershipForms {
 	private RenewalService $renewals;
 	private TeamRepository $teams;
 	private Logger $logger;
+	private PrivateDocumentRepository $private_documents;
+	private PrivateDocumentStorage $private_storage;
 	/** @var array<int, int> Attachments created during the current request. */
 	private array $pending_upload_ids = array();
+	/** @var array<int, int> Private documents created during the current request. */
+	private array $pending_private_document_ids = array();
 
 	/**
 	 * @var array<string, mixed>|null
 	 */
 	private ?array $form_settings = null;
 
-	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals, TeamRepository $teams, Logger $logger ) {
+	public function __construct( SettingsRepository $settings, MemberRepository $members, RegistrationService $registration, RenewalService $renewals, TeamRepository $teams, Logger $logger, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_storage ) {
 		$this->settings     = $settings;
 		$this->members      = $members;
 		$this->registration = $registration;
 		$this->renewals     = $renewals;
 		$this->teams        = $teams;
 		$this->logger       = $logger;
+		$this->private_documents = $private_documents;
+		$this->private_storage = $private_storage;
 	}
 
 	/**
@@ -372,6 +380,7 @@ final class MembershipForms {
 		}
 
 		$errors = array();
+		$registration_request_uuid = 'registration:' . wp_generate_uuid4();
 
 		$registration_nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( '' === $registration_nonce || ! wp_verify_nonce( $registration_nonce, 'adam_membership_registration_form' ) ) {
@@ -435,9 +444,9 @@ final class MembershipForms {
 		$this->validate_custom_fields( 'registration', $values, $errors, $mode, false );
 
 		$profile_photo = $this->process_upload( 'registration', 'profile_photo', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' ) );
-		$receipt       = $this->process_upload( 'registration', 'payment_receipt', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
-		$association_proof = 'external_association' === $mode ? $this->process_upload( 'registration', 'external_association_proof', $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
-		$custom_payload = $this->custom_submission_payload( 'registration', $values, $errors, $mode, false );
+		$receipt       = $this->process_private_upload( 'registration', 'payment_receipt', $registration_request_uuid, $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ) );
+		$association_proof = 'external_association' === $mode ? $this->process_private_upload( 'registration', 'external_association_proof', $registration_request_uuid, $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), true ) : '';
+		$custom_payload = $this->custom_submission_payload( 'registration', $values, $errors, $mode, false, $registration_request_uuid );
 
 		if ( array() !== $errors ) {
 			$this->logger->info( 'Registration validation failed.', array( 'error_count' => count( $errors ) ) );
@@ -479,6 +488,7 @@ final class MembershipForms {
 				'profile_photo'              => $profile_photo,
 				'payment_receipt'            => $receipt,
 				'custom_fields'              => $custom_payload,
+				'registration_request_uuid'  => $registration_request_uuid,
 			)
 		);
 
@@ -507,6 +517,7 @@ final class MembershipForms {
 	 * @param array<string, mixed> $custom        Custom field payload.
 	 */
 	private function cleanup_registration_uploads( mixed $profile_photo, mixed $receipt, mixed $association, array $custom ): void {
+		$this->cleanup_pending_private_documents();
 		$ids = array();
 		foreach ( array( $profile_photo, $receipt, $association ) as $value ) {
 			if ( is_numeric( $value ) && absint( $value ) > 0 ) {
@@ -527,6 +538,18 @@ final class MembershipForms {
 			wp_delete_attachment( $attachment_id, true );
 		}
 		$this->pending_upload_ids = array();
+		$this->pending_private_document_ids = array();
+	}
+
+	/** Remove private documents created by a registration that was not persisted. */
+	private function cleanup_pending_private_documents(): void {
+		$ids = array_unique( array_map( 'absint', $this->pending_private_document_ids ) );
+		$this->pending_private_document_ids = array();
+		foreach ( $ids as $document_id ) {
+			if ( $document_id <= 0 ) { continue; }
+			$document = $this->private_documents->find( $document_id );
+			if ( null !== $document ) { $this->private_documents->delete_with_storage( $document, $this->private_storage ); }
+		}
 	}
 
 	/**
@@ -936,6 +959,35 @@ final class MembershipForms {
 		}
 	}
 
+	/** Store sensitive registration proofs through the existing private-document architecture. */
+	private function process_private_upload( string $form, string $field, string $request_uuid, array &$errors, array $mimes, bool $force_required = false ): mixed {
+		$config = $this->field_config( $form, $field );
+		if ( ! $config['enabled'] ) { return ''; }
+		$required = $force_required || $config['required'];
+		$file = $_FILES[ $field ] ?? null;
+		if ( ! is_array( $file ) || UPLOAD_ERR_NO_FILE === (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) {
+			if ( $required ) { $errors[] = sprintf( __( "O ficheiro \"%s\" é obrigatório.", 'adam-membership' ), $config['label'] ); }
+			return '';
+		}
+		if ( UPLOAD_ERR_OK !== (int) ( $file['error'] ?? UPLOAD_ERR_OK ) ) {
+			$errors[] = sprintf( __( 'Não foi possível carregar o ficheiro "%s".', 'adam-membership' ), $config['label'] );
+			return '';
+		}
+		$result = $this->private_documents->create_from_upload(
+			array( 'request_reference' => $request_uuid, 'request_type' => 'registration', 'active_key' => $request_uuid . ':' . sanitize_key( $field ), 'uploaded_by' => 0 ),
+			$file,
+			$this->private_storage,
+			$mimes
+		);
+		if ( is_wp_error( $result ) ) {
+			$this->logger->error( 'Sensitive registration upload was rejected.', array( 'field' => $field, 'error_code' => $result->get_error_code() ) );
+			$errors[] = sprintf( __( 'O ficheiro "%s" não é válido ou não pôde ser guardado.', 'adam-membership' ), $config['label'] );
+			return '';
+		}
+		$this->pending_private_document_ids[] = $result->id();
+		return 'private:' . $result->id();
+	}
+
 	/**
 	 * Process a frontend upload field.
 	 *
@@ -1015,6 +1067,7 @@ final class MembershipForms {
 
 	/** Remove all attachments created by this request when an unexpected failure occurs. */
 	private function cleanup_pending_uploads(): void {
+		$this->cleanup_pending_private_documents();
 		$ids = array_unique( array_map( 'absint', $this->pending_upload_ids ) );
 		$this->pending_upload_ids = array();
 		foreach ( $ids as $attachment_id ) {
@@ -1496,7 +1549,7 @@ final class MembershipForms {
 	 * @param bool                 $profileChanged  Profile update toggle.
 	 * @return array<string, mixed>
 	 */
-	private function custom_submission_payload( string $form, array $values, array &$errors, string $associationMode, bool $profileChanged ): array {
+	private function custom_submission_payload( string $form, array $values, array &$errors, string $associationMode, bool $profileChanged, string $request_uuid = '' ): array {
 		$payload = array();
 
 		foreach ( $this->custom_field_configs( $form ) as $field_key => $config ) {
@@ -1505,13 +1558,9 @@ final class MembershipForms {
 			}
 
 			if ( 'file' === (string) $config['type'] ) {
-				$payload[ $this->custom_member_meta_key( $field_key ) ] = $this->process_upload(
-					$form,
-					$field_key,
-					$errors,
-					array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ),
-					! empty( $config['required'] )
-				);
+				$payload[ $this->custom_member_meta_key( $field_key ) ] = 'registration' === $form
+					? $this->process_private_upload( $form, $field_key, $request_uuid, $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), ! empty( $config['required'] ) )
+					: $this->process_upload( $form, $field_key, $errors, array( 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf' ), ! empty( $config['required'] ) );
 				continue;
 			}
 

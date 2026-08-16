@@ -133,7 +133,7 @@ final class RegistrationService {
 
 			$member = new Member( (int) $user_id );
 			$member->initialize( $this->build_member_data( $payload ) );
-			add_user_meta( (int) $user_id, 'adam_membership_registration_request_uuid', 'registration:' . wp_generate_uuid4(), true );
+			add_user_meta( (int) $user_id, 'adam_membership_registration_request_uuid', (string) ( $payload['registration_request_uuid'] ?? 'registration:' . wp_generate_uuid4() ), true );
 			update_user_meta( (int) $user_id, 'adam_membership_year', (string) wp_date( 'Y', current_time( 'timestamp' ) ) );
 			update_user_meta( (int) $user_id, 'adam_membership_source_order_id', (string) $entry_id );
 		} catch ( \Throwable $exception ) {

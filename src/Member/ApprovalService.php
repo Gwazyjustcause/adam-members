@@ -285,7 +285,7 @@ final class ApprovalService {
 		$round_id = count( $history ) + 1;
 		$storage_map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'profile_photo' => 'profile_photo', 'payment_receipt' => 'payment_receipt', 'external_association_proof' => 'adam_external_association_proof' );
 		$previous_values = array();
-		foreach ( $fields as $field ) { $storage_key = $storage_map[ $field ] ?? $field; $previous_values[ $field ] = 'email' === $field ? $member->email() : $member->field( $storage_key ); }
+		foreach ( $fields as $field ) { $storage_key = $storage_map[ $field ] ?? ( 'adam_custom_' . sanitize_key( $field ) ); $previous_values[ $field ] = 'email' === $field ? $member->email() : $member->field( $storage_key ); }
 		$history[] = array( 'id' => $round_id, 'status' => 'correction_requested', 'requested_at' => current_time( 'mysql' ), 'reason' => $reason, 'note' => $note, 'fields' => $fields, 'previous_values' => $previous_values );
 		$member->save( array( 'estado' => Member::STATUS_REJECTED, 'motivo_rejeicao' => $reason, 'nota_rejeicao_admin' => $note, 'adam_correction_status' => 'correction_requested', 'adam_correction_reason' => $reason, 'adam_correction_note' => $note, 'adam_correction_fields' => $fields, 'adam_correction_active_round' => $round_id, 'adam_correction_history' => $history ) );
 		try {
@@ -590,6 +590,9 @@ final class ApprovalService {
 	 * @param mixed $value Stored media reference.
 	 */
 	private function media_reference_url( mixed $value ): string {
+		if ( is_string( $value ) && str_starts_with( $value, 'private:' ) && absint( substr( $value, 8 ) ) > 0 ) {
+			return $value;
+		}
 		if ( is_numeric( $value ) ) {
 			$url = wp_get_attachment_url( absint( $value ) );
 

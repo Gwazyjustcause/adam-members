@@ -31,7 +31,7 @@ adam_registration_assert( str_contains( $forms, 'cleanup_pending_uploads' ) && s
 adam_registration_assert( str_contains( $forms, 'adam_membership_duplicate_nif' ) && str_contains( $forms, 'erro interno' ), 'Known validation errors remain specific while internal errors stay generic.' );
 adam_registration_assert( str_contains( $forms, '$this->registration->register(' ), 'A valid submission must reach RegistrationService.' );
 adam_registration_assert( str_contains( $forms, 'Registration validation failed' ) && str_contains( $forms, 'error_count' ), 'Validation failures must be logged without submitted PII.' );
-adam_registration_assert( str_contains( $forms, 'private Logger $logger' ) && str_contains( $forms, 'Logger $logger' ) && str_contains( $plugin, 'MembershipForms( $settings, $members, $registration_service, $renewals, $teams, $logger )' ), 'MembershipForms must receive the logger used by its validation error path.' );
+adam_registration_assert( str_contains( $forms, 'private Logger $logger' ) && str_contains( $forms, 'Logger $logger' ) && str_contains( $plugin, 'MembershipForms( $settings, $members, $registration_service, $renewals, $teams, $logger, $private_document_repository, $private_document_storage )' ), 'MembershipForms must receive the logger and private document services used by its validation and upload paths.' );
 adam_registration_assert( str_contains( $nif, 'is_valid' ), 'NIF checksum validation must remain active.' );
 
 echo "Registration submission smoke tests passed.\n";

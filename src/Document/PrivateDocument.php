@@ -25,6 +25,7 @@ final class PrivateDocument {
 	public function request_reference(): string { return (string) ( $this->data['request_reference'] ?? '' ); }
 	public function request_type(): string { return (string) ( $this->data['request_type'] ?? '' ); }
 	public function active(): bool { return '' !== (string) ( $this->data['active_key'] ?? '' ); }
+	public function active_key(): string { return (string) ( $this->data['active_key'] ?? '' ); }
 	public function file_identifier(): string { return (string) ( $this->data['file_identifier'] ?? '' ); }
 	public function original_name(): string { return (string) ( $this->data['original_name'] ?? '' ); }
 	public function mime(): string { return (string) ( $this->data['mime'] ?? '' ); }

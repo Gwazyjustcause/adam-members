@@ -21,6 +21,8 @@ use AdamMembership\Form\SharedFieldValidator;
 use AdamMembership\Form\IdentificationValidator;
 use AdamMembership\Document\Document;
 use AdamMembership\Document\DocumentService;
+use AdamMembership\Document\PrivateDocumentRepository;
+use AdamMembership\Document\PrivateDocumentStorage;
 use AdamMembership\Helpers\RateLimiter;
 use AdamMembership\Points\PointsEntry;
 use AdamMembership\Points\PointsService;
@@ -99,6 +101,8 @@ final class MemberArea {
 	private CommunicationPreferences $communication_preferences;
 	private ApdAssociationService $apd_association;
 	private MemberChangeService $member_changes;
+	private PrivateDocumentRepository $private_documents;
+	private PrivateDocumentStorage $private_storage;
 
 	/**
 	 * Constructor.
@@ -115,7 +119,7 @@ final class MemberArea {
 	 * @param RecognitionService       $recognition               Recognition service.
 	 * @param CommunicationPreferences $communication_preferences Communication preferences.
 	 */
-	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences, ApdAssociationService $apd_association, MemberChangeService $member_changes ) {
+	public function __construct( MemberRepository $members, RenewalService $renewals, SettingsRepository $settings, CardService $cards, AnnouncementService $announcements, DocumentService $documents, PointsService $points, RewardService $rewards, AccountSetup $account_setup, RecognitionService $recognition, CommunicationPreferences $communication_preferences, ApdAssociationService $apd_association, MemberChangeService $member_changes, PrivateDocumentRepository $private_documents, PrivateDocumentStorage $private_storage ) {
 		$this->members       = $members;
 		$this->renewals      = $renewals;
 		$this->settings      = $settings;
@@ -129,6 +133,8 @@ final class MemberArea {
 		$this->communication_preferences = $communication_preferences;
 		$this->apd_association = $apd_association;
 		$this->member_changes = $member_changes;
+		$this->private_documents = $private_documents;
+		$this->private_storage = $private_storage;
 	}
 
 	/**
@@ -2854,6 +2860,11 @@ final class MemberArea {
 	private function render_registration_correction_v2( Member $member ): string {
 		$settings = $this->settings->membership_form_settings();
 		$fields   = CorrectionFieldCatalog::definitions( $settings );
+		foreach ( (array) ( $settings['registration_fields'] ?? array() ) as $custom_key => $custom_config ) {
+			$custom_key = sanitize_key( (string) $custom_key );
+			if ( isset( $fields[ $custom_key ] ) || ! is_array( $custom_config ) || empty( $custom_config['enabled'] ) || 'file' !== (string) ( $custom_config['type'] ?? '' ) ) { continue; }
+			$fields[ $custom_key ] = array_merge( $custom_config, array( 'label' => (string) ( $custom_config['label'] ?? $custom_key ), 'type' => 'file' ) );
+		}
 		$stored  = $member->field( 'adam_correction_fields' );
 		$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
 		$active  = absint( $member->field( 'adam_correction_active_round' ) );
@@ -2890,6 +2901,11 @@ final class MemberArea {
 				'options' => (string) ( $definition['options'] ?? '' ),
 			);
 		}
+		foreach ( (array) ( $settings['registration_fields'] ?? array() ) as $custom_key => $custom_config ) {
+			$custom_key = sanitize_key( (string) $custom_key );
+			if ( isset( $definitions[ $custom_key ] ) || ! is_array( $custom_config ) || empty( $custom_config['enabled'] ) || 'file' !== (string) ( $custom_config['type'] ?? '' ) ) { continue; }
+			$definitions[ $custom_key ] = array( 'label' => (string) ( $custom_config['label'] ?? $custom_key ), 'help' => (string) ( $custom_config['help'] ?? '' ), 'type' => 'file', 'options' => '' );
+		}
 		$message = '';
 		if ( empty( $allowed ) ) {
 			$message = $this->notice_markup( 'error', 'Não foi possível identificar os campos solicitados. Contacte-nos através de apoio@airsoftmondego.pt.' );
@@ -2903,7 +2919,8 @@ final class MemberArea {
 			} else {
 				$updates = array();
 				$email_update = '';
-				$upload_ids = array();
+						$upload_ids = array();
+						$private_upload_ids = array();
 				foreach ( $allowed as $key ) {
 					$config = $definitions[ $key ];
 					if ( 'file' === $config['type'] ) {
@@ -2918,24 +2935,37 @@ final class MemberArea {
 					$check = SharedFieldValidator::validate( $key, $raw, $config, true );
 					if ( is_wp_error( $check ) ) { $message = $this->notice_markup( 'error', $check->get_error_message() ); break; }
 					$clean_value = sanitize_text_field( is_scalar( $raw ) ? (string) $raw : '' );
-					if ( 'email' === $key ) { $email_update = $clean_value; } else { $updates[ $map[ $key ] ?? $key ] = $clean_value; }
+					if ( 'email' === $key ) { $email_update = $clean_value; } else { $updates[ $map[ $key ] ?? ( 'adam_custom_' . sanitize_key( $key ) ) ] = $clean_value; }
 				}
 				if ( '' === $message ) {
-					require_once ABSPATH . 'wp-admin/includes/file.php';
-					require_once ABSPATH . 'wp-admin/includes/media.php';
-					require_once ABSPATH . 'wp-admin/includes/image.php';
 					foreach ( $allowed as $key ) {
 						if ( 'file' !== $definitions[ $key ]['type'] ) { continue; }
 						$file_key = 'profile_photo' === $key ? 'profile_photo' : $key;
-						$upload = media_handle_upload( $file_key, 0, array(), array( 'test_form' => false ) );
-						if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
-						$upload_ids[ $map[ $key ] ?? $key ] = absint( $upload );
+						if ( 'profile_photo' === $key ) {
+							require_once ABSPATH . 'wp-admin/includes/file.php';
+							require_once ABSPATH . 'wp-admin/includes/media.php';
+							require_once ABSPATH . 'wp-admin/includes/image.php';
+							$upload = media_handle_upload( $file_key, 0, array(), array( 'test_form' => false ) );
+							if ( is_wp_error( $upload ) ) { $message = $this->notice_markup( 'error', $upload->get_error_message() ); break; }
+							$upload_ids[ 'profile_photo' ] = absint( $upload );
+							continue;
+						}
+						$reference = (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true );
+						$reference = str_starts_with( $reference, 'registration:' ) ? $reference : 'registration:' . sanitize_key( (string) $member->user_id() );
+						$private = $this->private_documents->replace_from_upload(
+							array( 'request_reference' => $reference, 'request_type' => 'registration', 'active_key' => $reference . ':' . sanitize_key( $key ), 'uploaded_by' => $member->user_id() ),
+							$_FILES[ $file_key ], $this->private_storage,
+							array( 'pdf' => 'application/pdf', 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp' )
+						);
+						if ( is_wp_error( $private ) ) { $message = $this->notice_markup( 'error', $private->get_error_message() ); break; }
+						$private_upload_ids[ 'adam_custom_' . sanitize_key( $key ) ] = 'private:' . $private->id();
 					}
 				}
 				if ( '' === $message && $email_update !== '' ) {
 					$email_result = wp_update_user( array( 'ID' => $member->user_id(), 'user_email' => $email_update ) );
 					if ( is_wp_error( $email_result ) ) { $message = $this->notice_markup( 'error', $email_result->get_error_message() ); }
 				}
+				$upload_ids = array_merge( $upload_ids, $private_upload_ids );
 				if ( '' === $message && ( $updates || $upload_ids || $email_update !== '' ) ) {
 					$history = is_array( $member->field( 'adam_correction_history' ) ) ? $member->field( 'adam_correction_history' ) : array();
 					foreach ( $history as &$round ) {

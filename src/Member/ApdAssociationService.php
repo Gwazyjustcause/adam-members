@@ -54,7 +54,14 @@ final class ApdAssociationService {
 	}
 
 	public function confirm( int $request_id, string $date, string $ana_member_number = '' ): true|WP_Error {
+		$lock = $this->acquire_approval_lock( $request_id );
+		if ( $lock instanceof WP_Error ) { return $lock; }
+		try { return $this->confirm_locked( $request_id, $date, $ana_member_number ); } finally { $this->release_approval_lock( $lock ); }
+	}
+
+	private function confirm_locked( int $request_id, string $date, string $ana_member_number = '' ): true|WP_Error {
 		$request = $this->repository->find( $request_id );
+		if ( null !== $request && ApdAssociationRequest::STATUS_CONFIRMED === $request->status() ) { return true; }
 		if ( null !== $request && ApdAssociationRequest::STATUS_SUBMITTED_ANA !== $request->status() ) { return new WP_Error( 'adam_apd_not_ready', __( 'O pedido só pode ser aprovado depois de ser submetido à ANA.', 'adam-membership' ) ); }
 		if ( null !== $request && ( '' === trim( $date ) || '' === trim( $ana_member_number ) ) ) { return new WP_Error( 'adam_apd_confirmation_required', __( 'Indique a data de confirmação e o número ANA.', 'adam-membership' ) ); }
 		if ( null === $request ) { return new WP_Error( 'adam_apd_request_not_found', __( 'Pedido APD não encontrado.', 'adam-membership' ) ); }
@@ -85,6 +92,26 @@ final class ApdAssociationService {
 		do_action( 'adam_membership_apd_association_approved', $confirmed, $member );
 		if ( null !== $this->email ) { $this->email->send_apd_association_approved_email( $member, $ana_member_number ); }
 		return true;
+	}
+
+	/** @return array{key:string,token:string}|WP_Error */
+	private function acquire_approval_lock( int $request_id ): array|WP_Error {
+		$key = 'adam_membership_apd_approval_lock_' . absint( $request_id );
+		$token = wp_generate_uuid4();
+		$payload = array( 'token' => $token, 'created_at' => time() );
+		if ( add_option( $key, $payload, '', 'no' ) ) { return array( 'key' => $key, 'token' => $token ); }
+		$current = get_option( $key, array() );
+		if ( is_array( $current ) && absint( $current['created_at'] ?? 0 ) < time() - 120 ) {
+			delete_option( $key );
+			if ( add_option( $key, $payload, '', 'no' ) ) { return array( 'key' => $key, 'token' => $token ); }
+		}
+		return new WP_Error( 'adam_membership_apd_approval_in_progress', __( 'Este pedido APD/ANA já está a ser processado. Aguarde alguns segundos e tente novamente.', 'adam-membership' ) );
+	}
+
+	/** @param array{key:string,token:string} $lock */
+	private function release_approval_lock( array $lock ): void {
+		$current = get_option( $lock['key'], array() );
+		if ( is_array( $current ) && hash_equals( $lock['token'], (string) ( $current['token'] ?? '' ) ) ) { delete_option( $lock['key'] ); }
 	}
 
 	public function mark_payment_received( int $request_id ): true|WP_Error {

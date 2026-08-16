@@ -33,8 +33,8 @@ final class PrivateDocumentDownloadController {
 		if ( is_wp_error( $path ) ) {
 			wp_die( esc_html__( 'Documento privado não encontrado.', 'adam-membership' ), '', array( 'response' => 404 ) );
 		}
-		header( 'Content-Type: application/pdf' );
-		header( 'Content-Disposition: attachment; filename="' . rawurlencode( $document->original_name() ) . '"' );
+		header( 'Content-Type: ' . ( '' !== $document->mime() ? $document->mime() : 'application/octet-stream' ) );
+		header( 'Content-Disposition: attachment; filename="' . rawurlencode( sanitize_file_name( $document->original_name() ) ) . '"' );
 		header( 'Content-Length: ' . (string) filesize( $path ) );
 		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Cache-Control: no-store, private' );

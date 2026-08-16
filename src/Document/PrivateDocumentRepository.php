@@ -33,14 +33,14 @@ final class PrivateDocumentRepository {
 			return new WP_Error( 'adam_private_document_invalid_request', __( 'A referência do pedido não é válida.', 'adam-membership' ) );
 		}
 
-		if ( ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $file_identifier ) ) {
+		if ( ! preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $file_identifier ) ) {
 			$this->trace( 'Private document replacement trace v1: file_identifier validation rejected.', array_merge( array( 'stage' => 'repository.file_identifier_validation', 'error_code' => 'adam_private_document_invalid_identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
 			return new WP_Error( 'adam_private_document_invalid_identifier', __( 'O identificador físico do documento não é válido.', 'adam-membership' ) );
 		}
 
 		$now = current_time( 'mysql' );
 		$active_key = array_key_exists( 'active_key', $data ) ? $data['active_key'] : $reference;
-		if ( null !== $active_key && (string) $active_key !== $reference ) {
+		if ( null !== $active_key && (string) $active_key !== $reference && ! str_starts_with( (string) $active_key, $reference . ':' ) ) {
 			return new WP_Error( 'adam_private_document_invalid_request', __( 'A associação ativa do documento não é válida.', 'adam-membership' ) );
 		}
 		$row = array(
@@ -74,9 +74,9 @@ final class PrivateDocumentRepository {
 	}
 
 	/** Store a file and create metadata, rolling the file back if the DB insert fails. */
-	public function create_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+	public function create_from_upload( array $data, array $file, PrivateDocumentStorage $storage, array $mimes = array( 'pdf' => 'application/pdf' ) ): PrivateDocument|WP_Error {
 		$this->trace( 'Private document replacement trace v1: create_from_upload entered.', array( 'stage' => 'repository.create_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
-		$stored = $storage->store_upload( $file );
+		$stored = $storage->store_upload( $file, $mimes );
 		$this->trace( 'Private document replacement trace v1: returned immediately after store_upload.', array( 'stage' => 'repository.after_store_upload.raw', 'stored_type' => get_debug_type( $stored ) ) );
 		if ( is_wp_error( $stored ) ) {
 			$this->trace( 'Private document replacement trace v1: create_from_upload storage failed.', array( 'stage' => 'repository.create_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
@@ -99,12 +99,12 @@ final class PrivateDocumentRepository {
 	}
 
 	/** Replace the active document while preserving the previous version. */
-	public function replace_from_upload( array $data, array $file, PrivateDocumentStorage $storage ): PrivateDocument|WP_Error {
+	public function replace_from_upload( array $data, array $file, PrivateDocumentStorage $storage, array $mimes = array( 'pdf' => 'application/pdf' ) ): PrivateDocument|WP_Error {
 		$stored              = null;
 		$transaction_started = false;
 		try {
 		$this->trace( 'Private document replacement trace v1: replace_from_upload entered.', array( 'stage' => 'repository.replace_from_upload', 'upload_error' => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ) ) );
-		$stored = $storage->store_upload( $file );
+		$stored = $storage->store_upload( $file, $mimes );
 		$this->trace( 'Private document replacement trace v1: returned immediately after store_upload.', array( 'stage' => 'repository.replace_after_store_upload.raw', 'stored_type' => get_debug_type( $stored ) ) );
 		if ( is_wp_error( $stored ) ) {
 			$this->trace( 'Private document replacement trace v1: replacement storage failed.', array( 'stage' => 'repository.replace_from_upload.storage', 'error_code' => $stored->get_error_code() ) );
@@ -117,12 +117,13 @@ final class PrivateDocumentRepository {
 		$reference = (string) ( $data['request_reference'] ?? '' );
 		$wpdb->query( 'START TRANSACTION' );
 		$transaction_started = true;
-		$current = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1 FOR UPDATE', $reference ), ARRAY_A );
+		$active_key = sanitize_text_field( (string) ( $data['active_key'] ?? $reference ) );
+		$current = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1 FOR UPDATE', $active_key ), ARRAY_A );
 		$this->trace( 'Private document replacement trace v1: before reading stored identifier.', array( 'stage' => 'repository.replace_before_identifier_read', 'stored_is_array' => is_array( $stored ) ) );
 		$file_identifier = (string) ( $stored['identifier'] ?? '' );
 		$this->trace( 'Private document replacement trace v1: stored identifier read.', array_merge( array( 'stage' => 'repository.replace_after_identifier_read' ), $this->identifier_diagnostic( $file_identifier, 'identifier' ) ) );
 		$this->trace( 'Private document replacement trace v1: identifier mapped to file_identifier.', array_merge( array( 'stage' => 'repository.identifier_mapping' ), $this->identifier_diagnostic( (string) ( $stored['identifier'] ?? '' ), 'identifier' ), $this->identifier_diagnostic( $file_identifier, 'file_identifier' ) ) );
-		$result = $this->create( array_merge( $data, $stored, array( 'file_identifier' => $file_identifier, 'active_key' => is_array( $current ) ? null : $reference ) ) );
+		$result = $this->create( array_merge( $data, $stored, array( 'file_identifier' => $file_identifier, 'active_key' => is_array( $current ) ? null : $active_key ) ) );
 		if ( is_wp_error( $result ) ) {
 			$this->trace( 'Private document replacement trace v1: new metadata INSERT rejected; rolling back.', array( 'stage' => 'repository.replace_from_upload.rollback', 'error_code' => $result->get_error_code() ) );
 			$wpdb->query( 'ROLLBACK' );
@@ -141,7 +142,7 @@ final class PrivateDocumentRepository {
 			$storage->delete_identifier( (string) $stored['identifier'] );
 			return new WP_Error( 'adam_private_document_replace_failed', __( 'Não foi possível concluir a substituição do documento privado.', 'adam-membership' ) );
 		}
-		if ( is_array( $current ) && is_wp_error( $this->update( $result, array( 'active_key' => $reference ) ) ) ) {
+		if ( is_array( $current ) && is_wp_error( $this->update( $result, array( 'active_key' => $active_key ) ) ) ) {
 			$this->trace( 'Private document replacement trace v1: new document activation failed; rolling back.', array( 'stage' => 'repository.replace_from_upload.activation.rollback' ) );
 			$wpdb->query( 'ROLLBACK' );
 			$storage->delete_identifier( (string) $stored['identifier'] );
@@ -190,7 +191,7 @@ final class PrivateDocumentRepository {
 			$field . '_present'     => '' !== $identifier,
 			$field . '_length'      => strlen( $identifier ),
 			$field . '_fingerprint' => hash( 'sha256', $identifier ),
-			$field . '_has_pdf_shape' => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+			$field . '_has_supported_shape' => 1 === preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $identifier ),
 		);
 	}
 
@@ -209,7 +210,7 @@ final class PrivateDocumentRepository {
 
 	public function find_active( string $request_reference ): ?PrivateDocument {
 		global $wpdb;
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE active_key = %s LIMIT 1', $request_reference ), ARRAY_A );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE request_reference = %s AND document_status = %s ORDER BY id ASC LIMIT 1', $request_reference, 'active' ), ARRAY_A );
 
 		return is_array( $row ) ? new PrivateDocument( $row ) : null;
 	}
@@ -236,7 +237,7 @@ final class PrivateDocumentRepository {
 	/** @return array<int,PrivateDocument> */
 	public function for_file_identifier( string $identifier ): array {
 		global $wpdb;
-		if ( ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ) ) {
+		if ( ! preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $identifier ) ) {
 			return array();
 		}
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . PrivateDocumentSchema::table_name() . ' WHERE file_identifier = %s ORDER BY id ASC', $identifier ), ARRAY_A );

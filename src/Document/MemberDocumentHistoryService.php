@@ -155,6 +155,7 @@ final class MemberDocumentHistoryService {
 		}
 
 		foreach ( $this->private_documents->for_references( $references ) as $document ) {
+			if ( $document->active_key() !== $document->request_reference() ) { continue; }
 			$group = $groups[ $document->request_reference() ] ?? array( 'year' => $this->year_from_date( $document->created_at() ), 'type' => $document->request_type(), 'label' => 'registration' === $document->request_type() ? 'Inscrição' : 'Renovação' );
 			$items[] = array(
 				'year'            => $group['year'],
@@ -206,7 +207,10 @@ final class MemberDocumentHistoryService {
 			if ( ! is_array( $config ) || 'file' !== (string) ( $config['type'] ?? '' ) ) { continue; }
 			$key = ! empty( $config['locked'] ) ? $this->locked_meta_key( (string) $field ) : 'adam_custom_' . sanitize_key( (string) $field );
 			$value = get_user_meta( $member->user_id(), $key, true );
-			$item = $this->media_item( $value, $reference, 'registration', $this->registration_year( $member ), (string) ( $config['label'] ?? $field ) );
+			$label = (string) ( $config['label'] ?? $field );
+			$item = is_string( $value ) && str_starts_with( $value, 'private:' ) && absint( substr( $value, 8 ) ) > 0
+				? $this->private_item( absint( substr( $value, 8 ) ), $reference, $this->registration_year( $member ), $label )
+				: $this->media_item( $value, $reference, 'registration', $this->registration_year( $member ), $label );
 			if ( null !== $item ) { $items[] = $item; }
 		}
 		return $items;
@@ -235,6 +239,12 @@ final class MemberDocumentHistoryService {
 		$filename = $id > 0 ? sanitize_file_name( (string) get_post_meta( $id, '_wp_attached_file', true ) ) : sanitize_file_name( wp_basename( (string) parse_url( $url, PHP_URL_PATH ) ) );
 		$history_key = 'media:' . hash( 'sha256', $reference . '|' . $type . '|' . $label . '|' . (string) $id . '|' . $url );
 		return array( 'year' => $year, 'request_type' => $type, 'request_label' => 'registration' === $type ? 'Inscrição' : 'Renovação', 'request_reference' => $reference, 'document_type' => $label, 'filename' => wp_basename( $filename ), 'date' => $id > 0 ? (string) get_post_field( 'post_date', $id ) : '', 'origin' => 'Sócio', 'status' => 'submitted', 'sent' => false, 'download_url' => $url, 'private' => false, 'document_id' => $id, 'history_key' => $history_key, 'source_type' => 'media', 'source_id' => $id );
+	}
+
+	private function private_item( int $id, string $reference, string $year, string $label ): ?array {
+		$document = $this->private_documents->find( $id );
+		if ( null === $document || $document->request_reference() !== $reference || 'active' !== $document->document_status() ) { return null; }
+		return array( 'year' => $year, 'request_type' => 'registration', 'request_label' => 'Inscrição', 'request_reference' => $reference, 'document_type' => $label, 'filename' => $document->original_name(), 'date' => $document->created_at(), 'origin' => 'Sócio', 'status' => $document->document_status(), 'sent' => false, 'download_url' => $this->private_download_url( $id ), 'private' => true, 'document_id' => $id, 'history_key' => 'private:' . $id, 'source_type' => 'private', 'source_id' => $id );
 	}
 
 	private function registration_year( Member $member ): string { return (string) ( get_user_meta( $member->user_id(), 'adam_membership_year', true ) ?: $this->year_from_date( (string) $member->field( 'data_adesao' ) ) ); }

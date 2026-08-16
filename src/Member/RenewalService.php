@@ -207,11 +207,18 @@ final class RenewalService {
 	 * @return true|WP_Error
 	 */
 	public function approve( int $request_id ): true|WP_Error {
+		$lock = $this->acquire_request_lock( 'renewal', $request_id );
+		if ( $lock instanceof WP_Error ) { return $lock; }
+		try { return $this->approve_locked( $request_id ); } finally { $this->release_request_lock( $lock ); }
+	}
+
+	private function approve_locked( int $request_id ): true|WP_Error {
 		$request = $this->renewals->find( $request_id );
 
 		if ( null === $request ) {
 			return new WP_Error( 'adam_membership_renewal_not_found', __( 'Pedido de renovação não encontrado.', 'adam-membership' ) );
 		}
+		if ( RenewalRequest::STATUS_APPROVED === $request->status() ) { return true; }
 
 		if ( ! in_array( $request->status(), array( RenewalRequest::STATUS_PENDING, RenewalRequest::STATUS_CORRECTION_SUBMITTED ), true ) ) {
 			return new WP_Error( 'adam_membership_renewal_not_pending', __( 'Apenas pedidos de renovação pendentes podem ser aprovados.', 'adam-membership' ) );
@@ -316,6 +323,26 @@ final class RenewalService {
 		$this->logger->info( 'Renewal confirmation email resent.', array( 'renewal_id' => $request_id, 'member_id' => $member->user_id() ) );
 
 		return true;
+	}
+
+	/** @return array{key:string,token:string}|WP_Error */
+	private function acquire_request_lock( string $type, int $request_id ): array|WP_Error {
+		$key = 'adam_membership_' . $type . '_approval_lock_' . absint( $request_id );
+		$token = wp_generate_uuid4();
+		$payload = array( 'token' => $token, 'created_at' => time() );
+		if ( add_option( $key, $payload, '', 'no' ) ) { return array( 'key' => $key, 'token' => $token ); }
+		$current = get_option( $key, array() );
+		if ( is_array( $current ) && absint( $current['created_at'] ?? 0 ) < time() - 120 ) {
+			delete_option( $key );
+			if ( add_option( $key, $payload, '', 'no' ) ) { return array( 'key' => $key, 'token' => $token ); }
+		}
+		return new WP_Error( 'adam_membership_request_in_progress', __( 'Este pedido já está a ser processado. Aguarde alguns segundos e tente novamente.', 'adam-membership' ) );
+	}
+
+	/** @param array{key:string,token:string} $lock */
+	private function release_request_lock( array $lock ): void {
+		$current = get_option( $lock['key'], array() );
+		if ( is_array( $current ) && hash_equals( $lock['token'], (string) ( $current['token'] ?? '' ) ) ) { delete_option( $lock['key'] ); }
 	}
 
 	/** Send only the renewal document without repeating approval. */

@@ -3651,7 +3651,7 @@ final class AdminController {
 		$values = is_array( $round['values'] ?? null ) ? $round['values'] : array();
 		$previous = is_array( $round['previous_values'] ?? null ) ? $round['previous_values'] : array();
 		$map = array( 'full_name' => 'nome', 'birth_date' => 'data_nascimento', 'marital_status' => 'estado_civil', 'gender' => 'genero', 'profession' => 'profissao', 'birthplace' => 'naturalidade', 'nationality' => 'nacionalidade', 'email' => 'email', 'phone' => 'telefone', 'telephone' => 'telefone_fixo', 'address_line_1' => 'morada', 'address_line_2' => 'morada_linha_2', 'postcode' => 'codigo_postal', 'city' => 'cidade', 'municipality' => 'municipio', 'country' => 'pais', 'citizen_card' => 'cartao_cidadao', 'document_expiry_date' => 'documento_validade', 'document_issuing_place' => 'documento_local_emissao', 'nif' => 'nif', 'team' => 'equipa', 'profile_photo' => 'profile_photo', 'payment_receipt' => 'payment_receipt', 'external_association_proof' => 'adam_external_association_proof' );
-		?><div class="adam-admin-panel adam-card adam-registration-correction-review"><h2>CORREÇÃO RECEBIDA</h2><p><?php echo esc_html( (string) ( $round['submitted_at'] ?? '' ) ); ?></p><table class="widefat striped"><thead><tr><th>Campo</th><th>Valor anterior</th><th>Valor corrigido</th></tr></thead><tbody><?php foreach ( (array) ( $round['fields'] ?? array() ) as $field ) : $old = $previous[ $field ] ?? ''; $new = $values[ $map[ $field ] ?? $field ] ?? $values[ $field ] ?? ''; ?><tr><td><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?></td><td><?php echo esc_html( is_scalar( $old ) ? (string) $old : '—' ); ?></td><td><?php if ( in_array( $field, array( 'profile_photo', 'payment_receipt', 'external_association_proof' ), true ) ) : ?><?php $url = is_numeric( $new ) ? wp_get_attachment_url( absint( $new ) ) : ( is_string( $new ) ? $new : '' ); ?><?php if ( $url ) : ?><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener">Abrir documento</a><?php else : ?>—<?php endif; ?><?php else : ?><?php echo esc_html( is_scalar( $new ) ? (string) $new : '—' ); ?><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
+		?><div class="adam-admin-panel adam-card adam-registration-correction-review"><h2>CORREÇÃO RECEBIDA</h2><p><?php echo esc_html( (string) ( $round['submitted_at'] ?? '' ) ); ?></p><table class="widefat striped"><thead><tr><th>Campo</th><th>Valor anterior</th><th>Valor corrigido</th></tr></thead><tbody><?php foreach ( (array) ( $round['fields'] ?? array() ) as $field ) : $old = $previous[ $field ] ?? ''; $new = $values[ $map[ $field ] ?? ( 'adam_custom_' . sanitize_key( (string) $field ) ) ] ?? $values[ $field ] ?? ''; $is_file = in_array( $field, array( 'profile_photo', 'payment_receipt', 'external_association_proof' ), true ) || ( is_string( $new ) && str_starts_with( $new, 'private:' ) ); ?><tr><td><?php echo esc_html( DisplayLabels::field( (string) $field ) ); ?></td><td><?php echo esc_html( is_scalar( $old ) ? (string) $old : '—' ); ?></td><td><?php if ( $is_file ) : ?><?php $url = $this->media_reference_url( $new ); ?><?php if ( $url ) : ?><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener">Abrir documento</a><?php else : ?>—<?php endif; ?><?php else : ?><?php echo esc_html( is_scalar( $new ) ? (string) $new : '—' ); ?><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></div><?php
 	}
 
 	private function render_member_detail( Member $member ): void {
@@ -5567,6 +5567,9 @@ final class AdminController {
 		?>
 		<div class="adam-admin-panel adam-card adam-private-document-panel">
 			<h2><?php esc_html_e( 'Documento de faturação/recibo (opcional)', 'adam-membership' ); ?></h2>
+			<?php if ( 'registration' === $type ) : $registration_documents = $this->private_documents->for_references( array( $reference ) ); $registration_documents = array_values( array_filter( $registration_documents, static fn ( \AdamMembership\Document\PrivateDocument $item ): bool => 'active' === $item->document_status() ) ); ?>
+				<?php if ( $registration_documents ) : ?><div class="adam-registration-private-documents"><p><strong><?php esc_html_e( 'Documentos privados submetidos:', 'adam-membership' ); ?></strong></p><?php foreach ( $registration_documents as $registration_document ) : ?><p><?php echo esc_html( $registration_document->original_name() ); ?> — <a href="<?php echo esc_url( $this->private_document_download_url( $registration_document->id() ) ); ?>"><?php esc_html_e( 'Descarregar', 'adam-membership' ); ?></a></p><?php endforeach; ?></div><?php endif; ?>
+			<?php endif; ?>
 			<?php if ( null === $document ) : ?>
 				<p><?php esc_html_e( 'Sem documento — a aprovação será enviada sem anexo.', 'adam-membership' ); ?></p>
 			<?php else : ?>
@@ -5822,6 +5825,11 @@ final class AdminController {
 	 * @param mixed $value Media reference.
 	 */
 	private function media_reference_url( mixed $value ): string {
+		if ( is_string( $value ) && str_starts_with( $value, 'private:' ) ) {
+			$id = absint( substr( $value, 8 ) );
+			$document = $id > 0 ? $this->private_documents->find( $id ) : null;
+			return null !== $document && 'active' === $document->document_status() ? $this->private_document_download_url( $id ) : '';
+		}
 		if ( is_numeric( $value ) ) {
 			$url = wp_get_attachment_url( absint( $value ) );
 
@@ -5842,6 +5850,11 @@ final class AdminController {
 	 * @param string|null $fallback Fallback datetime.
 	 */
 	private function media_reference_datetime( mixed $value, ?string $fallback = null ): string {
+		if ( is_string( $value ) && str_starts_with( $value, 'private:' ) ) {
+			$id = absint( substr( $value, 8 ) );
+			$document = $id > 0 ? $this->private_documents->find( $id ) : null;
+			return null !== $document ? $this->format_datetime( $document->created_at() ) : '';
+		}
 		if ( is_numeric( $value ) ) {
 			$post = get_post( absint( $value ) );
 
@@ -5859,6 +5872,11 @@ final class AdminController {
 	 * @param mixed $value Media reference.
 	 */
 	private function media_reference_filename( mixed $value ): string {
+		if ( is_string( $value ) && str_starts_with( $value, 'private:' ) ) {
+			$id = absint( substr( $value, 8 ) );
+			$document = $id > 0 ? $this->private_documents->find( $id ) : null;
+			return null !== $document ? sanitize_file_name( $document->original_name() ) : '';
+		}
 		if ( is_numeric( $value ) ) {
 			$file = get_attached_file( absint( $value ) );
 

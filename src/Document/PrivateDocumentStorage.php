@@ -58,7 +58,7 @@ final class PrivateDocumentStorage {
 	}
 
 	/** @return array{identifier:string,original_name:string,mime:string,file_size:int,sha256:string}|WP_Error */
-	public function store_upload( array $file ): array|WP_Error {
+	public function store_upload( array $file, array $mimes = array( 'pdf' => 'application/pdf' ) ): array|WP_Error {
 		$this->trace( 'Private document replacement trace v1: storage store_upload entered.', array(
 			'upload_present' => true,
 			'upload_error'   => (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE ),
@@ -81,13 +81,13 @@ final class PrivateDocumentStorage {
 		}
 		$this->trace( 'Private document replacement trace v1: private temporary file created.', array( 'stage' => 'storage.temporary_file' ) );
 
-		$result = $this->finalize_temp_file( $temp, (string) $file['name'], $directory );
+		$result = $this->finalize_temp_file( $temp, (string) $file['name'], $directory, $mimes );
 		$this->trace_result( 'Private document replacement trace v1: store_upload returned.', $result, 'storage.store_upload.return' );
 		return $result;
 	}
 
 	/** Store a local source file for controlled tests and maintenance tooling. */
-	public function store_source( string $source, string $original_name ): array|WP_Error {
+	public function store_source( string $source, string $original_name, array $mimes = array( 'pdf' => 'application/pdf' ) ): array|WP_Error {
 		$directory = $this->directory();
 		if ( is_wp_error( $directory ) || ! is_file( $source ) || ! is_readable( $source ) ) {
 			return is_wp_error( $directory ) ? $directory : new WP_Error( 'adam_private_document_source_invalid', __( 'A origem do documento não é válida.', 'adam-membership' ) );
@@ -98,7 +98,7 @@ final class PrivateDocumentStorage {
 			return new WP_Error( 'adam_private_document_store_failed', __( 'Não foi possível guardar temporariamente o documento privado.', 'adam-membership' ) );
 		}
 
-		return $this->finalize_temp_file( $temp, $original_name, $directory );
+		return $this->finalize_temp_file( $temp, $original_name, $directory, $mimes );
 	}
 
 	public function delete_identifier( string $identifier ): void {
@@ -119,7 +119,7 @@ final class PrivateDocumentStorage {
 		}
 		$raw_identifier = $document->file_identifier();
 		$identifier     = basename( $raw_identifier );
-		if ( '' === $identifier || $identifier !== $raw_identifier || ! preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ) ) {
+		if ( '' === $identifier || $identifier !== $raw_identifier || ! preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $identifier ) ) {
 			return new WP_Error(
 				'adam_private_document_invalid_identifier',
 				__( 'O identificador do documento não é válido.', 'adam-membership' ),
@@ -128,13 +128,13 @@ final class PrivateDocumentStorage {
 					'identifier_fingerprint' => hash( 'sha256', $raw_identifier ),
 					'identifier_length'       => strlen( $raw_identifier ),
 					'has_path_separator'      => $identifier !== $raw_identifier,
-					'has_pdf_shape'           => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+					'has_supported_shape'     => 1 === preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $identifier ),
 				)
 			);
 		}
 		$path = $directory . DIRECTORY_SEPARATOR . $identifier;
 		$resolved_path = realpath( $path );
-		if ( false === $resolved_path || ! $this->is_within( $resolved_path, $directory ) || ! is_file( $resolved_path ) || ! is_readable( $resolved_path ) || ! $this->is_pdf_file( $resolved_path ) ) {
+		if ( false === $resolved_path || ! $this->is_within( $resolved_path, $directory ) || ! is_file( $resolved_path ) || ! is_readable( $resolved_path ) || ! $this->is_supported_file( $resolved_path, $document->mime() ) ) {
 			return new WP_Error( 'adam_private_document_unavailable', __( 'O documento privado não está disponível.', 'adam-membership' ) );
 		}
 
@@ -142,14 +142,14 @@ final class PrivateDocumentStorage {
 	}
 
 	/** @return array{identifier:string,original_name:string,mime:string,file_size:int,sha256:string}|WP_Error */
-	private function finalize_temp_file( string $temp, string $original_name, string $directory ): array|WP_Error {
-		$validation = $this->validate_file( $temp, $original_name );
+	private function finalize_temp_file( string $temp, string $original_name, string $directory, array $mimes ): array|WP_Error {
+		$validation = $this->validate_file( $temp, $original_name, $mimes );
 		if ( is_wp_error( $validation ) ) {
 			$this->trace_error( 'Private document replacement trace v1: PDF validation rejected upload.', $validation, 'storage.pdf_validation' );
 			unlink( $temp );
 			return $validation;
 		}
-		$identifier = wp_generate_uuid4() . '.pdf';
+		$identifier = wp_generate_uuid4() . '.' . $this->extension_for_mime( (string) $validation['mime'] );
 		$this->trace_identifier( 'Private document replacement trace v1: identifier generated.', $identifier, 'storage.identifier_generated' );
 		$target     = $directory . DIRECTORY_SEPARATOR . $identifier;
 		if ( file_exists( $target ) || ! rename( $temp, $target ) ) {
@@ -167,7 +167,7 @@ final class PrivateDocumentStorage {
 			return new WP_Error( 'adam_private_document_pdf_invalid', __( 'O documento excede o tamanho permitido.', 'adam-membership' ) );
 		}
 
-		$result = array( 'identifier' => $identifier, 'original_name' => sanitize_file_name( $original_name ), 'mime' => 'application/pdf', 'file_size' => $final_size, 'sha256' => (string) hash_file( 'sha256', $target ) );
+		$result = array( 'identifier' => $identifier, 'original_name' => sanitize_file_name( $original_name ), 'mime' => (string) $validation['mime'], 'file_size' => $final_size, 'sha256' => (string) hash_file( 'sha256', $target ) );
 		$this->trace_identifier( 'Private document replacement trace v1: storage finalization returned identifier.', $identifier, 'storage.finalize.return' );
 		return $result;
 	}
@@ -204,33 +204,48 @@ final class PrivateDocumentStorage {
 			'identifier_present'     => '' !== $identifier,
 			'identifier_length'      => strlen( $identifier ),
 			'identifier_fingerprint' => hash( 'sha256', $identifier ),
-			'has_pdf_shape'          => 1 === preg_match( '/^[a-f0-9-]+\.pdf$/i', $identifier ),
+			'has_supported_shape'    => 1 === preg_match( '/^[a-f0-9-]+\.(pdf|jpe?g|png|webp)$/i', $identifier ),
 		);
 	}
 
-	/** @return true|WP_Error */
-	private function validate_file( string $path, string $original_name ): true|WP_Error {
-		if ( 'pdf' !== strtolower( (string) pathinfo( $original_name, PATHINFO_EXTENSION ) ) ) {
-			return new WP_Error( 'adam_private_document_pdf_invalid', __( 'O documento deve ser um PDF válido.', 'adam-membership' ) );
+	/** @return array{mime:string}|WP_Error */
+	private function validate_file( string $path, string $original_name, array $mimes ): array|WP_Error {
+		$name = sanitize_file_name( $original_name );
+		$extension = strtolower( (string) pathinfo( $name, PATHINFO_EXTENSION ) );
+		$type = array( 'ext' => '', 'type' => '' );
+		foreach ( $mimes as $extensions => $mime_type ) {
+			if ( in_array( $extension, explode( '|', (string) $extensions ), true ) ) {
+				$type = array( 'ext' => $extension, 'type' => (string) $mime_type );
+				break;
+			}
+		}
+		if ( empty( $type['type'] ) ) {
+			return new WP_Error( 'adam_private_document_file_invalid', __( 'O documento não tem um tipo permitido.', 'adam-membership' ) );
 		}
 		$max_size = defined( 'ADAM_PRIVATE_DOCUMENT_MAX_BYTES' ) ? absint( ADAM_PRIVATE_DOCUMENT_MAX_BYTES ) : 10 * 1024 * 1024;
 		$size     = filesize( $path );
 		if ( false === $size || $size <= 0 || $size > $max_size ) {
-			return new WP_Error( 'adam_private_document_pdf_invalid', __( 'O documento deve ser um PDF válido até ao tamanho máximo configurado.', 'adam-membership' ) );
+			return new WP_Error( 'adam_private_document_file_invalid', __( 'O documento excede o tamanho máximo permitido.', 'adam-membership' ) );
 		}
 		if ( ! class_exists( 'finfo' ) ) {
 			return new WP_Error( 'adam_private_document_mime_unavailable', __( 'Não foi possível validar o tipo MIME do documento.', 'adam-membership' ) );
 		}
 		$finfo = new \finfo( FILEINFO_MIME_TYPE );
 		$mime  = $finfo->file( $path );
-		$handle = fopen( $path, 'rb' );
-		$prefix = false !== $handle ? fread( $handle, 4 ) : '';
-		if ( false !== $handle ) { fclose( $handle ); }
-		if ( 'application/pdf' !== $mime || self::PDF_SIGNATURE !== $prefix || (int) filesize( $path ) !== $size ) {
-			return new WP_Error( 'adam_private_document_pdf_invalid', __( 'O documento não passou a validação de segurança PDF.', 'adam-membership' ) );
+		$valid = false;
+		if ( 'application/pdf' === $type['type'] ) {
+			$handle = fopen( $path, 'rb' );
+			$prefix = false !== $handle ? fread( $handle, 4 ) : '';
+			if ( false !== $handle ) { fclose( $handle ); }
+			$valid = 'application/pdf' === $mime && self::PDF_SIGNATURE === $prefix;
+		} elseif ( str_starts_with( (string) $type['type'], 'image/' ) ) {
+			$valid = false !== @getimagesize( $path ) && $mime === $type['type'];
+		}
+		if ( ! $valid || (int) filesize( $path ) !== $size ) {
+			return new WP_Error( 'adam_private_document_file_invalid', __( 'O documento não passou a validação de segurança.', 'adam-membership' ) );
 		}
 
-		return true;
+		return array( 'mime' => (string) $type['type'] );
 	}
 
 	private function temporary_path( string $directory ): string { return $directory . DIRECTORY_SEPARATOR . '.upload-' . wp_generate_uuid4() . '.tmp'; }
@@ -271,18 +286,19 @@ final class PrivateDocumentStorage {
 
 	private function is_absolute_path( string $path ): bool { return str_starts_with( $path, '/' ) || (bool) preg_match( '/^[A-Za-z]:[\\\\\/]/', $path ); }
 	private function is_within( string $path, string $root ): bool { $path = rtrim( str_replace( '\\', '/', $path ), '/' ) . '/'; $root = rtrim( str_replace( '\\', '/', $root ), '/' ) . '/'; return str_starts_with( strtolower( $path ), strtolower( $root ) ); }
-	private function is_pdf_file( string $path ): bool {
+	private function is_supported_file( string $path, string $expected_mime ): bool {
 		$handle = fopen( $path, 'rb' );
 		$prefix = false !== $handle ? fread( $handle, 4 ) : '';
 		if ( false !== $handle ) {
 			fclose( $handle );
 		}
-		if ( '%PDF' !== $prefix ) {
-			return false;
-		}
 		$finfo = class_exists( 'finfo' ) ? new \finfo( FILEINFO_MIME_TYPE ) : false;
 		$mime  = false !== $finfo ? $finfo->file( $path ) : '';
-
-		return 'application/pdf' === $mime;
+		if ( 'application/pdf' === $expected_mime ) {
+			return '%PDF' === $prefix && 'application/pdf' === $mime;
+		}
+		return str_starts_with( $expected_mime, 'image/' ) && $mime === $expected_mime && false !== @getimagesize( $path );
 	}
+
+	private function extension_for_mime( string $mime ): string { return match ( $mime ) { 'application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', default => 'bin' }; }
 }
