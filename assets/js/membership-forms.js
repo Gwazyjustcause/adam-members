@@ -293,7 +293,7 @@
 				setNifState( form, input, feedback, status, message );
 				if ( ( 'available' === status || 'local_valid' === status ) && submitAfterCheck ) {
 					submitAfterCheck = false;
-					if ( form.requestSubmit ) { form.requestSubmit(); } else { form.submit(); }
+					if ( form.requestSubmit ) { form.requestSubmit(); } else if ( validateRegistrationUploadSize( form ) ) { form.submit(); }
 				}
 			} ).catch( function ( error ) {
 				if ( 'AbortError' === error.name || input.value.trim() !== value ) {
@@ -306,7 +306,7 @@
 				setNifState( form, input, feedback, 'local_valid', '' );
 				if ( submitAfterCheck ) {
 					submitAfterCheck = false;
-					if ( form.requestSubmit ) { form.requestSubmit(); } else { form.submit(); }
+					if ( form.requestSubmit ) { form.requestSubmit(); } else if ( validateRegistrationUploadSize( form ) ) { form.submit(); }
 				}
 			} ).finally( function () {
 				if ( activeRequest === controller ) {

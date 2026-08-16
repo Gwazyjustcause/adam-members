@@ -61,7 +61,20 @@ final class MembershipForms {
 		add_shortcode( 'adam_renewal_form', array( $this, 'render_renewal_shortcode' ) );
 		add_shortcode( 'adam_membership_form', array( $this, 'render_generic_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
+		add_action( 'template_redirect', array( $this, 'prevent_registration_page_caching' ), 1 );
 		add_filter( 'the_content', array( $this, 'inject_native_forms_into_configured_pages' ), 8 );
+	}
+
+	/** Prevent stale registration nonces and cached success pages. */
+	public function prevent_registration_page_caching(): void {
+		if ( ! is_singular() || ! $this->same_url( (string) get_permalink( get_queried_object_id() ), $this->settings->registration_page_url() ) ) {
+			return;
+		}
+
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		nocache_headers();
 	}
 
 	/**

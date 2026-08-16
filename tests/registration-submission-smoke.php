@@ -17,6 +17,7 @@ $plugin      = (string) file_get_contents( dirname( __DIR__ ) . '/src/Core/Plugi
 $javascript  = (string) file_get_contents( dirname( __DIR__ ) . '/assets/js/membership-forms.js' );
 
 adam_registration_assert( str_contains( $forms, 'enctype="multipart/form-data"' ), 'Registration form must submit uploads as multipart data.' );
+adam_registration_assert( str_contains( $forms, 'DONOTCACHEPAGE' ) && str_contains( $forms, 'nocache_headers' ), 'The public registration page must not cache stale nonces or success confirmations.' );
 adam_registration_assert( str_contains( $forms, 'wp_verify_nonce( $registration_nonce, \'adam_membership_registration_form\' )' ), 'Registration must verify its CSRF nonce.' );
 adam_registration_assert( str_contains( $forms, 'A sessão do formulário expirou ou é inválida.' ), 'Nonce failures must explain that the form session expired.' );
 adam_registration_assert( ! str_contains( $forms, 'Não foi possível validar a submissão da inscrição.' ), 'The old generic registration validation message must not remain.' );
