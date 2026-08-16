@@ -2194,32 +2194,42 @@ final class AdminController {
 
 	/** Test the configured Google Sheets connection without writing spreadsheet data. */
 	public function handle_test_google_sheets(): void {
-		$this->ensure_can_manage();
-		$this->verify_admin_nonce( 'adam_membership_test_google_sheets' );
-		$result = $this->google_sheets->test_connection();
+		try {
+			$this->ensure_can_manage();
+			$this->verify_admin_nonce( 'adam_membership_test_google_sheets' );
+			$result = $this->google_sheets->test_connection();
 
-		if ( is_wp_error( $result ) ) {
-			$this->settings->save_google_sheets_test_result( 'failed' );
-			$this->redirect_with_error( $result->get_error_message() );
-			return;
+			if ( is_wp_error( $result ) ) {
+				$this->settings->save_google_sheets_test_result( 'failed' );
+				$this->redirect_with_error( $result->get_error_message() );
+				return;
+			}
+
+			$this->settings->save_google_sheets_test_result( 'connected', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
+			$this->redirect_with_message( __( 'A ligação Google Sheets foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
+		} catch ( \Throwable $exception ) {
+			$this->google_sheets->log_exception( '', 'connection_test_quotas_handler', $exception );
+			$this->redirect_with_error( __( 'Não foi possível testar a ligação Google Sheets. Verifique a configuração e tente novamente.', 'adam-membership' ) );
 		}
-
-		$this->settings->save_google_sheets_test_result( 'connected', wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ) );
-		$this->redirect_with_message( __( 'A ligação Google Sheets foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 	}
 
 	/** Test the separate Gestão de Sócios destination without writing spreadsheet data. */
 	public function handle_test_gestao_google_sheets(): void {
-		$this->ensure_can_manage();
-		$this->verify_admin_nonce( 'adam_membership_test_gestao_google_sheets' );
-		$result = $this->google_sheets->test_gestao_connection();
+		try {
+			$this->ensure_can_manage();
+			$this->verify_admin_nonce( 'adam_membership_test_gestao_google_sheets' );
+			$result = $this->google_sheets->test_gestao_connection();
 
-		if ( is_wp_error( $result ) ) {
-			$this->redirect_with_error( $result->get_error_message() );
-			return;
+			if ( is_wp_error( $result ) ) {
+				$this->redirect_with_error( $result->get_error_message() );
+				return;
+			}
+
+			$this->redirect_with_message( __( 'A ligação da Gestão de Sócios foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
+		} catch ( \Throwable $exception ) {
+			$this->google_sheets->log_exception( '', 'connection_test_gestao_handler', $exception );
+			$this->redirect_with_error( __( 'Não foi possível testar a ligação da Gestão de Sócios. Verifique a configuração e tente novamente.', 'adam-membership' ) );
 		}
-
-		$this->redirect_with_message( __( 'A ligação da Gestão de Sócios foi confirmada. Nenhum dado foi alterado.', 'adam-membership' ) );
 	}
 
 	/**
