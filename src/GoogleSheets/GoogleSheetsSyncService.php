@@ -100,6 +100,11 @@ final class GoogleSheetsSyncService {
 			$movement['payment_date'] = (string) $financial['payment_date'];
 			$movement['method'] = (string) $financial['payment_method'];
 		}
+		// registration_movement() retains its legacy export keys, while the
+		// financial repository accepts the canonical persistence keys.
+		$movement['membership_year'] = absint( $movement['year'] ?? 0 );
+		$movement['payment_method'] = (string) ( $movement['method'] ?? '' );
+		unset( $movement['year'], $movement['method'] );
 		return $this->movements->ensure( array_merge( $movement, array(
 			'member_id' => $member->user_id(),
 			'member_number' => (string) $member->field( 'numero_socio' ),
