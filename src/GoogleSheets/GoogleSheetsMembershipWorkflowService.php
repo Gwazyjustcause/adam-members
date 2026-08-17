@@ -34,6 +34,22 @@ final class GoogleSheetsMembershipWorkflowService {
 		return $this->sync( $request->request_uuid(), $member, 'Associar APD/ANA' );
 	}
 
+	/** Return live-row status for the admin operational card. */
+	public function registration_status( Member $member ): bool|WP_Error {
+		$type = 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) ? 'Inscrição ADAM/ANA' : 'Inscrição ADAM';
+		return $this->client->workflow_request_exists( self::SHEET_NAME, (string) get_user_meta( $member->user_id(), 'adam_membership_registration_request_uuid', true ), $type, $member->full_name() );
+	}
+
+	public function renewal_status( RenewalRequest $request, Member $member ): bool|WP_Error {
+		$data = $request->submitted_data();
+		$type = 'adam_primary' === (string) ( $data['adam_membership_origin'] ?? '' ) ? 'Renovação ADAM/ANA' : 'Renovação ADAM';
+		return $this->client->workflow_request_exists( self::SHEET_NAME, $request->request_uuid(), $type, $member->full_name() );
+	}
+
+	public function apd_status( ApdAssociationRequest $request, ?Member $member = null ): bool|WP_Error {
+		return $this->client->workflow_request_exists( self::SHEET_NAME, $request->request_uuid(), 'Associar APD/ANA', null !== $member ? $member->full_name() : '' );
+	}
+
 	private function sync( string $request_id, Member $member, string $quota_type ): true|WP_Error {
 		if ( '' === $request_id ) { return $this->failure( $member, '', new WP_Error( 'adam_google_sheets_request_id_missing', __( 'O identificador do pedido não está disponível.', 'adam-membership' ) ) ); }
 		$lock_key = self::LOCK_PREFIX . md5( $request_id );
@@ -41,9 +57,9 @@ final class GoogleSheetsMembershipWorkflowService {
 		if ( $lock_time > 0 && $lock_time < time() - 60 ) { delete_option( $lock_key ); }
 		if ( ! add_option( $lock_key, time(), '', 'no' ) ) { return new WP_Error( 'adam_google_sheets_sync_in_progress', __( 'Este pedido já está a ser sincronizado.', 'adam-membership' ) ); }
 		try {
-			$ids = $this->client->workflow_request_ids( self::SHEET_NAME, $request_id );
-			if ( is_wp_error( $ids ) ) { return $this->failure( $member, $request_id, $ids ); }
-			if ( in_array( $request_id, $ids, true ) ) { return $this->success( $member, $request_id, 'already_present', $quota_type ); }
+			$exists = $this->client->workflow_request_exists( self::SHEET_NAME, $request_id, $quota_type, $member->full_name() );
+			if ( is_wp_error( $exists ) ) { return $this->failure( $member, $request_id, $exists ); }
+			if ( $exists ) { return $this->success( $member, $request_id, 'already_present', $quota_type ); }
 			$ana = str_ends_with( $quota_type, '/ANA' ) || 'Associar APD/ANA' === $quota_type;
 			$row = array( 'Tesoureiro', $quota_type, $member->full_name(), 'Por confirmar', $ana ? 'Espera' : 'Não aplicável', 'Espera', 'Por iniciar', '' );
 			$result = $this->client->append_workflow_row( self::SHEET_NAME, $row, $request_id );

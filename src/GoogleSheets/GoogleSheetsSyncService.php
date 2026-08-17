@@ -85,6 +85,15 @@ final class GoogleSheetsSyncService {
 	/** Persist a financially confirmed registration without approving or synchronizing it. */
 	public function ensure_registration_movement( Member $member, ?array $financial = null ): FinancialMovement|WP_Error {
 		$movement = $this->registration_movement( $member );
+		if ( null === $financial ) {
+			$existing = $this->movements->find( (string) $movement['movement_id'] );
+			if ( null !== $existing ) {
+				$movement['year'] = (string) $existing->membership_year();
+				$movement['amount'] = $existing->amount();
+				$movement['payment_date'] = $existing->payment_date();
+				$movement['method'] = $existing->payment_method();
+			}
+		}
 		if ( null !== $financial ) {
 			$movement['year'] = (string) $financial['membership_year'];
 			$movement['amount'] = (string) $financial['amount'];
@@ -135,12 +144,19 @@ final class GoogleSheetsSyncService {
 		$data = $request->data();
 		$quota_type = $this->quota_type( (string) ( $data['submitted_data']['adam_membership_origin'] ?? '' ), 'renewal' );
 		$sync = (array) ( $data['google_sheets_sync'] ?? array() );
-		$financial = $financial ?? array(
-			'membership_year' => absint( $data['membership_year'] ?? 0 ),
-			'amount' => (string) ( $data['payment_amount'] ?? $data['submitted_data']['adam_membership_fee'] ?? '' ),
-			'payment_date' => (string) ( $data['payment_date'] ?? '' ),
-			'payment_method' => (string) ( $data['payment_method'] ?? '' ),
-		);
+		if ( null === $financial ) {
+			$existing = $this->movements->find( $request->request_uuid() );
+			if ( null !== $existing ) {
+				$financial = array( 'membership_year' => $existing->membership_year(), 'amount' => $existing->amount(), 'payment_date' => $existing->payment_date(), 'payment_method' => $existing->payment_method() );
+			} else {
+				$financial = array(
+					'membership_year' => absint( $data['membership_year'] ?? 0 ),
+					'amount' => (string) ( $data['payment_amount'] ?? $data['submitted_data']['adam_membership_fee'] ?? '' ),
+					'payment_date' => (string) ( $data['payment_date'] ?? '' ),
+					'payment_method' => (string) ( $data['payment_method'] ?? '' ),
+				);
+			}
+		}
 		return $this->movements->ensure( array(
 			'quota_type' => $quota_type,
 			'movement_id' => $request->request_uuid(),
@@ -183,6 +199,14 @@ final class GoogleSheetsSyncService {
 
 	/** Persist a financially confirmed APD movement without confirming the APD request. */
 	public function ensure_apd_movement( ApdAssociationRequest $request, Member $member ): FinancialMovement|WP_Error {
+		$existing = $this->movements->find( $request->request_uuid() );
+		if ( null !== $existing ) {
+			return $this->movements->ensure( array(
+				'quota_type' => 'Associar APD/ANA', 'movement_id' => $request->request_uuid(), 'source_type' => 'apd', 'source_reference' => $request->request_uuid(), 'member_id' => $member->user_id(),
+				'member_number' => (string) $member->field( 'numero_socio' ), 'member_name' => $member->full_name(), 'member_type' => FinancialMovementRepository::member_type_for_quota_type( 'Associar APD/ANA' ),
+				'membership_year' => $existing->membership_year(), 'amount' => $existing->amount(), 'payment_date' => $existing->payment_date(), 'payment_method' => $existing->payment_method(), 'financial_status' => $existing->financial_status(), 'google_state' => $existing->google_state(),
+			) );
+		}
 		return $this->movements->ensure( array(
 			'quota_type' => 'Associar APD/ANA',
 			'movement_id' => $request->request_uuid(),

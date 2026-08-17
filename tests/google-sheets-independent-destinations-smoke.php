@@ -31,6 +31,8 @@ $retry_end   = strpos( $admin, '/** Save payment data required', $retry_start );
 $retry       = false !== $retry_start && false !== $retry_end ? substr( $admin, $retry_start, $retry_end - $retry_start ) : '';
 adam_independent_sheets_assert( str_contains( $retry, 'Member::STATUS_ACTIVE !== $member->status()' ), 'Pending registration retry must stop after Gestão synchronization.' );
 adam_independent_sheets_assert( strpos( $retry, 'Member::STATUS_ACTIVE !== $member->status()' ) < strpos( $retry, '$this->google_sheets_sync->sync_persisted_movement' ), 'Pending retry guard must run before any Quotas synchronization.' );
-adam_independent_sheets_assert( str_contains( $workflow, 'workflow_request_ids' ) && str_contains( $client, 'createDeveloperMetadata' ), 'Retry remains idempotent through request UUID developer metadata.' );
+adam_independent_sheets_assert( str_contains( $workflow, 'workflow_request_exists' ) && str_contains( $client, 'createDeveloperMetadata' ) && str_contains( $client, 'dimensionRange' ), 'Retry remains idempotent through live request UUID developer metadata.' );
+adam_independent_sheets_assert( str_contains( $client, 'expected_quota_type' ) && str_contains( $client, 'expected_member_name' ) && str_contains( $client, 'check_gestao_metadata_row' ), 'Metadata idempotency must verify the current row signature, not metadata alone.' );
+adam_independent_sheets_assert( substr_count( $admin, 'Google Sheets — movimento financeiro' ) === 0, 'All financial UI branches must use the Gestão Financeira label.' );
 
 echo "Independent Google Sheets destination smoke tests passed.\n";

@@ -187,7 +187,6 @@ final class GoogleSheetsClient {
 
 	/** Return request IDs recorded as row-level developer metadata. */
 	public function workflow_request_ids( string $sheet_name, string $request_id = '' ): array|WP_Error {
-		$config = $this->settings->google_sheets_settings();
 		$spreadsheet_id = $this->gestao_spreadsheet_id();
 		if ( is_wp_error( $spreadsheet_id ) ) { return $spreadsheet_id; }
 		$response = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ), array(), self::READONLY_SCOPE, array( 'fields' => 'developerMetadata(metadataKey,metadataValue)' ), $request_id, 'read_gestao_metadata', $spreadsheet_id );
@@ -197,6 +196,43 @@ final class GoogleSheetsClient {
 			if ( 'adam_gestao_socios_request_id' === (string) ( $metadata['metadataKey'] ?? '' ) && '' !== (string) ( $metadata['metadataValue'] ?? '' ) ) { $ids[] = (string) $metadata['metadataValue']; }
 		}
 		return array_values( array_unique( $ids ) );
+	}
+
+	/** Check whether a request UUID still points to a live row-level metadata location. */
+	public function workflow_request_exists( string $sheet_name, string $request_id = '', string $expected_quota_type = '', string $expected_member_name = '' ): bool|WP_Error {
+		if ( '' === trim( $request_id ) ) { return false; }
+		$spreadsheet_id = $this->gestao_spreadsheet_id();
+		if ( is_wp_error( $spreadsheet_id ) ) { return $spreadsheet_id; }
+		$response = $this->request_json(
+			'GET',
+			'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ),
+			array(),
+			self::READONLY_SCOPE,
+			array( 'fields' => 'developerMetadata(metadataKey,metadataValue,location),sheets(properties(title,sheetId))' ),
+			$request_id,
+			'check_gestao_metadata',
+			$spreadsheet_id
+		);
+		if ( is_wp_error( $response ) ) { return $response; }
+		$sheet_ids = array();
+		foreach ( (array) ( $response['sheets'] ?? array() ) as $sheet ) {
+			if ( $sheet_name === (string) ( $sheet['properties']['title'] ?? '' ) ) {
+				$sheet_ids[] = absint( $sheet['properties']['sheetId'] ?? 0 );
+			}
+		}
+		foreach ( (array) ( $response['developerMetadata'] ?? array() ) as $metadata ) {
+			if ( 'adam_gestao_socios_request_id' !== (string) ( $metadata['metadataKey'] ?? '' ) || $request_id !== (string) ( $metadata['metadataValue'] ?? '' ) ) { continue; }
+			$location = (array) ( $metadata['location']['dimensionRange'] ?? array() );
+			if ( 'ROWS' !== (string) ( $location['dimension'] ?? '' ) || ! in_array( absint( $location['sheetId'] ?? 0 ), $sheet_ids, true ) || absint( $location['endIndex'] ?? 0 ) !== absint( $location['startIndex'] ?? 0 ) + 1 ) { continue; }
+			$row_number = absint( $location['startIndex'] ?? 0 ) + 1;
+			$row = $this->request_json( 'GET', 'https://sheets.googleapis.com/v4/spreadsheets/' . rawurlencode( $spreadsheet_id ) . '/values/' . rawurlencode( $sheet_name . '!A' . $row_number . ':C' . $row_number ), array(), self::READONLY_SCOPE, array( 'valueRenderOption' => 'UNFORMATTED_VALUE' ), $request_id, 'check_gestao_metadata_row', $spreadsheet_id );
+			if ( is_wp_error( $row ) ) { return $row; }
+			$values = (array) ( $row['values'][0] ?? array() );
+			if ( '' !== $expected_quota_type && $expected_quota_type !== (string) ( $values[1] ?? '' ) ) { continue; }
+			if ( '' !== $expected_member_name && $expected_member_name !== (string) ( $values[2] ?? '' ) ) { continue; }
+			return true;
+		}
+		return false;
 	}
 
 	/**
