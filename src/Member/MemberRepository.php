@@ -72,6 +72,32 @@ final class MemberRepository {
 	public function all_members(): array {
 		return $this->query_members(
 			array(
+				// Administrator accounts are used for administration/test flows,
+				// not as real ADAM members. Keep them out of every normal member
+				// consumer (dashboard, lists, teams, exports, and maintenance).
+				'role__not_in' => array( 'administrator' ),
+				'meta_query' => array(
+					array(
+						'key'     => 'estado',
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Get administrator accounts that have ADAM member metadata.
+	 *
+	 * This dataset is intentionally only for the hidden test-account screen.
+	 * It must not be used by operational member counts or reports.
+	 *
+	 * @return array<int, Member>
+	 */
+	public function administrator_members(): array {
+		return $this->query_members(
+			array(
+				'role__in'  => array( 'administrator' ),
 				'meta_query' => array(
 					array(
 						'key'     => 'estado',

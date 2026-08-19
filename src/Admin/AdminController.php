@@ -95,6 +95,7 @@ final class AdminController {
 	private const MEMBER_CHANGES_PAGE_SLUG = 'adam-membership-member-changes';
 	private const DIAGNOSTICS_PAGE_SLUG  = 'adam-membership-diagnostics';
 	private const FOUNDERS_PAGE_SLUG     = 'adam-membership-founders';
+	private const TEST_MEMBERS_PAGE_SLUG = 'adam-membership-test-members';
 	private const FORMS_PAGE_SLUG        = 'adam-membership-forms';
 	private const EMAILS_PAGE_SLUG       = 'adam-membership-emails';
 	private const TEAMS_PAGE_SLUG        = 'adam-membership-teams';
@@ -429,6 +430,17 @@ final class AdminController {
 			self::CAPABILITY,
 			self::DIAGNOSTICS_PAGE_SLUG,
 			array( $this, 'render_diagnostics_page' )
+		);
+
+		// Deliberately hidden from the ADAM menu. This is only a maintenance
+		// escape hatch for administrator accounts used in test flows.
+		add_submenu_page(
+			null,
+			esc_html__( 'Contas de teste', 'adam-membership' ),
+			esc_html__( 'Contas de teste', 'adam-membership' ),
+			self::CAPABILITY,
+			self::TEST_MEMBERS_PAGE_SLUG,
+			array( $this, 'render_test_members_page' )
 		);
 
 		add_submenu_page(
@@ -800,6 +812,43 @@ final class AdminController {
 		$this->render_history_filters( $filters );
 		$this->render_financial_history( (int) ( $filters['member_id'] ?? 0 ) );
 		$this->render_history_timeline( $entries );
+		$this->render_footer();
+	}
+
+	/**
+	 * Render the hidden administrator/test member screen.
+	 */
+	public function render_test_members_page(): void {
+		$this->ensure_can_manage();
+
+		$members = $this->members->administrator_members();
+
+		$this->render_header( __( 'Contas de teste', 'adam-membership' ) );
+		$this->render_notices();
+		?>
+		<div class="adam-admin-panel adam-card">
+			<h2><?php esc_html_e( 'Sócios de teste / administradores', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'Estas contas têm acesso administrativo e ficam separadas dos sócios reais. Não entram em contagens, listas, equipas, relatórios ou exportações normais.', 'adam-membership' ); ?></p>
+			<?php if ( array() === $members ) : ?>
+				<?php $this->render_empty_state( __( 'Não existem contas de administrador com dados de sócio.', 'adam-membership' ) ); ?>
+			<?php else : ?>
+				<table class="widefat striped adam-admin-table adam-table">
+					<thead><tr><th><?php esc_html_e( 'Conta', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Email', 'adam-membership' ); ?></th><th><?php esc_html_e( 'N.º de sócio', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Estado', 'adam-membership' ); ?></th><th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th></tr></thead>
+					<tbody>
+						<?php foreach ( $members as $member ) : ?>
+							<tr>
+								<td><?php echo esc_html( $member->full_name() ); ?></td>
+								<td><?php echo esc_html( $member->email() ); ?></td>
+								<td><?php echo esc_html( $this->member_number_label( $member ) ); ?></td>
+								<td><?php echo esc_html( DisplayLabels::status( (string) $member->effective_status() ) ); ?></td>
+								<td><a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'Ver sócio', 'adam-membership' ); ?></a></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
 		$this->render_footer();
 	}
 
@@ -1186,6 +1235,11 @@ final class AdminController {
 				<?php wp_nonce_field( 'adam_membership_run_maintenance' ); ?>
 				<button type="submit" class="button button-secondary adam-button adam-button--secondary"><?php esc_html_e( 'Executar manutenção agora', 'adam-membership' ); ?></button>
 			</form>
+		</div>
+		<div class="adam-admin-panel adam-card">
+			<h2><?php esc_html_e( 'Contas de teste', 'adam-membership' ); ?></h2>
+			<p><?php esc_html_e( 'As contas de administrador usadas para testes ficam fora de todos os dados normais de sócios.', 'adam-membership' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::TEST_MEMBERS_PAGE_SLUG ) ); ?>"><?php esc_html_e( 'Abrir sócios de teste', 'adam-membership' ); ?></a></p>
 		</div>
 		<?php
 		$this->render_footer();

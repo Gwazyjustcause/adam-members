@@ -17,6 +17,8 @@ $assert = static function ( bool $condition, string $message ): void {
 // WP_User_Query, before status, founder, date, or any other statistic exists.
 $assert( str_contains( $repository_source, 'public function statistical_members' ), 'A dedicated statistical member dataset must exist.' );
 $assert( str_contains( $repository_source, "'role__not_in' => array( 'administrator' )" ), 'The statistical member query must exclude administrator roles at query level.' );
+$assert( substr_count( $repository_source, "'role__not_in' => array( 'administrator' )" ) >= 2, 'The normal member dataset must also exclude administrator roles.' );
+$assert( str_contains( $repository_source, 'public function administrator_members' ), 'A separate administrator/test member dataset must exist.' );
 $assert( str_contains( $repository_source, "'key'     => 'estado'" ), 'Statistical members must still require membership metadata.' );
 
 $fixtures = array(
