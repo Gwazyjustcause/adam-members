@@ -187,9 +187,10 @@
 	min-width: 0;
 }
 
-.adam-card-workspace > .adam-card {
+.adam-member-area .adam-card-workspace > .adam-card {
 	grid-column: auto;
 	min-width: 0;
+	padding: clamp(16px, 2vw, 24px);
 }
 
 .adam-card-workspace > .adam-card > .adam-card-heading {
@@ -202,12 +203,55 @@
 	justify-content: flex-start;
 }
 
+.adam-card-workspace .adam-card-actions > :is(.adam-card-link, .adam-text-link) {
+	width: auto;
+	min-height: 44px;
+	padding: 10px 12px;
+	font-size: 0.875rem;
+}
+
+.adam-card-workspace .adam-card-actions > .adam-text-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
 .adam-card-workspace .adam-card-customizer {
 	display: flex;
 	flex-direction: column;
+	margin: 0;
 	padding: 0;
-	border: 0;
-	background: transparent;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	gap: 16px;
+}
+
+.adam-card-workspace .adam-card-customizer label {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+.adam-card-workspace .adam-card-customizer select {
+	max-width: 100%;
+}
+
+.adam-card-workspace .adam-card-personalization-section > .adam-card-heading h3 {
+	margin: 0;
+	font-size: 1.05rem;
+	line-height: 1.4;
+}
+
+.adam-card-workspace .adam-card-customizer__heading {
+	margin: 0;
+}
+
+.adam-card-workspace .adam-card-customizer__heading button {
+	min-height: 44px;
 }
 
 .adam-card-workspace .adam-card-customizer__grid {
@@ -226,6 +270,18 @@
 	.adam-card-workspace {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 16px;
+	}
+}
+
+@media (max-width: 480px) {
+	.adam-card-workspace .adam-digital-card-actions {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.adam-card-workspace .adam-digital-card-actions > .adam-card-download-button {
+		grid-column: 1 / -1;
 	}
 }
 
@@ -3918,6 +3974,45 @@
 	overflow: auto;
 }
 
+/* Center the complete card without stretching its fixed canvas. */
+.adam-digital-card-stage {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1 0 auto;
+	width: 100%;
+	min-width: 0;
+}
+
+.adam-digital-card-viewport.is-pending {
+	aspect-ratio: 1024 / 656;
+	overflow: hidden;
+	border-radius: 14px;
+	background: var(--adam-surface, #f4f7f3);
+}
+
+.adam-digital-card-viewport.is-pending > .adam-digital-card {
+	position: absolute;
+	top: 0;
+	left: 0;
+	visibility: hidden;
+}
+
+.adam-digital-card-loading {
+	display: none;
+}
+
+.is-pending > .adam-digital-card-loading {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 16px;
+	color: var(--adam-muted, #5d6b7c);
+	font-size: 0.875rem;
+	text-align: center;
+}
+
 .adam-digital-card-viewport.is-scaled {
 	overflow: hidden;
 }
@@ -4047,5 +4142,13 @@ body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-digital-card-
 	border-radius: 10px;
 	color: #14200c;
 	font-family: inherit;
+	box-shadow: none;
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-card-workspace .adam-card-customizer__heading .adam-card-link {
+	background: var(--adam-member-ui-accent) !important;
+	color: #14200c !important;
+	-webkit-text-fill-color: currentColor;
+	border-radius: 10px;
 	box-shadow: none;
 }

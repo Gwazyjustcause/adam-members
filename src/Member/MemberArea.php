@@ -792,9 +792,13 @@ final class MemberArea {
 					<a class="adam-text-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
 				</div>
 			</div>
-			<div class="adam-digital-card-viewport">
-				<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<div class="adam-digital-card-stage">
+				<div class="adam-digital-card-viewport is-pending" aria-busy="true">
+					<span class="adam-digital-card-loading" role="status"><?php esc_html_e( 'A preparar cartão…', 'adam-membership' ); ?></span>
+					<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				</div>
 			</div>
+			<noscript><style>.adam-digital-card-viewport.is-pending{aspect-ratio:auto;overflow:auto}.adam-digital-card-viewport.is-pending > .adam-digital-card{position:relative;visibility:visible}.adam-digital-card-loading{display:none!important}</style></noscript>
 		</section>
 		<?php
 	}
@@ -846,7 +850,7 @@ final class MemberArea {
 	 */
 	private function render_card_customizer( Member $member, array $cosmetic_options, array $card_presentation ): void {
 		?>
-		<form method="post" class="adam-card-customizer">
+		<form method="post" class="adam-card-customizer" data-adam-ui-ignore>
 			<input type="hidden" name="adam_member_action" value="save_card_cosmetics">
 			<?php wp_nonce_field( 'adam_member_save_card_cosmetics_' . $member->user_id() ); ?>
 

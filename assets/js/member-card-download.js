@@ -463,10 +463,17 @@
 				viewport.appendChild( image );
 				viewport.style.height = ( viewport.clientWidth * image.naturalHeight / image.naturalWidth ) + 'px';
 				viewport.classList.add( 'is-rendered' );
+				viewport.classList.remove( 'is-pending' );
+				viewport.removeAttribute( 'aria-busy' );
 				return blob;
 			} catch ( error ) {
 				if ( url ) { window.URL.revokeObjectURL( url ); }
-				if ( renderedCards.get( card ) === state ) { renderedCards.delete( card ); }
+				if ( renderedCards.get( card ) === state ) {
+					renderedCards.delete( card );
+					// Keep the scaled HTML card usable if capture is unavailable.
+					viewport.classList.remove( 'is-pending' );
+					viewport.removeAttribute( 'aria-busy' );
+				}
 				throw error;
 			}
 		}() );
