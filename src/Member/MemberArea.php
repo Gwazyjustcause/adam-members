@@ -760,14 +760,15 @@ final class MemberArea {
 			<div class="adam-card-heading">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
-					<h3><?php esc_html_e( 'O teu cartão ADAM', 'adam-membership' ); ?></h3>
+				</div>
+				<div class="adam-card-actions adam-digital-card-actions">
+					<button type="button" class="adam-card-link adam-card-download-button" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></button>
+					<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+					<a class="adam-text-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
 				</div>
 			</div>
-			<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-			<div class="adam-card-actions adam-digital-card-actions">
-				<button type="button" class="adam-card-link adam-card-download-button" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></button>
-				<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
-				<a class="adam-text-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
+			<div class="adam-digital-card-viewport">
+				<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			</div>
 		</section>
 		<?php

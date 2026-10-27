@@ -5,6 +5,37 @@
 	var messages = config.messages || {};
 	var busyButtons = new WeakMap();
 
+	function initCardScaling() {
+		document.querySelectorAll( '.adam-digital-card-viewport' ).forEach( function ( viewport ) {
+			var card = viewport.querySelector( '.adam-digital-card' );
+			if ( ! card ) {
+				return;
+			}
+
+			function fitCard() {
+				var scale = Math.min( 1, viewport.clientWidth / card.offsetWidth );
+				if ( scale <= 0 || ! Number.isFinite( scale ) ) {
+					return;
+				}
+				card.style.transform = 'scale(' + scale + ')';
+				viewport.style.height = ( card.offsetHeight * scale ) + 'px';
+				viewport.classList.add( 'is-scaled' );
+			}
+
+			fitCard();
+			if ( 'function' === typeof window.ResizeObserver ) {
+				var observer = new ResizeObserver( fitCard );
+				observer.observe( viewport );
+				observer.observe( card );
+			} else {
+				window.addEventListener( 'resize', fitCard );
+			}
+			if ( document.fonts && document.fonts.ready ) {
+				document.fonts.ready.then( fitCard );
+			}
+		} );
+	}
+
 	function getMessage( key, fallback ) {
 		return messages[ key ] || fallback;
 	}
@@ -251,9 +282,6 @@
 				throw new Error( getMessage( 'errorHiddenCard', 'O cartão digital tem de estar visível para descarregar o PNG.' ) );
 			}
 
-			window.console.log( 'ADAM card capture root:', card );
-			window.console.log( 'ADAM card capture root bounds:', card.getBoundingClientRect() );
-
 			if ( document.fonts && document.fonts.ready ) {
 				await document.fonts.ready;
 			}
@@ -262,12 +290,21 @@
 
 			var canvas = await window.html2canvas( card, {
 				scale: 3,
+				width: card.offsetWidth,
+				height: card.offsetHeight,
 				backgroundColor: null,
 				useCORS: true,
 				allowTaint: false,
 				logging: false,
 				imageTimeout: 15000,
 				onclone: function ( clonedDocument ) {
+					// Capture the full canvas, independently of its phone display scale.
+					var clonedCard = clonedDocument.querySelector( '.adam-digital-card-viewport > .adam-digital-card' );
+					if ( clonedCard && card.closest( '.adam-digital-card-viewport' ) ) {
+						clonedCard.style.transform = 'none';
+						clonedCard.parentElement.style.height = 'auto';
+						clonedCard.parentElement.style.overflow = 'visible';
+					}
 					cloneTitleBadgesForCapture( card, clonedDocument );
 				}
 			} );
@@ -294,6 +331,7 @@
 	};
 
 	function init() {
+		initCardScaling();
 		var buttons = document.querySelectorAll( '[data-adam-card-download="png"]' );
 
 		Array.prototype.forEach.call( buttons, function ( button ) {

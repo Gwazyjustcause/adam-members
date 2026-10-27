@@ -3189,20 +3189,6 @@
 		grid-column: 1 / -1;
 	}
 
-	.adam-digital-card__content {
-		grid-template-columns: 1fr;
-	}
-
-	.adam-digital-card__body {
-		grid-template-columns: 128px minmax(0, 1fr);
-	}
-
-	.adam-digital-card__qr {
-		grid-column: 1 / -1;
-		justify-self: center;
-		width: min(220px, 100%);
-	}
-
 	.adam-action-grid {
 		grid-template-columns: 1fr;
 	}
@@ -3330,38 +3316,6 @@
 	.adam-text-link {
 		width: 100%;
 		text-align: center;
-	}
-
-	.adam-digital-card {
-		gap: 16px;
-		padding: 22px;
-		text-align: center;
-	}
-
-	.adam-digital-card__header,
-	.adam-digital-card__body,
-	.adam-digital-card__details,
-	.adam-digital-card__footer {
-		grid-template-columns: 1fr;
-	}
-
-	.adam-digital-card__header,
-	.adam-digital-card__identity,
-	.adam-digital-card__footer {
-		justify-content: center;
-	}
-
-	.adam-digital-card__header,
-	.adam-digital-card__footer {
-		flex-direction: column;
-	}
-
-	.adam-digital-card__photo {
-		justify-self: center;
-	}
-
-	.adam-digital-card__qr {
-		width: 100%;
 	}
 
 	.adam-card-actions {
@@ -3700,10 +3654,9 @@
 .adam-confirmation-summary dd { margin: 0; font-weight: 600; }
 .adam-confirmation-page .adam-notice--warning { margin: 1.5rem 0; }
 
-/* One personalized card for phones and desktops, including PNG capture. */
+/* The card is a fixed desktop canvas, scaled as a whole inside its viewport. */
 .adam-digital-card-actions {
-	justify-content: flex-start;
-	margin-top: 20px;
+	justify-content: flex-end;
 }
 
 .adam-member-area :is(a, button, input, select):focus-visible {
@@ -3770,126 +3723,10 @@
 		padding: 8px 8px 0;
 	}
 
-	.adam-digital-card-section > .adam-digital-card {
-		display: block;
-		width: 100%;
-		min-width: 0;
-		min-height: 0;
-		padding: 20px;
-		text-align: left;
-	}
-
-	.adam-digital-card-section .adam-digital-card__content {
-		gap: 18px;
-		min-width: 0;
-	}
-
-	.adam-digital-card-section .adam-digital-card__header {
-		display: grid;
-		grid-template-columns: 72px minmax(0, 1fr);
-		gap: 12px;
-		text-align: left;
-	}
-
-	.adam-digital-card-section .adam-digital-card__logo {
-		width: 72px;
-		height: 58px;
-		padding: 8px;
-		border-radius: 10px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__header > .adam-badge {
-		grid-column: 1 / -1;
-		justify-self: start;
-	}
-
-	.adam-digital-card-section .adam-digital-card__body {
-		grid-template-columns: 72px minmax(0, 1fr);
-		gap: 14px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__photo {
-		width: 72px;
-		justify-self: start;
-		border-width: 2px;
-		border-radius: 12px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__identity strong {
-		font-size: clamp(1.15rem, 4.5vw, 1.8rem);
-		line-height: 1.15;
-	}
-
-	.adam-digital-card-section .adam-digital-card__title {
-		max-width: 100%;
-		min-height: 0;
-		padding: 8px;
-		gap: 6px;
-		font-size: 0.75rem;
-		letter-spacing: 0.02em;
-	}
-
-	.adam-digital-card-section .adam-digital-card__rank > small {
-		display: block;
-		min-height: 0;
-		padding: 0;
-		border: 0;
-		border-radius: 0;
-		background: none;
-		font-size: 0.65rem;
-	}
-
-	.adam-digital-card-section .adam-title-badge__label {
-		min-width: 0;
-		overflow-wrap: anywhere;
-		line-height: 1.3;
-	}
-
-	.adam-digital-card-section .adam-digital-card__qr {
-		grid-column: 1 / -1;
-		justify-self: center;
-		width: auto;
-		padding: 12px;
-		border-radius: 14px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__qr img {
-		width: 140px;
-		height: 140px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__details {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 8px;
-	}
-
-	.adam-digital-card-section .adam-digital-card__details div {
-		min-width: 0;
-		padding: 10px;
-		border-radius: 10px;
-		overflow-wrap: anywhere;
-	}
-
-	.adam-digital-card-section .adam-digital-card__details div:first-child {
-		grid-column: 1 / -1;
-	}
-
-	.adam-digital-card-section .adam-digital-card__details strong {
-		font-size: 0.9rem;
-	}
-
-	.adam-digital-card-section .adam-digital-card__footer {
-		align-items: flex-start;
-		gap: 8px;
-		text-align: left;
-		overflow-wrap: anywhere;
-	}
-
 	.adam-digital-card-actions {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: 10px;
-		margin-top: 14px;
 	}
 
 	.adam-digital-card-actions .adam-text-link {
@@ -3909,4 +3746,32 @@
 		gap: 6px;
 		padding: 12px 0;
 	}
+}
+
+.adam-digital-card-viewport {
+	width: 100%;
+	max-width: 1024px;
+	margin-inline: auto;
+	overflow: auto;
+}
+
+.adam-digital-card-viewport.is-scaled {
+	overflow: hidden;
+}
+
+.adam-digital-card-viewport > .adam-digital-card {
+	width: 1024px;
+	max-width: none;
+	flex: none;
+	transform-origin: top left;
+	text-align: left;
+}
+
+/* Freeze viewport-dependent type too, so names wrap identically at all sizes. */
+.adam-digital-card-viewport .adam-digital-card__header strong {
+	font-size: 1.18rem;
+}
+
+.adam-digital-card-viewport .adam-digital-card__identity strong {
+	font-size: 3.6rem;
 }
