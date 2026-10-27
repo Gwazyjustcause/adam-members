@@ -310,6 +310,7 @@ final class CardService {
 		ob_start();
 		?>
 		<article class="<?php echo esc_attr( $resolved['class_name'] ); ?>"<?php echo '' !== $resolved['inline_style'] ? ' style="' . esc_attr( $resolved['inline_style'] ) . '"' : ''; ?> data-adam-card-preview data-adam-card-base-class="<?php echo esc_attr( $resolved['base_class_name'] ); ?>" aria-label="<?php esc_attr_e( 'ADAM digital membership card', 'adam-membership' ); ?>">
+				<div class="adam-digital-card__decoration" aria-hidden="true">
 				<div class="adam-digital-card__shine" aria-hidden="true"></div>
 				<div class="adam-digital-card__backdrop"<?php echo '' !== $resolved['background_image_url'] ? ' style="background-image:url(' . esc_attr( $this->asset_url_for_markup( $resolved['background_image_url'], $allow_data_uris ) ) . ');"' : ''; ?> data-adam-card-backdrop></div>
 				<div class="adam-digital-card__pattern adam-digital-card__pattern--<?php echo esc_attr( $resolved['pattern'] ); ?>" data-adam-card-pattern></div>
@@ -320,6 +321,7 @@ final class CardService {
 					<?php foreach ( $resolved['shapes'] as $shape ) : ?>
 						<?php $this->render_shape( (array) $shape ); ?>
 					<?php endforeach; ?>
+				</div>
 				</div>
 				<div class="adam-digital-card__content">
 				<header class="adam-digital-card__header">

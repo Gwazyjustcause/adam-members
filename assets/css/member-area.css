@@ -283,6 +283,22 @@
 	min-height: 100%;
 }
 
+/* Decorations stay inside the frame, including oversized rotated patterns. */
+.adam-digital-card__decoration {
+	position: absolute;
+	inset: var(--adam-frame-width, 0px);
+	border-radius: max(0px, calc(var(--adam-card-radius) - var(--adam-frame-width, 0px)));
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 0;
+}
+
+.adam-digital-card__decoration > .adam-digital-card__backdrop,
+.adam-digital-card__decoration > .adam-digital-card__art,
+.adam-digital-card__decoration > .adam-digital-card__shapes {
+	inset: max(0px, calc(var(--adam-card-frame-inset) - var(--adam-frame-width, 0px)));
+}
+
 
 
 .adam-digital-card__shine {
@@ -305,7 +321,24 @@
 	border-width: 0;
 }
 
+/* A continuous outer surface and rounded inner surface form the frame ring.
+ * Keep it out of layout so frame thickness cannot move the card contents. */
+.adam-digital-card.adam-digital-card--has-frame {
+	background: var(--adam-card-frame-ring);
+}
+
+.adam-digital-card--has-frame::before {
+	content: "";
+	position: absolute;
+	inset: var(--adam-frame-width, 0px);
+	border-radius: max(0px, calc(var(--adam-card-radius) - var(--adam-frame-width, 0px)));
+	background: var(--adam-card-surface);
+	pointer-events: none;
+	z-index: -1;
+}
+
 .adam-digital-card--frame-simple {
+	--adam-card-frame-ring: linear-gradient(var(--adam-frame-color, transparent), var(--adam-frame-color, transparent));
 	--adam-card-frame-top: linear-gradient(var(--adam-frame-color, transparent), var(--adam-frame-color, transparent));
 	--adam-card-frame-right: linear-gradient(var(--adam-frame-color, transparent), var(--adam-frame-color, transparent));
 	--adam-card-frame-bottom: linear-gradient(var(--adam-frame-color, transparent), var(--adam-frame-color, transparent));
@@ -313,6 +346,7 @@
 }
 
 .adam-digital-card--frame-metallic {
+	--adam-card-frame-ring: linear-gradient(135deg, var(--adam-frame-highlight-color, transparent) 0%, var(--adam-frame-color, transparent) 48%, var(--adam-frame-highlight-color, transparent) 100%);
 	--adam-card-frame-top: linear-gradient(90deg, var(--adam-frame-highlight-color, transparent) 0%, var(--adam-frame-color, transparent) 48%, var(--adam-frame-highlight-color, transparent) 100%);
 	--adam-card-frame-right: linear-gradient(180deg, var(--adam-frame-highlight-color, transparent) 0%, var(--adam-frame-color, transparent) 48%, var(--adam-frame-highlight-color, transparent) 100%);
 	--adam-card-frame-bottom: linear-gradient(90deg, var(--adam-frame-highlight-color, transparent) 0%, var(--adam-frame-color, transparent) 48%, var(--adam-frame-highlight-color, transparent) 100%);
@@ -320,6 +354,7 @@
 }
 
 .adam-digital-card--frame-gradient {
+	--adam-card-frame-ring: linear-gradient(var(--adam-frame-angle, 135deg), var(--adam-frame-gradient-color-1, transparent) 0%, var(--adam-frame-gradient-color-2, transparent) 50%, var(--adam-frame-gradient-color-3, transparent) 100%);
 	--adam-card-frame-top: linear-gradient(90deg, var(--adam-frame-gradient-color-1, transparent) 0%, var(--adam-frame-gradient-color-2, transparent) 50%, var(--adam-frame-gradient-color-3, transparent) 100%);
 	--adam-card-frame-right: linear-gradient(180deg, var(--adam-frame-gradient-color-1, transparent) 0%, var(--adam-frame-gradient-color-2, transparent) 50%, var(--adam-frame-gradient-color-3, transparent) 100%);
 	--adam-card-frame-bottom: linear-gradient(90deg, var(--adam-frame-gradient-color-3, transparent) 0%, var(--adam-frame-gradient-color-2, transparent) 50%, var(--adam-frame-gradient-color-1, transparent) 100%);
