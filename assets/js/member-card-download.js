@@ -146,6 +146,47 @@
 		} );
 	}
 
+	async function fittedImagesForCapture( card ) {
+		// html2canvas stretches replaced images instead of applying object-fit.
+		// Bake the browser's crop into a same-ratio bitmap for the clone only.
+		return Promise.all( Array.prototype.map.call( card.querySelectorAll( 'img' ), async function ( image ) {
+			var style = window.getComputedStyle( image );
+			var width = parseFloat( style.width );
+			var height = parseFloat( style.height );
+			if ( ! image.naturalWidth || ! image.naturalHeight || ! ( width > 0 && height > 0 ) ||
+				( 'cover' !== style.objectFit && 'contain' !== style.objectFit ) ) {
+				return null;
+			}
+			if ( 'function' === typeof image.decode ) {
+				await image.decode();
+			}
+
+			var ratio = ( 'cover' === style.objectFit ? Math.max : Math.min )(
+				width / image.naturalWidth, height / image.naturalHeight
+			);
+			var position = style.objectPosition.split( /\s+/ );
+			function offset( value, space ) {
+				if ( 'left' === value || 'top' === value ) { return 0; }
+				if ( 'right' === value || 'bottom' === value ) { return space; }
+				if ( /%$/.test( value ) ) { return space * parseFloat( value ) / 100; }
+				if ( /px$/.test( value ) ) { return parseFloat( value ); }
+				return space / 2;
+			}
+
+			var canvas = document.createElement( 'canvas' );
+			canvas.width = Math.ceil( width * 3 );
+			canvas.height = Math.ceil( height * 3 );
+			var context = canvas.getContext( '2d' );
+			context.scale( canvas.width / width, canvas.height / height );
+			context.drawImage( image,
+				offset( position[0], width - image.naturalWidth * ratio ),
+				offset( position[1] || '50%', height - image.naturalHeight * ratio ),
+				image.naturalWidth * ratio, image.naturalHeight * ratio
+			);
+			return { src: canvas.toDataURL( 'image/png' ), width: width, height: height };
+		} ) );
+	}
+
 	function parseRgbColor( value ) {
 		var match = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/i.exec( value || '' );
 
@@ -287,6 +328,8 @@
 			}
 
 			await Promise.all( getCardImages( card ).map( waitForImage ) );
+			var fittedImages = await fittedImagesForCapture( card );
+			var cardIndex = Array.prototype.indexOf.call( document.querySelectorAll( '.adam-digital-card' ), card );
 
 			var canvas = await window.html2canvas( card, {
 				scale: 3,
@@ -297,13 +340,29 @@
 				allowTaint: false,
 				logging: false,
 				imageTimeout: 15000,
-				onclone: function ( clonedDocument ) {
+				onclone: async function ( clonedDocument ) {
 					// Capture the full canvas, independently of its phone display scale.
-					var clonedCard = clonedDocument.querySelector( '.adam-digital-card-viewport > .adam-digital-card' );
+					var clonedCard = clonedDocument.querySelectorAll( '.adam-digital-card' )[ cardIndex ];
 					if ( clonedCard && card.closest( '.adam-digital-card-viewport' ) ) {
 						clonedCard.style.transform = 'none';
 						clonedCard.parentElement.style.height = 'auto';
 						clonedCard.parentElement.style.overflow = 'visible';
+					}
+					if ( clonedCard ) {
+						await Promise.all( Array.prototype.map.call( clonedCard.querySelectorAll( 'img' ), async function ( image, index ) {
+							var fitted = fittedImages[ index ];
+							if ( ! fitted ) { return; }
+							image.removeAttribute( 'srcset' );
+							image.removeAttribute( 'sizes' );
+							image.src = fitted.src;
+							image.style.width = fitted.width + 'px';
+							image.style.height = fitted.height + 'px';
+							image.style.objectFit = 'fill';
+							await waitForImage( image );
+							if ( 'function' === typeof image.decode ) {
+								await image.decode();
+							}
+						} ) );
 					}
 					cloneTitleBadgesForCapture( card, clonedDocument );
 				}

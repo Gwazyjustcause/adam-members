@@ -57,6 +57,33 @@ const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.ph
         await download.saveAs(filename);
         const png = fs.readFileSync(filename);
         const pngSize = [png.readUInt32BE(16), png.readUInt32BE(20)];
+
+        // A round target in a square source must remain round in the portrait crop.
+        const photoShape = await page.evaluate(async source => {
+          const image = new Image();
+          image.src = source;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d');
+          context.drawImage(image, 0, 0);
+          const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          let left = Infinity, top = Infinity, right = -1, bottom = -1;
+          for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+              const i = (y * canvas.width + x) * 4;
+              if (data[i] > 220 && data[i + 1] < 70 && data[i + 2] > 140) {
+                left = Math.min(left, x); right = Math.max(right, x);
+                top = Math.min(top, y); bottom = Math.max(bottom, y);
+              }
+            }
+          }
+          return { width: right - left + 1, height: bottom - top + 1 };
+        }, 'data:image/png;base64,' + png.toString('base64'));
+        assert(photoShape.width > 100 && photoShape.height > 100, 'Export must include the portrait');
+        assert(Math.abs(photoShape.width / photoShape.height - 1) < 0.025,
+          `Portrait distorted: circular target became ${photoShape.width}×${photoShape.height}`);
         assert.equal(pngSize[0], 3072, 'PNG always exports the full 1024px canvas at 3x');
         if (!referencePngSize) referencePngSize = pngSize;
         assert.deepEqual(pngSize, referencePngSize, 'PNG dimensions must not change with the screen width');

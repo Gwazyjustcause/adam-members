@@ -21,7 +21,8 @@ $svg = static fn( $content ) => 'data:image/svg+xml;base64,' . base64_encode( '<
 $card_data = array(
 	'association_name' => 'Associação Desportiva de Airsoft do Mondego',
 	'association_logo' => $svg( '<rect width="160" height="160" fill="white"/><text x="10" y="90" fill="#365314" font-size="44" font-weight="bold">ADAM</text>' ),
-	'photo_url' => '', 'initials' => 'MS',
+	// A circular target makes stretching in the PNG export measurable.
+	'photo_url' => $svg( '<rect width="160" height="160" fill="#154b87"/><circle cx="80" cy="80" r="35" fill="#ff24b4"/>' ), 'initials' => 'MS',
 	'member_name' => 'Maria Alexandra de Albuquerque e Silva',
 	'member_number_ui' => 'ADAM-000123', 'status' => 'Ativo',
 	'joined_date' => '01/01/2020', 'expiry_date' => '31/12/2026',
