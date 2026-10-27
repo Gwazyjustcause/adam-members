@@ -56,12 +56,42 @@ const card = cardFixture.match(/<section class="adam-card adam-digital-card-sect
             assert(contrast.buttons.every(value => value >= 4.5), `Dark button text contrast too low: ${contrast.buttons}`);
           }
           if (state === 'active') {
-            await page.locator('.adam-dashboard-grid').evaluate((grid, card) => grid.insertAdjacentHTML('beforebegin', card), card);
+            await page.locator('.adam-card-workspace > .adam-digital-card-section').evaluate((section, card) => section.outerHTML = card, card);
             // The sample uses a fixed card theme, like a member's saved cosmetics.
             await page.locator('.adam-digital-card').evaluate(card => card.style.setProperty('--adam-card-surface', 'linear-gradient(135deg, #173f24, #102033)'));
             await page.addScriptTag({ path: path.join(root, 'assets/vendor/html2canvas/html2canvas.min.js') });
             await page.addScriptTag({ path: path.join(root, 'assets/js/member-card-download.js') });
             await page.evaluate(() => window.adamMemberCardDownloadApi.preparePreviews());
+            const layout = await page.evaluate(() => {
+              const card = document.querySelector('.adam-card-workspace > .adam-digital-card-section').getBoundingClientRect();
+              const controls = document.querySelector('.adam-card-workspace > .adam-card-personalization-section').getBoundingClientRect();
+              return { card: card.toJSON(), controls: controls.toJSON() };
+            });
+            if (width > 900) {
+              assert(Math.abs(layout.card.top - layout.controls.top) < 1, 'Desktop card and personalization must share a row');
+              assert(layout.controls.left >= layout.card.right, 'Personalization must sit to the right of the card');
+              assert(Math.abs(layout.card.width - layout.controls.width) < 1, 'Both columns must have equal width');
+              const pending = page.waitForEvent('download');
+              await page.locator('[data-adam-card-download]').click();
+              const download = await pending;
+              const pngPath = path.join(output, `workspace-${type.name()}-${dark ? 'dark' : 'light'}.png`);
+              await download.saveAs(pngPath);
+              assert.equal(fs.readFileSync(pngPath).readUInt32BE(16), 3072, 'Compact preview must still download at full resolution');
+              const background = await page.evaluate(async source => {
+                const image = new Image(); image.src = source; await image.decode();
+                const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+                const context = canvas.getContext('2d');
+                context.drawImage(image, 3000, 1200, 1, 1, 0, 0, 1, 1);
+                return [...context.getImageData(0, 0, 1, 1).data];
+              }, 'data:image/png;base64,' + fs.readFileSync(pngPath).toString('base64'));
+              assert(background[3] === 255 && background[0] < 80 && background[1] < 100 && background[2] < 110,
+                `The compact card must retain its dark gradient surface: ${background}`);
+            } else {
+              assert(layout.controls.top >= layout.card.bottom, 'Phones must stack personalization below the card');
+            }
+            assert.equal(await page.locator('#adam-personalizacao select').count(), 3);
+            await page.locator('select[name="active_card_theme"]').selectOption('theme-moss');
+            assert.equal(await page.locator('select[name="active_card_theme"]').inputValue(), 'theme-moss');
           }
           await page.addScriptTag({ content: "window.adamCommunicationPreferences={ajaxUrl:'https://member.test/ajax',nonce:'fixture'};" });
           await page.addScriptTag({ path: path.join(root, 'assets/js/member-communication-preferences.js') });

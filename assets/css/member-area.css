@@ -178,6 +178,57 @@
 	gap: 24px;
 }
 
+.adam-card-workspace {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: stretch;
+	gap: 24px;
+	width: 100%;
+	min-width: 0;
+}
+
+.adam-card-workspace > .adam-card {
+	grid-column: auto;
+	min-width: 0;
+}
+
+.adam-card-workspace > .adam-card > .adam-card-heading {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+}
+
+.adam-card-workspace .adam-card-actions {
+	justify-content: flex-start;
+}
+
+.adam-card-workspace .adam-card-customizer {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+.adam-card-workspace .adam-card-customizer__grid {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.adam-card-workspace .adam-card-customizer__heading {
+	order: 1;
+}
+
+.adam-card-workspace .adam-card-customizer__heading > div {
+	display: none;
+}
+
+@media (max-width: 900px) {
+	.adam-card-workspace {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 16px;
+	}
+}
+
 .adam-card {
 	display: flex;
 	flex-direction: column;
@@ -702,12 +753,7 @@
 	--adam-card-shine: var(--adam-highlight, rgba(255, 255, 255, 0.10));
 	--adam-card-chip-surface: var(--adam-highlight, rgba(255, 255, 255, 0.16));
 	--adam-card-chip-border: var(--adam-highlight, rgba(255, 255, 255, 0.16));
-	background:
-		var(--adam-card-frame-top, none) top / 100% var(--adam-frame-width, 0px) no-repeat,
-		var(--adam-card-frame-right, none) right / var(--adam-frame-width, 0px) 100% no-repeat,
-		var(--adam-card-frame-bottom, none) bottom / 100% var(--adam-frame-width, 0px) no-repeat,
-		var(--adam-card-frame-left, none) left / var(--adam-frame-width, 0px) 100% no-repeat,
-		var(--adam-card-surface);
+	background: var(--adam-card-surface);
 	border-color: transparent;
 	box-shadow: var(--adam-card-shadow);
 	color: var(--adam-card-text-primary);

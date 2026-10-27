@@ -331,8 +331,7 @@ final class MemberArea {
 				} elseif ( $member->isRejected() ) {
 					$this->render_rejected( $member );
 				} elseif ( $member->isActive() ) {
-					$this->render_digital_card( $member );
-					$this->render_personalization_section( $member );
+					$this->render_card_workspace( $member );
 					$card_rendered = true;
 					$this->render_active( $member );
 				} else {
@@ -341,8 +340,7 @@ final class MemberArea {
 
 				if ( $member->has_active_benefits() ) {
 					if ( ! $card_rendered ) {
-						$this->render_digital_card( $member );
-						$this->render_personalization_section( $member );
+						$this->render_card_workspace( $member );
 					}
 					$this->render_points_card( $member );
 				}
@@ -749,6 +747,19 @@ final class MemberArea {
 
 			$this->render_profile( $member );
 			?>
+		</div>
+		<?php
+	}
+
+	/** Render the card and its personalization controls as one responsive row. */
+	private function render_card_workspace( Member $member ): void {
+		if ( ! $member->has_active_benefits() ) {
+			return;
+		}
+		?>
+		<div class="adam-card-workspace">
+			<?php $this->render_digital_card( $member ); ?>
+			<?php $this->render_personalization_section( $member ); ?>
 		</div>
 		<?php
 	}
