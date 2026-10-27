@@ -78,6 +78,8 @@
 	width: 100%;
 	padding-top: 16px;
 	border-top: 1px solid var(--adam-border, #d9e4dc);
+	background: transparent;
+	box-shadow: none;
 }
 
 .adam-member-area .adam-hero-tool {
@@ -3892,4 +3894,100 @@
 
 .adam-digital-card-viewport .adam-digital-card__identity strong {
 	font-size: 3.6rem;
+}
+
+/* Account chrome owns its palette; the site's navigation/hero rules must not
+ * turn the shortcuts into a second navigation bar or mute the heading. */
+body.adam-theme-dark .adam-member-area.adam-member-dashboard {
+	--adam-member-ui-text: var(--adam-global-text, #deeece);
+	--adam-member-ui-muted: color-mix(in srgb, var(--adam-member-ui-text) 78%, #212520);
+	--adam-member-ui-surface: var(--adam-card-bg, #10140f);
+	--adam-member-ui-raised: var(--adam-card-elevated-bg, #212520);
+	--adam-member-ui-border: var(--adam-card-border, #41493e);
+	--adam-member-ui-accent: var(--adam-btn-primary-bg, #9bc85a);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero {
+	--adam-hero-bg: var(--adam-member-ui-raised);
+	--adam-hero-heading: var(--adam-member-ui-text);
+	--adam-hero-text: var(--adam-member-ui-muted);
+	--adam-night-component-heading: var(--adam-member-ui-text);
+	--adam-night-component-text: var(--adam-member-ui-muted);
+	background: var(--adam-member-ui-raised);
+	border-color: var(--adam-member-ui-border);
+	color: var(--adam-member-ui-text);
+	box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero__content h2 {
+	color: var(--adam-member-ui-text);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero__content > p:not(.adam-eyebrow):not(.adam-founder-hero-note) {
+	color: var(--adam-member-ui-muted);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero .adam-eyebrow {
+	color: var(--adam-member-ui-accent);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero__tools {
+	background: transparent;
+	border-color: var(--adam-member-ui-border);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-hero-tool {
+	/* The theme's generic button rules use !important; match links and buttons. */
+	background: color-mix(in srgb, var(--adam-member-ui-text) 5%, var(--adam-member-ui-raised)) !important;
+	border-color: var(--adam-member-ui-border) !important;
+	color: var(--adam-member-ui-text) !important;
+	box-shadow: none;
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-hero-tool:hover,
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-hero-tool[aria-current="page"] {
+	background: color-mix(in srgb, var(--adam-member-ui-accent) 13%, var(--adam-member-ui-raised)) !important;
+	border-color: var(--adam-member-ui-accent) !important;
+	color: var(--adam-member-ui-text) !important;
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-hero-tool svg {
+	color: var(--adam-member-ui-accent);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-hero-tool__count {
+	background: var(--adam-member-ui-accent);
+	color: #14200c;
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-member-hero .adam-hero-status .adam-badge {
+	background: color-mix(in srgb, var(--adam-member-ui-accent) 12%, var(--adam-member-ui-raised));
+	border: 1px solid color-mix(in srgb, var(--adam-member-ui-accent) 32%, var(--adam-member-ui-border));
+	color: var(--adam-member-ui-accent);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-card:not(.adam-digital-card-section) {
+	background: var(--adam-member-ui-surface);
+	border-color: var(--adam-member-ui-border);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.1);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-digital-card-section {
+	background: var(--adam-member-ui-surface);
+	border-color: var(--adam-member-ui-border);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.1);
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-digital-card-actions {
+	--adam-btn-primary-text: #14200c;
+	--adam-btn-primary-hover-text: #14200c;
+}
+
+body.adam-theme-dark .adam-member-area.adam-member-dashboard .adam-digital-card-actions .adam-card-link {
+	background: var(--adam-member-ui-accent);
+	border: 1px solid transparent;
+	border-radius: 10px;
+	color: #14200c;
+	font-family: inherit;
+	box-shadow: none;
 }

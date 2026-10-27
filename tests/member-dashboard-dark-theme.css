@@ -1,0 +1,34 @@
+/* Production palette and global selector conflicts, loaded after member CSS. */
+body.adam-theme-dark {
+  --adam-bg: #141914;
+  --adam-global-text: #deeece;
+  --adam-text: #deeece;
+  --adam-text-muted: #a7b3a0;
+  --adam-primary: #5da332;
+  --adam-surface: #10140f;
+  --adam-card-bg: #10140f;
+  --adam-card-elevated-bg: #212520;
+  --adam-card-border: #41493e;
+  --adam-border: #41493e;
+  --adam-hero-bg: #202a1c;
+  --adam-hero-heading: #6baa2c;
+  --adam-hero-text: #deeece;
+  --adam-btn-primary-bg: #9bc85a;
+  --adam-btn-primary-text: #37491b;
+  --adam-success-bg: #193724;
+  --adam-section-feature: #202a1c;
+  --adam-on-section-feature: #deeece;
+  --adam-text-inverse: #141914;
+  color: var(--adam-text);
+  background: var(--adam-bg) !important;
+  color-scheme: dark;
+}
+:where(body.adam-theme-dark) :where(nav) { background-color: var(--adam-surface); }
+body.adam-theme-dark .adam-member-area .adam-member-hero { background: var(--adam-section-feature); }
+body.adam-theme-dark .adam-member-area .adam-member-hero :where(h2, p) { color: var(--adam-on-section-feature); }
+body.adam-theme-dark:not(.wp-admin) [data-adam-night-component="hero"] {
+  --adam-night-component-heading: var(--adam-hero-heading);
+  --adam-night-component-text: var(--adam-hero-text);
+  background: var(--adam-hero-bg) !important;
+}
+body.adam-theme-dark:not(.wp-admin) [data-adam-night-component="hero"] :where(h1,h2,h3) { color: var(--adam-night-component-heading) !important; }

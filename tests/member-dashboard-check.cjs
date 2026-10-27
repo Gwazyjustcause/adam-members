@@ -5,6 +5,8 @@ const path = require('path');
 const assert = require('node:assert/strict');
 const root = path.join(__dirname, '..');
 const output = path.join(root, 'playwright/artifacts/dashboard');
+const dark = process.argv.includes('--dark');
+const productionTheme = process.argv.includes('--production-theme');
 fs.mkdirSync(output, { recursive: true });
 const cardFixture = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.php')], { encoding: 'utf8' });
 const card = cardFixture.match(/<section class="adam-card adam-digital-card-section"[\s\S]*?<\/section>/)[0];
@@ -25,8 +27,38 @@ const card = cardFixture.match(/<section class="adam-card adam-digital-card-sect
           });
           await page.goto('https://member.test/socio/');
           await page.addStyleTag({ path: path.join(root, 'assets/css/member-area.css') });
+          if (dark) {
+            await page.evaluate(() => {
+              document.body.classList.add('adam-theme-dark');
+              document.querySelector('.adam-member-hero').setAttribute('data-adam-night-component', 'hero');
+            });
+            await page.addStyleTag({ path: path.join(__dirname, 'member-dashboard-dark-theme.css') });
+            if (productionTheme) {
+              for (const filename of ['variables', 'ui', 'components', 'inline-theme']) {
+                await page.addStyleTag({ path: path.join(root, `playwright/artifacts/production-${filename}.css`) });
+              }
+            }
+            await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important; }' });
+            const contrast = await page.evaluate(() => {
+              function rgb(css) { return css.match(/[\d.]+/g).slice(0, 3).map(Number); }
+              function luminance(color) { return color.map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0); }
+              function ratio(fg, bg) { const a = luminance(rgb(fg)), b = luminance(rgb(bg)); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); }
+              const hero = getComputedStyle(document.querySelector('.adam-member-hero'));
+              const heading = getComputedStyle(document.querySelector('.adam-member-hero__content h2'));
+              const tools = document.querySelector('.adam-member-hero__tools');
+              return { navBackground: getComputedStyle(tools).backgroundColor, heading: ratio(heading.color, hero.backgroundColor),
+                buttons: [...tools.querySelectorAll('.adam-hero-tool')].map(button => {
+                  const css = getComputedStyle(button); return ratio(css.color, css.backgroundColor);
+                }) };
+            });
+            assert.equal(contrast.navBackground, 'rgba(0, 0, 0, 0)', 'Shortcut row must not inherit the site navigation background');
+            assert(contrast.heading >= 7, `Dark heading contrast too low: ${contrast.heading}`);
+            assert(contrast.buttons.every(value => value >= 4.5), `Dark button text contrast too low: ${contrast.buttons}`);
+          }
           if (state === 'active') {
             await page.locator('.adam-dashboard-grid').evaluate((grid, card) => grid.insertAdjacentHTML('beforebegin', card), card);
+            // The sample uses a fixed card theme, like a member's saved cosmetics.
+            await page.locator('.adam-digital-card').evaluate(card => card.style.setProperty('--adam-card-surface', 'linear-gradient(135deg, #173f24, #102033)'));
             await page.addScriptTag({ path: path.join(root, 'assets/vendor/html2canvas/html2canvas.min.js') });
             await page.addScriptTag({ path: path.join(root, 'assets/js/member-card-download.js') });
             await page.evaluate(() => window.adamMemberCardDownloadApi.preparePreviews());
@@ -66,7 +98,7 @@ const card = cardFixture.match(/<section class="adam-card adam-digital-card-sect
           await page.keyboard.press('Escape');
           if (type === chromium && state === 'active' && [390, 1440].includes(width)) {
             await page.locator('.adam-member-hero__content h2').click();
-            await page.screenshot({ path: path.join(output, `active-${width}.png`), fullPage: true });
+            await page.screenshot({ path: path.join(output, `active-${dark ? 'dark-' : ''}${width}.png`), fullPage: true });
           }
           console.log(`PASS ${type.name()} ${state} ${width}px: compact header, correct status panels, preferences open/cancel/save`);
           await page.close();
