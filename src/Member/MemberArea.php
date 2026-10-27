@@ -751,8 +751,6 @@ final class MemberArea {
 
 		$card_data          = $this->cards->card_data( $member );
 		$member_number_text = (string) $card_data['member_number_ui'];
-		$joined_date        = (string) $card_data['joined_date'];
-		$expiry_date        = (string) $card_data['expiry_date'];
 		$validation_url     = (string) $card_data['validation_url'];
 		$qr_image_url       = (string) $card_data['qr_image_url'];
 		$card_presentation  = $this->cards->card_presentation( $member );
@@ -762,45 +760,15 @@ final class MemberArea {
 			<div class="adam-card-heading">
 				<div>
 					<p class="adam-eyebrow"><?php esc_html_e( 'Cartão digital', 'adam-membership' ); ?></p>
-				</div>
-				<div class="adam-card-actions">
-					<a class="adam-card-link adam-card-download-button" href="#" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></a>
-					<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
-				</div>
-			</div>
-			<div class="adam-digital-card-mobile" aria-label="<?php esc_attr_e( 'Resumo do cartao digital', 'adam-membership' ); ?>">
-				<div class="adam-digital-card-mobile__summary">
-					<div class="adam-digital-card-mobile__identity">
-						<span><?php esc_html_e( 'Cartao ADAM', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( (string) $card_data['member_name'] ); ?></strong>
-						<small><?php echo esc_html( $member_number_text ); ?></small>
-					</div>
-					<div class="adam-digital-card-mobile__status">
-						<?php $this->render_status_badge( $member->effective_status() ); ?>
-					</div>
-				</div>
-				<div class="adam-digital-card-mobile__meta">
-					<div>
-						<span><?php esc_html_e( 'Valido ate', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( '' !== $expiry_date ? $expiry_date : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
-					</div>
-					<div>
-						<span><?php esc_html_e( 'Data de adesao', 'adam-membership' ); ?></span>
-						<strong><?php echo esc_html( '' !== $joined_date ? $joined_date : __( 'Indisponivel', 'adam-membership' ) ); ?></strong>
-					</div>
-				</div>
-				<div class="adam-digital-card-mobile__utility">
-					<div class="adam-digital-card-mobile__qr">
-						<img src="<?php echo esc_url( $qr_image_url ); ?>" alt="<?php esc_attr_e( 'QR code for member validation', 'adam-membership' ); ?>">
-					</div>
-					<div class="adam-digital-card-mobile__actions">
-						<a class="adam-card-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
-						<a class="adam-card-link adam-card-download-button" href="#" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>" rel="noopener noreferrer"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></a>
-						<a class="adam-text-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
-					</div>
+					<h3><?php esc_html_e( 'O teu cartão ADAM', 'adam-membership' ); ?></h3>
 				</div>
 			</div>
 			<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<div class="adam-card-actions adam-digital-card-actions">
+				<button type="button" class="adam-card-link adam-card-download-button" data-adam-card-download="png" data-adam-card-filename="<?php echo esc_attr( $download_filename ); ?>"><?php esc_html_e( 'Descarregar cartão PNG', 'adam-membership' ); ?></button>
+				<a class="adam-card-link" href="<?php echo esc_url( $validation_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Validar online', 'adam-membership' ); ?></a>
+				<a class="adam-text-link" href="<?php echo esc_url( $qr_image_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Ver QR', 'adam-membership' ); ?></a>
+			</div>
 		</section>
 		<?php
 	}

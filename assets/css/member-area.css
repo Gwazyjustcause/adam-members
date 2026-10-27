@@ -1,4 +1,5 @@
 .adam-member-area {
+	box-sizing: border-box;
 	--adam-green-900: var(--adam-primary, #173f24);
 	--adam-green-800: var(--adam-primary, #24502f);
 	--adam-green-700: var(--adam-primary, #2f6b3b);
@@ -185,99 +186,6 @@
 .adam-digital-card-section {
 	grid-column: 1 / -1;
 	overflow: hidden;
-}
-
-.adam-digital-card-mobile {
-	display: none;
-}
-
-.adam-digital-card-mobile__summary,
-.adam-digital-card-mobile__meta,
-.adam-digital-card-mobile__utility,
-.adam-digital-card-mobile__actions {
-	display: grid;
-	gap: 12px;
-}
-
-.adam-digital-card-mobile__summary {
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: start;
-}
-
-.adam-digital-card-mobile__identity,
-.adam-digital-card-mobile__meta {
-	min-width: 0;
-}
-
-.adam-digital-card-mobile__identity span,
-.adam-digital-card-mobile__meta span {
-	display: block;
-	margin-bottom: 4px;
-	color: var(--adam-muted);
-	font-size: 0.76rem;
-	font-weight: 800;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-}
-
-.adam-digital-card-mobile__identity strong {
-	display: block;
-	margin-bottom: 8px;
-	color: var(--adam-green-900);
-	font-size: 1.3rem;
-	line-height: 1.15;
-	font-weight: 900;
-	overflow-wrap: anywhere;
-}
-
-.adam-digital-card-mobile__identity small {
-	display: inline-flex;
-	align-items: center;
-	min-height: 32px;
-	padding: 7px 12px;
-	border-radius: 999px;
-	background: var(--adam-green-100);
-	color: var(--adam-green-900);
-	font-size: 0.9rem;
-	font-weight: 900;
-}
-
-.adam-digital-card-mobile__meta {
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.adam-digital-card-mobile__meta div,
-.adam-digital-card-mobile__qr {
-	padding: 14px;
-	border: 1px solid var(--adam-border, #d9e4dc);
-	border-radius: 16px;
-	background: linear-gradient(180deg, var(--adam-surface, #ffffff), var(--adam-surface, #f7fbf8));
-}
-
-.adam-digital-card-mobile__meta strong {
-	display: block;
-	color: var(--adam-ink);
-	font-size: 1rem;
-	font-weight: 900;
-}
-
-.adam-digital-card-mobile__utility {
-	grid-template-columns: 108px minmax(0, 1fr);
-	align-items: center;
-}
-
-.adam-digital-card-mobile__qr {
-	display: grid;
-	place-items: center;
-}
-
-.adam-digital-card-mobile__qr img {
-	width: 100%;
-	max-width: 88px;
-}
-
-.adam-digital-card-mobile__actions {
-	align-content: start;
 }
 
 .adam-points-section,
@@ -3345,36 +3253,6 @@
 		width: 100%;
 	}
 
-	.adam-digital-card-section {
-		overflow: visible;
-	}
-
-	.adam-digital-card-section > .adam-card-heading .adam-card-actions {
-		display: none;
-	}
-
-	.adam-digital-card-mobile {
-		display: grid;
-		gap: 14px;
-	}
-
-	.adam-digital-card {
-		display: none;
-	}
-
-	.adam-digital-card-mobile__utility {
-		grid-template-columns: 1fr;
-	}
-
-	.adam-digital-card-mobile__qr {
-		justify-self: start;
-		width: min(124px, 100%);
-	}
-
-	.adam-digital-card-mobile__status {
-		justify-self: end;
-	}
-
 	.adam-reward-card__stats,
 	.adam-reward-card__actions,
 	.adam-reward-history__item {
@@ -3497,24 +3375,6 @@
 		width: 100%;
 	}
 
-	.adam-digital-card-mobile__summary,
-	.adam-digital-card-mobile__meta {
-		grid-template-columns: 1fr;
-	}
-
-	.adam-digital-card-mobile__status {
-		justify-self: start;
-	}
-
-	.adam-digital-card-mobile__qr {
-		width: 100%;
-		justify-self: stretch;
-	}
-
-	.adam-digital-card-mobile__qr img {
-		max-width: 112px;
-	}
-
 	.adam-card-customizer__heading {
 		align-items: stretch;
 		flex-direction: column;
@@ -3561,9 +3421,6 @@
 		border-radius: 16px;
 	}
 
-	.adam-digital-card-mobile__identity strong {
-		font-size: 1.18rem;
-	}
 
 	.adam-reward-card {
 		padding: 14px;
@@ -3842,3 +3699,214 @@
 .adam-confirmation-summary dt { margin-bottom: .35rem; color: var(--adam-text-muted, #64748b); font-size: .85rem; }
 .adam-confirmation-summary dd { margin: 0; font-weight: 600; }
 .adam-confirmation-page .adam-notice--warning { margin: 1.5rem 0; }
+
+/* One personalized card for phones and desktops, including PNG capture. */
+.adam-digital-card-actions {
+	justify-content: flex-start;
+	margin-top: 20px;
+}
+
+.adam-member-area :is(a, button, input, select):focus-visible {
+	outline: 3px solid var(--adam-primary, #3f8f4d);
+	outline-offset: 4px;
+}
+
+@media (max-width: 768px) {
+	.adam-member-area {
+		margin: 24px auto 40px;
+		padding: 0 12px;
+		width: 100%;
+	}
+
+	.adam-member-area.adam-member-dashboard,
+	.adam-account-page,
+	.adam-dashboard-grid {
+		gap: 16px;
+	}
+
+	.adam-dashboard-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.adam-member-hero,
+	.adam-card,
+	.adam-login-panel {
+		padding: 20px;
+		border-radius: 18px;
+	}
+
+	.adam-member-hero {
+		gap: 16px;
+	}
+
+	.adam-member-hero h2,
+	.adam-member-login h2,
+	.adam-empty-state h2 {
+		font-size: clamp(1.65rem, 6vw, 2.2rem);
+		line-height: 1.15;
+	}
+
+	.adam-card-heading {
+		flex-direction: column;
+		gap: 12px;
+		margin-bottom: 16px;
+	}
+
+	.adam-member-area .adam-card :is(.adam-card-link, .button, input[type="submit"]),
+	.adam-member-area .adam-form-actions .adam-text-link {
+		min-height: 48px;
+		min-width: 0;
+		width: 100%;
+		justify-content: center;
+		text-align: center;
+		white-space: normal;
+	}
+
+	.adam-digital-card-section {
+		padding: 12px;
+	}
+
+	.adam-digital-card-section > .adam-card-heading {
+		padding: 8px 8px 0;
+	}
+
+	.adam-digital-card-section > .adam-digital-card {
+		display: block;
+		width: 100%;
+		min-width: 0;
+		min-height: 0;
+		padding: 20px;
+		text-align: left;
+	}
+
+	.adam-digital-card-section .adam-digital-card__content {
+		gap: 18px;
+		min-width: 0;
+	}
+
+	.adam-digital-card-section .adam-digital-card__header {
+		display: grid;
+		grid-template-columns: 72px minmax(0, 1fr);
+		gap: 12px;
+		text-align: left;
+	}
+
+	.adam-digital-card-section .adam-digital-card__logo {
+		width: 72px;
+		height: 58px;
+		padding: 8px;
+		border-radius: 10px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__header > .adam-badge {
+		grid-column: 1 / -1;
+		justify-self: start;
+	}
+
+	.adam-digital-card-section .adam-digital-card__body {
+		grid-template-columns: 72px minmax(0, 1fr);
+		gap: 14px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__photo {
+		width: 72px;
+		justify-self: start;
+		border-width: 2px;
+		border-radius: 12px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__identity strong {
+		font-size: clamp(1.15rem, 4.5vw, 1.8rem);
+		line-height: 1.15;
+	}
+
+	.adam-digital-card-section .adam-digital-card__title {
+		max-width: 100%;
+		min-height: 0;
+		padding: 8px;
+		gap: 6px;
+		font-size: 0.75rem;
+		letter-spacing: 0.02em;
+	}
+
+	.adam-digital-card-section .adam-digital-card__rank > small {
+		display: block;
+		min-height: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
+		font-size: 0.65rem;
+	}
+
+	.adam-digital-card-section .adam-title-badge__label {
+		min-width: 0;
+		overflow-wrap: anywhere;
+		line-height: 1.3;
+	}
+
+	.adam-digital-card-section .adam-digital-card__qr {
+		grid-column: 1 / -1;
+		justify-self: center;
+		width: auto;
+		padding: 12px;
+		border-radius: 14px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__qr img {
+		width: 140px;
+		height: 140px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__details {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 8px;
+	}
+
+	.adam-digital-card-section .adam-digital-card__details div {
+		min-width: 0;
+		padding: 10px;
+		border-radius: 10px;
+		overflow-wrap: anywhere;
+	}
+
+	.adam-digital-card-section .adam-digital-card__details div:first-child {
+		grid-column: 1 / -1;
+	}
+
+	.adam-digital-card-section .adam-digital-card__details strong {
+		font-size: 0.9rem;
+	}
+
+	.adam-digital-card-section .adam-digital-card__footer {
+		align-items: flex-start;
+		gap: 8px;
+		text-align: left;
+		overflow-wrap: anywhere;
+	}
+
+	.adam-digital-card-actions {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 10px;
+		margin-top: 14px;
+	}
+
+	.adam-digital-card-actions .adam-text-link {
+		padding: 12px;
+		text-align: center;
+		width: 100%;
+	}
+
+	.adam-member-area .adam-action-card {
+		flex-direction: row;
+		align-items: center;
+		gap: 14px;
+		padding: 16px;
+	}
+
+	.adam-member-area .adam-data-item {
+		gap: 6px;
+		padding: 12px 0;
+	}
+}

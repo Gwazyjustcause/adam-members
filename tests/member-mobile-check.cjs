@@ -1,0 +1,57 @@
+// Offline regression: real PHP markup, CSS, html2canvas and download handler.
+// Run: node tests/member-mobile-check.cjs (PHP and Playwright browsers required).
+const fs = require('fs');
+const path = require('path');
+const assert = require('node:assert/strict');
+const { execFileSync } = require('child_process');
+const { chromium, webkit } = require('@playwright/test');
+const root = path.join(__dirname, '..');
+const output = path.join(root, 'playwright/artifacts/member-mobile');
+fs.mkdirSync(output, { recursive: true });
+const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.php')], { encoding: 'utf8' });
+
+(async () => {
+  for (const browserType of [chromium, webkit]) {
+    const browser = await browserType.launch();
+    try {
+      for (const width of [320, 375, 390, 430, 640, 768, 820, 1440]) {
+        const page = await browser.newPage({ viewport: { width, height: 900 }, acceptDownloads: true });
+        await page.route('https://member.test/', route => route.fulfill({ contentType: 'text/html', body: html }));
+        await page.goto('https://member.test/');
+        await page.addStyleTag({ path: path.join(root, 'assets/css/member-area.css') });
+        await page.addScriptTag({ path: path.join(root, 'assets/vendor/html2canvas/html2canvas.min.js') });
+        await page.addScriptTag({ path: path.join(root, 'assets/js/member-card-download.js') });
+        const dialogs = [];
+        page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.dismiss(); });
+        const bounds = await page.evaluate(() => {
+          const card = document.querySelector('.adam-digital-card');
+          const rect = card.getBoundingClientRect();
+          const clipped = [...card.querySelectorAll('strong, small, img, .adam-digital-card__title')]
+            .filter(el => el.getBoundingClientRect().width > 0)
+            .filter(el => { const b = el.getBoundingClientRect(); return b.left < rect.left - 1 || b.right > rect.right + 1; })
+            .map(el => el.className || el.tagName);
+          return { display: getComputedStyle(card).display, left: rect.left, right: rect.right, height: rect.height,
+            overflow: document.documentElement.scrollWidth > innerWidth, clipped,
+            qr: document.querySelector('.adam-digital-card__qr img').getBoundingClientRect().width };
+        });
+        assert.notEqual(bounds.display, 'none');
+        assert(bounds.height > 0 && bounds.left >= 0 && bounds.right <= width, JSON.stringify(bounds));
+        assert.equal(bounds.overflow, false, `${browserType.name()} ${width}: horizontal overflow`);
+        assert.deepEqual(bounds.clipped, [], `${browserType.name()} ${width}: clipped card content`);
+        assert(bounds.qr >= 130, 'QR must stay large enough to scan');
+        const downloadPromise = page.waitForEvent('download');
+        await page.locator('[data-adam-card-download]').click();
+        const download = await downloadPromise;
+        assert.equal(download.suggestedFilename(), 'cartao-adam-test.png');
+        const filename = path.join(output, `${browserType.name()}-${width}.png`);
+        await download.saveAs(filename);
+        const png = fs.readFileSync(filename);
+        assert(png.readUInt32BE(16) > 600 && png.readUInt32BE(20) > 600, 'PNG should contain a full size card');
+        assert.deepEqual(dialogs, [], 'Download must succeed without an error alert');
+        if ([390, 1440].includes(width)) await page.screenshot({ path: path.join(output, `${browserType.name()}-${width}-page.png`), fullPage: true });
+        console.log(`PASS ${browserType.name()} ${width}px: visible card, no clipping, PNG ${png.readUInt32BE(16)}×${png.readUInt32BE(20)}`);
+        await page.close();
+      }
+    } finally { await browser.close(); }
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });
