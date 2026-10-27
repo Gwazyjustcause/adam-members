@@ -382,11 +382,11 @@
 .adam-digital-card__pattern {
 	z-index: 0;
 	opacity: var(--adam-card-pattern-opacity);
+	inset: auto;
 	top: 50%;
 	left: 50%;
 	width: 200%;
 	height: 200%;
-	inset: auto;
 	background-color: transparent;
 	background-size: auto;
 	background-position: center;
@@ -3784,6 +3784,7 @@
 }
 
 .adam-digital-card-viewport {
+	position: relative;
 	width: 100%;
 	max-width: 1024px;
 	margin-inline: auto;
@@ -3792,6 +3793,21 @@
 
 .adam-digital-card-viewport.is-scaled {
 	overflow: hidden;
+}
+
+/* Show the exact high-resolution bitmap that the download button saves. */
+.adam-digital-card-viewport.is-rendered > .adam-digital-card {
+	visibility: hidden;
+}
+
+.adam-member-area .adam-digital-card-rendered {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	object-fit: fill;
 }
 
 .adam-digital-card-viewport > .adam-digital-card {

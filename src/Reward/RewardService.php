@@ -1846,6 +1846,12 @@ final class RewardService {
 				continue;
 			}
 
+			// Retire the old automatic rarity bubble, including saved card styles.
+			$geometry = array_map( 'intval', array( $shape['x'] ?? 72, $shape['y'] ?? 20, $shape['width'] ?? 18, $shape['height'] ?? 18, $shape['rotation'] ?? 0 ) );
+			if ( 'circle' === $type && in_array( $geometry, array( array( 84, 16, 14, 14, 0 ), array( 84, 14, 16, 16, 0 ) ), true ) ) {
+				continue;
+			}
+
 			$clean[] = array(
 				'type'     => $type,
 				'x'        => max( 0, min( 100, (int) ( $shape['x'] ?? 72 ) ) ),
@@ -1862,20 +1868,12 @@ final class RewardService {
 	}
 
 	/**
-	 * Get starter shapes based on rarity.
+	 * New styles start without the retired rarity bubble.
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function default_visual_shapes( string $rarity ): array {
-		return match ( $rarity ) {
-			Reward::RARITY_EPIC => array(
-				array( 'type' => 'circle', 'x' => 84, 'y' => 16, 'width' => 14, 'height' => 14, 'rotation' => 0, 'opacity' => 24, 'color' => '#ffffff' ),
-			),
-			Reward::RARITY_LEGENDARY => array(
-				array( 'type' => 'circle', 'x' => 84, 'y' => 14, 'width' => 16, 'height' => 16, 'rotation' => 0, 'opacity' => 28, 'color' => '#fff4b8' ),
-			),
-			default => array(),
-		};
+		return array();
 	}
 
 	/**

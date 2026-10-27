@@ -4,6 +4,7 @@
 	var config = window.adamMemberCardDownload || {};
 	var messages = config.messages || {};
 	var busyButtons = new WeakMap();
+	var renderedCards = new WeakMap();
 
 	function initCardScaling() {
 		document.querySelectorAll( '.adam-digital-card-viewport' ).forEach( function ( viewport ) {
@@ -18,7 +19,9 @@
 					return;
 				}
 				card.style.transform = 'scale(' + scale + ')';
-				viewport.style.height = ( card.offsetHeight * scale ) + 'px';
+				var rendered = viewport.querySelector( '.adam-digital-card-rendered' );
+				viewport.style.height = ( rendered && rendered.naturalWidth ?
+					viewport.clientWidth * rendered.naturalHeight / rendered.naturalWidth : card.offsetHeight * scale ) + 'px';
 				viewport.classList.add( 'is-scaled' );
 			}
 
@@ -64,7 +67,7 @@
 			return null;
 		}
 
-		return isVisible( card ) ? card : null;
+		return isVisible( card ) || ( renderedCards.has( card ) && isVisible( card.parentElement ) ) ? card : null;
 	}
 
 	function getCardImages( card ) {
@@ -187,79 +190,60 @@
 		} ) );
 	}
 
-	function parseRgbColor( value ) {
-		var match = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)/i.exec( value || '' );
-
-		if ( ! match ) {
-			return null;
+	function capturePattern( card ) {
+		var element = card.querySelector( '.adam-digital-card__pattern' );
+		if ( ! element ) { return null; }
+		var style = window.getComputedStyle( element );
+		if ( 'none' === style.backgroundImage || parseFloat( style.opacity ) === 0 ) { return null; }
+		var grid = element.classList.contains( 'adam-digital-card__pattern--grid' );
+		var diagonal = element.classList.contains( 'adam-digital-card__pattern--diagonal' );
+		var dots = element.classList.contains( 'adam-digital-card__pattern--dots' );
+		if ( ! grid && ! diagonal && ! dots ) { return null; }
+		function value( key, fallback ) {
+			var number = parseFloat( style.getPropertyValue( key ) );
+			return Number.isFinite( number ) ? number : fallback;
 		}
-
-		return {
-			r: Math.max( 0, Math.min( 255, parseFloat( match[1] ) ) ),
-			g: Math.max( 0, Math.min( 255, parseFloat( match[2] ) ) ),
-			b: Math.max( 0, Math.min( 255, parseFloat( match[3] ) ) ),
-			a: null === match[4] || 'undefined' === typeof match[4] ? 1 : Math.max( 0, Math.min( 1, parseFloat( match[4] ) ) )
-		};
-	}
-
-	function mixRgbColor( color, target, amount ) {
-		return {
-			r: color.r + ( target.r - color.r ) * amount,
-			g: color.g + ( target.g - color.g ) * amount,
-			b: color.b + ( target.b - color.b ) * amount,
-			a: color.a
-		};
-	}
-
-	function formatRgbColor( color ) {
-		return 'rgba(' +
-			Math.round( color.r ) + ', ' +
-			Math.round( color.g ) + ', ' +
-			Math.round( color.b ) + ', ' +
-			color.a +
-		')';
-	}
-
-	function cloneTitleBadgesForCapture( sourceCard, clonedDocument ) {
-		if ( ! sourceCard || ! clonedDocument ) {
-			return;
+		var size = value( '--adam-card-pattern-size', 24 );
+		var step = size + value( '--adam-card-pattern-spacing', 24 );
+		var density = value( '--adam-card-pattern-density', 2 );
+		var line = Math.max( 1, Math.min( step - 1, size * 0.08 + density ) );
+		var color = style.getPropertyValue( '--adam-card-pattern-color' ).trim();
+		var parentStyle = window.getComputedStyle( element.parentElement );
+		var width = parseFloat( parentStyle.width ), height = parseFloat( parentStyle.height );
+		var patternWidth = parseFloat( style.width ), patternHeight = parseFloat( style.height );
+		// Rasterize only the decoration, preserving its exact CSS phase and rotation.
+		var canvas = document.createElement( 'canvas' );
+		canvas.width = Math.ceil( width * 2 ); canvas.height = Math.ceil( height * 2 );
+		var context = canvas.getContext( '2d' );
+		context.scale( canvas.width / width, canvas.height / height );
+		context.translate( width / 2, height / 2 );
+		context.rotate( value( '--adam-card-pattern-rotation', 0 ) * Math.PI / 180 );
+		context.translate( -patternWidth / 2, -patternHeight / 2 );
+		context.fillStyle = color;
+		var x, y;
+		if ( grid ) {
+			for ( x = 0; x < patternWidth; x += step ) { context.fillRect( x, 0, line, patternHeight ); }
+			for ( y = patternHeight - line; y > -line; y -= step ) { context.fillRect( 0, y, patternWidth, line ); }
+		} else if ( diagonal ) {
+			context.strokeStyle = color; context.lineWidth = line;
+			for ( x = 0; x < patternWidth + patternHeight; x += step * Math.SQRT2 ) {
+				context.beginPath();
+				context.moveTo( -patternHeight, x + patternHeight + line / Math.SQRT2 );
+				context.lineTo( patternWidth, x - patternWidth + line / Math.SQRT2 );
+				context.stroke();
+			}
+		} else {
+			var radius = Math.max( 1, Math.min( step / 2 - 1, size * 0.14 + density * 0.8 ) );
+			for ( x = ( patternWidth / 2 ) % step; x < patternWidth; x += step ) {
+				for ( y = ( patternHeight / 2 ) % step; y < patternHeight; y += step ) {
+					var fade = context.createRadialGradient( x, y, radius, x, y, radius + 1 );
+					fade.addColorStop( 0, color ); fade.addColorStop( 1, 'transparent' );
+					context.fillStyle = fade;
+					context.fillRect( x - radius - 1, y - radius - 1, radius * 2 + 2, radius * 2 + 2 );
+				}
+			}
 		}
-
-		var sourceBadges = sourceCard.querySelectorAll( '.adam-digital-card__title' );
-		var clonedBadges = clonedDocument.querySelectorAll( '.adam-digital-card__title' );
-
-		Array.prototype.forEach.call( clonedBadges, function ( clonedBadge, index ) {
-			var sourceBadge = sourceBadges[ index ];
-
-			if ( ! sourceBadge ) {
-				return;
-			}
-
-			var sourceStyle = window.getComputedStyle( sourceBadge );
-			var badgeBackgroundVar = sourceStyle.getPropertyValue( '--adam-title-badge-background' ) || '';
-			var baseBackground = badgeBackgroundVar.trim() || sourceStyle.backgroundColor;
-			var baseColor = parseRgbColor( baseBackground );
-			var backgroundImage = 'none';
-
-			if ( baseColor ) {
-				var topColor = formatRgbColor( mixRgbColor( baseColor, { r: 255, g: 255, b: 255 }, 0.12 ) );
-				var bottomColor = formatRgbColor( mixRgbColor( baseColor, { r: 0, g: 0, b: 0 }, 0.12 ) );
-
-				backgroundImage = 'linear-gradient(180deg, ' + topColor + ' 0%, ' + baseBackground + ' 56%, ' + bottomColor + ' 100%)';
-			}
-
-			clonedBadge.style.setProperty( 'display', 'flex', 'important' );
-			clonedBadge.style.setProperty( 'align-items', 'center', 'important' );
-			clonedBadge.style.setProperty( 'gap', sourceStyle.gap || '10px', 'important' );
-			clonedBadge.style.setProperty( 'width', 'max-content', 'important' );
-			clonedBadge.style.setProperty( 'max-width', '100%', 'important' );
-			clonedBadge.style.setProperty( 'background-color', baseBackground, 'important' );
-			clonedBadge.style.setProperty( 'background-image', backgroundImage, 'important' );
-			clonedBadge.style.setProperty( 'box-shadow', '0 2px 6px rgba(0, 0, 0, 0.18)', 'important' );
-			clonedBadge.style.setProperty( 'backdrop-filter', 'none', 'important' );
-			clonedBadge.style.setProperty( 'mix-blend-mode', 'normal', 'important' );
-			clonedBadge.style.setProperty( 'isolation', 'auto', 'important' );
-		} );
+		return canvas.toDataURL( 'image/png' );
 	}
 
 	function downloadBlob( blob, filename ) {
@@ -299,6 +283,106 @@
 		} );
 	}
 
+	async function renderCardBlob( card ) {
+		if ( document.fonts && document.fonts.ready ) {
+			await document.fonts.ready;
+		}
+
+		await Promise.all( getCardImages( card ).map( waitForImage ) );
+		var fittedImages = await fittedImagesForCapture( card );
+		var patternImage = capturePattern( card );
+		var cardIndex = Array.prototype.indexOf.call( document.querySelectorAll( '.adam-digital-card' ), card );
+
+		var canvas = await window.html2canvas( card, {
+			scale: 3,
+			width: card.offsetWidth,
+			height: card.offsetHeight,
+			backgroundColor: null,
+			useCORS: true,
+			allowTaint: false,
+			logging: false,
+			imageTimeout: 15000,
+			onclone: async function ( clonedDocument ) {
+				// Capture the full canvas, independently of its phone display scale.
+				var clonedCard = clonedDocument.querySelectorAll( '.adam-digital-card' )[ cardIndex ];
+				if ( clonedCard && card.closest( '.adam-digital-card-viewport' ) ) {
+					clonedCard.style.transform = 'none';
+					clonedCard.parentElement.style.height = 'auto';
+					clonedCard.parentElement.style.overflow = 'visible';
+				}
+				if ( clonedCard ) {
+					clonedCard.style.visibility = 'visible';
+					if ( patternImage ) {
+						var pattern = clonedCard.querySelector( '.adam-digital-card__pattern' );
+						pattern.style.cssText += ';inset:0;width:100%;height:100%;transform:none;border-radius:0;background:url("' + patternImage + '") 0 0 / 100% 100% no-repeat;';
+					}
+
+					await Promise.all( Array.prototype.map.call( clonedCard.querySelectorAll( 'img' ), async function ( image, index ) {
+						var fitted = fittedImages[ index ];
+						if ( ! fitted ) { return; }
+						image.removeAttribute( 'srcset' );
+						image.removeAttribute( 'sizes' );
+						image.src = fitted.src;
+						image.style.width = fitted.width + 'px';
+						image.style.height = fitted.height + 'px';
+						image.style.objectFit = 'fill';
+						await waitForImage( image );
+						if ( 'function' === typeof image.decode ) {
+							await image.decode();
+						}
+					} ) );
+				}
+
+			}
+		} );
+
+		return canvasToBlob( canvas );
+	}
+
+	async function prepareCard( card ) {
+		if ( document.fonts && document.fonts.ready ) { await document.fonts.ready; }
+		var viewport = card.closest( '.adam-digital-card-viewport' );
+		if ( ! viewport ) { return renderCardBlob( card ); }
+		var markup = card.cloneNode( true );
+		markup.style.transform = '';
+		var signature = markup.outerHTML + document.documentElement.className + document.body.className;
+		var style = window.getComputedStyle( card );
+		[ '--adam-card-surface', '--adam-card-text-primary', '--adam-card-text-secondary', '--adam-card-panel-bg', '--adam-card-pattern-color' ].forEach( function ( key ) {
+			signature += style.getPropertyValue( key );
+		} );
+		var existing = renderedCards.get( card );
+		if ( existing && existing.signature === signature ) { return existing.promise; }
+		var state = { signature: signature };
+		renderedCards.set( card, state );
+		state.promise = ( async function () {
+			try {
+				var blob = await renderCardBlob( card );
+				if ( renderedCards.get( card ) !== state ) { return blob; }
+				var image = new Image();
+				var url = window.URL.createObjectURL( blob );
+				image.className = 'adam-digital-card-rendered';
+				image.alt = card.textContent.replace( /\s+/g, ' ' ).trim();
+				image.src = url;
+				await image.decode();
+				var previous = viewport.querySelector( '.adam-digital-card-rendered' );
+				if ( previous ) { window.URL.revokeObjectURL( previous.src ); previous.remove(); }
+				viewport.appendChild( image );
+				viewport.style.height = ( viewport.clientWidth * image.naturalHeight / image.naturalWidth ) + 'px';
+				viewport.classList.add( 'is-rendered' );
+				return blob;
+			} catch ( error ) {
+				if ( url ) { window.URL.revokeObjectURL( url ); }
+				if ( renderedCards.get( card ) === state ) { renderedCards.delete( card ); }
+				throw error;
+			}
+		}() );
+		return state.promise;
+	}
+
+	function preparePreviews() {
+		return Promise.all( Array.prototype.map.call( document.querySelectorAll( '.adam-digital-card-viewport > .adam-digital-card' ), prepareCard ) );
+	}
+
 	async function handleDownload( event ) {
 		event.preventDefault();
 
@@ -323,52 +407,7 @@
 				throw new Error( getMessage( 'errorHiddenCard', 'O cartão digital tem de estar visível para descarregar o PNG.' ) );
 			}
 
-			if ( document.fonts && document.fonts.ready ) {
-				await document.fonts.ready;
-			}
-
-			await Promise.all( getCardImages( card ).map( waitForImage ) );
-			var fittedImages = await fittedImagesForCapture( card );
-			var cardIndex = Array.prototype.indexOf.call( document.querySelectorAll( '.adam-digital-card' ), card );
-
-			var canvas = await window.html2canvas( card, {
-				scale: 3,
-				width: card.offsetWidth,
-				height: card.offsetHeight,
-				backgroundColor: null,
-				useCORS: true,
-				allowTaint: false,
-				logging: false,
-				imageTimeout: 15000,
-				onclone: async function ( clonedDocument ) {
-					// Capture the full canvas, independently of its phone display scale.
-					var clonedCard = clonedDocument.querySelectorAll( '.adam-digital-card' )[ cardIndex ];
-					if ( clonedCard && card.closest( '.adam-digital-card-viewport' ) ) {
-						clonedCard.style.transform = 'none';
-						clonedCard.parentElement.style.height = 'auto';
-						clonedCard.parentElement.style.overflow = 'visible';
-					}
-					if ( clonedCard ) {
-						await Promise.all( Array.prototype.map.call( clonedCard.querySelectorAll( 'img' ), async function ( image, index ) {
-							var fitted = fittedImages[ index ];
-							if ( ! fitted ) { return; }
-							image.removeAttribute( 'srcset' );
-							image.removeAttribute( 'sizes' );
-							image.src = fitted.src;
-							image.style.width = fitted.width + 'px';
-							image.style.height = fitted.height + 'px';
-							image.style.objectFit = 'fill';
-							await waitForImage( image );
-							if ( 'function' === typeof image.decode ) {
-								await image.decode();
-							}
-						} ) );
-					}
-					cloneTitleBadgesForCapture( card, clonedDocument );
-				}
-			} );
-
-			var blob = await canvasToBlob( canvas );
+			var blob = await prepareCard( card );
 			var filename = button.getAttribute( 'data-adam-card-filename' ) || 'cartao-adam.png';
 
 			downloadBlob( blob, filename );
@@ -381,6 +420,7 @@
 	}
 
 	window.adamMemberCardDownloadApi = {
+		preparePreviews: preparePreviews,
 		downloadFromButton: function ( button ) {
 			return handleDownload( {
 				preventDefault: function () {},
@@ -391,6 +431,15 @@
 
 	function init() {
 		initCardScaling();
+		function refreshPreviews() {
+			preparePreviews().catch( function ( error ) { window.console.error( 'ADAM card preview failed:', error ); } );
+		}
+		refreshPreviews();
+		// The site theme changes inherited colors without reloading this page.
+		var themeObserver = new MutationObserver( refreshPreviews );
+		var themeAttributes = { attributes: true, attributeFilter: [ 'class', 'style', 'data-theme', 'data-color-scheme', 'data-adam-theme' ] };
+		themeObserver.observe( document.documentElement, themeAttributes );
+		themeObserver.observe( document.body, themeAttributes );
 		var buttons = document.querySelectorAll( '[data-adam-card-download="png"]' );
 
 		Array.prototype.forEach.call( buttons, function ( button ) {
