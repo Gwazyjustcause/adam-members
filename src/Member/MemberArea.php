@@ -332,6 +332,7 @@ final class MemberArea {
 					$this->render_rejected( $member );
 				} elseif ( $member->isActive() ) {
 					$this->render_digital_card( $member );
+					$this->render_personalization_section( $member );
 					$card_rendered = true;
 					$this->render_active( $member );
 				} else {
@@ -341,8 +342,8 @@ final class MemberArea {
 				if ( $member->has_active_benefits() ) {
 					if ( ! $card_rendered ) {
 						$this->render_digital_card( $member );
+						$this->render_personalization_section( $member );
 					}
-					$this->render_personalization_section( $member );
 					$this->render_points_card( $member );
 				}
 				$this->render_documents( $member );
@@ -933,7 +934,7 @@ final class MemberArea {
 
 		$balance        = $this->points->current_balance( $member );
 		$total_earned   = $this->points->total_earned( $member );
-		$recent_entries = $this->points->recent_activity( $member, 5 );
+		$recent_entries = $this->points->recent_activity( $member, 3 );
 		$history_url    = ManagedPages::url( 'points_history' );
 		?>
 		<section class="adam-card adam-points-section" aria-label="<?php esc_attr_e( 'Pontos ADAM', 'adam-membership' ); ?>">
