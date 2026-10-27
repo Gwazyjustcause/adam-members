@@ -27,9 +27,29 @@ const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.ph
             Object.entries({ '--adam-frame-width': '16px', '--adam-frame-color': '#ffff00',
               '--adam-card-surface': 'linear-gradient(135deg, #ffdb19, #855100)',
               '--adam-card-pattern-opacity': '0.7', '--adam-card-pattern-color': '#ffffcc',
-              '--adam-card-pattern-rotation': '0deg' }).forEach(([key, value]) => card.style.setProperty(key, value));
+              '--adam-card-pattern-rotation': '0deg', '--adam-card-text-secondary': '#ffee00' }).forEach(([key, value]) => card.style.setProperty(key, value));
             document.querySelector('.adam-digital-card__pattern').className = 'adam-digital-card__pattern adam-digital-card__pattern--' + pattern;
+            const title = card.querySelector('.adam-digital-card__title');
+            if (!title.querySelector('.adam-title-badge__symbol')) {
+              const symbol = document.createElement('span');
+              symbol.className = 'adam-title-badge__symbol'; symbol.textContent = '⚔️';
+              title.prepend(symbol);
+            }
+            title.style.setProperty('--adam-title-badge-background', '#2b6ea8');
+            title.style.setProperty('--adam-title-badge-text', '#ffee00');
+            // Reproduce legacy text-span fills and card-wide color overrides.
+            const label = title.querySelector('.adam-title-badge__label');
+            label.style.background = '#ff00ff';
+            label.style.color = '#ff00ff';
           }, pattern);
+          const badgeStyles = await page.evaluate(() => ({
+            status: getComputedStyle(document.querySelector('.adam-digital-card__header > .adam-badge')).color,
+            label: getComputedStyle(document.querySelector('.adam-title-badge__label')).color,
+            background: getComputedStyle(document.querySelector('.adam-title-badge__label')).backgroundColor
+          }));
+          assert.equal(badgeStyles.status, 'rgb(20, 83, 45)', 'Active status must stay green even on yellow-text cards');
+          assert.equal(badgeStyles.label, 'rgb(255, 238, 0)', 'Title text must use its configured badge color');
+          assert.equal(badgeStyles.background, 'rgba(0, 0, 0, 0)', 'Title label must not have a nested colored rectangle');
           await page.evaluate(() => window.adamMemberCardDownloadApi.preparePreviews());
           const label = `${type.name()}-${width}-${pattern}`;
           const screenBox = await page.locator('.adam-digital-card-viewport').boundingBox();
@@ -39,6 +59,20 @@ const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.ph
           const download = await pending;
           const pngPath = path.join(output, label + '-download.png');
           await download.saveAs(pngPath);
+          const titleSurface = await page.evaluate(async source => {
+            const image = new Image(); image.src = source; await image.decode();
+            const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+            const card = document.querySelector('.adam-digital-card'), rootBox = card.getBoundingClientRect();
+            const badge = card.querySelector('.adam-digital-card__title').getBoundingClientRect();
+            const factor = image.width / rootBox.width;
+            const x = (badge.left - rootBox.left) * factor, y = (badge.top - rootBox.top) * factor;
+            const width = badge.width * factor, height = badge.height * factor;
+            return [[width / 2, 5 * 3], [width / 2, height - 5 * 3], [10 * 3, height / 2], [width - 10 * 3, height / 2]]
+              .map(([px, py]) => [...ctx.getImageData(Math.round(x + px), Math.round(y + py), 1, 1).data]);
+          }, 'data:image/png;base64,' + fs.readFileSync(pngPath).toString('base64'));
+          assert(titleSurface.every(pixel => [43, 110, 168].every((value, index) => Math.abs(value - pixel[index]) <= 2)),
+            `Badge must have a single uniform configured surface, without an inset rectangle: ${JSON.stringify(titleSurface)}`);
           const displayedBytes = await page.locator('.adam-digital-card-rendered').evaluate(async image =>
             [...new Uint8Array(await (await fetch(image.src)).arrayBuffer())]);
           assert(fs.readFileSync(pngPath).equals(Buffer.from(displayedBytes)), 'Website preview and PNG download must use the exact same image bytes');

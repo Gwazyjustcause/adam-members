@@ -226,6 +226,36 @@
 		return { src: canvas.toDataURL( 'image/png' ), width: width, height: height };
 	}
 
+	function captureTitleText( card ) {
+		return Array.prototype.map.call( card.querySelectorAll( '.adam-digital-card__title' ), function ( badge ) {
+			var style = window.getComputedStyle( badge );
+			var width = parseFloat( style.width ), height = parseFloat( style.height );
+			var bounds = badge.getBoundingClientRect();
+			var scale = bounds.width / width;
+			var canvas = document.createElement( 'canvas' );
+			canvas.width = Math.ceil( width * 3 ); canvas.height = Math.ceil( height * 3 );
+			var context = canvas.getContext( '2d' );
+			context.scale( canvas.width / width, canvas.height / height );
+			badge.querySelectorAll( '.adam-title-badge__symbol, .adam-title-badge__label' ).forEach( function ( part ) {
+				var css = window.getComputedStyle( part ), box = part.getBoundingClientRect();
+				var text = part.textContent.trim();
+				if ( 'uppercase' === css.textTransform ) { text = text.toLocaleUpperCase(); }
+				context.font = css.fontStyle + ' ' + css.fontWeight + ' ' + css.fontSize + ' ' + css.fontFamily;
+				context.fillStyle = css.color;
+				var metrics = context.measureText( text );
+				var spacing = parseFloat( css.letterSpacing ) || 0;
+				var letters = Array.from( text );
+				var ink = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + spacing * ( letters.length - 1 );
+				var x = ( box.left - bounds.left ) / scale + ( box.width / scale - ink ) / 2 + metrics.actualBoundingBoxLeft;
+				var y = ( box.top - bounds.top ) / scale + ( box.height / scale + metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent ) / 2;
+				letters.forEach( function ( letter, index ) {
+					context.fillText( letter, x + context.measureText( letters.slice( 0, index ).join( '' ) ).width + spacing * index, y );
+				} );
+			} );
+			return { src: canvas.toDataURL( 'image/png' ), width: width, height: height };
+		} );
+	}
+
 	function capturePattern( card ) {
 		var element = card.querySelector( '.adam-digital-card__pattern' );
 		if ( ! element ) { return null; }
@@ -327,6 +357,7 @@
 		await Promise.all( getCardImages( card ).map( waitForImage ) );
 		var fittedImages = await fittedImagesForCapture( card );
 		var statusBadge = captureStatusBadge( card );
+		var titleText = captureTitleText( card );
 		var patternImage = capturePattern( card );
 		var cardIndex = Array.prototype.indexOf.call( document.querySelectorAll( '.adam-digital-card' ), card );
 
@@ -380,6 +411,20 @@
 						badge.replaceChildren( label );
 						await label.decode();
 					}
+					await Promise.all( Array.prototype.map.call( clonedCard.querySelectorAll( '.adam-digital-card__title' ), async function ( badge, index ) {
+						var text = titleText[ index ];
+						var image = clonedDocument.createElement( 'img' );
+						image.src = text.src;
+						image.alt = badge.textContent;
+						image.style.cssText = 'position:absolute;inset:0;display:block;margin:0;width:100%;height:100%;';
+						badge.style.position = 'relative';
+						badge.style.width = text.width + 'px';
+						badge.style.height = text.height + 'px';
+						// One styled container, one transparent text layer. Nested inline
+						// backgrounds/shadows must never produce rectangular text blocks.
+						badge.replaceChildren( image );
+						await image.decode();
+					} ) );
 				}
 
 			}
