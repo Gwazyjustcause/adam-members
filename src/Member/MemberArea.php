@@ -798,7 +798,7 @@ final class MemberArea {
 					<?php echo $this->cards->render_card( $card_data, $card_presentation ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				</div>
 			</div>
-			<noscript><style>.adam-digital-card-viewport.is-pending{aspect-ratio:auto;overflow:auto}.adam-digital-card-viewport.is-pending > .adam-digital-card{position:relative;visibility:visible}.adam-digital-card-loading{display:none!important}</style></noscript>
+			<noscript><style>.adam-digital-card-viewport.is-pending{aspect-ratio:auto;overflow:auto}.adam-digital-card-viewport.is-pending > .adam-digital-card{position:relative;opacity:1;pointer-events:auto}.adam-digital-card-loading{display:none!important}</style></noscript>
 		</section>
 		<?php
 	}

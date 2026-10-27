@@ -12,6 +12,7 @@
 			if ( ! card ) {
 				return;
 			}
+			card.setAttribute( 'aria-hidden', 'true' );
 
 			function fitCard() {
 				var scale = Math.min( 1, viewport.clientWidth / card.offsetWidth );
@@ -380,6 +381,7 @@
 				}
 				if ( clonedCard ) {
 					clonedCard.style.visibility = 'visible';
+					clonedCard.style.opacity = '1';
 					if ( patternImage ) {
 						var pattern = clonedCard.querySelector( '.adam-digital-card__pattern' );
 						pattern.style.cssText += ';inset:0;width:100%;height:100%;transform:none;border-radius:0;background:url("' + patternImage + '") 0 0 / 100% 100% no-repeat;';
@@ -473,6 +475,7 @@
 					// Keep the scaled HTML card usable if capture is unavailable.
 					viewport.classList.remove( 'is-pending' );
 					viewport.removeAttribute( 'aria-busy' );
+					if ( ! viewport.classList.contains( 'is-rendered' ) ) { card.removeAttribute( 'aria-hidden' ); }
 				}
 				throw error;
 			}

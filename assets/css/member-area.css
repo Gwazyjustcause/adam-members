@@ -3995,7 +3995,10 @@
 	position: absolute;
 	top: 0;
 	left: 0;
-	visibility: hidden;
+	/* visibility is inherited by ::before and frozen by html2canvas's cloner.
+	 * Opacity hides the temporary card without hiding its inner surface. */
+	opacity: 0;
+	pointer-events: none;
 }
 
 .adam-digital-card-loading {
@@ -4019,7 +4022,8 @@
 
 /* Show the exact high-resolution bitmap that the download button saves. */
 .adam-digital-card-viewport.is-rendered > .adam-digital-card {
-	visibility: hidden;
+	opacity: 0;
+	pointer-events: none;
 }
 
 .adam-member-area .adam-digital-card-rendered {

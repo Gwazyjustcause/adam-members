@@ -30,6 +30,12 @@ async function setup(page, dark) {
   }
   await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important}' });
   await page.locator('.adam-digital-card__identity > strong').evaluate(el => el.textContent = 'ADMINADAM');
+  await page.locator('.adam-digital-card').evaluate(el => {
+    el.classList.add('adam-digital-card--has-frame', 'adam-digital-card--frame-simple');
+    el.style.setProperty('--adam-frame-width', '16px');
+    el.style.setProperty('--adam-frame-color', '#66ff00');
+    el.style.setProperty('--adam-card-surface', '#487b8d');
+  });
 }
 
 async function settle(page) {
@@ -43,7 +49,7 @@ async function settle(page) {
       for (const dark of [false, true]) {
         const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
         await setup(page, dark);
-        assert.equal(await page.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).visibility), 'hidden',
+        assert.equal(await page.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).opacity), '0',
           'The temporary HTML card must be hidden before the renderer script even starts');
         await page.addScriptTag({ path: library });
         await page.evaluate(() => {
@@ -53,10 +59,17 @@ async function settle(page) {
         });
         await page.addScriptTag({ path: script });
         assert(await page.locator('.adam-digital-card-loading').isVisible());
-        assert.equal(await page.locator('.adam-digital-card__header > .adam-badge').evaluate(el => getComputedStyle(el).visibility), 'hidden',
+        assert.equal(await page.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).opacity), '0',
           'ATIVO must not appear in its intermediate position during slow capture');
         await page.evaluate(() => window.releaseCardCapture());
         await page.evaluate(() => window.adamMemberCardDownloadApi.preparePreviews());
+        const colours = await page.locator('.adam-digital-card-rendered').evaluate(image => {
+          const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+          const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+          return { surface: [...ctx.getImageData(1600, 300, 1, 1).data], frame: [...ctx.getImageData(1600, 6, 1, 1).data] };
+        });
+        assert.deepEqual(colours.surface, [72, 123, 141, 255], 'The blue background must not be replaced by the green frame');
+        assert.deepEqual(colours.frame, [102, 255, 0, 255], 'The green finish must stay on the frame');
         assert.equal(await page.locator('.adam-digital-card-viewport').getAttribute('aria-busy'), null);
         assert.equal(await page.locator('.adam-digital-card-loading').isVisible(), false);
         const preview = await page.locator('.adam-digital-card-rendered').getAttribute('src');
@@ -98,13 +111,13 @@ async function settle(page) {
       // A missing capture dependency must leave a usable scaled HTML fallback.
       await fallback.addScriptTag({ path: script });
       await fallback.waitForFunction(() => !document.querySelector('.adam-digital-card-viewport').classList.contains('is-pending'));
-      assert.equal(await fallback.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).visibility), 'visible');
+      assert.equal(await fallback.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).opacity), '1');
       assert.equal(await fallback.locator('.adam-digital-card-viewport').getAttribute('aria-busy'), null);
       await fallback.close();
       const nojs = await browser.newPage({ javaScriptEnabled: false });
       nojs.setDefaultTimeout(10000);
       await nojs.setContent(html.replace('<body', `<style>${css}</style><body`), { waitUntil: 'domcontentloaded' });
-      assert.equal(await nojs.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).visibility), 'visible');
+      assert.equal(await nojs.locator('.adam-digital-card').evaluate(el => getComputedStyle(el).opacity), '1');
       await nojs.close();
       console.log(`PASS ${engine.name()}: capture failure and JavaScript-disabled fallbacks`);
     } finally { await browser.close(); }
