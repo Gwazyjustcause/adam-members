@@ -70,6 +70,7 @@ const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.ph
           context.drawImage(image, 0, 0);
           const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
           let left = Infinity, top = Infinity, right = -1, bottom = -1;
+          let logoLeft = Infinity, logoTop = Infinity, logoRight = -1, logoBottom = -1;
           for (let y = 0; y < canvas.height; y++) {
             for (let x = 0; x < canvas.width; x++) {
               const i = (y * canvas.width + x) * 4;
@@ -77,13 +78,41 @@ const html = execFileSync('php', [path.join(__dirname, 'member-mobile-fixture.ph
                 left = Math.min(left, x); right = Math.max(right, x);
                 top = Math.min(top, y); bottom = Math.max(bottom, y);
               }
+              if (data[i] < 40 && data[i + 1] > 140 && data[i + 2] > 220) {
+                logoLeft = Math.min(logoLeft, x); logoRight = Math.max(logoRight, x);
+                logoTop = Math.min(logoTop, y); logoBottom = Math.max(logoBottom, y);
+              }
             }
           }
-          return { width: right - left + 1, height: bottom - top + 1 };
+          const card = document.querySelector('.adam-digital-card');
+          const rootBox = card.getBoundingClientRect();
+          const badge = card.querySelector('.adam-digital-card__header > .adam-badge').getBoundingClientRect();
+          const factor = 3 * card.offsetWidth / rootBox.width;
+          const bx = (badge.left - rootBox.left) * factor, by = (badge.top - rootBox.top) * factor;
+          const bw = badge.width * factor, bh = badge.height * factor;
+          let inkLeft = Infinity, inkTop = Infinity, inkRight = -1, inkBottom = -1;
+          for (let y = Math.ceil(by + 3); y < by + bh - 3; y++) {
+            for (let x = Math.ceil(bx + 3); x < bx + bw - 3; x++) {
+              const i = (y * canvas.width + x) * 4;
+              if (data[i] < 80 && data[i + 1] < 130 && data[i + 2] < 110) {
+                inkLeft = Math.min(inkLeft, x); inkRight = Math.max(inkRight, x);
+                inkTop = Math.min(inkTop, y); inkBottom = Math.max(inkBottom, y);
+              }
+            }
+          }
+          return { width: right - left + 1, height: bottom - top + 1,
+            logoWidth: logoRight - logoLeft + 1, logoHeight: logoBottom - logoTop + 1,
+            badgeDx: (inkLeft + inkRight + 1) / 2 - bx - bw / 2,
+            badgeDy: (inkTop + inkBottom + 1) / 2 - by - bh / 2 };
         }, 'data:image/png;base64,' + png.toString('base64'));
         assert(photoShape.width > 100 && photoShape.height > 100, 'Export must include the portrait');
         assert(Math.abs(photoShape.width / photoShape.height - 1) < 0.025,
           `Portrait distorted: circular target became ${photoShape.width}×${photoShape.height}`);
+        assert(photoShape.logoWidth > 40 && photoShape.logoHeight > 40, 'Export must include the logo');
+        assert(Math.abs(photoShape.logoWidth / photoShape.logoHeight - 1) < 0.025,
+          `Logo distorted inside its padded box: circle became ${photoShape.logoWidth}×${photoShape.logoHeight}`);
+        assert(Math.abs(photoShape.badgeDx) < 2 && Math.abs(photoShape.badgeDy) < 2,
+          `Status text is off-center: x=${photoShape.badgeDx}, y=${photoShape.badgeDy} export pixels`);
         assert.equal(pngSize[0], 3072, 'PNG always exports the full 1024px canvas at 3x');
         if (!referencePngSize) referencePngSize = pngSize;
         assert.deepEqual(pngSize, referencePngSize, 'PNG dimensions must not change with the screen width');

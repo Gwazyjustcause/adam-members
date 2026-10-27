@@ -154,8 +154,18 @@
 		// Bake the browser's crop into a same-ratio bitmap for the clone only.
 		return Promise.all( Array.prototype.map.call( card.querySelectorAll( 'img' ), async function ( image ) {
 			var style = window.getComputedStyle( image );
-			var width = parseFloat( style.width );
-			var height = parseFloat( style.height );
+			var boxWidth = parseFloat( style.width );
+			var boxHeight = parseFloat( style.height );
+			var width = boxWidth;
+			var height = boxHeight;
+			// object-fit applies to the content box. Padding belongs to the logo's
+			// white container and must not be baked into the image a second time.
+			if ( 'border-box' === style.boxSizing ) {
+				width -= parseFloat( style.paddingLeft ) + parseFloat( style.paddingRight ) +
+					parseFloat( style.borderLeftWidth ) + parseFloat( style.borderRightWidth );
+				height -= parseFloat( style.paddingTop ) + parseFloat( style.paddingBottom ) +
+					parseFloat( style.borderTopWidth ) + parseFloat( style.borderBottomWidth );
+			}
 			if ( ! image.naturalWidth || ! image.naturalHeight || ! ( width > 0 && height > 0 ) ||
 				( 'cover' !== style.objectFit && 'contain' !== style.objectFit ) ) {
 				return null;
@@ -186,8 +196,34 @@
 				offset( position[1] || '50%', height - image.naturalHeight * ratio ),
 				image.naturalWidth * ratio, image.naturalHeight * ratio
 			);
-			return { src: canvas.toDataURL( 'image/png' ), width: width, height: height };
+			return { src: canvas.toDataURL( 'image/png' ), width: boxWidth, height: boxHeight };
 		} ) );
+	}
+
+	function captureStatusBadge( card ) {
+		var badge = card.querySelector( '.adam-digital-card__header > .adam-badge' );
+		if ( ! badge ) { return null; }
+		var style = window.getComputedStyle( badge );
+		var width = parseFloat( style.width ), height = parseFloat( style.height );
+		var text = badge.textContent.trim();
+		if ( 'uppercase' === style.textTransform ) { text = text.toLocaleUpperCase(); }
+		var canvas = document.createElement( 'canvas' );
+		canvas.width = Math.ceil( width * 3 ); canvas.height = Math.ceil( height * 3 );
+		var context = canvas.getContext( '2d' );
+		context.scale( canvas.width / width, canvas.height / height );
+		context.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+		context.fillStyle = style.color;
+		var metrics = context.measureText( text );
+		var spacing = parseFloat( style.letterSpacing ) || 0;
+		var letters = Array.from( text );
+		var inkWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + spacing * ( letters.length - 1 );
+		var x = ( width - inkWidth ) / 2 + metrics.actualBoundingBoxLeft;
+		var y = ( height + metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent ) / 2;
+		// Center the visible glyphs, rather than the font's uneven ascent/descent box.
+		letters.forEach( function ( letter, index ) {
+			context.fillText( letter, x + context.measureText( letters.slice( 0, index ).join( '' ) ).width + spacing * index, y );
+		} );
+		return { src: canvas.toDataURL( 'image/png' ), width: width, height: height };
 	}
 
 	function capturePattern( card ) {
@@ -290,6 +326,7 @@
 
 		await Promise.all( getCardImages( card ).map( waitForImage ) );
 		var fittedImages = await fittedImagesForCapture( card );
+		var statusBadge = captureStatusBadge( card );
 		var patternImage = capturePattern( card );
 		var cardIndex = Array.prototype.indexOf.call( document.querySelectorAll( '.adam-digital-card' ), card );
 
@@ -331,6 +368,18 @@
 							await image.decode();
 						}
 					} ) );
+					if ( statusBadge ) {
+						var badge = clonedCard.querySelector( '.adam-digital-card__header > .adam-badge' );
+						var label = clonedDocument.createElement( 'img' );
+						label.src = statusBadge.src;
+						label.alt = badge.textContent;
+						label.style.cssText = 'display:block;margin:0;width:100%;height:100%;';
+						badge.style.width = statusBadge.width + 'px';
+						badge.style.height = statusBadge.height + 'px';
+						badge.style.padding = '0';
+						badge.replaceChildren( label );
+						await label.decode();
+					}
 				}
 
 			}

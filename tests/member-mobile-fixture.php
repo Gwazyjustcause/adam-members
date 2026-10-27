@@ -20,7 +20,7 @@ $cards = ( new ReflectionClass( AdamMembership\Member\CardService::class ) )->ne
 $svg = static fn( $content ) => 'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">' . $content . '</svg>' );
 $card_data = array(
 	'association_name' => 'Associação Desportiva de Airsoft do Mondego',
-	'association_logo' => $svg( '<rect width="160" height="160" fill="white"/><text x="10" y="90" fill="#365314" font-size="44" font-weight="bold">ADAM</text>' ),
+	'association_logo' => 'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="160" viewBox="0 0 320 160"><rect width="320" height="160" fill="white"/><circle cx="60" cy="80" r="40" fill="#00c8ff"/><text x="115" y="96" fill="#365314" font-size="52" font-weight="bold">ADAM</text></svg>' ),
 	// A circular target makes stretching in the PNG export measurable.
 	'photo_url' => $svg( '<rect width="160" height="160" fill="#154b87"/><circle cx="80" cy="80" r="35" fill="#ff24b4"/>' ), 'initials' => 'MS',
 	'member_name' => 'Maria Alexandra de Albuquerque e Silva',

@@ -321,6 +321,7 @@ final class MemberArea {
 			<?php else : ?>
 
 				<?php
+				$card_rendered = false;
 				if ( $member->isPending() ) {
 					$this->render_pending( $member );
 				} elseif ( $member->isRenewalPending() ) {
@@ -330,19 +331,22 @@ final class MemberArea {
 				} elseif ( $member->isRejected() ) {
 					$this->render_rejected( $member );
 				} elseif ( $member->isActive() ) {
+					$this->render_digital_card( $member );
+					$card_rendered = true;
 					$this->render_active( $member );
 				} else {
 					$this->render_unknown_status();
 				}
 
 				if ( $member->has_active_benefits() ) {
-					$this->render_digital_card( $member );
+					if ( ! $card_rendered ) {
+						$this->render_digital_card( $member );
+					}
 					$this->render_personalization_section( $member );
 					$this->render_points_card( $member );
 				}
 				$this->render_documents( $member );
 				$this->render_member_actions( $member );
-				$this->render_announcements( $member, true );
 				?>
 			<?php endif; ?>
 		</div>
@@ -510,10 +514,15 @@ final class MemberArea {
 	 * @param Member $member Member.
 	 */
 	private function render_header( Member $member ): void {
-		$founder_number    = $member->founder_number();
-		$card_presentation = $this->cards->card_presentation( $member );
+		$founder_number = $member->founder_number();
+		$unread_count   = 0;
+		foreach ( $this->announcements->visible_for_member( $member, false ) as $announcement ) {
+			if ( $this->announcements->is_unread( $member, $announcement ) ) {
+				++$unread_count;
+			}
+		}
 		?>
-		<header class="adam-member-hero">
+		<header class="adam-member-hero" data-adam-communication-preferences>
 			<div class="adam-member-hero__content">
 				<p class="adam-eyebrow"><?php esc_html_e( 'Área do Sócio', 'adam-membership' ); ?></p>
 				<h2>
@@ -527,7 +536,7 @@ final class MemberArea {
 					);
 					?>
 				</h2>
-				<p><?php esc_html_e( 'O seu painel central para acompanhar a inscrição, quota, dados de sócio e próximas funcionalidades da ADAM.', 'adam-membership' ); ?></p>
+				<p><?php esc_html_e( 'O seu cartão, dados e serviços de sócio num só lugar.', 'adam-membership' ); ?></p>
 				<?php if ( $member->is_founder() ) : ?>
 					<p class="adam-founder-hero-note">
 						<?php echo esc_html( $founder_number > 0 ? sprintf( __( 'Membro Fundador ADAM | Fundador #%d', 'adam-membership' ), $founder_number ) : __( 'Membro Fundador ADAM', 'adam-membership' ) ); ?>
@@ -539,6 +548,21 @@ final class MemberArea {
 				<?php $this->render_status_badge( $member->effective_status() ); ?>
 				<span><?php echo esc_html( (string) $member->field( 'numero_socio' ) ?: __( 'Número por atribuir', 'adam-membership' ) ); ?></span>
 			</div>
+			<nav class="adam-member-hero__tools" aria-label="<?php esc_attr_e( 'Atalhos da área de sócio', 'adam-membership' ); ?>">
+				<?php if ( '' !== $this->current_member_view() ) : ?>
+					<a class="adam-hero-tool" href="<?php echo esc_url( $this->member_area_url() ); ?>"><?php esc_html_e( 'Painel', 'adam-membership' ); ?></a>
+				<?php endif; ?>
+				<a class="adam-hero-tool" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>" aria-current="<?php echo 'avisos' === $this->current_member_view() ? 'page' : 'false'; ?>">
+					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					<?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?>
+					<?php if ( $unread_count > 0 ) : ?><span class="adam-hero-tool__count" aria-label="<?php echo esc_attr( sprintf( __( '%d avisos por ler', 'adam-membership' ), $unread_count ) ); ?>"><?php echo esc_html( (string) $unread_count ); ?></span><?php endif; ?>
+				</a>
+				<button type="button" class="adam-hero-tool" data-adam-communication-preferences-open aria-controls="adam-communication-preferences-dialog" aria-haspopup="dialog">
+					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6M15 14v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+					<?php esc_html_e( 'Preferências de Comunicação', 'adam-membership' ); ?>
+				</button>
+			</nav>
+			<?php $this->render_communication_preferences_dialog(); ?>
 		</header>
 		<?php
 	}
@@ -720,18 +744,7 @@ final class MemberArea {
 		?>
 		<div class="adam-dashboard-grid">
 			<?php
-			$this->render_status_card(
-				$member->effective_status(),
-				__( 'A sua inscrição encontra-se ativa. Pode consultar os seus dados e gerir o acesso à conta.', 'adam-membership' )
-			);
-
 			$this->render_membership( $member );
-
-			$this->render_notifications_card(
-				array(
-					__( 'O seu cartão digital está disponível para validação através de QR code.', 'adam-membership' ),
-				)
-			);
 
 			$this->render_profile( $member );
 			?>
@@ -2191,26 +2204,28 @@ final class MemberArea {
 	 * @param array<int, string> $messages Notification messages.
 	 */
 	private function render_notifications_card( array $messages ): void {
-		$user_id       = get_current_user_id();
-		$optional      = $this->communication_preferences->categories()->optional();
-		$mandatory     = $this->communication_preferences->categories()->mandatory();
-		$subscriptions = $this->communication_preferences->subscriptions( $user_id, CommunicationPreferences::CHANNEL_EMAIL );
+		if ( array() === $messages ) {
+			return;
+		}
 		?>
-		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Centro de Avisos', 'adam-membership' ); ?>" data-adam-communication-preferences>
-			<div class="adam-card-heading adam-notifications-card__header">
-				<a class="adam-card-link adam-notifications-card__notices-link" href="<?php echo esc_url( $this->member_area_url( array( 'view' => 'avisos' ) ) ); ?>"><?php esc_html_e( 'Centro de Avisos', 'adam-membership' ); ?></a>
-				<button type="button" class="adam-communication-settings-button" data-adam-communication-preferences-open aria-controls="adam-communication-preferences-dialog" aria-haspopup="dialog" title="<?php esc_attr_e( 'Preferências de comunicação', 'adam-membership' ); ?>">
-					<span class="screen-reader-text"><?php esc_html_e( 'Abrir preferências de comunicação', 'adam-membership' ); ?></span>
-					<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.37 2.8a.5.5 0 0 0-.5-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.51c-.59.24-1.13.56-1.64.95L5.16 5.3a.5.5 0 0 0-.61.22L2.63 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.08.65-.08.94s.03.63.08.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.95l.36 2.51a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .5-.4l.36-2.51a7.2 7.2 0 0 0 1.63-.95l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.02-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
-				</button>
-			</div>
-
+		<section class="adam-card adam-notifications-card" aria-label="<?php esc_attr_e( 'Atualizações do pedido', 'adam-membership' ); ?>">
+			<p class="adam-eyebrow"><?php esc_html_e( 'Atualizações do pedido', 'adam-membership' ); ?></p>
 			<ul class="adam-notification-list">
 				<?php foreach ( $messages as $message ) : ?>
 					<li><?php echo esc_html( $message ); ?></li>
 				<?php endforeach; ?>
 			</ul>
+		</section>
+		<?php
+	}
 
+	/** Render the communication settings dialog once, alongside its header button. */
+	private function render_communication_preferences_dialog(): void {
+		$user_id       = get_current_user_id();
+		$optional      = $this->communication_preferences->categories()->optional();
+		$mandatory     = $this->communication_preferences->categories()->mandatory();
+		$subscriptions = $this->communication_preferences->subscriptions( $user_id, CommunicationPreferences::CHANNEL_EMAIL );
+		?>
 			<dialog id="adam-communication-preferences-dialog" class="adam-communication-preferences-dialog" data-adam-communication-preferences-dialog aria-labelledby="adam-communication-preferences-title">
 				<form method="post" class="adam-communication-preferences-form" data-adam-communication-preferences-form>
 					<div class="adam-communication-preferences-dialog__header">
@@ -2251,7 +2266,6 @@ final class MemberArea {
 					</div>
 				</form>
 			</dialog>
-		</section>
 		<?php
 	}
 
