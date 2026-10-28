@@ -81,6 +81,11 @@ final class EmailService {
 				'description'  => __( 'Enviado quando a Direção aprova uma nova inscrição.', 'adam-membership' ),
 				'placeholders' => array( 'member_name', 'member_number', 'member_area_link', 'login_link', 'quota_value', 'expiry_date' ),
 			),
+			'member_approved_delayed' => array(
+				'label'        => __( 'Sócio aprovado — pedido de desculpa pelo atraso', 'adam-membership' ),
+				'description'  => __( 'Substitui o email de aprovação quando o administrador assinala que houve atraso.', 'adam-membership' ),
+				'placeholders' => array( 'member_name', 'member_number', 'member_area_link', 'login_link', 'quota_value', 'expiry_date' ),
+			),
 			'member_rejected' => array(
 				'label'        => __( 'Sócio rejeitado', 'adam-membership' ),
 				'description'  => __( 'Enviado quando uma inscrição é rejeitada.', 'adam-membership' ),
@@ -177,10 +182,10 @@ final class EmailService {
 	 *
 	 * @param Member $member Member.
 	 */
-	public function send_approval_email( Member $member, ?PrivateDocument $document = null ): bool {
+	public function send_approval_email( Member $member, ?PrivateDocument $document = null, bool $apologize_for_delay = false ): bool {
 		$delivery = $this->document_delivery( $document );
 		$sent = $this->send_member_template_email(
-			'member_approved',
+			$apologize_for_delay ? 'member_approved_delayed' : 'member_approved',
 			$member,
 			array(
 				'member_area_link' => $this->settings->member_area_url(),

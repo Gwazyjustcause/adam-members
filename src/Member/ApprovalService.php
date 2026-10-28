@@ -84,20 +84,20 @@ final class ApprovalService {
 	 * @param int $user_id User ID.
 	 * @return true|WP_Error
 	 */
-	public function approve( int $user_id ): true|WP_Error {
+	public function approve( int $user_id, bool $apologize_for_delay = false ): true|WP_Error {
 		$lock = $this->acquire_approval_lock( $user_id );
 		if ( $lock instanceof WP_Error ) {
 			return $lock;
 		}
 		try {
-			return $this->approve_locked( $user_id );
+			return $this->approve_locked( $user_id, $apologize_for_delay );
 		} finally {
 			$this->release_approval_lock( $lock );
 		}
 	}
 
 	/** @param int $user_id User ID. */
-	private function approve_locked( int $user_id ): true|WP_Error {
+	private function approve_locked( int $user_id, bool $apologize_for_delay ): true|WP_Error {
 
 		$member = $this->members->find( $user_id );
 
@@ -181,7 +181,8 @@ final class ApprovalService {
 		$this->recognition->handle_member_approved( $member );
 		$this->history->member_approved( $member, $old_status, $member->status() );
 
-		$this->email->send_approval_email( $member, $this->private_document( $member ) );
+		update_user_meta( $user_id, 'adam_approval_delayed', $apologize_for_delay ? '1' : '' );
+		$this->email->send_approval_email( $member, $this->private_document( $member ), $apologize_for_delay );
 		/**
 		 * The WordPress approval is complete. Integrations must treat failures
 		 * from this notification as independent from the approval result.
@@ -370,12 +371,12 @@ final class ApprovalService {
 	}
 
 	/** Record ANA confirmation and complete an initial ADAM/ANA registration. */
-	public function confirm_ana_and_approve( int $user_id, string $date ): true|WP_Error {
+	public function confirm_ana_and_approve( int $user_id, string $date, bool $apologize_for_delay = false ): true|WP_Error {
 		$member = $this->members->find( $user_id );
 		if ( null === $member ) { return new WP_Error( 'adam_membership_member_not_found', __( 'Sócio não encontrado.', 'adam-membership' ) ); }
 		if ( '' === $date || false === strtotime( $date ) ) { return new WP_Error( 'adam_membership_invalid_ana_date', __( 'Indique uma data de confirmação ANA válida.', 'adam-membership' ) ); }
 		$member->save( array( 'adam_apd_ana_confirmation_date' => $date, 'adam_apd_management_status' => Member::APD_MANAGED, 'data_adesao' => $date, 'validade_quota' => gmdate( 'Y-m-d', strtotime( '+1 year', strtotime( $date ) ) ) ) );
-		return $this->approve( $user_id );
+		return $this->approve( $user_id, $apologize_for_delay );
 	}
 
 	/**
@@ -439,7 +440,7 @@ final class ApprovalService {
 			);
 		}
 
-		if ( ! $this->email->send_approval_email( $member, $this->private_document( $member ) ) ) {
+		if ( ! $this->email->send_approval_email( $member, $this->private_document( $member ), '1' === (string) get_user_meta( $user_id, 'adam_approval_delayed', true ) ) ) {
 			return new WP_Error(
 				'adam_membership_approval_email_failed',
 				__( 'Não foi possível enviar o email de aprovação.', 'adam-membership' )

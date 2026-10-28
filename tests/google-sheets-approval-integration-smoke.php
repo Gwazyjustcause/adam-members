@@ -24,7 +24,7 @@ $approval_event = strpos( $approval, "do_action( 'adam_membership_member_approve
 $approval_return = strpos( $approval, 'return true;', $approval_event );
 adam_phase4_assert( false !== $approval_event && false !== $approval_return && $approval_event < $approval_return, 'Registration sync event is emitted only after approval completes.' );
 adam_phase4_assert( 1 === substr_count( $approval, "do_action( 'adam_membership_member_approved'" ), 'Registration approval emits exactly one sync event.' );
-adam_phase4_assert( str_contains( $approval, 'return $this->approve( $user_id );' ), 'ANA registration approval delegates to the normal approval path.' );
+adam_phase4_assert( str_contains( $approval, 'return $this->approve( $user_id, $apologize_for_delay );' ), 'ANA registration approval delegates to the normal approval path with the chosen email variant.' );
 
 $renewal_status = strpos( $renewal, "'status'      => RenewalRequest::STATUS_APPROVED" );
 $renewal_event  = strpos( $renewal, "do_action( 'adam_membership_renewal_approved'" );

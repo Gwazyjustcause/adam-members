@@ -852,6 +852,11 @@ final class SettingsRepository {
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM foi aprovada",
 				'body'    => "<p>Ol\u{00E1} <strong>{{member_name}}</strong>,</p><p>\u{00C9} com enorme satisfa\u{00E7}\u{00E3}o que informamos que a sua inscri\u{00E7}\u{00E3}o na ADAM foi aprovada.</p><p><strong>N.\u{00BA} de s\u{00F3}cio:</strong> {{member_number}}</p><p>O seu registo encontra-se agora ativo.</p><p><a href=\"{{member_area_link}}\">Aceder \u{00E0} \u{00C1}rea de S\u{00F3}cio</a></p><p>Cumprimentos,<br><strong>A Dire\u{00E7}\u{00E3}o da ADAM</strong></p>",
 			),
+			'member_approved_delayed' => array(
+				'enabled' => true,
+				'subject' => 'A sua inscrição na ADAM foi aprovada — obrigado pela sua paciência',
+				'body'    => '<p>Olá <strong>{{member_name}}</strong>,</p><p>Pedimos desculpa pela demora na conclusão da sua inscrição e pelo tempo que ficou à espera da nossa confirmação. Sabemos que esta espera pode ter causado transtornos e agradecemos a sua paciência e compreensão.</p><p>A sua inscrição na ADAM foi agora aprovada e o seu registo encontra-se ativo. Seja bem-vindo à ADAM!</p><p><strong>N.º de sócio ADAM:</strong> {{member_number}}<br><strong>Validade da quota:</strong> {{expiry_date}}</p><p>Já pode aceder à sua Área de Sócio para consultar os seus dados e descarregar o seu cartão digital.</p><p><a href="{{member_area_link}}">Aceder à Área de Sócio</a></p><p>Se precisar de ajuda, contacte-nos através de <a href="mailto:{{support_email}}">{{support_email}}</a>.</p><p>Mais uma vez, pedimos desculpa pelo atraso e agradecemos a confiança.</p><p>Cumprimentos,<br><strong>A Direção da ADAM</strong></p>',
+			),
 			'member_rejected' => array(
 				'enabled' => true,
 				'subject' => "A sua inscri\u{00E7}\u{00E3}o na ADAM n\u{00E3}o foi aprovada",

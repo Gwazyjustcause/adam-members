@@ -3893,7 +3893,7 @@ final class AdminController {
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
-				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmação ANA <input type="date" name="ana_confirmation_date" required></label><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
+				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmação ANA <input type="date" name="ana_confirmation_date" required></label><?php $this->render_approval_delay_option(); ?><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
 				<?php if ( Member::APD_MANAGED === (string) $member->field( 'adam_apd_management_status' ) || 'ANA' === (string) $member->field( 'adam_external_association_name' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('Tem a certeza de que pretende remover a associação ANA deste sócio?');"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><button class="button">Remover ANA</button></form><?php endif; ?>
 				</div>
 
@@ -4386,8 +4386,8 @@ final class AdminController {
 		}
 
 		$result = match ( $action ) {
-			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id ),
-			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ) ),
+			self::ACTION_APPROVE      => $this->approval_service->approve( $user_id, isset( $_POST['approval_delayed'] ) ),
+			self::ACTION_CONFIRM_ANA  => $this->approval_service->confirm_ana_and_approve( $user_id, sanitize_text_field( wp_unslash( $_POST['ana_confirmation_date'] ?? '' ) ), isset( $_POST['approval_delayed'] ) ),
 			self::ACTION_REMOVE_ANA   => $this->remove_ana_for_testing( $user_id ),
 			self::ACTION_REJECT       => $this->approval_service->reject( $user_id, $this->posted_rejection_reason(), $this->posted_rejection_note() ),
 			self::ACTION_REQUEST_CORRECTION => $this->approval_service->request_correction( $user_id, $this->posted_correction_reason(), $this->posted_correction_note(), isset( $_POST['correction_fields'] ) && is_array( $_POST['correction_fields'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['correction_fields'] ) ) : array() ),
@@ -6154,6 +6154,13 @@ final class AdminController {
 		);
 	}
 
+	/** Let the administrator choose the delayed approval email for this submission. */
+	private function render_approval_delay_option(): void {
+		?>
+		<label class="adam-admin-checkbox-field"><input type="checkbox" name="approval_delayed" value="1"> <?php esc_html_e( 'Incluir pedido de desculpa pelo atraso no email de aprovação', 'adam-membership' ); ?></label>
+		<?php
+	}
+
 	/**
 	 * Render an inline row action form.
 	 *
@@ -6169,6 +6176,7 @@ final class AdminController {
 			<input type="hidden" name="member_action" value="<?php echo esc_attr( $action ); ?>">
 			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<?php if ( self::ACTION_APPROVE === $action ) { $this->render_approval_delay_option(); } ?>
 			<button type="submit" class="button button-small <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
 		</form>
 		<?php
@@ -6214,6 +6222,7 @@ final class AdminController {
 			<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>">
 			<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->member_url( $member ) ); ?>">
 			<?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?>
+			<?php if ( self::ACTION_APPROVE === $action ) { $this->render_approval_delay_option(); } ?>
 			<button type="submit" class="button <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
 		</form>
 		<?php
