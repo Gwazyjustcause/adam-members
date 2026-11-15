@@ -265,6 +265,13 @@ final class Announcement {
 		return sanitize_text_field( (string) ( $this->data['email_sent_at'] ?? '' ) );
 	}
 
+	/** @return int[] Media Library documents attached to the email. */
+	public function email_attachment_ids(): array {
+		$ids = (array) ( $this->data['email_attachment_ids'] ?? array() );
+
+		return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+	}
+
 	/**
 	 * Get created at datetime.
 	 */

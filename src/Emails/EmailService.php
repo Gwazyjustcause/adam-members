@@ -402,8 +402,9 @@ final class EmailService {
 	 *
 	 * @param Member       $member       Member.
 	 * @param Announcement $announcement Announcement.
+	 * @param array<array-key,string> $attachments Email attachments.
 	 */
-	public function send_announcement_email( Member $member, Announcement $announcement ): bool {
+	public function send_announcement_email( Member $member, Announcement $announcement, array $attachments = array() ): bool {
 		$rendered = $this->render_announcement_email( $announcement, $member->full_name() );
 
 		return $this->send(
@@ -414,7 +415,8 @@ final class EmailService {
 			array(
 				'announcement_id' => $announcement->id(),
 				'member_id'       => $member->user_id(),
-			)
+			),
+			$attachments
 		);
 	}
 

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace AdamMembership\Admin;
 
 use AdamMembership\Announcement\Announcement;
+use AdamMembership\Announcement\AnnouncementAttachments;
 use AdamMembership\Announcement\AnnouncementService;
 use AdamMembership\Announcement\AnnouncementView;
 use AdamMembership\Communication\CommunicationCategoryRegistry;
@@ -63,6 +64,10 @@ final class AnnouncementController {
 			return;
 		}
 
+		if ( current_user_can( 'upload_files' ) ) {
+			wp_enqueue_media();
+		}
+
 		$script_path = ADAM_MEMBERSHIP_PATH . 'assets/js/admin-announcements.js';
 
 		wp_enqueue_script(
@@ -76,12 +81,18 @@ final class AnnouncementController {
 			'adam-membership-admin-announcements',
 			'adamAnnouncementPreview',
 			array(
-				'url'     => admin_url( 'admin-ajax.php' ),
-				'action'  => self::PREVIEW_ACTION,
-				'nonce'   => wp_create_nonce( self::PREVIEW_ACTION ),
-				'empty'   => __( 'Escreva o título para iniciar a pré-visualização.', 'adam-membership' ),
-				'loading' => __( 'A atualizar a pré-visualização…', 'adam-membership' ),
-				'error'   => __( 'Não foi possível atualizar a pré-visualização. Tente novamente.', 'adam-membership' ),
+				'url'         => admin_url( 'admin-ajax.php' ),
+				'action'      => self::PREVIEW_ACTION,
+				'nonce'       => wp_create_nonce( self::PREVIEW_ACTION ),
+				'empty'       => __( 'Escreva o título para iniciar a pré-visualização.', 'adam-membership' ),
+				'loading'     => __( 'A atualizar a pré-visualização…', 'adam-membership' ),
+				'error'       => __( 'Não foi possível atualizar a pré-visualização. Tente novamente.', 'adam-membership' ),
+				'attachments' => array(
+					'mimes'   => array_values( AnnouncementAttachments::mimes() ),
+					'select'  => __( 'Selecionar documentos', 'adam-membership' ),
+					'add'     => __( 'Anexar ao email', 'adam-membership' ),
+					'remove'  => __( 'Remover', 'adam-membership' ),
+				),
 			)
 		);
 	}
@@ -368,6 +379,7 @@ final class AnnouncementController {
 									<small><?php esc_html_e( 'Use Ctrl/Cmd para selecionar vários membros.', 'adam-membership' ); ?></small>
 								</label>
 							</div>
+							<?php $this->render_email_attachments( $announcement?->email_attachment_ids() ?? array() ); ?>
 						</fieldset>
 					</section>
 
@@ -378,6 +390,32 @@ final class AnnouncementController {
 				</form>
 				<?php $this->render_preview_panel(); ?>
 			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render Media Library selections independently of the email body.
+	 *
+	 * @param int[] $attachment_ids Saved attachment IDs.
+	 */
+	private function render_email_attachments( array $attachment_ids ): void {
+		?>
+		<div class="adam-announcement-channel-settings adam-announcement-attachments" data-adam-announcement-attachments>
+			<strong><?php esc_html_e( 'Anexos do email (opcional)', 'adam-membership' ); ?></strong>
+			<p class="description"><?php esc_html_e( 'Selecione ou carregue documentos na Biblioteca multimédia. Use ficheiros que possam ficar acessíveis por URL pública.', 'adam-membership' ); ?></p>
+			<input type="hidden" name="email_attachment_ids" value="<?php echo esc_attr( implode( ',', $attachment_ids ) ); ?>">
+			<ul class="adam-announcement-attachment-list" data-adam-announcement-attachment-list>
+				<?php foreach ( $attachment_ids as $attachment_id ) : ?>
+					<li data-attachment-id="<?php echo esc_attr( (string) $attachment_id ); ?>">
+						<span><?php echo esc_html( AnnouncementAttachments::filename( $attachment_id ) ); ?></span>
+						<button type="button" class="button-link" data-adam-remove-attachment><?php esc_html_e( 'Remover', 'adam-membership' ); ?></button>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<?php if ( current_user_can( 'upload_files' ) ) : ?>
+				<button type="button" class="button" data-adam-add-attachments><?php esc_html_e( 'Adicionar documentos', 'adam-membership' ); ?></button>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -407,6 +445,10 @@ final class AnnouncementController {
 					<span data-adam-announcement-preview-subject></span>
 				</p>
 				<p class="description"><?php esc_html_e( 'A saudação usa um nome de exemplo.', 'adam-membership' ); ?></p>
+				<div class="adam-announcement-subject" data-adam-announcement-preview-attachments hidden>
+					<strong><?php esc_html_e( 'Anexos', 'adam-membership' ); ?></strong>
+					<ul class="adam-announcement-attachment-list"></ul>
+				</div>
 				<iframe title="<?php esc_attr_e( 'Corpo do email do aviso', 'adam-membership' ); ?>" sandbox></iframe>
 			</div>
 			<noscript><p><?php esc_html_e( 'Ative o JavaScript para ver a pré-visualização.', 'adam-membership' ); ?></p></noscript>
@@ -559,6 +601,7 @@ final class AnnouncementController {
 			'email_audience'          => $fields['email_audience'] ?? Announcement::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS,
 			'email_team_id'           => absint( $fields['email_team_id'] ?? 0 ),
 			'email_member_ids'        => isset( $_POST['email_member_ids'] ) && is_array( $_POST['email_member_ids'] ) ? wp_unslash( array_filter( $_POST['email_member_ids'], 'is_string' ) ) : array(),
+			'email_attachment_ids'    => explode( ',', $fields['email_attachment_ids'] ?? '' ),
 		);
 	}
 

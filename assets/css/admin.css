@@ -1275,6 +1275,34 @@
 	display: none;
 }
 
+.adam-announcement-attachments {
+	padding-top: 14px;
+	border-top: 1px solid var(--adam-admin-border);
+}
+
+.adam-announcement-attachments > .button {
+	justify-self: start;
+}
+
+.adam-announcement-attachment-list {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.adam-announcement-attachment-list:empty {
+	display: none;
+}
+
+.adam-announcement-attachments li {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 0;
+}
+
 .adam-announcement-preview {
 	scroll-margin-top: 56px;
 }

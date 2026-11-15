@@ -110,27 +110,40 @@ final class AnnouncementService {
 			return new WP_Error( 'adam_membership_announcement_email_members_required', __( 'Selecione pelo menos um sócio para receber o email.', 'adam-membership' ) );
 		}
 
+		$current = $id > 0 ? $this->repository->find( $id ) : null;
+		if ( $id > 0 && null === $current ) {
+			return new WP_Error( 'adam_membership_announcement_not_found', __( 'Announcement not found.', 'adam-membership' ) );
+		}
+
+		$candidate = new Announcement( array_merge( $current?->data() ?? array(), $prepared, array_intersect_key( $data, array( 'email_attachment_ids' => true ) ) ) );
+		$prepared['email_attachment_ids'] = $candidate->email_attachment_ids();
+		$will_send = $candidate->send_email() && $candidate->is_visible() && '' === $candidate->email_sent_at();
+		$attachments = array();
+
+		if ( $will_send || $prepared['email_attachment_ids'] !== ( $current?->email_attachment_ids() ?? array() ) ) {
+			$attachments = AnnouncementAttachments::resolve( $candidate );
+			if ( is_wp_error( $attachments ) ) {
+				return $attachments;
+			}
+		}
+
 		$now = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) );
 
-		if ( 0 === $id ) {
+		if ( null === $current ) {
 			$prepared['created_at']    = $now;
 			$prepared['updated_at']    = $now;
 			$prepared['email_sent_at'] = '';
 			$announcement              = $this->repository->create( $prepared );
 			$this->logger->info( 'Announcement created.', array( 'announcement_id' => $announcement->id() ) );
 		} else {
-			$current = $this->repository->find( $id );
-
-			if ( null === $current ) {
-				return new WP_Error( 'adam_membership_announcement_not_found', __( 'Announcement not found.', 'adam-membership' ) );
-			}
-
 			$prepared['updated_at'] = $now;
 			$announcement           = $this->repository->update( $current, $prepared );
 			$this->logger->info( 'Announcement updated.', array( 'announcement_id' => $announcement->id() ) );
 		}
 
-		$this->maybe_send_announcement_email( $announcement );
+		if ( $will_send ) {
+			$this->dispatch_announcement_email( $announcement, $attachments );
+		}
 
 		return $announcement;
 	}
@@ -409,17 +422,14 @@ final class AnnouncementService {
 	/**
 	 * Send optional announcement email.
 	 *
-	 * @param Announcement $announcement Announcement.
+	 * @param Announcement         $announcement Announcement.
+	 * @param array<array-key,string> $attachments Resolved email attachments.
 	 */
-	private function maybe_send_announcement_email( Announcement $announcement ): void {
-		if ( ! $announcement->send_email() || Announcement::STATUS_PUBLISHED !== $announcement->effective_status() || '' !== $announcement->email_sent_at() ) {
-			return;
-		}
-
+	private function dispatch_announcement_email( Announcement $announcement, array $attachments ): void {
 		$sent_count = 0;
 
 		foreach ( $this->email_target_members( $announcement ) as $member ) {
-			if ( $this->email->send_announcement_email( $member, $announcement ) ) {
+			if ( $this->email->send_announcement_email( $member, $announcement, $attachments ) ) {
 				++$sent_count;
 			}
 		}
