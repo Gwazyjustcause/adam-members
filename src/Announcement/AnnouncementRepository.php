@@ -15,6 +15,17 @@ namespace AdamMembership\Announcement;
 final class AnnouncementRepository {
 	private const OPTION_ITEMS   = 'adam_membership_announcements';
 	private const OPTION_NEXT_ID = 'adam_membership_announcement_next_id';
+	private const EMAIL_CLAIM_PREFIX = 'adam_membership_announcement_email_claim_';
+
+	/** Check dispatch history for old and new announcements. */
+	public function email_processed( Announcement $announcement ): bool {
+		return '' !== $announcement->email_sent_at() || (bool) get_option( self::EMAIL_CLAIM_PREFIX . $announcement->id(), false );
+	}
+
+	/** Reserve the one-time email send across simultaneous requests. */
+	public function claim_email_delivery( Announcement $announcement ): bool {
+		return ! $this->email_processed( $announcement ) && add_option( self::EMAIL_CLAIM_PREFIX . $announcement->id(), '1', '', false );
+	}
 
 	/**
 	 * Create an announcement.
@@ -61,6 +72,7 @@ final class AnnouncementRepository {
 		$announcements = $this->raw_items();
 		unset( $announcements[ $announcement_id ] );
 		update_option( self::OPTION_ITEMS, $announcements, false );
+		delete_option( self::EMAIL_CLAIM_PREFIX . $announcement_id );
 	}
 
 	/**

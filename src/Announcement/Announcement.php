@@ -114,7 +114,16 @@ final class Announcement {
 	 * Get publish date.
 	 */
 	public function publish_date(): string {
+		if ( self::STATUS_SCHEDULED === $this->status() && $this->scheduled_at() > 0 ) {
+			return wp_date( 'Y-m-d', $this->scheduled_at() );
+		}
+
 		return sanitize_text_field( (string) ( $this->data['publish_date'] ?? '' ) );
+	}
+
+	/** Scheduled publication as a Unix timestamp. Older date-only notices return zero. */
+	public function scheduled_at(): int {
+		return absint( $this->data['scheduled_at'] ?? 0 );
 	}
 
 	/**
@@ -314,6 +323,10 @@ final class Announcement {
 		}
 
 		if ( self::STATUS_SCHEDULED === $status ) {
+			if ( $this->scheduled_at() > 0 ) {
+				return $this->scheduled_at() > time() ? self::STATUS_SCHEDULED : self::STATUS_PUBLISHED;
+			}
+
 			$publish = strtotime( $this->publish_date() . ' 00:00:00' );
 
 			if ( false === $publish || $publish > $now ) {

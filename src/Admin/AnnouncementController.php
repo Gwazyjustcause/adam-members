@@ -87,6 +87,13 @@ final class AnnouncementController {
 				'empty'       => __( 'Escreva o título para iniciar a pré-visualização.', 'adam-membership' ),
 				'loading'     => __( 'A atualizar a pré-visualização…', 'adam-membership' ),
 				'error'       => __( 'Não foi possível atualizar a pré-visualização. Tente novamente.', 'adam-membership' ),
+				'publication' => $this->publication_labels() + array(
+					'today'             => wp_date( 'Y-m-d' ),
+					'draftEmail'        => __( 'Ao guardar o rascunho, o email fica por enviar.', 'adam-membership' ),
+					'scheduledEmail'    => __( 'O email será enviado na data e hora escolhidas.', 'adam-membership' ),
+					'scheduledEmailAt'  => __( 'O email será enviado em %1$s às %2$s, na hora do site.', 'adam-membership' ),
+					'immediateEmail'    => __( 'Ao clicar no botão, o email será enviado de imediato aos destinatários selecionados.', 'adam-membership' ),
+				),
 				'attachments' => array(
 					'mimes'   => array_values( AnnouncementAttachments::mimes() ),
 					'select'  => __( 'Selecionar documentos', 'adam-membership' ),
@@ -186,7 +193,7 @@ final class AnnouncementController {
 								<td><?php echo esc_html( $announcement->category() ); ?></td>
 								<td><?php $this->render_badge( AnnouncementView::priority_label( $announcement->priority() ), 'announcement-' . $announcement->priority() ); ?></td>
 								<td><?php $this->render_badge( $this->status_label( $announcement->effective_status() ), 'announcement-status-' . $announcement->effective_status() ); ?></td>
-								<td><?php echo esc_html( $this->format_date( $announcement->publish_date() ) ); ?></td>
+								<td><?php echo esc_html( $announcement->scheduled_at() > 0 ? wp_date( 'd/m/Y H:i', $announcement->scheduled_at() ) : $this->format_date( $announcement->publish_date() ) ); ?></td>
 								<td><?php echo esc_html( $this->format_date( $announcement->expiry_date() ) ); ?></td>
 								<td><?php echo esc_html( $this->audience_label( $announcement->target_audience() ) ); ?></td>
 								<td><?php echo esc_html( sprintf( '%1$d / %2$d', $stats['read'], $stats['targeted'] ) ); ?></td>
@@ -228,6 +235,29 @@ final class AnnouncementController {
 		$email_audience   = null !== $announcement ? $announcement->email_audience() : Announcement::EMAIL_AUDIENCE_CATEGORY_SUBSCRIBERS;
 		$email_team_id    = null !== $announcement ? $announcement->email_team_id() : 0;
 		$email_member_ids = null !== $announcement ? $announcement->email_member_ids() : array();
+		$email_processed  = null !== $announcement && $this->announcements->repository()->email_processed( $announcement );
+		$effective_status = $announcement?->effective_status();
+		$editor_status    = $announcement?->status() ?? Announcement::STATUS_DRAFT;
+		$is_live          = Announcement::STATUS_PUBLISHED === $effective_status;
+		$show_in_member   = $announcement?->show_in_member_area() ?? true;
+		$send_email       = $announcement?->send_email() ?? false;
+		$scheduled_at     = $announcement?->scheduled_at() ?? 0;
+		$today            = wp_date( 'Y-m-d' );
+		$published_date   = $is_live || Announcement::STATUS_EXPIRED === $effective_status ? ( $announcement?->publish_date() ?: $today ) : $today;
+		if ( Announcement::STATUS_SCHEDULED === $editor_status && ( $is_live || ( $scheduled_at > 0 && $scheduled_at <= time() ) ) ) {
+			$editor_status = Announcement::STATUS_PUBLISHED;
+		}
+
+		$will_email = $send_email && ! $email_processed;
+		$submit_key = match ( $editor_status ) {
+			Announcement::STATUS_SCHEDULED => $will_email ? ( $show_in_member ? 'scheduleBoth' : 'scheduleEmail' ) : 'schedule',
+			Announcement::STATUS_PUBLISHED => $will_email && Announcement::STATUS_EXPIRED !== $effective_status
+				? ( $is_live ? 'updateEmail' : ( $show_in_member ? 'publishEmail' : 'sendEmail' ) )
+				: ( $is_live || Announcement::STATUS_EXPIRED === $effective_status ? 'update' : 'publish' ),
+			Announcement::STATUS_ARCHIVED => 'archive',
+			default => 'draft',
+		};
+		$labels = $this->publication_labels();
 		?>
 		<div class="wrap adam-admin-wrap adam-admin-announcements">
 			<div class="adam-admin-titlebar">
@@ -236,7 +266,7 @@ final class AnnouncementController {
 			</div>
 			<?php $this->render_notices(); ?>
 			<div class="adam-announcement-workspace">
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form" data-adam-announcement-form>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="adam-admin-edit-form" data-adam-announcement-form data-email-processed="<?php echo esc_attr( $email_processed ? '1' : '0' ); ?>" data-is-live="<?php echo esc_attr( $is_live ? '1' : '0' ); ?>" data-is-expired="<?php echo esc_attr( Announcement::STATUS_EXPIRED === $effective_status ? '1' : '0' ); ?>" data-published-date="<?php echo esc_attr( $published_date ); ?>">
 					<input type="hidden" name="action" value="adam_membership_save_announcement">
 					<input type="hidden" name="announcement_id" value="<?php echo esc_attr( (string) ( null !== $announcement ? $announcement->id() : 0 ) ); ?>">
 					<?php wp_nonce_field( 'adam_membership_save_announcement' ); ?>
@@ -302,21 +332,34 @@ final class AnnouncementController {
 								</select>
 							</label>
 							<label>
-								<span><?php esc_html_e( 'Estado', 'adam-membership' ); ?></span>
+								<span><?php esc_html_e( 'Quando publicar', 'adam-membership' ); ?></span>
 								<select name="status">
-									<?php foreach ( array( Announcement::STATUS_DRAFT, Announcement::STATUS_SCHEDULED, Announcement::STATUS_PUBLISHED, Announcement::STATUS_ARCHIVED ) as $status ) : ?>
-										<?php $this->render_select_option( $status, $this->status_label( $status ), null !== $announcement ? $announcement->status() : Announcement::STATUS_DRAFT ); ?>
-									<?php endforeach; ?>
+									<?php $this->render_select_option( Announcement::STATUS_DRAFT, __( 'Manter como rascunho', 'adam-membership' ), $editor_status ); ?>
+									<?php $this->render_select_option( Announcement::STATUS_PUBLISHED, $is_live ? __( 'Publicado', 'adam-membership' ) : __( 'Publicar agora', 'adam-membership' ), $editor_status ); ?>
+									<?php $this->render_select_option( Announcement::STATUS_SCHEDULED, __( 'Agendar para mais tarde', 'adam-membership' ), $editor_status ); ?>
+									<?php $this->render_select_option( Announcement::STATUS_ARCHIVED, __( 'Arquivar', 'adam-membership' ), $editor_status ); ?>
 								</select>
-							</label>
-							<label>
-								<span><?php esc_html_e( 'Data de publicação', 'adam-membership' ); ?></span>
-								<input type="date" name="publish_date" value="<?php echo esc_attr( null !== $announcement ? $announcement->publish_date() : wp_date( 'Y-m-d', current_time( 'timestamp' ) ) ); ?>">
 							</label>
 							<label>
 								<span><?php esc_html_e( 'Data de expiração (opcional)', 'adam-membership' ); ?></span>
 								<input type="date" name="expiry_date" value="<?php echo esc_attr( null !== $announcement ? $announcement->expiry_date() : '' ); ?>">
 							</label>
+						</div>
+						<div class="adam-announcement-channel-settings" data-adam-announcement-schedule>
+							<div class="adam-admin-edit-grid">
+								<label>
+									<span><?php esc_html_e( 'Data de publicação', 'adam-membership' ); ?></span>
+									<input type="date" name="publish_date" value="<?php echo esc_attr( $announcement?->publish_date() ?: $today ); ?>" min="<?php echo esc_attr( $today ); ?>" aria-describedby="adam-announcement-timezone">
+								</label>
+								<label>
+									<span><?php esc_html_e( 'Hora de publicação', 'adam-membership' ); ?></span>
+									<input type="time" name="publish_time" value="<?php echo esc_attr( $scheduled_at > 0 ? wp_date( 'H:i', $scheduled_at ) : ( Announcement::STATUS_SCHEDULED === $editor_status ? '00:00' : '' ) ); ?>" aria-describedby="adam-announcement-timezone">
+								</label>
+							</div>
+							<p id="adam-announcement-timezone" class="description"><?php echo esc_html( sprintf( __( 'Fuso horário do site (%s).', 'adam-membership' ), wp_timezone_string() ) ); ?></p>
+							<?php if ( Announcement::STATUS_SCHEDULED === $editor_status && 0 === $scheduled_at && $will_email ) : ?>
+								<p class="description"><?php esc_html_e( 'Este aviso tem um agendamento antigo. Confirme a data e a hora e volte a agendar para programar o envio do email.', 'adam-membership' ); ?></p>
+							<?php endif; ?>
 						</div>
 					</section>
 
@@ -342,11 +385,11 @@ final class AnnouncementController {
 						</fieldset>
 						<fieldset class="adam-admin-delivery-options">
 							<legend><?php esc_html_e( 'Email', 'adam-membership' ); ?></legend>
-							<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( $announcement?->send_email() ?? false ); ?>> <?php esc_html_e( 'Enviar por email', 'adam-membership' ); ?></label>
-							<?php if ( '' !== ( $announcement?->email_sent_at() ?? '' ) ) : ?>
+							<label class="adam-admin-checkbox-field"><input type="checkbox" name="send_email" value="1" <?php checked( $send_email ); ?>> <?php esc_html_e( 'Enviar email aos destinatários na publicação', 'adam-membership' ); ?></label>
+							<?php if ( $email_processed ) : ?>
 								<p class="description"><?php esc_html_e( 'O envio deste aviso já foi processado. Guardar alterações não volta a enviar o email.', 'adam-membership' ); ?></p>
-							<?php else : ?>
-								<p class="description"><?php esc_html_e( 'Com esta opção ativa, guardar um aviso com publicação em vigor pode enviar o email imediatamente.', 'adam-membership' ); ?></p>
+							<?php elseif ( $send_email && $is_live && $scheduled_at > 0 && false === wp_next_scheduled( AnnouncementService::CRON_HOOK, array( $announcement->id(), $scheduled_at ) ) ) : ?>
+								<p class="description"><?php esc_html_e( 'A hora agendada já passou e o envio continua por processar. Reveja os destinatários e os anexos antes de enviar.', 'adam-membership' ); ?></p>
 							<?php endif; ?>
 							<div class="adam-announcement-channel-settings" data-adam-announcement-email-settings>
 								<strong><?php esc_html_e( 'Quem recebe o email', 'adam-membership' ); ?></strong>
@@ -383,15 +426,34 @@ final class AnnouncementController {
 						</fieldset>
 					</section>
 
-					<div class="adam-admin-actions">
-						<button type="submit" class="button button-primary adam-button"><?php esc_html_e( 'Guardar aviso', 'adam-membership' ); ?></button>
-						<a class="button adam-announcement-preview-jump" href="#adam-announcement-preview"><?php esc_html_e( 'Ver pré-visualização', 'adam-membership' ); ?></a>
+					<div class="adam-admin-panel adam-card adam-announcement-editor-section">
+						<p class="description" data-adam-announcement-submit-note role="status"></p>
+						<div class="adam-admin-actions">
+							<button type="submit" class="button button-primary adam-button" data-adam-announcement-submit><?php echo esc_html( $labels[ $submit_key ] ); ?></button>
+							<a class="button adam-announcement-preview-jump" href="#adam-announcement-preview"><?php esc_html_e( 'Ver pré-visualização', 'adam-membership' ); ?></a>
+						</div>
 					</div>
 				</form>
 				<?php $this->render_preview_panel(); ?>
 			</div>
 		</div>
 		<?php
+	}
+
+	/** Labels for the consequences of submitting the notice form. */
+	private function publication_labels(): array {
+		return array(
+			'draft'        => __( 'Guardar rascunho', 'adam-membership' ),
+			'schedule'     => __( 'Agendar publicação', 'adam-membership' ),
+			'scheduleBoth' => __( 'Agendar publicação e envio de email', 'adam-membership' ),
+			'scheduleEmail' => __( 'Agendar envio de email', 'adam-membership' ),
+			'publish'      => __( 'Publicar agora', 'adam-membership' ),
+			'publishEmail' => __( 'Publicar e enviar email agora', 'adam-membership' ),
+			'sendEmail'    => __( 'Enviar email agora', 'adam-membership' ),
+			'update'       => __( 'Guardar alterações', 'adam-membership' ),
+			'updateEmail'  => __( 'Guardar alterações e enviar email agora', 'adam-membership' ),
+			'archive'      => __( 'Arquivar aviso', 'adam-membership' ),
+		);
 	}
 
 	/**
@@ -517,13 +579,31 @@ final class AnnouncementController {
 		check_admin_referer( 'adam_membership_save_announcement' );
 
 		$announcement_id = isset( $_POST['announcement_id'] ) ? absint( wp_unslash( $_POST['announcement_id'] ) ) : 0;
+		$current         = $this->announcements->repository()->find( $announcement_id );
+		$email_processed = null !== $current && $this->announcements->repository()->email_processed( $current );
 		$result          = $this->announcements->save( $this->posted_data(), $announcement_id );
 
 		if ( is_wp_error( $result ) ) {
+			$error_data = $result->get_error_data();
+			$announcement_id = is_array( $error_data ) ? (int) ( $error_data['announcement_id'] ?? $announcement_id ) : $announcement_id;
 			$this->redirect_with_notice( 'adam_error', $result->get_error_message(), $this->edit_url( $announcement_id ) );
 		}
 
-		$this->redirect_with_notice( 'adam_message', __( 'Aviso guardado com sucesso.', 'adam-membership' ), $this->edit_url( $result->id() ) );
+		$message = match ( $result->status() ) {
+			Announcement::STATUS_DRAFT => __( 'Rascunho guardado.', 'adam-membership' ),
+			Announcement::STATUS_SCHEDULED => sprintf(
+				$result->send_email() && ! $email_processed
+					? __( 'O envio do email foi agendado para %s.', 'adam-membership' )
+					: __( 'A publicação foi agendada para %s.', 'adam-membership' ),
+				wp_date( 'd/m/Y H:i', $result->scheduled_at() )
+			),
+			Announcement::STATUS_ARCHIVED => __( 'Aviso arquivado.', 'adam-membership' ),
+			default => $result->send_email() && ! $email_processed && $this->announcements->repository()->email_processed( $result )
+				? __( 'Aviso guardado. O envio do email foi processado.', 'adam-membership' )
+				: __( 'Aviso guardado com sucesso.', 'adam-membership' ),
+		};
+
+		$this->redirect_with_notice( 'adam_message', $message, $this->edit_url( $result->id() ) );
 	}
 
 	/**
@@ -590,6 +670,7 @@ final class AnnouncementController {
 			'priority'                => $fields['priority'] ?? '',
 			'status'                  => $fields['status'] ?? '',
 			'publish_date'            => $fields['publish_date'] ?? '',
+			'publish_time'            => $fields['publish_time'] ?? '',
 			'expiry_date'             => $fields['expiry_date'] ?? '',
 			'target_audience'         => $fields['target_audience'] ?? '',
 			'show_in_member_area'     => isset( $fields['show_in_member_area'] ),

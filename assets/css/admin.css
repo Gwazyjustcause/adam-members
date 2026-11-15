@@ -1295,6 +1295,14 @@
 	display: none;
 }
 
+.adam-announcement-workspace [data-adam-announcement-submit-note]:empty {
+	display: none;
+}
+
+.adam-announcement-workspace [data-adam-announcement-submit] {
+	white-space: normal;
+}
+
 .adam-announcement-attachments li {
 	display: flex;
 	flex-wrap: wrap;

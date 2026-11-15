@@ -152,6 +152,7 @@ final class Plugin {
 		$communication_preferences = new CommunicationPreferences( $communication_categories );
 		$announcement_repository   = new AnnouncementRepository();
 		$announcements             = new AnnouncementService( $announcement_repository, $members, $email, $logger, $communication_preferences, $teams );
+		add_action( AnnouncementService::CRON_HOOK, array( $announcements, 'send_scheduled_email' ), 10, 2 );
 		$document_repository       = new DocumentRepository();
 		$documents                 = new DocumentService( $document_repository, $members, $logger, $history_repository );
 		$event_repository          = new EventRepository();

@@ -22,7 +22,11 @@
 		const attachments = form.querySelector( '[data-adam-announcement-attachments]' );
 		const attachmentList = attachments.querySelector( '[data-adam-announcement-attachment-list]' );
 		const addAttachments = attachments.querySelector( '[data-adam-add-attachments]' );
-		const fields = [ 'title', 'summary', 'content', 'category', 'priority', 'publish_date', 'expiry_date', 'action_label', 'action_url', 'pinned' ];
+		const scheduleSettings = form.querySelector( '[data-adam-announcement-schedule]' );
+		const submitButton = form.querySelector( '[data-adam-announcement-submit]' );
+		const submitNote = form.querySelector( '[data-adam-announcement-submit-note]' );
+		const publication = config.publication;
+		const fields = [ 'title', 'summary', 'content', 'category', 'priority', 'status', 'publish_date', 'publish_time', 'expiry_date', 'action_label', 'action_url', 'pinned' ];
 		const editorId = 'adam_announcement_content';
 		let channel = 'member';
 		let timer;
@@ -46,6 +50,48 @@
 
 			panels[0].querySelector( '[data-adam-announcement-channel-disabled]' ).hidden = showInMemberArea;
 			panels[1].querySelector( '[data-adam-announcement-channel-disabled]' ).hidden = sendEmail;
+		}
+
+		function updatePublication() {
+			const state = form.elements.status.value;
+			const scheduled = state === 'scheduled';
+			const sendEmail = form.elements.send_email.checked && form.dataset.emailProcessed !== '1';
+			const memberArea = form.elements.show_in_member_area.checked;
+			const isLive = form.dataset.isLive === '1';
+			const expiry = form.elements.expiry_date.value;
+			const remainsExpired = form.dataset.isExpired === '1' && expiry && expiry < publication.today;
+			let label = 'draft';
+			let note = sendEmail ? publication.draftEmail : '';
+
+			scheduleSettings.hidden = ! scheduled;
+			const publishDate = form.elements.publish_date;
+			const publishTime = form.elements.publish_time;
+			publishDate.required = scheduled;
+			publishTime.required = scheduled;
+			publishDate.disabled = ! scheduled;
+			publishTime.disabled = ! scheduled;
+
+			if ( scheduled ) {
+				label = sendEmail ? ( memberArea ? 'scheduleBoth' : 'scheduleEmail' ) : 'schedule';
+				note = sendEmail ? publication.scheduledEmail : '';
+				if ( sendEmail && publishDate.value && publishTime.value ) {
+					const date = publishDate.value.split( '-' ).reverse().join( '/' );
+					note = publication.scheduledEmailAt.replace( '%1$s', date ).replace( '%2$s', publishTime.value );
+				}
+			} else if ( state === 'published' ) {
+				label = isLive || remainsExpired ? 'update' : 'publish';
+				note = '';
+				if ( sendEmail && ! remainsExpired ) {
+					label = isLive ? 'updateEmail' : ( memberArea ? 'publishEmail' : 'sendEmail' );
+					note = publication.immediateEmail;
+				}
+			} else if ( state === 'archived' ) {
+				label = 'archive';
+				note = '';
+			}
+
+			submitButton.textContent = publication[label];
+			submitNote.textContent = note;
 		}
 
 		function updateAttachments() {
@@ -120,10 +166,13 @@
 
 			fields.forEach( function ( name ) {
 				const field = form.elements[name];
-				if ( field.type !== 'checkbox' || field.checked ) {
+				if ( ! field.disabled && ( field.type !== 'checkbox' || field.checked ) ) {
 					payload.set( name, field.value );
 				}
 			} );
+			if ( form.elements.status.value === 'published' ) {
+				payload.set( 'publish_date', form.dataset.publishedDate );
+			}
 
 			const controller = new AbortController();
 			request = controller;
@@ -182,6 +231,7 @@
 
 		form.addEventListener( 'change', function ( event ) {
 			updateDelivery();
+			updatePublication();
 			if ( fields.includes( event.target.name ) ) {
 				schedule();
 			}
@@ -222,6 +272,7 @@
 
 		updateDelivery();
 		updateAttachments();
+		updatePublication();
 		schedule( 0 );
 	} );
 }( jQuery, window.adamAnnouncementPreview ) );

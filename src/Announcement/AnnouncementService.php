@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace AdamMembership\Announcement;
 
+use DateTimeImmutable;
 use AdamMembership\Communication\CommunicationPreferences;
 use AdamMembership\Emails\EmailService;
 use AdamMembership\Helpers\Logger;
@@ -21,6 +22,8 @@ use WP_Error;
  * Coordinates announcement publication, visibility, and reads.
  */
 final class AnnouncementService {
+	public const CRON_HOOK = 'adam_membership_send_scheduled_announcement';
+
 	private const READ_META_KEY = 'adam_membership_announcement_reads';
 
 	/**
@@ -115,12 +118,33 @@ final class AnnouncementService {
 			return new WP_Error( 'adam_membership_announcement_not_found', __( 'Announcement not found.', 'adam-membership' ) );
 		}
 
+		$scheduled = Announcement::STATUS_SCHEDULED === $prepared['status'];
+		if ( $scheduled && $prepared['scheduled_at'] <= time() ) {
+			return new WP_Error( 'adam_announcement_schedule_required', __( 'Escolha uma data e hora futuras para agendar o aviso.', 'adam-membership' ) );
+		}
+
+		$today = wp_date( 'Y-m-d' );
+		$publishing = Announcement::STATUS_PUBLISHED === $prepared['status'];
+		$previous_status = $current?->effective_status();
+		if ( $publishing ) {
+			$prepared['publish_date'] = in_array( $previous_status, array( Announcement::STATUS_PUBLISHED, Announcement::STATUS_EXPIRED ), true )
+				? ( $current->publish_date() ?: $today )
+				: $today;
+		}
+
+		$expiry = $prepared['expiry_date'];
+		if ( '' !== $expiry && ( ( $scheduled && $expiry < $prepared['publish_date'] ) || ( $publishing && $expiry < $today && Announcement::STATUS_EXPIRED !== $previous_status ) ) ) {
+			return new WP_Error( 'adam_announcement_invalid_expiry', __( 'A data de expiração deve ser igual ou posterior à data de publicação.', 'adam-membership' ) );
+		}
+
 		$candidate = new Announcement( array_merge( $current?->data() ?? array(), $prepared, array_intersect_key( $data, array( 'email_attachment_ids' => true ) ) ) );
 		$prepared['email_attachment_ids'] = $candidate->email_attachment_ids();
-		$will_send = $candidate->send_email() && $candidate->is_visible() && '' === $candidate->email_sent_at();
+		$email_pending = $candidate->send_email() && ( null === $current || ! $this->repository->email_processed( $current ) );
+		$will_send = $email_pending && ! $scheduled && $candidate->is_visible();
+		$will_queue = $email_pending && $scheduled;
 		$attachments = array();
 
-		if ( $will_send || $prepared['email_attachment_ids'] !== ( $current?->email_attachment_ids() ?? array() ) ) {
+		if ( $will_send || $will_queue || $prepared['email_attachment_ids'] !== ( $current?->email_attachment_ids() ?? array() ) ) {
 			$attachments = AnnouncementAttachments::resolve( $candidate );
 			if ( is_wp_error( $attachments ) ) {
 				return $attachments;
@@ -141,11 +165,53 @@ final class AnnouncementService {
 			$this->logger->info( 'Announcement updated.', array( 'announcement_id' => $announcement->id() ) );
 		}
 
+		if ( null !== $current && ( ! $will_queue || $current->scheduled_at() !== $announcement->scheduled_at() ) ) {
+			$this->clear_scheduled_email( $current );
+		}
+
+		if ( $will_queue ) {
+			$args = array( $announcement->id(), $announcement->scheduled_at() );
+			if ( false === wp_next_scheduled( self::CRON_HOOK, $args ) ) {
+				$queued = wp_schedule_single_event( $announcement->scheduled_at(), self::CRON_HOOK, $args );
+				if ( ! $queued && false === wp_next_scheduled( self::CRON_HOOK, $args ) ) {
+					return new WP_Error(
+						'adam_announcement_cron_failed',
+						__( 'O aviso foi guardado, mas não foi possível agendar o envio do email. Tente agendar novamente.', 'adam-membership' ),
+						array( 'announcement_id' => $announcement->id() )
+					);
+				}
+			}
+		}
+
 		if ( $will_send ) {
 			$this->dispatch_announcement_email( $announcement, $attachments );
 		}
 
 		return $announcement;
+	}
+
+	/**
+	 * Send a due email using the latest saved notice and recipient settings.
+	 */
+	public function send_scheduled_email( int $id, int $scheduled_at ): void {
+		$announcement = $this->repository->find( $id );
+		if ( null === $announcement || $scheduled_at <= 0 || Announcement::STATUS_SCHEDULED !== $announcement->status() || $scheduled_at !== $announcement->scheduled_at() || ! $announcement->is_visible() || ! $announcement->send_email() || $this->repository->email_processed( $announcement ) ) {
+			return;
+		}
+
+		$attachments = AnnouncementAttachments::resolve( $announcement );
+		if ( is_wp_error( $attachments ) ) {
+			$this->logger->error( 'Scheduled announcement email could not be sent.', array( 'announcement_id' => $id, 'error' => $attachments->get_error_code() ) );
+			return;
+		}
+
+		$this->dispatch_announcement_email( $announcement, $attachments );
+	}
+
+	private function clear_scheduled_email( Announcement $announcement ): void {
+		if ( $announcement->scheduled_at() > 0 ) {
+			wp_clear_scheduled_hook( self::CRON_HOOK, array( $announcement->id(), $announcement->scheduled_at() ) );
+		}
 	}
 
 	/**
@@ -177,6 +243,7 @@ final class AnnouncementService {
 				'updated_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
 			)
 		);
+		$this->clear_scheduled_email( $announcement );
 
 		$this->logger->info( 'Announcement archived.', array( 'announcement_id' => $announcement_id ) );
 
@@ -189,7 +256,11 @@ final class AnnouncementService {
 	 * @param int $announcement_id Announcement ID.
 	 */
 	public function delete( int $announcement_id ): void {
+		$announcement = $this->repository->find( $announcement_id );
 		$this->repository->delete( $announcement_id );
+		if ( null !== $announcement ) {
+			$this->clear_scheduled_email( $announcement );
+		}
 		$this->logger->info( 'Announcement deleted.', array( 'announcement_id' => $announcement_id ) );
 	}
 
@@ -396,6 +467,16 @@ final class AnnouncementService {
 		}
 
 		$email_member_ids = isset( $data['email_member_ids'] ) && is_array( $data['email_member_ids'] ) ? $data['email_member_ids'] : array();
+		$publish_date     = $this->sanitize_date( (string) ( $data['publish_date'] ?? '' ) );
+		$publish_time     = trim( (string) ( $data['publish_time'] ?? '' ) );
+		$scheduled_at     = 0;
+		if ( Announcement::STATUS_SCHEDULED === $status && preg_match( '/^\d{2}:\d{2}$/D', $publish_time ) ) {
+			$local_time = $publish_date . ' ' . $publish_time;
+			$date = DateTimeImmutable::createFromFormat( '!Y-m-d H:i', $local_time, wp_timezone() );
+			if ( false !== $date && $local_time === $date->format( 'Y-m-d H:i' ) ) {
+				$scheduled_at = $date->getTimestamp();
+			}
+		}
 
 		return array(
 			'title'                   => isset( $data['title'] ) ? sanitize_text_field( (string) $data['title'] ) : '',
@@ -404,7 +485,8 @@ final class AnnouncementService {
 			'category'                => isset( $data['category'] ) ? sanitize_text_field( (string) $data['category'] ) : '',
 			'priority'                => $priority,
 			'status'                  => $status,
-			'publish_date'            => $this->sanitize_date( (string) ( $data['publish_date'] ?? '' ) ),
+			'publish_date'            => $publish_date,
+			'scheduled_at'            => $scheduled_at,
 			'expiry_date'             => $this->sanitize_date( (string) ( $data['expiry_date'] ?? '' ) ),
 			'target_audience'         => $audience,
 			'pinned'                  => ! empty( $data['pinned'] ),
@@ -426,6 +508,10 @@ final class AnnouncementService {
 	 * @param array<array-key,string> $attachments Resolved email attachments.
 	 */
 	private function dispatch_announcement_email( Announcement $announcement, array $attachments ): void {
+		if ( ! $this->repository->claim_email_delivery( $announcement ) ) {
+			return;
+		}
+
 		$sent_count = 0;
 
 		foreach ( $this->email_target_members( $announcement ) as $member ) {
@@ -433,14 +519,6 @@ final class AnnouncementService {
 				++$sent_count;
 			}
 		}
-
-		$this->repository->update(
-			$announcement,
-			array(
-				'email_sent_at' => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
-				'updated_at'    => wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) ),
-			)
-		);
 
 		$this->logger->info(
 			'Announcement email dispatched.',
