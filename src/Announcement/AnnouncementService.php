@@ -136,6 +136,15 @@ final class AnnouncementService {
 	}
 
 	/**
+	 * Normalize unsaved form data for display.
+	 *
+	 * @param array<string, mixed> $data Announcement data.
+	 */
+	public function preview( array $data ): Announcement {
+		return new Announcement( $this->sanitize_data( $data ) );
+	}
+
+	/**
 	 * Archive an announcement.
 	 *
 	 * @param int $announcement_id Announcement ID.

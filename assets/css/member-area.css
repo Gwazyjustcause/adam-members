@@ -2781,6 +2781,10 @@
 	line-height: 1.7;
 }
 
+.adam-announcement-detail__content p + p {
+	margin-top: 1em;
+}
+
 .adam-announcement-card__footer,
 .adam-announcement-detail__meta {
 	color: var(--adam-text-muted, #6b7280);

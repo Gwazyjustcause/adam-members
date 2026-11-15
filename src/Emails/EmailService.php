@@ -404,29 +404,46 @@ final class EmailService {
 	 * @param Announcement $announcement Announcement.
 	 */
 	public function send_announcement_email( Member $member, Announcement $announcement ): bool {
+		$rendered = $this->render_announcement_email( $announcement, $member->full_name() );
+
+		return $this->send(
+			$member->email(),
+			$rendered['subject'],
+			$rendered['html'],
+			'announcement',
+			array(
+				'announcement_id' => $announcement->id(),
+				'member_id'       => $member->user_id(),
+			)
+		);
+	}
+
+	/**
+	 * Render the same branded email for delivery and editorial previews.
+	 *
+	 * @param Announcement $announcement Announcement.
+	 * @param string       $member_name  Name used in the greeting.
+	 * @return array{subject:string,html:string}
+	 */
+	public function render_announcement_email( Announcement $announcement, string $member_name ): array {
 		$button = '';
 
 		if ( '' !== $announcement->action_label() && '' !== $announcement->action_url() ) {
 			$button = '<p style="text-align:center;"><a href="' . esc_url( $announcement->action_url() ) . '">' . esc_html( $announcement->action_label() ) . '</a></p>';
 		}
 
+		$subject = $announcement->title();
 		$content = sprintf(
-			'<p>Olá <strong>%1$s</strong>,</p><p>%2$s</p><div>%3$s</div>%4$s',
-			esc_html( $member->full_name() ),
-			esc_html( $announcement->summary() ),
+			'<p>Olá <strong>%1$s</strong>,</p>%2$s<div>%3$s</div>%4$s',
+			esc_html( $member_name ),
+			wpautop( esc_html( $announcement->summary() ) ),
 			wp_kses_post( wpautop( $announcement->content() ) ),
 			$button
 		);
 
-		return $this->send(
-			$member->email(),
-			$announcement->title(),
-			$this->render_template( $announcement->title(), $content ),
-			'announcement',
-			array(
-				'announcement_id' => $announcement->id(),
-				'member_id'       => $member->user_id(),
-			)
+		return array(
+			'subject' => $subject,
+			'html'    => $this->render_template( $subject, $content ),
 		);
 	}
 
@@ -868,7 +885,7 @@ final class EmailService {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr>
 <td align="center">
-<table role="presentation" width="650" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08);">
+<table role="presentation" width="650" cellpadding="0" cellspacing="0" style="width:100%;max-width:650px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.08);">
 <tr>
 <td style="background:<?php echo esc_attr( self::PRIMARY ); ?>;padding:35px;text-align:center;">
 <img src="<?php echo esc_url( self::LOGO_URL ); ?>" alt="ADAM" style="max-width:180px;height:auto;display:block;margin:0 auto 25px;">

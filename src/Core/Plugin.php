@@ -322,7 +322,7 @@ final class Plugin {
 				}
 			}
 			if ( is_admin() ) {
-				( new AnnouncementController( $announcements ) )->register();
+				( new AnnouncementController( $announcements, $email ) )->register();
 				( new DocumentController( $documents ) )->register();
 			}
 			( new PrivateDocumentDownloadController( $private_document_repository, $private_document_storage ) )->register();
