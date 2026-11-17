@@ -1021,15 +1021,24 @@ SVG;
 	 * @param bool        $is_valid Whether the member is valid.
 	 */
 	private function render_validation_markup( ?Member $member, bool $is_valid ): void {
-		$status       = null !== $member ? $member->effective_status() : __( 'Invalid token', 'adam-membership' );
-		$validated_at = wp_date( 'd/m/Y H:i', current_time( 'timestamp' ) );
+		$heading = match ( true ) {
+			$is_valid       => __( 'Sócio válido', 'adam-membership' ),
+			null === $member => __( 'Cartão inválido', 'adam-membership' ),
+			default         => __( 'Sócio inativo', 'adam-membership' ),
+		};
+		$badge = match ( true ) {
+			$is_valid       => __( 'Ativo', 'adam-membership' ),
+			null === $member => __( 'Inválido', 'adam-membership' ),
+			default         => __( 'Inativo', 'adam-membership' ),
+		};
+		$validated_at = wp_date( 'd/m/Y H:i' );
 		?>
 		<!doctype html>
-		<html <?php language_attributes(); ?>>
+		<html lang="pt-PT">
 		<head>
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title><?php esc_html_e( 'ADAM Member Validation', 'adam-membership' ); ?></title>
+			<title><?php esc_html_e( 'Validação de sócio ADAM', 'adam-membership' ); ?></title>
 			<?php wp_head(); ?>
 			<style>
 				body { margin: 0; background: linear-gradient(135deg, var(--adam-bg, #f4faf5), var(--adam-surface-2, #e8f4ea)); color: var(--adam-text, #102033); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -1052,26 +1061,26 @@ SVG;
 			<main class="adam-card-validation">
 				<section class="adam-card-validation__panel">
 					<img class="adam-card-validation__logo" src="<?php echo esc_url( $this->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->association_name() ); ?>">
-					<h1><?php echo esc_html( $is_valid ? __( 'Valid member', 'adam-membership' ) : __( 'Invalid or inactive member', 'adam-membership' ) ); ?></h1>
+					<h1><?php echo esc_html( $heading ); ?></h1>
 					<p><?php echo esc_html( $this->association_name() ); ?></p>
-					<span class="adam-card-validation__status <?php echo esc_attr( $is_valid ? 'valid' : 'invalid' ); ?>"><?php echo esc_html( $is_valid ? __( 'Active', 'adam-membership' ) : __( 'Not active', 'adam-membership' ) ); ?></span>
+					<span class="adam-card-validation__status <?php echo esc_attr( $is_valid ? 'valid' : 'invalid' ); ?>"><?php echo esc_html( $badge ); ?></span>
 					<?php if ( null !== $member ) : ?>
 						<div class="adam-card-validation__data">
-							<?php $this->render_validation_row( __( 'Name', 'adam-membership' ), $member->full_name() ); ?>
-							<?php $this->render_validation_row( __( 'Member number', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
-							<?php $this->render_validation_row( __( 'Status', 'adam-membership' ), $status ); ?>
-							<?php $this->render_validation_row( __( 'Date of subscription', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
-							<?php $this->render_validation_row( __( 'Quota expiry', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
+							<?php $this->render_validation_row( __( 'Nome', 'adam-membership' ), $member->full_name() ); ?>
+							<?php $this->render_validation_row( __( 'N.º de sócio', 'adam-membership' ), (string) $member->field( 'numero_socio' ) ); ?>
+							<?php $this->render_validation_row( __( 'Estado', 'adam-membership' ), $member->effective_status() ); ?>
+							<?php $this->render_validation_row( __( 'Data de adesão', 'adam-membership' ), $this->format_date( $member->field( 'data_adesao' ) ) ); ?>
+							<?php $this->render_validation_row( __( 'Validade das quotas', 'adam-membership' ), $this->format_date( $member->field( 'validade_quota' ) ) ); ?>
 						</div>
 					<?php else : ?>
-						<p><?php esc_html_e( 'The validation token is missing or invalid.', 'adam-membership' ); ?></p>
+						<p><?php esc_html_e( 'O código de validação está em falta ou é inválido.', 'adam-membership' ); ?></p>
 					<?php endif; ?>
 					<p class="adam-card-validation__checked">
 						<?php
 						echo esc_html(
 							sprintf(
 								/* translators: %s: validation date and time. */
-								__( 'Validated on %s', 'adam-membership' ),
+								__( 'Consulta efetuada em %s', 'adam-membership' ),
 								$validated_at
 							)
 						);
@@ -1095,7 +1104,7 @@ SVG;
 		?>
 		<div class="adam-card-validation__row">
 			<span><?php echo esc_html( $label ); ?></span>
-			<strong><?php echo esc_html( '' !== $value ? $value : __( 'Unavailable', 'adam-membership' ) ); ?></strong>
+			<strong><?php echo esc_html( '' !== $value ? $value : __( 'Indisponível', 'adam-membership' ) ); ?></strong>
 		</div>
 		<?php
 	}
