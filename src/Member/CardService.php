@@ -134,6 +134,7 @@ final class CardService {
 		$member = $this->member_by_token( $token );
 		$is_valid = null !== $member && $member->has_active_benefits();
 
+		$this->prepare_validation_page();
 		status_header( 200 );
 		nocache_headers();
 		$this->render_validation_markup( $member, $is_valid );
@@ -991,6 +992,31 @@ SVG;
 	}
 
 	/**
+	 * Keep the standalone validation result free of site overlays.
+	 */
+	private function prepare_validation_page(): void {
+		global $wp_filter;
+
+		show_admin_bar( false );
+
+		$bot_callbacks = array(
+			'wp_footer'          => array( \AdamBot\Frontend\Frontend::class, 'render_widget' ),
+			'wp_enqueue_scripts' => array( \AdamBot\Core\Assets::class, 'enqueue_assets' ),
+		);
+
+		foreach ( $bot_callbacks as $hook => list( $class, $method ) ) {
+			foreach ( $wp_filter[ $hook ]->callbacks ?? array() as $priority => $callbacks ) {
+				foreach ( $callbacks as $entry ) {
+					$callback = $entry['function'];
+					if ( is_array( $callback ) && is_object( $callback[0] ) && is_a( $callback[0], $class ) && $method === $callback[1] ) {
+						remove_action( $hook, $callback, $priority );
+					}
+				}
+			}
+		}
+	}
+
+	/**
 	 * Find a member by validation token.
 	 *
 	 * @param string $token Validation token.
@@ -1041,29 +1067,52 @@ SVG;
 			<title><?php esc_html_e( 'Validação de sócio ADAM', 'adam-membership' ); ?></title>
 			<?php wp_head(); ?>
 			<style>
-				body { margin: 0; background: linear-gradient(135deg, var(--adam-bg, #f4faf5), var(--adam-surface-2, #e8f4ea)); color: var(--adam-text, #102033); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-				.adam-card-validation { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
-				.adam-card-validation__panel { width: min(580px, 100%); padding: 34px; border: 1px solid var(--adam-border, #d9e4dc); border-radius: 26px; background: var(--adam-surface, #fff); box-shadow: var(--adam-shadow-lg, 0 22px 56px rgba(23, 63, 36, 0.16)); text-align: center; }
-				.adam-card-validation__logo { max-width: 150px; height: auto; margin-bottom: 18px; }
+				body.adam-card-validation-page { margin: 0; background: linear-gradient(135deg, var(--adam-bg, #f4faf5), var(--adam-surface-2, #e8f4ea)); color: var(--adam-text, #102033); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+				.adam-card-validation { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: clamp(10px, 3vmin, 28px); }
+				.adam-card-validation__panel { box-sizing: border-box; width: min(580px, 100%); min-width: 0; padding: 34px; border: 1px solid var(--adam-border, #d9e4dc); border-radius: 26px; background: var(--adam-surface, #fff); box-shadow: var(--adam-shadow-lg, 0 22px 56px rgba(23, 63, 36, 0.16)); text-align: center; }
+				.adam-card-validation__logo { display: block; width: min(150px, 100%); height: auto; object-fit: contain; margin: 0 auto 18px; }
 				.adam-card-validation h1 { margin: 0 0 10px; color: var(--adam-text, #173f24); font-size: clamp(2rem, 6vw, 3rem); line-height: 1; }
 				.adam-card-validation p { margin: 0; color: var(--adam-text-muted, #5d6b7c); }
 				.adam-card-validation__status { display: inline-flex; margin: 18px 0 22px; padding: 9px 16px; border-radius: 999px; font-weight: 800; }
 				.adam-card-validation__status.valid { background: var(--adam-success-bg, #dcfce7); color: var(--adam-success, #14532d); }
 				.adam-card-validation__status.invalid { background: var(--adam-danger-bg, #fee2e2); color: var(--adam-danger, #991b1b); }
 				.adam-card-validation__data { display: grid; gap: 10px; margin-top: 18px; text-align: left; }
-				.adam-card-validation__row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--adam-border, #edf3ee); }
+				.adam-card-validation__row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--adam-border, #edf3ee); overflow-wrap: anywhere; }
 				.adam-card-validation__row span { color: var(--adam-text-muted, #5d6b7c); font-weight: 700; }
 				.adam-card-validation__row strong { text-align: right; }
-				.adam-card-validation__checked { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--adam-border, #edf3ee); font-size: 0.92rem; }
+				.adam-card-validation .adam-card-validation__checked { margin-top: 20px; font-size: 0.92rem; }
+				@media (max-width: 600px), (max-height: 600px) {
+					.adam-card-validation__panel { padding: clamp(14px, 4vmin, 24px); border-radius: 20px; font-size: .9375rem; line-height: 1.4; }
+					.adam-card-validation__logo { width: min(124px, 100%); max-height: 56px; margin-bottom: 10px; }
+					.adam-card-validation h1 { font-size: clamp(1.5rem, 6vw, 2rem); line-height: 1.12; margin-bottom: 6px; }
+					.adam-card-validation__status { margin: 9px 0 2px; padding: 4px 12px; }
+					.adam-card-validation__data { gap: 0; margin-top: 5px; }
+					.adam-card-validation__row { padding: 7px 0; }
+					.adam-card-validation .adam-card-validation__checked { margin-top: 10px; font-size: .875rem; }
+				}
+				@media (max-width: 360px) {
+					.adam-card-validation__logo { max-height: 44px; }
+					.adam-card-validation__row { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); padding: 5px 0; }
+					.adam-card-validation__row:first-child { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+					.adam-card-validation__row:first-child strong { text-align: left; }
+				}
+				@media (min-width: 520px) and (max-height: 430px) {
+					.adam-card-validation__panel--member { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; column-gap: 20px; }
+					.adam-card-validation__logo { max-height: 38px; margin-bottom: 6px; }
+					.adam-card-validation__row { padding: 4px 0; }
+					.adam-card-validation__checked { grid-column: 1 / -1; }
+				}
 			</style>
 		</head>
-		<body>
+		<body <?php body_class( 'adam-card-validation-page' ); ?>>
 			<main class="adam-card-validation">
-				<section class="adam-card-validation__panel">
-					<img class="adam-card-validation__logo" src="<?php echo esc_url( $this->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->association_name() ); ?>">
-					<h1><?php echo esc_html( $heading ); ?></h1>
-					<p><?php echo esc_html( $this->association_name() ); ?></p>
-					<span class="adam-card-validation__status <?php echo esc_attr( $is_valid ? 'valid' : 'invalid' ); ?>"><?php echo esc_html( $badge ); ?></span>
+				<section class="adam-card-validation__panel<?php echo null !== $member ? ' adam-card-validation__panel--member' : ''; ?>">
+					<div>
+						<img class="adam-card-validation__logo" src="<?php echo esc_url( $this->association_logo_url() ); ?>" alt="<?php echo esc_attr( $this->association_name() ); ?>">
+						<h1><?php echo esc_html( $heading ); ?></h1>
+						<p><?php echo esc_html( $this->association_name() ); ?></p>
+						<span class="adam-card-validation__status <?php echo esc_attr( $is_valid ? 'valid' : 'invalid' ); ?>"><?php echo esc_html( $badge ); ?></span>
+					</div>
 					<?php if ( null !== $member ) : ?>
 						<div class="adam-card-validation__data">
 							<?php $this->render_validation_row( __( 'Nome', 'adam-membership' ), $member->full_name() ); ?>
