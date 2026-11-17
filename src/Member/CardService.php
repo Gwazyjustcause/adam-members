@@ -1096,6 +1096,19 @@ SVG;
 					.adam-card-validation__row:first-child { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 					.adam-card-validation__row:first-child strong { text-align: left; }
 				}
+				@media (max-width: 600px) and (min-height: 620px) {
+					.adam-card-validation { padding-inline: 16px; }
+					.adam-card-validation__panel { padding: clamp(22px, 4dvh, 34px) clamp(18px, 5vw, 30px); }
+					.adam-card-validation__logo { width: min(156px, 100%); max-height: clamp(64px, 10dvh, 82px); margin-bottom: 16px; }
+					.adam-card-validation h1 { margin-bottom: 10px; }
+					.adam-card-validation__status { margin: 14px 0 6px; padding: 6px 14px; }
+					.adam-card-validation__data { margin-top: 12px; }
+					.adam-card-validation__row { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: baseline; padding-block: clamp(8px, calc(3dvh - 11px), 14px); }
+					.adam-card-validation .adam-card-validation__checked { margin-top: 16px; }
+				}
+				@media (min-width: 361px) and (max-width: 600px) and (min-height: 620px) {
+					.adam-card-validation__row:first-child { grid-template-columns: auto minmax(0, 1fr); }
+				}
 				@media (min-width: 520px) and (max-height: 430px) {
 					.adam-card-validation__panel--member { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; column-gap: 20px; }
 					.adam-card-validation__logo { max-height: 38px; margin-bottom: 6px; }
