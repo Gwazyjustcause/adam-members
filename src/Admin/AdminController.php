@@ -3898,7 +3898,8 @@ final class AdminController {
 					<?php if ( in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) : ?><?php $this->render_registration_correction_selector( $member ); ?><?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
-					<?php if ( 'pending' === $this->account_setup_status( $member ) ) : ?>
+					<?php if ( $this->can_resend_account_setup( $member ) ) : ?>
+						<?php if ( 'unknown' === $this->account_setup_status( $member ) ) : ?><p><?php esc_html_e( 'Não existe confirmação de ativação. Confirme com o sócio antes de reenviar; a utilização do novo link permite redefinir as credenciais existentes.', 'adam-membership' ); ?></p><?php endif; ?>
 						<p><?php echo esc_html( sprintf( __( 'Enviar um novo link para %s (válido por 3 dias; o anterior deixa de funcionar).', 'adam-membership' ), $member->email() ) ); ?></p>
 						<?php $this->render_action_form( $member, self::ACTION_RESEND_SETUP, __( 'Reenviar email de criação de conta', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php endif; ?>
@@ -4413,9 +4414,20 @@ final class AdminController {
 		}
 	}
 
+	private function can_resend_account_setup( Member $member ): bool {
+		$user = $member->user();
+		return null !== $user
+			&& ! $this->member_has_admin_access( $member )
+			&& ! is_super_admin( $member->user_id() )
+			&& array( 'subscriber' ) === array_values( $user->roles )
+			&& metadata_exists( 'user', $member->user_id(), 'estado' )
+			&& is_email( $member->email() )
+			&& 'active' !== $this->account_setup_status( $member );
+	}
+
 	private function resend_account_setup( int $user_id ): true|WP_Error {
 		$member = $this->members->find( $user_id );
-		if ( null === $member || 'pending' !== $this->account_setup_status( $member ) ) {
+		if ( null === $member || ! $this->can_resend_account_setup( $member ) ) {
 			return new WP_Error( 'adam_setup_not_pending', __( 'Esta conta não está elegível para um novo link de ativação.', 'adam-membership' ) );
 		}
 		$user = $member->user();
