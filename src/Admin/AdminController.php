@@ -3902,6 +3902,9 @@ final class AdminController {
 						<?php if ( 'unknown' === $this->account_setup_status( $member ) ) : ?><p><?php esc_html_e( 'Não existe confirmação de ativação. Confirme com o sócio antes de reenviar; a utilização do novo link permite redefinir as credenciais existentes.', 'adam-membership' ); ?></p><?php endif; ?>
 						<p><?php echo esc_html( sprintf( __( 'Enviar um novo link para %s (válido por 3 dias; o anterior deixa de funcionar).', 'adam-membership' ), $member->email() ) ); ?></p>
 						<?php $this->render_action_form( $member, self::ACTION_RESEND_SETUP, __( 'Reenviar email de criação de conta', 'adam-membership' ), 'button-secondary' ); ?>
+					<?php else : ?>
+						<button type="button" class="button button-secondary" disabled><?php esc_html_e( 'Reenviar email de criação de conta', 'adam-membership' ); ?></button>
+						<p><?php echo esc_html( $this->account_setup_unavailable_reason( $member ) ); ?></p>
 					<?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
 				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmação ANA <input type="date" name="ana_confirmation_date" required></label><?php $this->render_approval_delay_option(); ?><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
@@ -4383,7 +4386,7 @@ final class AdminController {
 		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_completed_at', true ) || '' !== (string) get_user_meta( $id, 'adam_account_username', true ) ) {
 			return 'active';
 		}
-		if ( array( 'subscriber' ) !== array_values( $user->roles ) || ! metadata_exists( 'user', $id, 'estado' ) || ! is_email( $member->email() ) ) {
+		if ( ! $this->is_low_privilege_setup_user( $user ) || ! metadata_exists( 'user', $id, 'estado' ) || ! is_email( $member->email() ) ) {
 			return 'unknown';
 		}
 		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_token', true ) || '' !== (string) get_user_meta( $id, 'adam_membership_registration_request_uuid', true ) ) {
@@ -4414,15 +4417,48 @@ final class AdminController {
 		}
 	}
 
+	/**
+	 * Permit legacy member roles with only basic frontend capabilities.
+	 * Never issue setup links for accounts with elevated permissions.
+	 */
+	private function is_low_privilege_setup_user( \WP_User $user ): bool {
+		foreach ( $user->allcaps as $capability => $granted ) {
+			if ( ! $granted || in_array( $capability, $user->roles, true ) ) {
+				continue;
+			}
+			if ( ! in_array( $capability, array( 'read', 'level_0', 'exist' ), true ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private function can_resend_account_setup( Member $member ): bool {
 		$user = $member->user();
 		return null !== $user
 			&& ! $this->member_has_admin_access( $member )
 			&& ! is_super_admin( $member->user_id() )
-			&& array( 'subscriber' ) === array_values( $user->roles )
+			&& $this->is_low_privilege_setup_user( $user )
 			&& metadata_exists( 'user', $member->user_id(), 'estado' )
 			&& is_email( $member->email() )
 			&& 'active' !== $this->account_setup_status( $member );
+	}
+
+	private function account_setup_unavailable_reason( Member $member ): string {
+		$user = $member->user();
+		if ( null === $user ) {
+			return __( 'Conta WordPress não encontrada.', 'adam-membership' );
+		}
+		if ( $this->member_has_admin_access( $member ) || is_super_admin( $member->user_id() ) || ! $this->is_low_privilege_setup_user( $user ) ) {
+			return __( 'Reenvio indisponível: conta com permissões protegidas.', 'adam-membership' );
+		}
+		if ( 'active' === $this->account_setup_status( $member ) ) {
+			return __( 'A conta já foi ativada. Utilize a recuperação de palavra-passe.', 'adam-membership' );
+		}
+		if ( ! is_email( $member->email() ) ) {
+			return __( 'O email do sócio é inválido.', 'adam-membership' );
+		}
+		return __( 'O registo de sócio não está confirmado no WordPress.', 'adam-membership' );
 	}
 
 	private function resend_account_setup( int $user_id ): true|WP_Error {
