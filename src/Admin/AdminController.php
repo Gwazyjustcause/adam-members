@@ -33,6 +33,8 @@ use AdamMembership\GoogleSheets\GoogleSheetsMembershipWorkflowService;
 use AdamMembership\GoogleSheets\GoogleSheetsSyncService;
 use AdamMembership\Helpers\Logger;
 use AdamMembership\Member\ApprovalService;
+use AdamMembership\Member\AccountSetup;
+use AdamMembership\Member\HistoryService;
 use AdamMembership\Member\ApdAssociationService;
 use AdamMembership\Member\ApdAssociationRequest;
 use AdamMembership\Finance\FinancialMovement;
@@ -77,6 +79,7 @@ final class AdminController {
 	private const ACTION_RENEW        = 'renew_quota';
 	private const ACTION_CHANGE_QUOTA = 'change_quota_validity';
 	private const ACTION_RESEND_EMAIL = 'resend_approval_email';
+	private const ACTION_RESEND_SETUP = 'resend_account_setup';
 	private const ACTION_RESEND_RENEWAL_EMAIL = 'resend_renewal_approval_email';
 	private const ACTION_SEND_PRIVATE_DOCUMENT = 'send_private_document';
 	private const ACTION_SAVE_MEMBER  = 'save_member';
@@ -3766,6 +3769,7 @@ final class AdminController {
 					<th><?php echo wp_kses_post( $this->sort_link( __( 'Estado', 'adam-membership' ), 'status', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->sort_link( __( 'N.º de sócio', 'adam-membership' ), 'member_number', $filters ) ); ?></th>
 					<th><?php echo wp_kses_post( $this->sort_link( __( 'Quota', 'adam-membership' ), 'quota', $filters ) ); ?></th>
+					<th><?php esc_html_e( 'Conta online', 'adam-membership' ); ?></th>
 					<th><?php esc_html_e( 'Ações', 'adam-membership' ); ?></th>
 				</tr>
 			</thead>
@@ -3781,6 +3785,7 @@ final class AdminController {
 						<td><?php $this->render_status_badge( $member->effective_status() ); ?></td>
 						<td><?php echo esc_html( $this->member_number_label( $member ) ); ?></td>
 						<td><?php $this->render_quota_badge( $member ); ?></td>
+						<td><?php $this->render_account_setup_status( $member ); ?></td>
 						<td class="adam-admin-row-actions">
 							<a class="button button-small" href="<?php echo esc_url( $this->member_url( $member ) ); ?>"><?php esc_html_e( 'Ver', 'adam-membership' ); ?></a>
 							<a class="button button-small" href="<?php echo esc_url( $this->complete_export_member_url( $member ) ); ?>"><?php esc_html_e( 'Exportar ZIP', 'adam-membership' ); ?></a>
@@ -3792,7 +3797,7 @@ final class AdminController {
 					</tr>
 					<?php if ( $show_actions ) : ?>
 						<tr class="adam-admin-documents-row">
-							<td colspan="10">
+							<td colspan="11">
 								<?php $this->render_document_warning_panel( $this->approval_service->missing_registration_documents( $member ), __( 'Documentos obrigatórios em falta antes da aprovação.', 'adam-membership' ) ); ?>
 								<?php $this->render_documents_panel( __( 'Documentos submetidos', 'adam-membership' ), $this->member_document_rows( $member, false ) ); ?>
 							</td>
@@ -3835,6 +3840,7 @@ final class AdminController {
 					</div>
 				</div>
 
+				<p><strong><?php esc_html_e( 'Conta online:', 'adam-membership' ); ?></strong> <?php $this->render_account_setup_status( $member ); ?></p>
 				<?php $this->render_admin_safety_notice( $member ); ?>
 				<?php $this->render_member_status_consistency_notice( $member ); ?>
 				<?php $this->render_registration_correction_review( $member ); ?>
@@ -3892,6 +3898,10 @@ final class AdminController {
 					<?php if ( in_array( $member->status(), array( Member::STATUS_PENDING, Member::STATUS_REJECTED ), true ) ) : ?><?php $this->render_registration_correction_selector( $member ); ?><?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_RENEW, __( 'Renovar quota por um ano', 'adam-membership' ), 'button-secondary' ); ?>
 					<?php $this->render_action_form( $member, self::ACTION_RESEND_EMAIL, __( 'Reenviar email de aprovação', 'adam-membership' ), 'button-secondary' ); ?>
+					<?php if ( 'pending' === $this->account_setup_status( $member ) ) : ?>
+						<p><?php echo esc_html( sprintf( __( 'Enviar um novo link para %s (válido por 3 dias; o anterior deixa de funcionar).', 'adam-membership' ), $member->email() ) ); ?></p>
+						<?php $this->render_action_form( $member, self::ACTION_RESEND_SETUP, __( 'Reenviar email de criação de conta', 'adam-membership' ), 'button-secondary' ); ?>
+					<?php endif; ?>
 					<?php $this->render_action_form( $member, self::ACTION_REGENERATE_CARD_TOKEN, __( 'Regenerar token de validação do cartão', 'adam-membership' ), 'button-secondary' ); ?>
 				<?php if ( 'adam_primary' === (string) $member->field( 'adam_membership_origin' ) && '' === (string) $member->field( 'adam_apd_ana_confirmation_date' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_CONFIRM_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><label>Data de confirmação ANA <input type="date" name="ana_confirmation_date" required></label><?php $this->render_approval_delay_option(); ?><button class="button button-primary">Confirmar ANA e aprovar</button></form><?php endif; ?>
 				<?php if ( Member::APD_MANAGED === (string) $member->field( 'adam_apd_management_status' ) || 'ANA' === (string) $member->field( 'adam_external_association_name' ) ) : ?><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return window.confirm('Tem a certeza de que pretende remover a associação ANA deste sócio?');"><input type="hidden" name="action" value="adam_membership_member_action"><input type="hidden" name="member_action" value="<?php echo esc_attr( self::ACTION_REMOVE_ANA ); ?>"><input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $member->user_id() ); ?>"><?php wp_nonce_field( 'adam_membership_member_action_' . $member->user_id() ); ?><button class="button">Remover ANA</button></form><?php endif; ?>
@@ -4363,6 +4373,65 @@ final class AdminController {
 	 *
 	 * @param string $action Approval workflow action.
 	 */
+	private function account_setup_status( Member $member ): string {
+		$user = $member->user();
+		if ( null === $user || $this->member_has_admin_access( $member ) ) {
+			return 'unknown';
+		}
+		$id = $member->user_id();
+		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_completed_at', true ) || '' !== (string) get_user_meta( $id, 'adam_account_username', true ) ) {
+			return 'active';
+		}
+		if ( array( 'subscriber' ) !== array_values( $user->roles ) || ! metadata_exists( 'user', $id, 'estado' ) || ! is_email( $member->email() ) ) {
+			return 'unknown';
+		}
+		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_token', true ) || '' !== (string) get_user_meta( $id, 'adam_membership_registration_request_uuid', true ) ) {
+			return 'pending';
+		}
+		return 'unknown';
+	}
+
+	private function render_account_setup_status( Member $member ): void {
+		$status = $this->account_setup_status( $member );
+		$label = match ( $status ) {
+			'active' => __( 'Ativada', 'adam-membership' ),
+			'pending' => __( 'Por ativar', 'adam-membership' ),
+			default => __( 'Não confirmado', 'adam-membership' ),
+		};
+		$color = match ( $status ) {
+			'active' => '#116329',
+			'pending' => '#8a4b08',
+			default => '#50575e',
+		};
+		$symbol = match ( $status ) { 'active' => '✓', 'pending' => '◷', default => '—' };
+		printf( '<span style="color:%s;font-weight:600">%s %s</span>', esc_attr( $color ), esc_html( $symbol ), esc_html( $label ) );
+		if ( 'active' === $status ) {
+			$date = (string) get_user_meta( $member->user_id(), 'adam_account_setup_completed_at', true );
+			if ( '' !== $date ) {
+				echo '<br><small>' . esc_html( $date ) . '</small>';
+			}
+		}
+	}
+
+	private function resend_account_setup( int $user_id ): true|WP_Error {
+		$member = $this->members->find( $user_id );
+		if ( null === $member || 'pending' !== $this->account_setup_status( $member ) ) {
+			return new WP_Error( 'adam_setup_not_pending', __( 'Esta conta não está elegível para um novo link de ativação.', 'adam-membership' ) );
+		}
+		$user = $member->user();
+		if ( null === $user ) {
+			return new WP_Error( 'adam_setup_user_missing', __( 'Conta não encontrada.', 'adam-membership' ) );
+		}
+		$history = new HistoryService( $this->history_repository, $this->members );
+		$setup = new AccountSetup( $this->settings, $this->members, $history );
+		$link = $setup->issue_setup_link( $user );
+		if ( ! $this->email->send_registration_received_email( $member, $link ) ) {
+			return new WP_Error( 'adam_setup_mail_failed', __( 'Não foi possível enviar o email de criação de conta. Verifique o serviço de email e tente novamente.', 'adam-membership' ) );
+		}
+		$history->account_setup_link_sent( $member );
+		return true;
+	}
+
 	private function handle_member_action( string $action ): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage ADAM members.', 'adam-membership' ) );
@@ -4394,6 +4463,7 @@ final class AdminController {
 			self::ACTION_RENEW        => $this->approval_service->renew_quota( $user_id ),
 			self::ACTION_CHANGE_QUOTA => $this->approval_service->change_quota_validity( $user_id, $this->posted_quota_validity() ),
 			self::ACTION_RESEND_EMAIL => $this->approval_service->resend_approval_email( $user_id ),
+			self::ACTION_RESEND_SETUP => $this->resend_account_setup( $user_id ),
 			self::ACTION_SEND_PRIVATE_DOCUMENT => $this->approval_service->send_private_document( $user_id ),
 			self::ACTION_SAVE_MEMBER  => $this->save_member_fields( $user_id ),
 			self::ACTION_REGENERATE_CARD_TOKEN => $this->regenerate_card_token( $user_id ),
@@ -6860,6 +6930,7 @@ final class AdminController {
 			self::ACTION_RENEW        => __( 'Quota renewed successfully.', 'adam-membership' ),
 			self::ACTION_CHANGE_QUOTA => __( 'Validade da quota atualizada com sucesso.', 'adam-membership' ),
 			self::ACTION_RESEND_EMAIL => __( 'Email de aprovação reenviado com sucesso.', 'adam-membership' ),
+			self::ACTION_RESEND_SETUP => __( 'Email de criação de conta reenviado com sucesso.', 'adam-membership' ),
 			self::ACTION_SEND_PRIVATE_DOCUMENT => __( 'Documento enviado ao sócio com sucesso.', 'adam-membership' ),
 			self::ACTION_SAVE_MEMBER  => __( 'Member fields updated successfully.', 'adam-membership' ),
 			self::ACTION_REGENERATE_CARD_TOKEN => __( 'Digital card validation token regenerated successfully.', 'adam-membership' ),
