@@ -4386,7 +4386,7 @@ final class AdminController {
 		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_completed_at', true ) || '' !== (string) get_user_meta( $id, 'adam_account_username', true ) ) {
 			return 'active';
 		}
-		if ( ! $this->is_low_privilege_setup_user( $user ) || ! metadata_exists( 'user', $id, 'estado' ) || ! is_email( $member->email() ) ) {
+		if ( ! metadata_exists( 'user', $id, 'estado' ) || ! is_email( $member->email() ) ) {
 			return 'unknown';
 		}
 		if ( '' !== (string) get_user_meta( $id, 'adam_account_setup_token', true ) || '' !== (string) get_user_meta( $id, 'adam_membership_registration_request_uuid', true ) ) {
@@ -4417,28 +4417,13 @@ final class AdminController {
 		}
 	}
 
-	/**
-	 * Permit legacy member roles with only basic frontend capabilities.
-	 * Never issue setup links for accounts with elevated permissions.
-	 */
-	private function is_low_privilege_setup_user( \WP_User $user ): bool {
-		foreach ( $user->allcaps as $capability => $granted ) {
-			if ( ! $granted || in_array( $capability, $user->roles, true ) ) {
-				continue;
-			}
-			if ( ! in_array( $capability, array( 'read', 'level_0', 'exist' ), true ) ) {
-				return false;
-			}
-		}
-		return true;
-	}
-
 	private function can_resend_account_setup( Member $member ): bool {
 		$user = $member->user();
 		return null !== $user
 			&& ! $this->member_has_admin_access( $member )
 			&& ! is_super_admin( $member->user_id() )
-			&& $this->is_low_privilege_setup_user( $user )
+			&& ! in_array( 'administrator', $user->roles, true )
+			&& current_user_can( 'edit_user', $member->user_id() )
 			&& metadata_exists( 'user', $member->user_id(), 'estado' )
 			&& is_email( $member->email() )
 			&& 'active' !== $this->account_setup_status( $member );
@@ -4449,8 +4434,11 @@ final class AdminController {
 		if ( null === $user ) {
 			return __( 'Conta WordPress não encontrada.', 'adam-membership' );
 		}
-		if ( $this->member_has_admin_access( $member ) || is_super_admin( $member->user_id() ) || ! $this->is_low_privilege_setup_user( $user ) ) {
-			return __( 'Reenvio indisponível: conta com permissões protegidas.', 'adam-membership' );
+		if ( $this->member_has_admin_access( $member ) || is_super_admin( $member->user_id() ) || in_array( 'administrator', $user->roles, true ) ) {
+			return __( 'Reenvio indisponível: conta de administração WordPress.', 'adam-membership' );
+		}
+		if ( ! current_user_can( 'edit_user', $member->user_id() ) ) {
+			return __( 'O administrador atual não tem permissão WordPress para editar esta conta.', 'adam-membership' );
 		}
 		if ( 'active' === $this->account_setup_status( $member ) ) {
 			return __( 'A conta já foi ativada. Utilize a recuperação de palavra-passe.', 'adam-membership' );
